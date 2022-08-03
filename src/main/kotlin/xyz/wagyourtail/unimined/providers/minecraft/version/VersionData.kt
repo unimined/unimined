@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.providers.minecraft
+package xyz.wagyourtail.unimined.providers.minecraft.version
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement

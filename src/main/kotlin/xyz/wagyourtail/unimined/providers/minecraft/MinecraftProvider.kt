@@ -16,7 +16,6 @@ import xyz.wagyourtail.unimined.Constants
 class MinecraftProvider(val project: Project) : ArtifactProvider<ArtifactIdentifier> {
     companion object MinecraftProviderStatic {
         private val minecraftProvidersByProject = mutableMapOf<Project, MinecraftProvider>()
-
         fun getMinecraftProvider(project: Project): MinecraftProvider {
             return minecraftProvidersByProject.computeIfAbsent(project) {
                 MinecraftProvider(project)
@@ -30,23 +29,27 @@ class MinecraftProvider(val project: Project) : ArtifactProvider<ArtifactIdentif
     val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER)
 
     init {
-        project.afterEvaluate {
-            val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-            sourceSets.findByName("main")?.let {
-                it.compileClasspath += mcLibraries + combined
-                it.runtimeClasspath += mcLibraries + combined
-            }
-            sourceSets.findByName("client")?.let {
-                it.compileClasspath += mcLibraries + client
-                it.runtimeClasspath += mcLibraries + client
-            }
-            sourceSets.findByName("server")?.let {
-                it.compileClasspath += mcLibraries + server
-                it.runtimeClasspath += mcLibraries + server
-            }
-        }
 
         project.afterEvaluate {
+
+            val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+            val main = sourceSets.getByName("main")
+
+            main.compileClasspath += mcLibraries
+            main.runtimeClasspath += mcLibraries
+
+            sourceSets.findByName("client")?.let {
+                it.compileClasspath += client + main.compileClasspath
+                it.runtimeClasspath += client + main.runtimeClasspath
+            }
+            sourceSets.findByName("server")?.let {
+                it.compileClasspath += server + main.compileClasspath
+                it.runtimeClasspath += server + main.runtimeClasspath
+            }
+
+            main.compileClasspath += combined
+            main.runtimeClasspath += combined
+
             MinecraftDownloader.downloadMinecraft(project)
         }
     }

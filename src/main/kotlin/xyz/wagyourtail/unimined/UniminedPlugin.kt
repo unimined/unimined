@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined
 import net.minecraftforge.artifactural.gradle.GradleRepositoryAdapter
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.JavaExec
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import java.nio.file.Path
 
@@ -29,10 +30,6 @@ class UniminedPlugin : Plugin<Project> {
         ))
 
         val ext = project.extensions.create("unimined", UniminedExtension::class.java)
-
-        project.afterEvaluate {
-
-        }
 
         // init mc provider
         val mcProvider = MinecraftProvider.getMinecraftProvider(project)

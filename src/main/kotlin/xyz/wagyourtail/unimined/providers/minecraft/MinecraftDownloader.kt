@@ -4,10 +4,11 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.minecraftforge.artifactural.api.artifact.ArtifactIdentifier
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Dependency
-import org.gradle.api.artifacts.DependencyResolveDetails
-import org.gradle.nativeplatform.platform.OperatingSystem
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.*
+import xyz.wagyourtail.unimined.providers.minecraft.version.Download
+import xyz.wagyourtail.unimined.providers.minecraft.version.parseVersionData
 import java.io.InputStreamReader
 import java.net.URI
 import java.net.http.HttpClient
@@ -73,6 +74,7 @@ object MinecraftDownloader {
             throw IllegalArgumentException("Could not find client or server jar for Minecraft version")
         }
 
+        // get download files
         val clientJarDownloadPath = clientJarDownloadPath(project, versionData.id)
         val serverJarDownloadPath = serverJarDownloadPath(project, versionData.id)
         val combinedPomPath = combinedPomPath(project, versionData.id)
@@ -80,9 +82,11 @@ object MinecraftDownloader {
         clientJarDownloadPath.parent.maybeCreate()
         serverJarDownloadPath.parent.maybeCreate()
 
+        // initiate downloads
         download(clientJar, clientJarDownloadPath)
         download(serverJar, serverJarDownloadPath)
 
+        // write pom
         Files.writeString(
             combinedPomPath,
             XMLBuilder("project").addStringOption(
@@ -91,7 +95,8 @@ object MinecraftDownloader {
                 XMLBuilder("modelVersion").append("4.0.0"),
                 XMLBuilder("groupId").append("net.minecraft"),
                 XMLBuilder("artifactId").append("minecraft"),
-                XMLBuilder("version").append(versionData.id)
+                XMLBuilder("version").append(versionData.id),
+                XMLBuilder("packaging").append("jar"),
             ).toString(),
             StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
         )
@@ -120,6 +125,45 @@ object MinecraftDownloader {
                 }
             }
         }
+
+        // add runClient task
+        project.tasks.create("runClient", JavaExec::class.java, consumerApply {
+            group = "Unimined"
+            description = "Runs Minecraft Client"
+            mainClass.set(versionData.mainClass)
+            workingDir = project.projectDir.resolve("run").resolve("client")
+            workingDir.mkdirs()
+
+            val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+            classpath = sourceSets.findByName("client")?.runtimeClasspath ?: sourceSets.getByName("main").runtimeClasspath
+
+            args = listOf("--username", "dev", "--accessToken", "0" , "--version", versionData.id)
+        })
+        // add runServer task
+        project.tasks.create("runServer", JavaExec::class.java, consumerApply {
+            group = "Unimined"
+            description = "Runs Minecraft Server"
+            mainClass.set(versionData.mainClass)
+            workingDir = project.projectDir.resolve("run").resolve("server")
+            workingDir.mkdirs()
+
+            val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+            classpath = sourceSets.findByName("server")?.runtimeClasspath ?: sourceSets.getByName("main").runtimeClasspath
+
+            args = listOf("--nogui")
+        })
+
+        // add minecraft client/server deps
+        MinecraftProvider.getMinecraftProvider(project).server.dependencies.add(
+            project.dependencies.create(
+                "net.minecraft:minecraft:${versionData.id}:server"
+            )
+        )
+        MinecraftProvider.getMinecraftProvider(project).client.dependencies.add(
+            project.dependencies.create(
+                "net.minecraft:minecraft:${versionData.id}:client"
+            )
+        )
     }
 
     fun getMinecraft(project: Project, dependency: ArtifactIdentifier): Path {
@@ -132,14 +176,20 @@ object MinecraftDownloader {
             throw IllegalArgumentException("Dependency $dependency is not a Minecraft dependency")
         }
 
-        if (dependency.classifier != "jar") {
-            project.logger.info("Classifier ${dependency.classifier} is not a jar")
+        if (dependency.extension == "pom") {
             return combinedPomPath(project, dependency.version)
+        } else if (dependency.extension == "jar") {
+            //TODO: combine jars
+            // v1.2.5+ are combined anyway so...
+            if (dependency.classifier == null || dependency.classifier == "client") {
+                return clientJarDownloadPath(project, dependency.version)
+            } else if (dependency.classifier == "server") {
+                return serverJarDownloadPath(project, dependency.version)
+            } else {
+                throw IllegalArgumentException("Unknown classifier ${dependency.classifier}")
+            }
         }
-        project.logger.info("Classifier ${dependency.classifier} is a jar")
-        //TODO: combine jars
-        // v1.2.5+ are combined anyway so...
-        return clientJarDownloadPath(project, dependency.version)
+        throw IllegalStateException("Unknown dependency extension ${dependency.extension}")
     }
 
     private fun getMetadata(project: Project): JsonObject {
