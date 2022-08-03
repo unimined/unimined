@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined
 
-import xyz.wagyourtail.unimined.providers.minecraft.version.Download
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.*

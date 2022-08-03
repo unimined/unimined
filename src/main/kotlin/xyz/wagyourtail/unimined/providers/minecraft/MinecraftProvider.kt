@@ -13,7 +13,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
 
-class MinecraftProvider(val project: Project) : ArtifactProvider<ArtifactIdentifier> {
+class MinecraftProvider(private val project: Project) : ArtifactProvider<ArtifactIdentifier> {
     companion object MinecraftProviderStatic {
         private val minecraftProvidersByProject = mutableMapOf<Project, MinecraftProvider>()
         fun getMinecraftProvider(project: Project): MinecraftProvider {

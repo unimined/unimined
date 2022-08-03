@@ -16,7 +16,7 @@ import kotlin.io.path.inputStream
 
 object AssetsDownloader {
 
-    private val ASSET_BASE_URL = "https://resources.download.minecraft.net/"
+    private const val ASSET_BASE_URL = "https://resources.download.minecraft.net/"
 
     fun downloadAssets(project: Project, assets: AssetIndex): Path {
 
@@ -35,7 +35,7 @@ object AssetsDownloader {
         return dir
     }
 
-    fun updateIndex(assets: AssetIndex, index: Path) {
+    private fun updateIndex(assets: AssetIndex, index: Path) {
         if (testSha1(assets.size, assets.sha1!!, index)) {
             return
         }
@@ -49,7 +49,7 @@ object AssetsDownloader {
         }
     }
 
-    fun resolveAssets(project: Project, assetsJson: JsonObject, dir: Path) {
+    private fun resolveAssets(project: Project, assetsJson: JsonObject, dir: Path) {
         val copyToResources = assetsJson.get("map_to_resources")?.asBoolean ?: false
         for (key in assetsJson.keySet()) {
             val keyDir = dir.resolve(key)

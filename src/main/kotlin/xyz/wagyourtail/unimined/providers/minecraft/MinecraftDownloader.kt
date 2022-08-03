@@ -4,7 +4,6 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.minecraftforge.artifactural.api.artifact.ArtifactIdentifier
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.*
@@ -19,11 +18,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import java.security.MessageDigest
 import java.time.Duration
-import kotlin.io.path.exists
-import kotlin.io.path.fileSize
-import kotlin.io.path.inputStream
 
 object MinecraftDownloader {
 
@@ -185,10 +180,10 @@ object MinecraftDownloader {
         } else if (dependency.extension == "jar") {
             //TODO: combine jars
             // v1.2.5+ are combined anyway so...
-            if (dependency.classifier == null || dependency.classifier == "client") {
-                return clientJarDownloadPath(project, dependency.version)
+            return if (dependency.classifier == null || dependency.classifier == "client") {
+                clientJarDownloadPath(project, dependency.version)
             } else if (dependency.classifier == "server") {
-                return serverJarDownloadPath(project, dependency.version)
+                serverJarDownloadPath(project, dependency.version)
             } else {
                 throw IllegalArgumentException("Unknown classifier ${dependency.classifier}")
             }

@@ -3,7 +3,6 @@ package xyz.wagyourtail.unimined
 import net.minecraftforge.artifactural.gradle.GradleRepositoryAdapter
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.tasks.JavaExec
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import java.nio.file.Path
 

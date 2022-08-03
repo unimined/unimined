@@ -3,9 +3,9 @@ package xyz.wagyourtail.unimined
 import java.util.*
 
 class XMLBuilder {
-    val options: MutableMap<String, String?> = HashMap()
-    val children: MutableList<Any?> = LinkedList()
-    val type: String
+    private val options: MutableMap<String, String?> = HashMap()
+    private val children: MutableList<Any?> = LinkedList()
+    private val type: String
     var inline: Boolean
     var startNewLine: Boolean
 
@@ -76,10 +76,9 @@ class XMLBuilder {
             var inline = inline
             for (rawChild in children) {
                 if (rawChild is XMLBuilder) {
-                    val child = rawChild
-                    builder.append(if ((inline || child.inline) && !child.startNewLine) "" else "\n    ")
-                        .append(tabIn(child.toString(), child.inline))
-                    inline = child.inline
+                    builder.append(if ((inline || rawChild.inline) && !rawChild.startNewLine) "" else "\n    ")
+                        .append(tabIn(rawChild.toString(), rawChild.inline))
+                    inline = rawChild.inline
                 } else if (rawChild != null) {
                     builder.append(if (inline) "" else "\n    ").append(tabIn(rawChild.toString(), inline))
                     inline = this.inline

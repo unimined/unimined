@@ -107,7 +107,7 @@ data class VersionData(
         }
     }
 
-    fun getArgsRecursive(): List<String> {
+    private fun getArgsRecursive(): List<String> {
         val args: MutableList<String> = ArrayList()
         if (minecraftArguments != null) {
             args.addAll(minecraftArguments.split(" ").dropLastWhile { it.isEmpty() })
