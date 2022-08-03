@@ -1,8 +1,12 @@
 package xyz.wagyourtail.unimined
 
+import xyz.wagyourtail.unimined.providers.minecraft.version.Download
 import java.nio.file.Path
+import java.security.MessageDigest
 import java.util.*
 import kotlin.io.path.exists
+import kotlin.io.path.fileSize
+import kotlin.io.path.inputStream
 
 inline fun <T> consumerApply(crossinline action: T.() -> Unit): (T) -> Unit {
     return { action(it) }
@@ -35,3 +39,19 @@ object OSUtils {
         get() = System.getProperty("os.arch")
 }
 
+fun testSha1(size: Long, sha1: String, path: Path): Boolean {
+    if (path.exists()) {
+        if (path.fileSize() == size) {
+            val digestSha1 = MessageDigest.getInstance("SHA-1")
+            path.inputStream().use {
+                digestSha1.update(it.readBytes())
+            }
+            val hashBytes = digestSha1.digest()
+            val hash = hashBytes.joinToString("") { String.format("%02x", it) }
+            if (hash.equals(sha1, ignoreCase = true)) {
+                return true
+            }
+        }
+    }
+    return false
+}

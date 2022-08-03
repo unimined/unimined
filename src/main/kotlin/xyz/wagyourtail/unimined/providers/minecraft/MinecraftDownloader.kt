@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.minecraftforge.artifactural.api.artifact.ArtifactIdentifier
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.*
@@ -26,7 +27,7 @@ import kotlin.io.path.inputStream
 
 object MinecraftDownloader {
 
-    val METADATA_URL = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest.json")
+    private val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest.json")
 
     private val client = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_2)
@@ -107,7 +108,7 @@ object MinecraftDownloader {
 
         // populate mc dependency configuration
         for (library in versionData.libraries) {
-            project.logger.info("Added dependency ${library.name}")
+            project.logger.debug("Added dependency ${library.name}")
             if (library.rules.all { it.testRule() }) {
                 MinecraftProvider.getMinecraftProvider(project).mcLibraries.dependencies.add(
                     project.dependencies.create(
@@ -116,7 +117,7 @@ object MinecraftDownloader {
                 )
                 val native = library.natives[OSUtils.oSId]
                 if (native != null) {
-                    project.logger.info("Added native dependency ${library.name}:$native")
+                    project.logger.debug("Added native dependency ${library.name}:$native")
                     MinecraftProvider.getMinecraftProvider(project).mcLibraries.dependencies.add(
                         project.dependencies.create(
                             "${library.name}:$native"
@@ -137,7 +138,10 @@ object MinecraftDownloader {
             val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
             classpath = sourceSets.findByName("client")?.runtimeClasspath ?: sourceSets.getByName("main").runtimeClasspath
 
-            args = listOf("--username", "dev", "--accessToken", "0" , "--version", versionData.id)
+            jvmArgs = versionData.getJVMArgs(workingDir.resolve("libraries").toPath())
+
+            val assetsDir = versionData.assetIndex?.let { AssetsDownloader.downloadAssets(project, it) }
+            args = versionData.getGameArgs("Dev", workingDir.toPath(), assetsDir ?: workingDir.resolve("assets").toPath())
         })
         // add runServer task
         project.tasks.create("runServer", JavaExec::class.java, consumerApply {
@@ -253,7 +257,7 @@ object MinecraftDownloader {
 
     private fun download(download: Download, path: Path) {
 
-        if (testSha1(download, path)) {
+        if (testSha1(download.size, download.sha1, path)) {
             return
         }
 
@@ -261,26 +265,9 @@ object MinecraftDownloader {
             Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
         }
 
-        if (!testSha1(download, path)) {
+        if (!testSha1(download.size, download.sha1, path)) {
             throw Exception("Failed to download " + download.url)
         }
-    }
-
-    private fun testSha1(download: Download, path: Path): Boolean {
-        if (path.exists()) {
-            if (path.fileSize() == download.size) {
-                val digestSha1 = MessageDigest.getInstance("SHA-1")
-                path.inputStream().use {
-                    digestSha1.update(it.readBytes())
-                }
-                val hashBytes = digestSha1.digest()
-                val hash = hashBytes.joinToString("") { String.format("%02x", it) }
-                if (hash.equals(download.sha1, ignoreCase = true)) {
-                    return true
-                }
-            }
-        }
-        return false
     }
 
     fun clientJarDownloadPath(project: Project, version: String): Path {
@@ -299,24 +286,6 @@ object MinecraftDownloader {
             .resolve("minecraft")
             .resolve(version)
             .resolve("server.jar")
-    }
-
-    fun clientPomPath(project: Project, version: String): Path {
-        return UniminedPlugin.getGlobalCache(project)
-            .resolve("net")
-            .resolve("minecraft")
-            .resolve("minecraft")
-            .resolve(version)
-            .resolve("client.xml")
-    }
-
-    fun serverPomPath(project: Project, version: String): Path {
-        return UniminedPlugin.getGlobalCache(project)
-            .resolve("net")
-            .resolve("minecraft")
-            .resolve("minecraft")
-            .resolve(version)
-            .resolve("server.xml")
     }
 
     fun combinedPomPath(project: Project, version: String): Path {

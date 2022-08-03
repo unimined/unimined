@@ -6,10 +6,12 @@ import com.google.gson.JsonObject
 import org.gradle.api.JavaVersion
 import xyz.wagyourtail.unimined.OSUtils
 import xyz.wagyourtail.unimined.SemVerUtils
+import xyz.wagyourtail.unimined.consumerApply
 import java.net.MalformedURLException
 import java.net.URI
 import java.nio.file.Path
 import java.time.Instant
+
 
 /*
  * Ported from https://github.com/wagyourtail/WagYourLauncher/blob/main/src/main/java/xyz/wagyourtail/launcher/minecraft/version/Version.java
@@ -25,10 +27,129 @@ data class VersionData(
     val assets: String?,
     val downloads: Map<String, Download>,
     val javaVersion: JavaVersion,
-    val Arguments: Arguments?,
+    val arguments: Arguments?,
     val minecraftArguments: String?,
     val libraries: List<Library>,
-)
+) {
+
+
+    fun getJVMArgs(libDir: Path): List<String> {
+        val args = mutableListOf<String>()
+        args.addAll("-Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M".split(" "))
+        if (arguments?.jvm != null) {
+            arguments.jvm.forEach(consumerApply {
+                if (rules.all { it.testRule() }) {
+                    args.addAll(values)
+                }
+            })
+        } else {
+            // default args
+            // default args
+            val arguments: List<Argument> = listOf(
+                Argument(
+                    listOf(
+                        Rule("allow", OperatingSystem("osx", null, null), mapOf())
+                    ), listOf(
+                        "-XstartOnFirstThread"
+                    )
+                ),
+                Argument(
+                    listOf(
+                        Rule("allow", OperatingSystem("windows", null, null), mapOf())
+                    ), listOf(
+                        "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump"
+                    )
+                ),
+                Argument(
+                    listOf(
+                        Rule("allow", OperatingSystem("windows", "^10\\.", null), mapOf())
+                    ), listOf(
+                        "-Dos.name=Windows 10",
+                        "-Dos.version=10.0"
+                    )
+                ),
+                Argument(
+                    listOf(
+                        Rule("allow", OperatingSystem(null, null, "x86"), mapOf())
+                    ), listOf(
+                        "-Xss1M"
+                    )
+                ),
+                Argument(
+                    listOf(), listOf(
+                        "-Dminecraft.launcher.brand=\${launcher_name}"
+                    )
+                ),
+                Argument(
+                    listOf(), listOf(
+                        "-Dminecraft.launcher.version=\${launcher_version}"
+                    )
+                )
+            )
+            arguments.forEach(consumerApply {
+                if (rules.all { it.testRule() }) {
+                    args.addAll(values)
+                }
+            })
+        }
+
+
+        return args.mapNotNull { e: String ->
+            if (e == "-Djava.library.path=\${natives_directory}" || e == "\${classpath}" || e == "-cp") null
+            else e.replace("\${launcher_name}", "UniminedDev")
+                .replace("\${launcher_version}", "1.0.0")
+                .replace(
+                    "\${version_name}",
+                    id
+                ) //            .replace("${library_directory}", launcher.libs.globalLibPath.toString())
+                .replace("\${library_directory}", libDir.toString())
+                .replace("\${classpath_separator}", ":")
+        }
+    }
+
+    fun getArgsRecursive(): List<String> {
+        val args: MutableList<String> = ArrayList()
+        if (minecraftArguments != null) {
+            args.addAll(minecraftArguments.split(" ").dropLastWhile { it.isEmpty() })
+            return args
+        }
+        if (arguments?.game != null) {
+            for (arg in arguments.game) {
+                if (arg.rules.all { it.testRule() }) {
+                    args.addAll(arg.values)
+                }
+            }
+        }
+//        if (inheritsFrom != null) {
+//            args.addAll(inheritsFrom.getArgsRecursive(launcher))
+//        }
+        return args
+    }
+
+    fun getGameArgs(
+        username: String?,
+        gameDir: Path,
+        assets: Path,
+    ): List<String> {
+        val args = getArgsRecursive()
+        return args.mapNotNull { e: String ->
+            if (e == "--uuid" || e == "\${auth_uuid}") null
+            else e.replace("\${auth_player_name}", username!!)
+                .replace("\${version_name}", id)
+                .replace("\${game_directory}", gameDir.toAbsolutePath().toString())
+                .replace("\${assets_root}", assets.toString())
+                .replace("\${game_assets}", assets.toString())
+                .replace("\${assets_index_name}", assetIndex?.id ?: "")
+                .replace("\${assets_index}", assetIndex?.id ?: "")
+                .replace("\${auth_access_token}", "0")
+                .replace("\${clientid}", "0")
+                .replace("\${user_type}", "msa")
+                .replace("\${version_type}", type!!)
+                .replace("\${user_properties}", "")
+        }
+    }
+
+}
 
 fun parseVersionData(json: JsonObject): VersionData {
     return VersionData(
@@ -42,7 +163,7 @@ fun parseVersionData(json: JsonObject): VersionData {
         json.get("assets")?.asString,
         json.get("downloads").asJsonObject?.let { parseAllDownload(it) } ?: mapOf(),
         json.get("javaVersion")?.asJsonObject?.let { parseJavaVersion(it) } ?: JavaVersion.VERSION_1_8,
-        json.get("Arguments")?.asJsonObject?.let { parseArguments(it) },
+        json.get("arguments")?.asJsonObject?.let { parseArguments(it) },
         json.get("minecraftArguments")?.asString,
         json.get("libraries")?.asJsonArray?.let { parseAllLibraries(it) } ?: listOf()
     )
