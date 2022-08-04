@@ -3,35 +3,39 @@ package xyz.wagyourtail.unimined.providers.minecraft
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.minecraftforge.artifactural.api.artifact.ArtifactIdentifier
+import org.gradle.api.JavaVersion
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.*
+import xyz.wagyourtail.unimined.providers.minecraft.version.Artifact
 import xyz.wagyourtail.unimined.providers.minecraft.version.Download
+import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
 import xyz.wagyourtail.unimined.providers.minecraft.version.parseVersionData
 import java.io.InputStreamReader
+import java.net.HttpURLConnection
 import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse.BodyHandlers
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.time.Duration
+import java.util.*
+import java.util.zip.ZipInputStream
 
 object MinecraftDownloader {
 
-    private val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest.json")
-
-    private val client = HttpClient.newBuilder()
-        .version(HttpClient.Version.HTTP_2)
-        .followRedirects(HttpClient.Redirect.NORMAL)
-        .connectTimeout(Duration.ofSeconds(20))
-        .build()
+    private val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
 
     fun downloadMinecraft(project: Project) {
         project.logger.info("Downloading Minecraft...")
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+
+        val client = !UniminedPlugin.getOptions(project).disableCombined.get() || sourceSets.findByName("client") != null
+        val server = !UniminedPlugin.getOptions(project).disableCombined.get() || sourceSets.findByName("server") != null
+
         val dependencies = MinecraftProvider.getMinecraftProvider(project).combined.dependencies
 
         if (dependencies.isEmpty()) {
@@ -66,10 +70,6 @@ object MinecraftDownloader {
         val clientJar = versionData.downloads["client"]
         val serverJar = versionData.downloads["server"]
 
-        if (clientJar == null || serverJar == null) {
-            throw IllegalArgumentException("Could not find client or server jar for Minecraft version")
-        }
-
         // get download files
         val clientJarDownloadPath = clientJarDownloadPath(project, versionData.id)
         val serverJarDownloadPath = serverJarDownloadPath(project, versionData.id)
@@ -79,11 +79,19 @@ object MinecraftDownloader {
         serverJarDownloadPath.parent.maybeCreate()
 
         // initiate downloads
-        download(clientJar, clientJarDownloadPath)
-        download(serverJar, serverJarDownloadPath)
+        if (client && clientJar != null) {
+            download(clientJar, clientJarDownloadPath)
+        } else if (client) {
+            throw IllegalStateException("No client jar found for Minecraft")
+        }
+        if (server && serverJar != null) {
+            download(serverJar, serverJarDownloadPath)
+        } else if (server) {
+            throw IllegalStateException("No server jar found for Minecraft")
+        }
 
         // write pom
-        Files.writeString(
+        Files.write(
             combinedPomPath,
             XMLBuilder("project").addStringOption(
                 "xsi:schemaLocation", "http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
@@ -93,7 +101,7 @@ object MinecraftDownloader {
                 XMLBuilder("artifactId").append("minecraft"),
                 XMLBuilder("version").append(versionData.id),
                 XMLBuilder("packaging").append("jar"),
-            ).toString(),
+            ).toString().toByteArray(StandardCharsets.UTF_8),
             StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
         )
 
@@ -102,67 +110,137 @@ object MinecraftDownloader {
         }
 
         // populate mc dependency configuration
-        for (library in versionData.libraries) {
-            project.logger.debug("Added dependency ${library.name}")
-            if (library.rules.all { it.testRule() }) {
-                MinecraftProvider.getMinecraftProvider(project).mcLibraries.dependencies.add(
-                    project.dependencies.create(
-                        library.name
-                    )
+        if (client) {
+            val clientWorkingDir = project.projectDir.resolve("run").resolve("client")
+
+            val extractDependencies = mutableMapOf<Dependency, Extract>()
+
+            for (library in versionData.libraries) {
+                project.logger.debug("Added dependency ${library.name}")
+                if (library.rules.all { it.testRule() }) {
+                    if (library.url != null || library.downloads?.artifact != null) {
+                        val dep = project.dependencies.create(library.name)
+                        MinecraftProvider.getMinecraftProvider(project).mcLibraries.dependencies.add(dep)
+                        library.extract?.let { extractDependencies[dep] = it }
+                    }
+                    val native = library.natives[OSUtils.oSId]
+                    if (native != null) {
+                        project.logger.debug("Added native dependency ${library.name}:$native")
+                        val nativeDep = project.dependencies.create("${library.name}:$native")
+                        MinecraftProvider.getMinecraftProvider(project).mcLibraries.dependencies.add(nativeDep)
+                        library.extract?.let { extractDependencies[nativeDep] = it }
+                    }
+                }
+            }
+
+            val nativeDir = clientWorkingDir.resolve("natives")
+            if (nativeDir.exists()) {
+                nativeDir.deleteRecursively()
+            }
+            val preRun = project.tasks.create("preRunClient", consumerApply {
+                doLast {
+                    nativeDir.mkdirs()
+                    extractDependencies.forEach { (dep, extract) ->
+                        extract(project, dep, extract, nativeDir.toPath())
+                    }
+                }
+            })
+
+            //test if betacraft has our version on file
+            val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${versionData.id}.info").toURL().openConnection() as HttpURLConnection
+            url.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+            url.requestMethod = "GET"
+            url.connect()
+            val properties = Properties()
+            val betacraftArgs = if (url.responseCode == 200) {
+                url.inputStream.use { properties.load(it) }
+                properties.getProperty("proxy-args")?.split(" ") ?: listOf()
+            } else {
+                listOf()
+            }
+
+            project.tasks.create("runClient", JavaExec::class.java, consumerApply {
+                group = "Unimined"
+                description = "Runs Minecraft Client"
+                mainClass.set(versionData.mainClass)
+                workingDir = clientWorkingDir
+                workingDir.mkdirs()
+
+                classpath = sourceSets.findByName("client")?.runtimeClasspath
+                            ?: sourceSets.getByName("main").runtimeClasspath
+
+                jvmArgs = versionData.getJVMArgs(workingDir.resolve("libraries").toPath(), nativeDir.toPath()) + betacraftArgs
+
+
+                val assetsDir = versionData.assetIndex?.let { AssetsDownloader.downloadAssets(project, it) }
+                args = versionData.getGameArgs(
+                    "Dev",
+                    workingDir.toPath(),
+                    assetsDir ?: workingDir.resolve("assets").toPath()
                 )
-                val native = library.natives[OSUtils.oSId]
-                if (native != null) {
-                    project.logger.debug("Added native dependency ${library.name}:$native")
-                    MinecraftProvider.getMinecraftProvider(project).mcLibraries.dependencies.add(
+
+                dependsOn.add(preRun)
+
+                doFirst {
+                    if (!JavaVersion.current().equals(versionData.javaVersion)) {
+                        project.logger.error("Java version is ${JavaVersion.current()}, expected ${versionData.javaVersion}, Minecraft may not launch properly")
+                    }
+                }
+            })
+        }
+
+        // add runServer task
+        if (server) {
+            project.tasks.create("runServer", JavaExec::class.java, consumerApply {
+                group = "Unimined"
+                description = "Runs Minecraft Server"
+                mainClass.set(versionData.mainClass)
+                workingDir = project.projectDir.resolve("run").resolve("server")
+                workingDir.mkdirs()
+
+                classpath = sourceSets.findByName("server")?.runtimeClasspath
+                            ?: sourceSets.getByName("main").runtimeClasspath
+
+                args = listOf("--nogui")
+            })
+        }
+
+        // add minecraft client/server deps
+        if (client) {
+            MinecraftProvider.getMinecraftProvider(project).client.dependencies.add(
+                project.dependencies.create(
+                    "net.minecraft:minecraft:${versionData.id}:client"
+                )
+            )
+        }
+
+        if (server) {
+            MinecraftProvider.getMinecraftProvider(project).server.dependencies.add(
+                project.dependencies.create(
+                    "net.minecraft:minecraft:${versionData.id}:server"
+                )
+            )
+        }
+
+        if (UniminedPlugin.getOptions(project).disableCombined.get()) {
+            MinecraftProvider.getMinecraftProvider(project).combined.let {
+                it.dependencies.clear()
+                if (client) {
+                    it.dependencies.add(
                         project.dependencies.create(
-                            "${library.name}:$native"
+                            "net.minecraft:minecraft:${versionData.id}:client"
+                        )
+                    )
+                }
+                if (server) {
+                    it.dependencies.add(
+                        project.dependencies.create(
+                            "net.minecraft:minecraft:${versionData.id}:server"
                         )
                     )
                 }
             }
         }
-
-        // add runClient task
-        project.tasks.create("runClient", JavaExec::class.java, consumerApply {
-            group = "Unimined"
-            description = "Runs Minecraft Client"
-            mainClass.set(versionData.mainClass)
-            workingDir = project.projectDir.resolve("run").resolve("client")
-            workingDir.mkdirs()
-
-            val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-            classpath = sourceSets.findByName("client")?.runtimeClasspath ?: sourceSets.getByName("main").runtimeClasspath
-
-            jvmArgs = versionData.getJVMArgs(workingDir.resolve("libraries").toPath())
-
-            val assetsDir = versionData.assetIndex?.let { AssetsDownloader.downloadAssets(project, it) }
-            args = versionData.getGameArgs("Dev", workingDir.toPath(), assetsDir ?: workingDir.resolve("assets").toPath())
-        })
-        // add runServer task
-        project.tasks.create("runServer", JavaExec::class.java, consumerApply {
-            group = "Unimined"
-            description = "Runs Minecraft Server"
-            mainClass.set(versionData.mainClass)
-            workingDir = project.projectDir.resolve("run").resolve("server")
-            workingDir.mkdirs()
-
-            val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-            classpath = sourceSets.findByName("server")?.runtimeClasspath ?: sourceSets.getByName("main").runtimeClasspath
-
-            args = listOf("--nogui")
-        })
-
-        // add minecraft client/server deps
-        MinecraftProvider.getMinecraftProvider(project).server.dependencies.add(
-            project.dependencies.create(
-                "net.minecraft:minecraft:${versionData.id}:server"
-            )
-        )
-        MinecraftProvider.getMinecraftProvider(project).client.dependencies.add(
-            project.dependencies.create(
-                "net.minecraft:minecraft:${versionData.id}:client"
-            )
-        )
     }
 
     fun getMinecraft(project: Project, dependency: ArtifactIdentifier): Path {
@@ -197,19 +275,16 @@ object MinecraftDownloader {
             TODO()
         }
 
-        val request = HttpRequest.newBuilder()
-            .uri(METADATA_URL)
-            .header("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
-            .GET()
-            .build()
+        val urlConnection = METADATA_URL.toURL().openConnection() as HttpURLConnection
+        urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+        urlConnection.requestMethod = "GET"
+        urlConnection.connect()
 
-        val response = client.send(request, BodyHandlers.ofInputStream())
-
-        if (response.statusCode() != 200) {
-            throw Exception("Failed to get metadata, " + response.statusCode())
+        if (urlConnection.responseCode != 200) {
+            throw Exception("Failed to get metadata, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
         }
 
-        return response.body().use {
+        return urlConnection.inputStream.use {
             InputStreamReader(it).use { reader ->
                 JsonParser.parseReader(reader).asJsonObject
             }
@@ -231,19 +306,16 @@ object MinecraftDownloader {
 
     private fun getVersionData(version: JsonObject): JsonObject {
         val url = version.get("url").asString
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .header("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
-            .GET()
-            .build()
+        val urlConnection = URI.create(url).toURL().openConnection() as HttpURLConnection
+        urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+        urlConnection.requestMethod = "GET"
+        urlConnection.connect()
 
-        val response = client.send(request, BodyHandlers.ofInputStream())
-
-        if (response.statusCode() != 200) {
-            throw Exception("Failed to get version data, " + response.statusCode())
+        if (urlConnection.responseCode != 200) {
+            throw Exception("Failed to get version data, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
         }
 
-        return response.body().use {
+        return urlConnection.inputStream.use {
             InputStreamReader(it).use { reader ->
                 JsonParser.parseReader(reader).asJsonObject
             }
@@ -262,6 +334,48 @@ object MinecraftDownloader {
 
         if (!testSha1(download.size, download.sha1, path)) {
             throw Exception("Failed to download " + download.url)
+        }
+    }
+
+    private fun download(artifact: Artifact, path: Path) {
+
+        if (testSha1(artifact.size, artifact.sha1 ?: "", path)) {
+            return
+        }
+
+        artifact.url?.toURL()?.openStream()?.use {
+            Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
+        }
+
+        if (!testSha1(artifact.size, artifact.sha1 ?: "", path)) {
+            throw Exception("Failed to download " + artifact.url)
+        }
+    }
+
+    private fun download(url: URI, path: Path) {
+        url.toURL().openStream().use {
+            Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+
+    private fun extract(project: Project, dependency: Dependency, extract: Extract, path: Path) {
+        val resolved = MinecraftProvider.getMinecraftProvider(project).mcLibraries.resolvedConfiguration
+        resolved.getFiles { it == dependency }.forEach { file ->
+            ZipInputStream(file.inputStream()).use { stream ->
+                var entry = stream.nextEntry
+                while (entry != null) {
+                    if (entry.isDirectory) {
+                        entry = stream.nextEntry
+                        continue
+                    }
+                    if (extract.exclude.any { entry.name.startsWith(it) }) {
+                        entry = stream.nextEntry
+                        continue
+                    }
+                    Files.copy(stream, path.resolve(entry.name), StandardCopyOption.REPLACE_EXISTING)
+                    entry = stream.nextEntry
+                }
+            }
         }
     }
 

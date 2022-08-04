@@ -12,8 +12,11 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.SemVerUtils
+import xyz.wagyourtail.unimined.consumerApply
+import java.net.URI
 
-class MinecraftProvider(private val project: Project) : ArtifactProvider<ArtifactIdentifier> {
+class MinecraftProvider private constructor(private val project: Project) : ArtifactProvider<ArtifactIdentifier> {
     companion object MinecraftProviderStatic {
         private val minecraftProvidersByProject = mutableMapOf<Project, MinecraftProvider>()
         fun getMinecraftProvider(project: Project): MinecraftProvider {
@@ -29,7 +32,6 @@ class MinecraftProvider(private val project: Project) : ArtifactProvider<Artifac
     val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER)
 
     init {
-
         project.afterEvaluate {
 
             val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
@@ -42,6 +44,7 @@ class MinecraftProvider(private val project: Project) : ArtifactProvider<Artifac
                 it.compileClasspath += client + main.compileClasspath
                 it.runtimeClasspath += client + main.runtimeClasspath
             }
+
             sourceSets.findByName("server")?.let {
                 it.compileClasspath += server + main.compileClasspath
                 it.runtimeClasspath += server + main.runtimeClasspath
@@ -60,13 +63,13 @@ class MinecraftProvider(private val project: Project) : ArtifactProvider<Artifac
             .provide(this)
     )
 
-    override fun getArtifact(info: ArtifactIdentifier): Artifact? {
+    override fun getArtifact(info: ArtifactIdentifier): Artifact {
         return try {
                 StreamableArtifact.ofFile(
                     info, ArtifactType.BINARY, MinecraftDownloader.getMinecraft(project, info).toFile()
                 )
         } catch (ignored: IllegalArgumentException) {
-            null
+            Artifact.none()
         } catch (e: Exception) {
             e.printStackTrace()
             throw RuntimeException("Failed to get artifact $info", e)

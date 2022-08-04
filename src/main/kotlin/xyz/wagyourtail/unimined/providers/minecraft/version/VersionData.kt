@@ -7,10 +7,16 @@ import org.gradle.api.JavaVersion
 import xyz.wagyourtail.unimined.OSUtils
 import xyz.wagyourtail.unimined.SemVerUtils
 import xyz.wagyourtail.unimined.consumerApply
+import java.net.HttpURLConnection
 import java.net.MalformedURLException
 import java.net.URI
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatterBuilder
+import java.util.Properties
 
 
 /*
@@ -33,7 +39,7 @@ data class VersionData(
 ) {
 
 
-    fun getJVMArgs(libDir: Path): List<String> {
+    fun getJVMArgs(libDir: Path, nativeDir: Path): List<String> {
         val args = mutableListOf<String>()
         args.addAll("-Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M".split(" "))
         if (arguments?.jvm != null) {
@@ -76,6 +82,12 @@ data class VersionData(
                     )
                 ),
                 Argument(
+                    listOf(),
+                    listOf(
+                        "-Djava.library.path=\${natives_directory}"
+                    )
+                ),
+                Argument(
                     listOf(), listOf(
                         "-Dminecraft.launcher.brand=\${launcher_name}"
                     )
@@ -86,6 +98,7 @@ data class VersionData(
                     )
                 )
             )
+
             arguments.forEach(consumerApply {
                 if (rules.all { it.testRule() }) {
                     args.addAll(values)
@@ -95,13 +108,14 @@ data class VersionData(
 
 
         return args.mapNotNull { e: String ->
-            if (e == "-Djava.library.path=\${natives_directory}" || e == "\${classpath}" || e == "-cp") null
+            if (e == "\${classpath}" || e == "-cp") null
             else e.replace("\${launcher_name}", "UniminedDev")
                 .replace("\${launcher_version}", "1.0.0")
                 .replace(
                     "\${version_name}",
                     id
-                ) //            .replace("${library_directory}", launcher.libs.globalLibPath.toString())
+                )
+                .replace("\${natives_directory}", nativeDir.toString())
                 .replace("\${library_directory}", libDir.toString())
                 .replace("\${classpath_separator}", ":")
         }
@@ -138,7 +152,7 @@ data class VersionData(
                 .replace("\${version_name}", id)
                 .replace("\${game_directory}", gameDir.toAbsolutePath().toString())
                 .replace("\${assets_root}", assets.toString())
-                .replace("\${game_assets}", assets.toString())
+                .replace("\${game_assets}", gameDir.resolve("resources").toString())
                 .replace("\${assets_index_name}", assetIndex?.id ?: "")
                 .replace("\${assets_index}", assetIndex?.id ?: "")
                 .replace("\${auth_access_token}", "0")
@@ -150,13 +164,19 @@ data class VersionData(
     }
 
 }
+// 2010-07-08T22:00:00+00:00
+val dateTimeFormat = DateTimeFormatterBuilder()
+    .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+    .appendZoneOrOffsetId()
+    .toFormatter()
+
 
 fun parseVersionData(json: JsonObject): VersionData {
     return VersionData(
         json.get("id").asString,
         json.get("type")?.asString,
-        json.get("time")?.asString?.let { Instant.parse(it).toEpochMilli() } ?: 0,
-        json.get("releaseTime")?.asString?.let { Instant.parse(it).toEpochMilli() } ?: 0,
+        json.get("time")?.asString?.let { LocalDateTime.parse(it, dateTimeFormat).toInstant(ZoneOffset.UTC).toEpochMilli() } ?: 0,
+        json.get("releaseTime")?.asString?.let { LocalDateTime.parse(it, dateTimeFormat).toInstant(ZoneOffset.UTC).toEpochMilli() } ?: 0,
         json.get("minimumLauncherVersion")?.asInt ?: 0,
         json.get("mainClass").asString,
         json.get("assetIndex")?.asJsonObject?.let { parseAssets(it) },
@@ -308,7 +328,7 @@ data class Library(
     val name: String,
     val url: URI?,
     val natives: Map<String, String>,
-    val extract: Extract,
+    val extract: Extract?,
     val rules: List<Rule>
 )
 
@@ -326,7 +346,7 @@ fun parseLibrary(json: JsonObject): Library {
             null
         },
         json.get("natives")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString } ?: mapOf(),
-        parseExtract(json.get("extract")?.asJsonObject ?: JsonObject()),
+        json.get("extract")?.asJsonObject?.let { parseExtract(it) },
         json.getAsJsonArray("rules")?.map { parseRule(it.asJsonObject) } ?: listOf()
     )
 }
@@ -352,7 +372,7 @@ data class Artifact(
 
 fun parseArtifact(json: JsonObject): Artifact {
     return Artifact(
-        json.get("path")?.asString?.let { Path.of(it) },
+        json.get("path")?.asString?.let { Paths.get(it) },
         json.get("sha1")?.asString,
         json.get("size")?.asLong ?: 0,
         try {

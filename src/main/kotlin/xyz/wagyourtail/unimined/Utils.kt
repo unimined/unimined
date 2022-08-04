@@ -41,6 +41,9 @@ object OSUtils {
 fun testSha1(size: Long, sha1: String, path: Path): Boolean {
     if (path.exists()) {
         if (path.fileSize() == size) {
+            if (sha1.isEmpty()) {
+                return true
+            }
             val digestSha1 = MessageDigest.getInstance("SHA-1")
             path.inputStream().use {
                 digestSha1.update(it.readBytes())
