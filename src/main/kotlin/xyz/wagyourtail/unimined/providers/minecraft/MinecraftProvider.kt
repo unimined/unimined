@@ -9,77 +9,43 @@ import net.minecraftforge.artifactural.base.artifact.StreamableArtifact
 import net.minecraftforge.artifactural.base.repository.ArtifactProviderBuilder
 import net.minecraftforge.artifactural.base.repository.SimpleRepository
 import net.minecraftforge.artifactural.gradle.GradleRepositoryAdapter
-import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.tasks.Jar
-import xyz.wagyourtail.unimined.*
+import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.OSUtils
+import xyz.wagyourtail.unimined.UniminedExtension
+import xyz.wagyourtail.unimined.consumerApply
+import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.NoTransformsTransformer
+import xyz.wagyourtail.unimined.providers.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.fabric.FabricMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.remap.MinecraftRemapper
+import xyz.wagyourtail.unimined.providers.patch.remap.ModRemapper
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
+import java.nio.file.Path
 import java.util.*
 
-class MinecraftProvider private constructor(val project: Project) : ArtifactProvider<ArtifactIdentifier> {
-    companion object MinecraftProviderStatic {
-        private val minecraftProvidersByProject = mutableMapOf<Project, MinecraftProvider>()
-
-        @Synchronized
-        fun getMinecraftProvider(project: Project): MinecraftProvider {
-            return minecraftProvidersByProject.computeIfAbsent(project) {
-                MinecraftProvider(project)
-            }
-        }
-
-        private val transformers = linkedMapOf<(project: Project) -> Boolean, (project: Project, provider: MinecraftProvider) -> AbstractMinecraftTransformer>()
-        private val resolvedTransformer = mutableMapOf<Project, AbstractMinecraftTransformer>()
-        init {
-            transformers[{
-                it.configurations.findByName("fabric") != null
-            }] = { project, provider ->
-                FabricMinecraftTransformer(project, provider)
-            }
-            transformers[{
-                it.configurations.findByName("mappings") != null
-            }]  = { project, provider ->
-                MinecraftRemapper(project, provider)
-            }
-            transformers[{
-                true
-            }] = { project, provider ->
-                NoTransformsTransformer(project, provider)
-            }
-        }
-
-        @Synchronized
-        fun getTransformer(project: Project): AbstractMinecraftTransformer {
-            return resolvedTransformer.computeIfAbsent(project) {
-                val config = project.extensions.getByType(UniminedExtension::class.java)
-                transformers.entries.find { it.key(project) }?.value?.invoke(project, getMinecraftProvider(project))?.apply { config.patchSettings.get().execute(this) } ?: throw IllegalStateException("No transformer found for project $project")
-            }
-        }
-
-        private val minecraftDownloaders = mutableMapOf<Project, MinecraftDownloader>()
-
-        @Synchronized
-        fun getMinecraftDownloader(project: Project): MinecraftDownloader {
-            return minecraftDownloaders.computeIfAbsent(project) {
-                MinecraftDownloader(getMinecraftProvider(project))
-            }
-        }
-    }
+@Suppress("LeakingThis")
+abstract class MinecraftProvider(
+    val project: Project,
+    val parent: UniminedExtension
+) : ArtifactProvider<ArtifactIdentifier> {
 
     val combined: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_COMBINED_PROVIDER)
     val client: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_CLIENT_PROVIDER)
     val server: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_SERVER_PROVIDER)
     val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER)
 
-    private val config = project.extensions.getByType(UniminedExtension::class.java)
+    val minecraftDownloader: MinecraftDownloader = MinecraftDownloader(project, this)
+    val assetsDownloader: AssetsDownloader = AssetsDownloader(project, this)
+    private val sourceSets: SourceSetContainer = project.extensions.getByType(SourceSetContainer::class.java)
 
     val repo: Repository = SimpleRepository.of(
         ArtifactProviderBuilder.begin(ArtifactIdentifier::class.java)
@@ -87,81 +53,184 @@ class MinecraftProvider private constructor(val project: Project) : ArtifactProv
             .provide(this)
     )
 
-    val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+    private val mcRemapper = MinecraftRemapper(project, this)
+    private val modRemapper = ModRemapper(project, mcRemapper)
+
+    abstract val overrideMainClassClient: Property<String?>
+    abstract val overrideMainClassServer: Property<String?>
+    abstract val targetNamespace: Property<String>
+    abstract val clientWorkingDirectory: Property<File>
+    abstract val serverWorkingDirectory: Property<File>
+    abstract val disableCombined: Property<Boolean>
+    abstract val transformer: Property<String>
+
+    private lateinit var minecraftTransformer: AbstractMinecraftTransformer
 
     init {
-        GradleRepositoryAdapter.add(project.repositories, "minecraft-transformer", UniminedPlugin.getGlobalCache(project).toFile(), repo)
+        overrideMainClassClient.convention(null as String?).finalizeValueOnRead()
+        overrideMainClassServer.convention(null as String?).finalizeValueOnRead()
+        targetNamespace.convention("named").finalizeValueOnRead()
+        clientWorkingDirectory.convention(project.projectDir.resolve("run").resolve("client")).finalizeValueOnRead()
+        serverWorkingDirectory.convention(project.projectDir.resolve("run").resolve("server")).finalizeValueOnRead()
+        disableCombined.convention(false).finalizeValueOnRead()
+        transformer.convention("none").finalizeValueOnRead()
+
+        GradleRepositoryAdapter.add(
+            project.repositories,
+            "minecraft-transformer",
+            parent.getGlobalCache().toFile(),
+            repo
+        )
+
         project.afterEvaluate {
-            getMinecraftDownloader(project).downloadMinecraft()
-            val transformer = getTransformer(project)
-            transformer.init()
+            afterEvaluate()
+        }
+    }
 
-            val main = sourceSets.getByName("main")
+    private fun afterEvaluate() {
+        val main = sourceSets.getByName("main")
+        val client = sourceSets.findByName("client")
+        val server = sourceSets.findByName("server")
 
-            main.compileClasspath += mcLibraries
-            main.runtimeClasspath += mcLibraries
+        main.compileClasspath += mcLibraries
+        main.runtimeClasspath += mcLibraries
 
-            sourceSets.findByName("client")?.let {
-                it.compileClasspath += client + main.compileClasspath
-                it.runtimeClasspath += client + main.runtimeClasspath
-            }
+        client?.let {
+            it.compileClasspath += this.client + main.compileClasspath
+            it.runtimeClasspath += this.client + main.runtimeClasspath
+        }
 
-            sourceSets.findByName("server")?.let {
-                it.compileClasspath += server + main.compileClasspath
-                it.runtimeClasspath += server + main.runtimeClasspath
-            }
+        server?.let {
+            it.compileClasspath += this.server + main.compileClasspath
+            it.runtimeClasspath += this.server + main.runtimeClasspath
+        }
 
-            main.compileClasspath += combined
-            main.runtimeClasspath += combined
+        main.compileClasspath += combined
+        main.runtimeClasspath += combined
 
-            transformer.applyRunConfigs()
+        val jarServer = project.tasks.create("jarServer", Jar::class.java) {
+            it.from(server?.allSource ?: main)
+        }
 
-            project.tasks.named("jar", Jar::class.java) {
-                it.from(sourceSets.findByName("client")?.allSource ?: main)
+        project.tasks.named("jar", Jar::class.java) {
+            it.from(client?.allSource ?: main)
+            it.archiveClassifier.set("mapped-${targetNamespace.get()}")
+            it.dependsOn += jarServer
+        }
+
+        addMcLibraries()
+
+        minecraftTransformer = when(transformer.get()) {
+            "none", null -> NoTransformMinecraftTransformer(project, this)
+            "fabric" -> FabricMinecraftTransformer(project, this)
+            else -> throw IllegalArgumentException("Unknown transformer: ${transformer.get()}")
+        }
+
+        modRemapper.remap()
+        minecraftTransformer.applyRunConfigs()
+    }
+
+    private lateinit var extractDependencies: MutableMap<Dependency, Extract>
+
+    private fun addMcLibraries() {
+        extractDependencies = mutableMapOf()
+        for (library in minecraftDownloader.metadata.get().libraries) {
+            project.logger.debug("Added dependency ${library.name}")
+            if (library.rules.all { it.testRule() }) {
+                if (library.url != null || library.downloads?.artifact != null) {
+                    val dep = project.dependencies.create(library.name)
+                    mcLibraries.dependencies.add(dep)
+                    library.extract?.let { extractDependencies[dep] = it }
+                }
+                val native = library.natives[OSUtils.oSId]
+                if (native != null) {
+                    project.logger.debug("Added native dependency ${library.name}:$native")
+                    val nativeDep = project.dependencies.create("${library.name}:$native")
+                    mcLibraries.dependencies.add(nativeDep)
+                    library.extract?.let { extractDependencies[nativeDep] = it }
+                }
             }
         }
     }
 
-    fun findTransformer(): AbstractMinecraftTransformer {
-        for (entry in transformers.entries) {
-            if (entry.key(project)) {
-                return entry.value(project, this)
-            }
+    private val minecraftClientMapped = mutableMapOf<String, Path>()
+    private val minecraftServerMapped = mutableMapOf<String, Path>()
+//    private val minecraftCombinedMapped = mutableMapOf<String, Path>()
+
+    fun getMinecraftClientWithMapping(namespace: String): Path {
+        return minecraftClientMapped.computeIfAbsent(namespace) {
+            mcRemapper.provide(minecraftTransformer.transformClient(minecraftDownloader.minecraftClient.get()), targetNamespace.get())
         }
-        throw IllegalStateException("No transformer found for project $project")
+    }
+
+    fun getMinecraftServerWithMapping(namespace: String): Path {
+        return minecraftServerMapped.computeIfAbsent(namespace) {
+            mcRemapper.provide(minecraftTransformer.transformServer(minecraftDownloader.minecraftServer.get()), targetNamespace.get())
+        }
+    }
+
+    fun getMinecraftCombinedWithMapping(namespace: String): Path {
+        return minecraftClientMapped.computeIfAbsent(namespace) {
+            mcRemapper.provide(minecraftTransformer.transformCombined(minecraftDownloader.minecraftCombined.get()), targetNamespace.get())
+        }
     }
 
     override fun getArtifact(info: ArtifactIdentifier): Artifact {
-        return try {
-                StreamableArtifact.ofFile(
-                    info, ArtifactType.BINARY, getTransformer(project).transform(info, getMinecraftDownloader(project).getMinecraft(info).toFile())
-                )
-        } catch (ignored: IllegalArgumentException) {
-            Artifact.none()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            throw RuntimeException("Failed to get artifact $info", e)
+
+        if (info.group != Constants.MINECRAFT_GROUP) {
+            return Artifact.none()
         }
+
+        if (info.name != "minecraft") {
+            return Artifact.none()
+        }
+
+        return if (info.extension != "jar") {
+                Artifact.none()
+            } else {
+                when (info.classifier) {
+                    "client" -> StreamableArtifact.ofFile(
+                        info,
+                        ArtifactType.BINARY,
+                        getMinecraftClientWithMapping(targetNamespace.get()).toFile()
+                    )
+
+                    "server" -> StreamableArtifact.ofFile(
+                        info,
+                        ArtifactType.BINARY,
+                        getMinecraftServerWithMapping(targetNamespace.get()).toFile()
+                    )
+
+                    null -> StreamableArtifact.ofFile(
+                        info,
+                        ArtifactType.BINARY,
+                        getMinecraftCombinedWithMapping(targetNamespace.get()).toFile()
+                    )
+
+                    else -> throw IllegalArgumentException("Unknown classifier ${info.classifier}")
+                }
+            }
     }
 
-    fun provideRunClientTask(overrides: (JavaExec) -> Unit) {
-        val mcD = getMinecraftDownloader(project)
 
-        val nativeDir = mcD.clientWorkingDir.resolve("natives")
+    fun provideRunClientTask(overrides: (JavaExec) -> Unit) {
+        val nativeDir = clientWorkingDirectory.get().resolve("natives")
         if (nativeDir.exists()) {
             nativeDir.deleteRecursively()
         }
         val preRun = project.tasks.create("preRunClient", consumerApply {
             doLast {
                 nativeDir.mkdirs()
-                mcD.extractDependencies.forEach { (dep, extract) ->
-                    mcD.extract(dep, extract, nativeDir.toPath())
+                extractDependencies.forEach { (dep, extract) ->
+                    minecraftDownloader.extract(dep, extract, nativeDir.toPath())
                 }
             }
         })
 
         //test if betacraft has our version on file
-        val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${mcD.versionData.id}.info").toURL().openConnection() as HttpURLConnection
+        val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${minecraftDownloader.metadata.get().id}.info")
+            .toURL()
+            .openConnection() as HttpURLConnection
         url.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
         url.requestMethod = "GET"
         url.connect()
@@ -176,18 +245,24 @@ class MinecraftProvider private constructor(val project: Project) : ArtifactProv
         project.tasks.create("runClient", JavaExec::class.java, consumerApply {
             group = "Unimined"
             description = "Runs Minecraft Client"
-            mainClass.set(UniminedPlugin.getOptions(project).::overrideMainClassClient.getOrElse(mcD.versionData.mainClass))
-            workingDir = mcD.clientWorkingDir
+            mainClass.set(overrideMainClassClient.getOrElse(minecraftDownloader.metadata.get().mainClass))
+            workingDir = clientWorkingDirectory.get()
             workingDir.mkdirs()
 
             classpath = sourceSets.findByName("client")?.runtimeClasspath
                 ?: sourceSets.getByName("main").runtimeClasspath
 
-            jvmArgs = mcD.versionData.getJVMArgs(workingDir.resolve("libraries").toPath(), nativeDir.toPath()) + betacraftArgs
+            jvmArgs = minecraftDownloader.metadata.get()
+                .getJVMArgs(workingDir.resolve("libraries").toPath(), nativeDir.toPath()) + betacraftArgs
 
 
-            val assetsDir = mcD.versionData.assetIndex?.let { AssetsDownloader.downloadAssets(project, it) }
-            args = mcD.versionData.getGameArgs(
+            val assetsDir = minecraftDownloader.metadata.get().assetIndex?.let {
+                assetsDownloader.downloadAssets(
+                    project,
+                    it
+                )
+            }
+            args = minecraftDownloader.metadata.get().getGameArgs(
                 "Dev",
                 workingDir.toPath(),
                 assetsDir ?: workingDir.resolve("assets").toPath()
@@ -198,19 +273,18 @@ class MinecraftProvider private constructor(val project: Project) : ArtifactProv
             dependsOn.add(preRun)
 
             doFirst {
-                if (!JavaVersion.current().equals(mcD.versionData.javaVersion)) {
-                    project.logger.error("Java version is ${JavaVersion.current()}, expected ${mcD.versionData.javaVersion}, Minecraft may not launch properly")
+                if (!org.gradle.api.JavaVersion.current().equals(minecraftDownloader.metadata.get().javaVersion)) {
+                    project.logger.error("Java version is ${org.gradle.api.JavaVersion.current()}, expected ${minecraftDownloader.metadata.get().javaVersion}, Minecraft may not launch properly")
                 }
             }
         })
     }
 
     fun provideRunServerTask(overrides: (JavaExec) -> Unit) {
-        val mcD = getMinecraftDownloader(project)
         project.tasks.create("runServer", JavaExec::class.java, consumerApply {
             group = "Unimined"
             description = "Runs Minecraft Server"
-            mainClass.set(UniminedPlugin.getOptions(project).overrideMainClassServer.getOrElse(mcD.versionData.mainClass)) // TODO: get from meta-inf
+            mainClass.set(overrideMainClassServer.getOrElse(minecraftDownloader.metadata.get().mainClass)) // TODO: get from meta-inf
             workingDir = project.projectDir.resolve("run").resolve("server")
             workingDir.mkdirs()
 

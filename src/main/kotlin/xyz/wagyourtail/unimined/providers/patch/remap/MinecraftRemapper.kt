@@ -20,21 +20,23 @@ import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
 import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.nio.file.Path
 import java.util.zip.ZipInputStream
 import kotlin.io.path.exists
+import kotlin.io.path.extension
+import kotlin.io.path.nameWithoutExtension
 
 @Suppress("MemberVisibilityCanBePrivate")
 class MinecraftRemapper(
-    project: Project,
-    provider: MinecraftProvider,
-) : AbstractMinecraftTransformer(project, provider) {
+    val project: Project,
+    val provider: MinecraftProvider,
+) {
 
-    val mappings: Configuration = project.configurations.getByName(Constants.MAPPINGS_PROVIDER)
+    //TODO: make this configurable
+    val remapFrom = "obf"
+    val fallbackTarget = "intermediary"
 
-    //TODO: add support for auto-detecting and changing for other mapping formats & user overrides
-    val remapFrom: String = "obf"
-    val fallbackRemapTo: String = "intermediary"
-    val remapTo: String = "named"
+    val mappings: Configuration = project.configurations.maybeCreate(Constants.MAPPINGS_PROVIDER)
 
     lateinit var mappingTree: MemoryMappingTree
 
@@ -73,6 +75,7 @@ class MinecraftRemapper(
 
     fun getMappingProvider(
         srcName: String,
+        fallbackTarget: String,
         targetName: String,
         remapLocalVariables: Boolean = true
     ): (MappingAcceptor) -> Unit {
@@ -84,7 +87,7 @@ class MinecraftRemapper(
         }
         return { acceptor: MappingAcceptor ->
             val fromId = mappingTree.getNamespaceId(srcName)
-            var fallbackId = mappingTree.getNamespaceId(fallbackRemapTo)
+            var fallbackId = mappingTree.getNamespaceId(fallbackTarget)
             val toId = mappingTree.getNamespaceId(targetName)
 
             if (toId == MappingTreeView.NULL_NAMESPACE_ID) {
@@ -140,24 +143,21 @@ class MinecraftRemapper(
         }
     }
 
-    val mappingsDependecies = (mappings.dependencies as Set<Dependency>).sortedBy { "${it.name}-${it.version}" }
-    val combinedNames = mappingsDependecies.joinToString("+") { it.name }
-    val combinedVers = mappingsDependecies.joinToString("+") { it.version!! }
 
-    override fun transform(artifact: ArtifactIdentifier, file: File): File {
-        val parent = file.parentFile.toPath()
-        val target = parent.resolve("${combinedNames}-${combinedVers}")
-            .resolve("${file.nameWithoutExtension}-mapped-${combinedNames}-${combinedVers}.${file.extension}")
+    fun provide(file: Path, remapTo: String, remapFrom: String = this.remapFrom): Path {
 
-        project.tasks.named("jar", Jar::class.java) {
-            it.archiveClassifier.set("mapped-${combinedNames}-${combinedVers}")
-        }
+        val mappingsDependecies = (mappings.dependencies as Set<Dependency>).sortedBy { "${it.name}-${it.version}" }
+        val combinedNames = mappingsDependecies.joinToString("+") { it.name + "-" + it.version }
+
+        val parent = file.parent
+        val target = parent.resolve(combinedNames)
+            .resolve("${file.nameWithoutExtension}-mapped-${combinedNames}-${remapTo}.${file.extension}")
 
         if (target.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-            return target.toFile()
+            return target
         }
 
-        val remapper = TinyRemapper.newRemapper().withMappings(getMappingProvider(remapFrom, remapTo))
+        val remapper = TinyRemapper.newRemapper().withMappings(getMappingProvider(remapFrom, fallbackTarget, remapTo))
             .renameInvalidLocals(true)
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())
@@ -168,11 +168,11 @@ class MinecraftRemapper(
 
 
         OutputConsumerPath.Builder(target).build().use {
-            it.addNonClassFiles(file.toPath(), NonClassCopyMode.FIX_META_INF, null)
-            remapper.readInputs(file.toPath())
+            it.addNonClassFiles(file, NonClassCopyMode.FIX_META_INF, null)
+            remapper.readInputs(file)
             remapper.apply(it)
         }
         remapper.finish()
-        return target.toFile()
+        return target
     }
 }

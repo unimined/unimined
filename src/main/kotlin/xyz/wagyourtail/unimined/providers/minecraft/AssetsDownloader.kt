@@ -3,7 +3,6 @@ package xyz.wagyourtail.unimined.providers.minecraft
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.UniminedPlugin
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.version.AssetIndex
 import xyz.wagyourtail.unimined.testSha1
@@ -14,13 +13,13 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import kotlin.io.path.inputStream
 
-object AssetsDownloader {
+class AssetsDownloader(val project: Project, val parent: MinecraftProvider) {
 
-    private const val ASSET_BASE_URL = "https://resources.download.minecraft.net/"
+    private val ASSET_BASE_URL = "https://resources.download.minecraft.net/"
 
     fun downloadAssets(project: Project, assets: AssetIndex): Path {
 
-        val dir = UniminedPlugin.getGlobalCache(project).resolve("assets")
+        val dir = parent.parent.getGlobalCache().resolve("assets")
         val index = dir.resolve("indexes").resolve("${assets.id}.json")
 
         index.parent.maybeCreate()

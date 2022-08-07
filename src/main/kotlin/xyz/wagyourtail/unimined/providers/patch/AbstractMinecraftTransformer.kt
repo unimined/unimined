@@ -1,22 +1,23 @@
 package xyz.wagyourtail.unimined.providers.patch
 
-import net.minecraftforge.artifactural.api.artifact.ArtifactIdentifier
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
-import java.io.File
+import java.nio.file.Path
 
 abstract class AbstractMinecraftTransformer protected constructor(
     protected val project: Project,
-    protected val provider: MinecraftProvider
+    val provider: MinecraftProvider
 ) {
 
-    abstract fun transform(artifact: ArtifactIdentifier, file: File): File
+    abstract fun transformClient(baseMinecraft: Path): Path
+    abstract fun transformServer(baseMinecraft: Path): Path
+    abstract fun transformCombined(baseMinecraft: Path): Path
 
     fun applyRunConfigs() {
-        if (MinecraftProvider.getMinecraftDownloader(project).client) {
+        if (provider.minecraftDownloader.client) {
             applyClientRunConfig()
         }
-        if (MinecraftProvider.getMinecraftDownloader(project).server) {
+        if (provider.minecraftDownloader.server) {
             applyServerRunConfig()
         }
     }

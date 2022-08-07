@@ -1,29 +1,20 @@
 package xyz.wagyourtail.unimined.providers.patch.fabric
 
 import com.google.gson.JsonParser
-import net.minecraftforge.artifactural.api.artifact.ArtifactIdentifier
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.UniminedPlugin
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.remap.MinecraftRemapper
-import xyz.wagyourtail.unimined.providers.patch.remap.ModRemapper
-import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
+import java.nio.file.Path
 
 class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(
     project,
     provider
 ) {
-
-    private val remapper = MinecraftRemapper(project, provider)
-    // from int (fallback obf) to named, this is so pre-1.13 forge mods that target obf remap properly (looking at you baritone)
-    val modRemapper = ModRemapper(project, remapper, remapper.fallbackRemapTo, remapper.remapFrom, remapper.remapTo)
-
     val fabric: Configuration = project.configurations.getByName(Constants.FABRIC_PROVIDER)
 
     var clientMainClass: String? = null
@@ -34,6 +25,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         project.repositories.maven {
             it.url = URI.create("https://maven.fabricmc.net")
         }
+        init()
     }
 
     override fun init() {
@@ -43,8 +35,23 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         main.compileClasspath += fabric
         main.runtimeClasspath += fabric
 
-        val client = !UniminedPlugin.getOptions(project).disableCombined.get() || sourceSets.findByName("client") != null
-        val server = !UniminedPlugin.getOptions(project).disableCombined.get() || sourceSets.findByName("server") != null
+        if (provider.minecraftDownloader.client) {
+            sourceSets.findByName("client")?.let {
+                it.compileClasspath += fabric
+                it.runtimeClasspath += fabric
+            }
+        }
+
+        if (provider.minecraftDownloader.server) {
+            sourceSets.findByName("server")?.let {
+                it.compileClasspath += fabric
+                it.runtimeClasspath += fabric
+            }
+        }
+
+
+        val client = !provider.disableCombined.get() || sourceSets.findByName("client") != null
+        val server = !provider.disableCombined.get() || sourceSets.findByName("server") != null
 
         val dependencies = fabric.dependencies
 
@@ -125,9 +132,18 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         }
     }
 
-    override fun transform(artifact: ArtifactIdentifier, file: File): File {
-        return remapper.transform(artifact, file)
+    override fun transformClient(baseMinecraft: Path): Path {
+        return baseMinecraft
     }
+
+    override fun transformServer(baseMinecraft: Path): Path {
+        return baseMinecraft
+    }
+
+    override fun transformCombined(baseMinecraft: Path): Path {
+        return baseMinecraft
+    }
+
 
     override fun applyClientRunConfig() {
         provider.provideRunClientTask { task ->
