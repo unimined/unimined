@@ -40,7 +40,7 @@ object OSUtils {
 
 fun testSha1(size: Long, sha1: String, path: Path): Boolean {
     if (path.exists()) {
-        if (path.fileSize() == size) {
+        if (path.fileSize() == size || size == -1L) {
             if (sha1.isEmpty()) {
                 return true
             }

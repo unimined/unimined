@@ -9,10 +9,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.*
-import xyz.wagyourtail.unimined.providers.minecraft.version.Artifact
-import xyz.wagyourtail.unimined.providers.minecraft.version.Download
-import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
-import xyz.wagyourtail.unimined.providers.minecraft.version.parseVersionData
+import xyz.wagyourtail.unimined.providers.minecraft.version.*
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URI
@@ -24,17 +21,25 @@ import java.nio.file.StandardOpenOption
 import java.time.Duration
 import java.util.*
 import java.util.zip.ZipInputStream
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.exists
+import kotlin.io.path.inputStream
 
-object MinecraftDownloader {
+class MinecraftDownloader(val provider: MinecraftProvider) {
 
+    private val project: Project = provider.project
     private val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
 
-    fun downloadMinecraft(project: Project) {
-        project.logger.info("Downloading Minecraft...")
-        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+    val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+    val client = !UniminedPlugin.getOptions(project).disableCombined.get() || sourceSets.findByName("client") != null
+    val server = !UniminedPlugin.getOptions(project).disableCombined.get() || sourceSets.findByName("server") != null
 
-        val client = !UniminedPlugin.getOptions(project).disableCombined.get() || sourceSets.findByName("client") != null
-        val server = !UniminedPlugin.getOptions(project).disableCombined.get() || sourceSets.findByName("server") != null
+    lateinit var versionData: VersionData
+    val extractDependencies = mutableMapOf<Dependency, Extract>()
+    val clientWorkingDir = project.projectDir.resolve("run").resolve("client")
+
+    fun downloadMinecraft() {
+        project.logger.info("Downloading Minecraft...")
 
         val dependencies = MinecraftProvider.getMinecraftProvider(project).combined.dependencies
 
@@ -58,22 +63,31 @@ object MinecraftDownloader {
         }
 
         if (project.gradle.startParameter.isRefreshDependencies) {
-            TODO()
+            dependency.version?.let { clientJarDownloadPath(it).deleteIfExists() }
+            dependency.version?.let { serverJarDownloadPath(it).deleteIfExists() }
+            dependency.version?.let { combinedJarDownloadPath(it).deleteIfExists() }
+            dependency.version?.let { combinedPomPath(it).deleteIfExists() }
         }
 
         // get mc version metadata
-        val metadata = getMetadata(project)
+        val metadata = getMetadata()
         val version = getVersion(dependency.version!!, metadata)
-        val versionData = parseVersionData(getVersionData(version))
+        versionData = parseVersionData(
+            if (version == null) {
+                readVersionFile(dependency.version!!)
+            } else {
+                getVersionData(version)
+            }
+        )
 
         // get mc version jars
         val clientJar = versionData.downloads["client"]
         val serverJar = versionData.downloads["server"]
 
         // get download files
-        val clientJarDownloadPath = clientJarDownloadPath(project, versionData.id)
-        val serverJarDownloadPath = serverJarDownloadPath(project, versionData.id)
-        val combinedPomPath = combinedPomPath(project, versionData.id)
+        val clientJarDownloadPath = clientJarDownloadPath(versionData.id)
+        val serverJarDownloadPath = serverJarDownloadPath(versionData.id)
+        val combinedPomPath = combinedPomPath(versionData.id)
 
         clientJarDownloadPath.parent.maybeCreate()
         serverJarDownloadPath.parent.maybeCreate()
@@ -107,102 +121,6 @@ object MinecraftDownloader {
 
         project.repositories.maven {
             it.url = URI.create(Constants.MINECRAFT_MAVEN)
-        }
-
-        // populate mc dependency configuration
-        if (client) {
-            val clientWorkingDir = project.projectDir.resolve("run").resolve("client")
-
-            val extractDependencies = mutableMapOf<Dependency, Extract>()
-
-            for (library in versionData.libraries) {
-                project.logger.debug("Added dependency ${library.name}")
-                if (library.rules.all { it.testRule() }) {
-                    if (library.url != null || library.downloads?.artifact != null) {
-                        val dep = project.dependencies.create(library.name)
-                        MinecraftProvider.getMinecraftProvider(project).mcLibraries.dependencies.add(dep)
-                        library.extract?.let { extractDependencies[dep] = it }
-                    }
-                    val native = library.natives[OSUtils.oSId]
-                    if (native != null) {
-                        project.logger.debug("Added native dependency ${library.name}:$native")
-                        val nativeDep = project.dependencies.create("${library.name}:$native")
-                        MinecraftProvider.getMinecraftProvider(project).mcLibraries.dependencies.add(nativeDep)
-                        library.extract?.let { extractDependencies[nativeDep] = it }
-                    }
-                }
-            }
-
-            val nativeDir = clientWorkingDir.resolve("natives")
-            if (nativeDir.exists()) {
-                nativeDir.deleteRecursively()
-            }
-            val preRun = project.tasks.create("preRunClient", consumerApply {
-                doLast {
-                    nativeDir.mkdirs()
-                    extractDependencies.forEach { (dep, extract) ->
-                        extract(project, dep, extract, nativeDir.toPath())
-                    }
-                }
-            })
-
-            //test if betacraft has our version on file
-            val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${versionData.id}.info").toURL().openConnection() as HttpURLConnection
-            url.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
-            url.requestMethod = "GET"
-            url.connect()
-            val properties = Properties()
-            val betacraftArgs = if (url.responseCode == 200) {
-                url.inputStream.use { properties.load(it) }
-                properties.getProperty("proxy-args")?.split(" ") ?: listOf()
-            } else {
-                listOf()
-            }
-
-            project.tasks.create("runClient", JavaExec::class.java, consumerApply {
-                group = "Unimined"
-                description = "Runs Minecraft Client"
-                mainClass.set(versionData.mainClass)
-                workingDir = clientWorkingDir
-                workingDir.mkdirs()
-
-                classpath = sourceSets.findByName("client")?.runtimeClasspath
-                            ?: sourceSets.getByName("main").runtimeClasspath
-
-                jvmArgs = versionData.getJVMArgs(workingDir.resolve("libraries").toPath(), nativeDir.toPath()) + betacraftArgs
-
-
-                val assetsDir = versionData.assetIndex?.let { AssetsDownloader.downloadAssets(project, it) }
-                args = versionData.getGameArgs(
-                    "Dev",
-                    workingDir.toPath(),
-                    assetsDir ?: workingDir.resolve("assets").toPath()
-                )
-
-                dependsOn.add(preRun)
-
-                doFirst {
-                    if (!JavaVersion.current().equals(versionData.javaVersion)) {
-                        project.logger.error("Java version is ${JavaVersion.current()}, expected ${versionData.javaVersion}, Minecraft may not launch properly")
-                    }
-                }
-            })
-        }
-
-        // add runServer task
-        if (server) {
-            project.tasks.create("runServer", JavaExec::class.java, consumerApply {
-                group = "Unimined"
-                description = "Runs Minecraft Server"
-                mainClass.set(versionData.mainClass)
-                workingDir = project.projectDir.resolve("run").resolve("server")
-                workingDir.mkdirs()
-
-                classpath = sourceSets.findByName("server")?.runtimeClasspath
-                            ?: sourceSets.getByName("main").runtimeClasspath
-
-                args = listOf("--nogui")
-            })
         }
 
         // add minecraft client/server deps
@@ -243,7 +161,7 @@ object MinecraftDownloader {
         }
     }
 
-    fun getMinecraft(project: Project, dependency: ArtifactIdentifier): Path {
+    fun getMinecraft(dependency: ArtifactIdentifier): Path {
 
         if (dependency.group != Constants.MINECRAFT_GROUP) {
             throw IllegalArgumentException("Dependency $dependency is not Minecraft")
@@ -254,14 +172,14 @@ object MinecraftDownloader {
         }
 
         if (dependency.extension == "pom") {
-            return combinedPomPath(project, dependency.version)
+            return combinedPomPath(dependency.version)
         } else if (dependency.extension == "jar") {
             //TODO: combine jars
             // v1.2.5+ are combined anyway so...
             return if (dependency.classifier == null || dependency.classifier == "client") {
-                clientJarDownloadPath(project, dependency.version)
+                clientJarDownloadPath(dependency.version)
             } else if (dependency.classifier == "server") {
-                serverJarDownloadPath(project, dependency.version)
+                serverJarDownloadPath(dependency.version)
             } else {
                 throw IllegalArgumentException("Unknown classifier ${dependency.classifier}")
             }
@@ -269,10 +187,10 @@ object MinecraftDownloader {
         throw IllegalStateException("Unknown dependency extension ${dependency.extension}")
     }
 
-    private fun getMetadata(project: Project): JsonObject {
+    private fun getMetadata(): JsonObject? {
 
         if (project.gradle.startParameter.isOffline) {
-            TODO()
+            return null
         }
 
         val urlConnection = METADATA_URL.toURL().openConnection() as HttpURLConnection
@@ -284,14 +202,20 @@ object MinecraftDownloader {
             throw Exception("Failed to get metadata, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
         }
 
-        return urlConnection.inputStream.use {
+        val json = urlConnection.inputStream.use {
             InputStreamReader(it).use { reader ->
                 JsonParser.parseReader(reader).asJsonObject
             }
         }
+
+        return json
     }
 
-    private fun getVersion(versionId: String, metadata: JsonObject): JsonObject {
+    private fun getVersion(versionId: String, metadata: JsonObject?): JsonObject? {
+        if (metadata == null) {
+            return null
+        }
+
         val versions = metadata.getAsJsonArray("versions") ?: throw Exception("Failed to get metadata, no versions")
 
         for (version in versions) {
@@ -305,20 +229,50 @@ object MinecraftDownloader {
     }
 
     private fun getVersionData(version: JsonObject): JsonObject {
-        val url = version.get("url").asString
-        val urlConnection = URI.create(url).toURL().openConnection() as HttpURLConnection
-        urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
-        urlConnection.requestMethod = "GET"
-        urlConnection.connect()
+        val downloadPath = versionJsonDownloadPath(version.get("id").asString)
 
-        if (urlConnection.responseCode != 200) {
-            throw Exception("Failed to get version data, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
+        if (project.gradle.startParameter.isRefreshDependencies) {
+            downloadPath.deleteIfExists()
         }
 
-        return urlConnection.inputStream.use {
-            InputStreamReader(it).use { reader ->
-                JsonParser.parseReader(reader).asJsonObject
+        if (!downloadPath.exists() || !testSha1(-1, version.get("sha1").asString, downloadPath)) {
+
+            if (project.gradle.startParameter.isOffline) {
+                throw Exception("Failed to get version, offline mode")
             }
+
+            val url = version.get("url").asString
+            val urlConnection = URI.create(url).toURL().openConnection() as HttpURLConnection
+            urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+            urlConnection.requestMethod = "GET"
+            urlConnection.connect()
+
+            if (urlConnection.responseCode != 200) {
+                throw Exception("Failed to get version data, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
+            }
+
+            urlConnection.inputStream.use {
+                Files.write(downloadPath, it.readBytes())
+            }
+        }
+        if (!testSha1(-1, version.get("sha1").asString, downloadPath)) {
+            throw Exception("Failed to get version, checksum mismatch")
+        }
+        return readVersionFile(version.get("id").asString)
+    }
+
+    private fun readVersionFile(versionId: String): JsonObject {
+        val downloadPath = versionJsonDownloadPath(versionId)
+
+        if (!downloadPath.exists()) {
+            if (project.gradle.startParameter.isOffline) {
+                throw Exception("Failed to get version, offline mode")
+            }
+            throw Exception("Failed to get version, file not found.")
+        }
+
+        return InputStreamReader(downloadPath.inputStream()).use { reader ->
+            JsonParser.parseReader(reader).asJsonObject
         }
     }
 
@@ -358,7 +312,7 @@ object MinecraftDownloader {
         }
     }
 
-    private fun extract(project: Project, dependency: Dependency, extract: Extract, path: Path) {
+    fun extract(dependency: Dependency, extract: Extract, path: Path) {
         val resolved = MinecraftProvider.getMinecraftProvider(project).mcLibraries.resolvedConfiguration
         resolved.getFiles { it == dependency }.forEach { file ->
             ZipInputStream(file.inputStream()).use { stream ->
@@ -379,7 +333,7 @@ object MinecraftDownloader {
         }
     }
 
-    fun clientJarDownloadPath(project: Project, version: String): Path {
+    fun clientJarDownloadPath(version: String): Path {
         return UniminedPlugin.getGlobalCache(project)
             .resolve("net")
             .resolve("minecraft")
@@ -388,7 +342,7 @@ object MinecraftDownloader {
             .resolve("client.jar")
     }
 
-    fun serverJarDownloadPath(project: Project, version: String): Path {
+    fun serverJarDownloadPath(version: String): Path {
         return UniminedPlugin.getGlobalCache(project)
             .resolve("net")
             .resolve("minecraft")
@@ -397,7 +351,7 @@ object MinecraftDownloader {
             .resolve("server.jar")
     }
 
-    fun combinedPomPath(project: Project, version: String): Path {
+    fun combinedPomPath(version: String): Path {
         return UniminedPlugin.getGlobalCache(project)
             .resolve("net")
             .resolve("minecraft")
@@ -406,12 +360,21 @@ object MinecraftDownloader {
             .resolve("minecraft-$version.xml")
     }
 
-    fun combinedJarDownloadPath(project: Project, version: String): Path {
+    fun combinedJarDownloadPath(version: String): Path {
         return UniminedPlugin.getGlobalCache(project)
             .resolve("net")
             .resolve("minecraft")
             .resolve("minecraft")
             .resolve(version)
             .resolve("minecraft-$version.jar")
+    }
+
+    fun versionJsonDownloadPath(version: String): Path {
+        return UniminedPlugin.getGlobalCache(project)
+            .resolve("net")
+            .resolve("minecraft")
+            .resolve("minecraft")
+            .resolve(version)
+            .resolve("version.json")
     }
 }

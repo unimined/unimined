@@ -32,11 +32,10 @@ class UniminedPlugin : Plugin<Project> {
 //            "plugin" to "idea"
         ))
 
-        val ext = project.extensions.create("unimined", UniminedExtension::class.java)
+        project.extensions.create("unimined", UniminedExtension::class.java, project)
 
         // init mc provider
         val mcProvider = MinecraftProvider.getMinecraftProvider(project)
-        GradleRepositoryAdapter.add(project.repositories, "minecraft-transformer", getGlobalCache(project).toFile(), mcProvider.repo)
     }
 
 }
