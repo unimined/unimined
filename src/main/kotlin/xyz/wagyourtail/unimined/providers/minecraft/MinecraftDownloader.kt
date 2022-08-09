@@ -25,14 +25,12 @@ import kotlin.properties.Delegates
 class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
     private val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
 
-    private val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
     var client by Delegates.notNull<Boolean>()
     var server by Delegates.notNull<Boolean>()
 
+    val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
     init {
-        project.afterEvaluate {
-            afterEvaluate()
-        }
+        parent.parent.events.register(::afterEvaluate)
     }
 
     private fun afterEvaluate() {

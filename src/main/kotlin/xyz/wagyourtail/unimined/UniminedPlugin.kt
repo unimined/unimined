@@ -9,6 +9,9 @@ class UniminedPlugin : Plugin<Project> {
         project.apply(mapOf(
             "plugin" to "java"
         ))
+        project.apply(mapOf(
+            "plugin" to "idea"
+        ))
 
         val ext = project.extensions.create("unimined", UniminedExtension::class.java, project)
         project.extensions.create("minecraft", MinecraftProvider::class.java, project, ext)

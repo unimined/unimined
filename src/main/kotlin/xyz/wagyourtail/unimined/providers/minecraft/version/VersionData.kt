@@ -144,7 +144,7 @@ data class VersionData(
         username: String?,
         gameDir: Path,
         assets: Path,
-    ): List<String> {
+    ): MutableList<String> {
         val args = getArgsRecursive()
         return args.mapNotNull { e: String ->
             if (e == "--uuid" || e == "\${auth_uuid}") null
@@ -160,7 +160,7 @@ data class VersionData(
                 .replace("\${user_type}", "msa")
                 .replace("\${version_type}", type!!)
                 .replace("\${user_properties}", "")
-        }
+        }.toMutableList()
     }
 
 }

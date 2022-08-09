@@ -1,6 +1,8 @@
 package xyz.wagyourtail.unimined.providers.patch
 
 import org.gradle.api.Project
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import java.nio.file.Path
 
@@ -9,26 +11,32 @@ abstract class AbstractMinecraftTransformer protected constructor(
     val provider: MinecraftProvider
 ) {
 
+    init {
+        provider.parent.events.register(::sourceSets)
+        provider.parent.events.register(::applyRunConfigs)
+    }
+
     abstract fun transformClient(baseMinecraft: Path): Path
     abstract fun transformServer(baseMinecraft: Path): Path
     abstract fun transformCombined(baseMinecraft: Path): Path
 
-    fun applyRunConfigs() {
+    private fun applyRunConfigs(tasks: TaskContainer) {
         if (provider.minecraftDownloader.client) {
-            applyClientRunConfig()
+            applyClientRunConfig(tasks)
         }
         if (provider.minecraftDownloader.server) {
-            applyServerRunConfig()
+            applyServerRunConfig(tasks)
         }
     }
 
-    protected open fun applyClientRunConfig() {
-        provider.provideRunClientTask {  }
+    protected open fun applyClientRunConfig(tasks: TaskContainer) {
+        provider.provideRunClientTask(tasks) {  }
     }
 
-    protected open fun applyServerRunConfig() {
-        provider.provideRunServerTask {  }
+    protected open fun applyServerRunConfig(tasks: TaskContainer) {
+        provider.provideRunServerTask(tasks) {  }
     }
 
-    open fun init() = Unit
+    open fun afterEvaluate() {}
+    open fun sourceSets(sourceSets: SourceSetContainer) {}
 }

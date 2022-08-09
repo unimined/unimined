@@ -4,10 +4,10 @@ import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
-import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
 import java.nio.file.Path
@@ -29,31 +29,10 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         project.repositories.maven {
             it.url = URI.create("https://maven.fabricmc.net")
         }
-        init()
     }
 
-    override fun init() {
+    override fun afterEvaluate() {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-        val main = sourceSets.getByName("main")
-
-        main.compileClasspath += fabric
-        main.runtimeClasspath += fabric
-
-        if (provider.minecraftDownloader.client) {
-            sourceSets.findByName("client")?.let {
-                it.compileClasspath += fabric
-                it.runtimeClasspath += fabric
-            }
-        }
-
-        if (provider.minecraftDownloader.server) {
-            sourceSets.findByName("server")?.let {
-                it.compileClasspath += fabric
-                it.runtimeClasspath += fabric
-            }
-        }
-
-
         val client = !provider.disableCombined.get() || sourceSets.findByName("client") != null
         val server = !provider.disableCombined.get() || sourceSets.findByName("server") != null
 
@@ -136,6 +115,28 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         }
     }
 
+    override fun sourceSets(sourceSets: SourceSetContainer) {
+        val main = sourceSets.getByName("main")
+
+        main.compileClasspath += fabric
+        main.runtimeClasspath += fabric
+
+        if (provider.minecraftDownloader.client) {
+            sourceSets.findByName("client")?.let {
+                it.compileClasspath += fabric
+                it.runtimeClasspath += fabric
+            }
+        }
+
+        if (provider.minecraftDownloader.server) {
+            sourceSets.findByName("server")?.let {
+                it.compileClasspath += fabric
+                it.runtimeClasspath += fabric
+            }
+        }
+
+    }
+
     override fun transformClient(baseMinecraft: Path): Path {
         return baseMinecraft
     }
@@ -156,17 +157,17 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     }
 
 
-    override fun applyClientRunConfig() {
-        provider.provideRunClientTask { task ->
+    override fun applyClientRunConfig(tasks: TaskContainer) {
+        provider.provideRunClientTask(tasks) { task ->
             clientMainClass?.let { task.mainClass.set(it) }
             task.jvmArgs = listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath()}") + (task.jvmArgs ?: emptyList())
-         }
+        }
     }
 
-    override fun applyServerRunConfig() {
-        provider.provideRunServerTask { task ->
-            serverMainClass?.let { task.mainClass.set(it) }
-            task.jvmArgs = listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath()}") + (task.jvmArgs ?: emptyList())
+    override fun applyServerRunConfig(tasks: TaskContainer) {
+        provider.provideRunServerTask(tasks) { task ->
+            serverMainClass?.let { task.mainClass = it }
+            task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath()}")
         }
     }
 }

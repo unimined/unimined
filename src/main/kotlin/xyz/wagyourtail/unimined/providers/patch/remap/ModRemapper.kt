@@ -22,6 +22,7 @@ import kotlin.io.path.exists
 import kotlin.io.path.extension
 import kotlin.io.path.name
 
+@Suppress("INACCESSIBLE_TYPE")
 class ModRemapper(
     val project: Project,
     val mcRemapper: MinecraftRemapper
@@ -77,29 +78,29 @@ class ModRemapper(
                 ))
             })
 
-    val internalModRemapperConfiguration = project.configurations.maybeCreate("internalModRemapper").apply {
+    val internalModRemapperConfiguration: Configuration = project.configurations.maybeCreate("internalModRemapper").apply {
         exclude(mapOf(
             "group" to "net.fabricmc",
             "module" to "fabric-loader"
         ))
     }
-
-    private val sourceSet: SourceSetContainer = project.extensions.getByType(SourceSetContainer::class.java)
-
     init {
-        sourceSet.findByName("main")?.apply {
-            compileClasspath += modCompileOnly + modImplementation
-            runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-        }
-        sourceSet.findByName("client")?.apply {
-            compileClasspath += modCompileOnly + modImplementation
-            runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-        }
-        sourceSet.findByName("server")?.apply {
-            compileClasspath += modCompileOnly + modImplementation
-            runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-        }
+        mcRemapper.provider.parent.events.register(::sourceSets)
+    }
 
+    private fun sourceSets(sourceSets: SourceSetContainer) {
+        sourceSets.findByName("main")?.apply {
+            compileClasspath += modCompileOnly + modImplementation
+            runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+        }
+        sourceSets.findByName("client")?.apply {
+            compileClasspath += modCompileOnly + modImplementation
+            runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+        }
+        sourceSets.findByName("server")?.apply {
+            compileClasspath += modCompileOnly + modImplementation
+            runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+        }
     }
 
     private fun registerConfiguration(configuration: Configuration): Configuration {
@@ -120,7 +121,7 @@ class ModRemapper(
             .build()
         val mc = mcRemapper.provider.getMinecraftCombinedWithMapping(mcRemapper.fallbackTarget)
         tinyRemapper.readClassPathAsync(mc)
-        project.logger.warn("Remapping mods using ${mc}")
+        project.logger.warn("Remapping mods using $mc")
         tinyRemapper.readClassPathAsync(*mcRemapper.provider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
         configurations.forEach {
             transform(it)
@@ -256,7 +257,7 @@ class ModRemapper(
                                     val newMethodDesc = method.getDstDesc(mappingsTo) ?: method.getDstDesc(fallbackTo)
                                     writer.write("${newClassName}\t${newMethodName}\t${newMethodDesc}\n")
                                 } else {
-                                    project.logger.warn("Method ${methodName}${methodDesc} not found in class ${className}")
+                                    project.logger.warn("Method ${methodName}${methodDesc} not found in class $className")
                                     writer.write("${newClassName}\t${methodName}\t${methodDesc}\n")
                                 }
                             }
@@ -269,7 +270,7 @@ class ModRemapper(
                                     val newFieldDesc = field.getDstDesc(mappingsTo) ?: field.getDstDesc(fallbackTo)
                                     writer.write("${newClassName}\t${newFieldName}\t${newFieldDesc}\n")
                                 } else {
-                                    project.logger.warn("Field ${fieldName}${fieldDesc} not found in class ${className}")
+                                    project.logger.warn("Field ${fieldName}${fieldDesc} not found in class $className")
                                     writer.write("${newClassName}\t${fieldName}\t${fieldDesc}\n")
                                 }
                             }
