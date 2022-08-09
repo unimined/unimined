@@ -34,7 +34,8 @@ class ModRemapper(
             .apply {
                 extendsFrom(project.configurations.getByName("compileOnly"))
                 exclude(mapOf(
-                    "module" to "net.fabricmc.fabric-loader"
+                    "group" to "net.fabricmc",
+                    "module" to "fabric-loader"
                 ))
             })
 
@@ -43,14 +44,16 @@ class ModRemapper(
             .apply {
                 extendsFrom(project.configurations.getByName("runtimeOnly"))
                 exclude(mapOf(
-                    "module" to "net.fabricmc.fabric-loader"
+                    "group" to "net.fabricmc",
+                    "module" to "fabric-loader"
                 ))
             })
 
     val localRuntime: Configuration = project.configurations.maybeCreate("localRuntime").apply {
         extendsFrom(project.configurations.getByName("runtimeOnly"))
         exclude(mapOf(
-            "module" to "net.fabricmc.fabric-loader"
+            "group" to "net.fabricmc",
+            "module" to "fabric-loader"
         ))
     }
 
@@ -59,7 +62,8 @@ class ModRemapper(
             .apply {
                 extendsFrom(project.configurations.getByName("localRuntime"))
                 exclude(mapOf(
-                    "module" to "net.fabricmc.fabric-loader"
+                    "group" to "net.fabricmc",
+                    "module" to "fabric-loader"
                 ))
             })
 
@@ -68,11 +72,17 @@ class ModRemapper(
             .apply {
                 extendsFrom(project.configurations.getByName("implementation"))
                 exclude(mapOf(
-                    "module" to "net.fabricmc.fabric-loader"
+                    "group" to "net.fabricmc",
+                    "module" to "fabric-loader"
                 ))
             })
 
-    val internalModRemapperConfiguration = project.configurations.maybeCreate("internalModRemapper")
+    val internalModRemapperConfiguration = project.configurations.maybeCreate("internalModRemapper").apply {
+        exclude(mapOf(
+            "group" to "net.fabricmc",
+            "module" to "fabric-loader"
+        ))
+    }
 
     private val sourceSet: SourceSetContainer = project.extensions.getByType(SourceSetContainer::class.java)
 
