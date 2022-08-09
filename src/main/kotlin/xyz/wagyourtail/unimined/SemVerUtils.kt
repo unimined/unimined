@@ -214,29 +214,18 @@ object SemVerUtils {
         }
     }
 
-    data class HyphenRange(val from: SemVer, val to: SemVer) : SemVerMatcher {
-        override fun matches(version: SemVer): Boolean {
-            return version >= from && version <= to
-        }
+    object HyphenRange {
 
-        companion object {
-            var hyphenRangePattern = Regex(
-                "^(\\d+|X)(\\.(\\d+|X))?(\\.(\\d+|X))?\\s*-\\s*(\\d+|X)(\\.(\\d+|X))?(\\.(\\d+|X))?$"
+        var hyphenRangePattern = Regex(
+            "^(\\d+|X)(\\.(\\d+|X))?(\\.(\\d+|X))?\\s*-\\s*(\\d+|X)(\\.(\\d+|X))?(\\.(\\d+|X))?$"
+        )
+
+        fun parse(range: String): SemVerMatcher {
+            val m = hyphenRangePattern.find(range) ?: throw IllegalArgumentException("Invalid range $range")
+            return AndRange(
+                PrefixedRange(">=", m.groups[1]?.value, m.groups[3]?.value, m.groups[5]?.value),
+                PrefixedRange("<", m.groups[7]?.value, m.groups[9]?.value, m.groups[11]?.value)
             )
-
-            fun parse(range: String): HyphenRange {
-                val m = hyphenRangePattern.find(range) ?: throw IllegalArgumentException("Invalid range $range")
-                val fromMajor = if (m.groups[1]?.value == "X") 0 else m.groups[1]?.value?.toInt() ?: throw IllegalArgumentException("Invalid range $range")
-                val fromMinor = if (m.groups[3]?.value == "X") 0 else m.groups[3]?.value?.toInt() ?: throw IllegalArgumentException("Invalid range $range")
-                val fromPatch = if (m.groups[5]?.value == "X") 0 else m.groups[5]?.value?.toInt() ?: throw IllegalArgumentException("Invalid range $range")
-                val toMajor = if (m.groups[6]?.value == "X") Int.MAX_VALUE else m.groups[6]?.value?.toInt() ?: throw IllegalArgumentException("Invalid range $range")
-                val toMinor = if (m.groups[8]?.value == "X") Int.MAX_VALUE else m.groups[8]?.value?.toInt() ?: throw IllegalArgumentException("Invalid range $range")
-                val toPatch = if (m.groups[10]?.value == "X") Int.MAX_VALUE else m.groups[10]?.value?.toInt() ?: throw IllegalArgumentException("Invalid range $range")
-                return HyphenRange(
-                    SemVer(fromMajor, fromMinor, fromPatch, null, null),
-                    SemVer(toMajor, toMinor, toPatch, null, null)
-                )
-            }
         }
     }
 
