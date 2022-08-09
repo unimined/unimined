@@ -1,7 +1,6 @@
 package xyz.wagyourtail.unimined
 
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.maybeCreate
 import java.nio.file.Path
 
 abstract class UniminedExtension(val project: Project) {

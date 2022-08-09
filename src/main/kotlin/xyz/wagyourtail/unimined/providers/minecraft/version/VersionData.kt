@@ -7,16 +7,14 @@ import org.gradle.api.JavaVersion
 import xyz.wagyourtail.unimined.OSUtils
 import xyz.wagyourtail.unimined.SemVerUtils
 import xyz.wagyourtail.unimined.consumerApply
-import java.net.HttpURLConnection
 import java.net.MalformedURLException
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
-import java.util.Properties
 
 
 /*
@@ -165,7 +163,7 @@ data class VersionData(
 
 }
 // 2010-07-08T22:00:00+00:00
-val dateTimeFormat = DateTimeFormatterBuilder()
+val dateTimeFormat: DateTimeFormatter = DateTimeFormatterBuilder()
     .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
     .appendZoneOrOffsetId()
     .toFormatter()

@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.providers.minecraft
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.Constants.ASSET_BASE_URL
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.version.AssetIndex
 import xyz.wagyourtail.unimined.testSha1
@@ -13,9 +14,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import kotlin.io.path.inputStream
 
-class AssetsDownloader(val project: Project, val parent: MinecraftProvider) {
-
-    private val ASSET_BASE_URL = "https://resources.download.minecraft.net/"
+class AssetsDownloader(val project: Project, private val parent: MinecraftProvider) {
 
     fun downloadAssets(project: Project, assets: AssetIndex): Path {
 

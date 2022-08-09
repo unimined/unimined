@@ -44,7 +44,8 @@ dependencies {
     // mappings
     implementation("net.fabricmc:mapping-io:0.3.0")
 
-
+    // jetbrains annotations
+    implementation("org.jetbrains:annotations-java5:23.0.0")
 }
 
 tasks.jar {
@@ -70,7 +71,7 @@ gradlePlugin {
 
 tasks.withType<JavaCompile> {
     val targetVersion = 8
-    if (JavaVersion.current().isJava9Compatible()) {
+    if (JavaVersion.current().isJava9Compatible) {
         options.release.set(targetVersion)
     }
 }

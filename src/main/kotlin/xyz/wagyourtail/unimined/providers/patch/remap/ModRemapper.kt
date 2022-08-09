@@ -13,6 +13,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.maybeCreate
 import java.io.*
 import java.nio.file.Files
@@ -78,6 +79,7 @@ class ModRemapper(
                 ))
             })
 
+    @ApiStatus.Internal
     val internalModRemapperConfiguration: Configuration = project.configurations.maybeCreate("internalModRemapper").apply {
         exclude(mapOf(
             "group" to "net.fabricmc",
@@ -86,6 +88,12 @@ class ModRemapper(
     }
     init {
         mcRemapper.provider.parent.events.register(::sourceSets)
+        project.repositories.flatDir { repo ->
+            repo.dir(modTransformFolder().toString())
+            repo.content {
+                it.includeGroupByRegex("remapped_*")
+            }
+        }
     }
 
     private fun sourceSets(sourceSets: SourceSetContainer) {
@@ -150,11 +158,14 @@ class ModRemapper(
 
     private fun postTransform(configuration: Configuration) {
         dependencyMap[configuration]?.forEach {
-            configuration.dependencies.add(
-                project.dependencies.create(
-                    project.files(getOutputs(it))
+
+            getOutputs(it).forEach { artifact ->
+                configuration.dependencies.add(
+                    project.dependencies.create(
+                        artifact
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -177,25 +188,30 @@ class ModRemapper(
         }
     }
 
-    private fun getOutputs(dependency: Dependency): Set<File> {
+    private fun getOutputs(dependency: Dependency): Set<String> {
         val mappingsDependecies = (mcRemapper.mappings.dependencies as Set<Dependency>).sortedBy { "${it.name}-${it.version}" }
         val combinedNames = mappingsDependecies.joinToString("+") { it.name + "-" + it.version }
-
-        val outputs = mutableSetOf<File>()
-        for (file in internalModRemapperConfiguration.files(dependency)) {
-            if (file.extension == "jar") {
-                val target = modTransformFolder()
-                    .resolve("${file.nameWithoutExtension}-mapped-${combinedNames}-${mcRemapper.provider.targetNamespace.get()}.${file.extension}")
-                if (target.exists()) {
-                    outputs += target.toFile()
-                    continue
+        val outputs = mutableSetOf<String>()
+        for (innerDep in internalModRemapperConfiguration.resolvedConfiguration.getFirstLevelModuleDependencies { it == dependency }) {
+            for (artifact in innerDep.allModuleArtifacts) {
+                if (artifact.file.extension == "jar") {
+                    val target = modTransformFolder().resolve("${artifact.file.nameWithoutExtension}-mapped-${combinedNames}-${mcRemapper.provider.targetNamespace.get()}.${artifact.file.extension}")
+                    val classifier = artifact.classifier?.let { "$it-" } ?: ""
+                    outputs += "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${combinedNames}-${mcRemapper.provider.targetNamespace.get()}"
+                    if (target.exists()) {
+                        continue
+                    }
+                    OutputConsumerPath.Builder(target).build().use {
+                        it.addNonClassFiles(
+                            artifact.file.toPath(),
+                            tinyRemapper,
+                            listOf(awRemapper, innerJarStripper) + NonClassCopyMode.FIX_META_INF.remappers
+                        )
+                        tinyRemapper.apply(it, outputMap[artifact.file])
+                    }
+                } else {
+                    outputs += artifact.id.toString()
                 }
-                OutputConsumerPath.Builder(target).build().use {
-                    it.addNonClassFiles(file.toPath(), tinyRemapper, listOf(awRemapper, innerJarStripper) + NonClassCopyMode.FIX_META_INF.remappers)
-                    tinyRemapper.apply(it, outputMap[file])
-                }
-            } else {
-                outputs += file
             }
         }
         return outputs

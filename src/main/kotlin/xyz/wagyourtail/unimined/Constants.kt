@@ -1,5 +1,8 @@
 package xyz.wagyourtail.unimined
 
+import org.jetbrains.annotations.ApiStatus
+import java.net.URI
+
 object Constants {
     val MAPPINGS_PROVIDER = "mappings"
     const val MINECRAFT_COMBINED_PROVIDER = "minecraft"
@@ -16,7 +19,13 @@ object Constants {
 
     const val FABRIC_PROVIDER = "fabric"
 
-    const val FABRIC_JSON = "fabricHiddenDontTouch"
+    const val ASSET_BASE_URL = "https://resources.download.minecraft.net/"
 
+    val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
+
+    @ApiStatus.Internal
+    const val FABRIC_JSON = "fabricHiddenDontTouch"
+    @ApiStatus.Internal
     const val MAPPINGS_INTERNAL = "mappingsHiddenDontTouch"
 }
+

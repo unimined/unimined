@@ -17,9 +17,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
-import org.gradle.jvm.tasks.Jar
-import org.gradle.plugins.ide.idea.IdeaPlugin
-import org.gradle.plugins.ide.idea.model.IdeaProject
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.OSUtils
 import xyz.wagyourtail.unimined.UniminedExtension
@@ -34,7 +31,6 @@ import xyz.wagyourtail.unimined.providers.patch.remap.ModRemapper
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
@@ -56,7 +52,7 @@ abstract class MinecraftProvider(
     val minecraftDownloader: MinecraftDownloader = MinecraftDownloader(project, this)
     val assetsDownloader: AssetsDownloader = AssetsDownloader(project, this)
 
-    val repo: Repository = SimpleRepository.of(
+    private val repo: Repository = SimpleRepository.of(
         ArtifactProviderBuilder.begin(ArtifactIdentifier::class.java)
             .filter(ArtifactIdentifier.groupEquals(Constants.MINECRAFT_GROUP))
             .provide(this)
@@ -84,13 +80,16 @@ abstract class MinecraftProvider(
         disableCombined.convention(false).finalizeValueOnRead()
         transformer.convention("none").finalizeValueOnRead()
 
+        project.repositories.maven {
+            it.url = URI.create(Constants.MINECRAFT_MAVEN)
+        }
+
         GradleRepositoryAdapter.add(
             project.repositories,
             "minecraft-transformer",
             parent.getGlobalCache().toFile(),
             repo
         )
-
         parent.events.register(::afterEvaluate)
         parent.events.register(::sourceSets)
     }
@@ -269,6 +268,7 @@ abstract class MinecraftProvider(
             assetsDownloader.downloadAssets(project, it)
         }
 
+        @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
         val runConfig = RunConfig(
             project,
             "runClient",
@@ -297,6 +297,7 @@ abstract class MinecraftProvider(
     fun provideRunServerTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
+        @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
         val runConfig = RunConfig(
             project,
             "runServer",

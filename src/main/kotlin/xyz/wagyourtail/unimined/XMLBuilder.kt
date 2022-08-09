@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined
 
 import java.util.*
 
+@Suppress("UNUSED")
 class XMLBuilder {
     private val options: MutableMap<String, String?> = HashMap()
     private val children: MutableList<Any?> = LinkedList()

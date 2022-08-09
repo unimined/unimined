@@ -2,7 +2,9 @@ package xyz.wagyourtail.unimined
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import xyz.wagyourtail.unimined.Constants.MINECRAFT_MAVEN
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
+import java.net.URI
 
 class UniminedPlugin : Plugin<Project> {
     override fun apply(project: Project) {

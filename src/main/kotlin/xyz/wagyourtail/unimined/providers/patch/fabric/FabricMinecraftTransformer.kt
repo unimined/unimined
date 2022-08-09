@@ -20,10 +20,10 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     provider
 ) {
     val fabric: Configuration = project.configurations.getByName(Constants.FABRIC_PROVIDER)
+    val fabricJson: Configuration = project.configurations.maybeCreate(Constants.FABRIC_JSON)
 
     var clientMainClass: String? = null
     var serverMainClass: String? = null
-    val fabricJson: Configuration = project.configurations.maybeCreate(Constants.FABRIC_JSON)
 
     init {
         project.repositories.maven {

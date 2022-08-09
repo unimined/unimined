@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.Constants.METADATA_URL
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.version.*
 import xyz.wagyourtail.unimined.testSha1
@@ -22,13 +23,12 @@ import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import kotlin.properties.Delegates
 
-class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
-    private val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
+class MinecraftDownloader(val project: Project, private val parent: MinecraftProvider) {
 
     var client by Delegates.notNull<Boolean>()
     var server by Delegates.notNull<Boolean>()
 
-    val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+    private val sourceSets: SourceSetContainer = project.extensions.getByType(SourceSetContainer::class.java)
     init {
         parent.parent.events.register(::afterEvaluate)
     }
@@ -224,27 +224,6 @@ class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
         }
     }
 
-    private fun download(artifact: Artifact, path: Path) {
-
-        if (testSha1(artifact.size, artifact.sha1 ?: "", path)) {
-            return
-        }
-
-        artifact.url?.toURL()?.openStream()?.use {
-            Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
-        }
-
-        if (!testSha1(artifact.size, artifact.sha1 ?: "", path)) {
-            throw Exception("Failed to download " + artifact.url)
-        }
-    }
-
-    private fun download(url: URI, path: Path) {
-        url.toURL().openStream().use {
-            Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
-        }
-    }
-
     fun extract(dependency: Dependency, extract: Extract, path: Path) {
         val resolved = parent.mcLibraries.resolvedConfiguration
         resolved.getFiles { it == dependency }.forEach { file ->
@@ -280,10 +259,6 @@ class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
 
     fun serverJarDownloadPath(version: String): Path {
         return mcVersionFolder(version).resolve("server.jar")
-    }
-
-    fun combinedPomPath(version: String): Path {
-        return mcVersionFolder(version).resolve("minecraft-$version.xml")
     }
 
     fun combinedJarDownloadPath(version: String): Path {
