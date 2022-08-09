@@ -14,8 +14,9 @@ object Constants {
 
     const val MINECRAFT_GROUP = "net.minecraft"
 
-
     const val FABRIC_PROVIDER = "fabric"
 
     const val FABRIC_JSON = "fabricHiddenDontTouch"
+
+    const val MAPPINGS_INTERNAL = "mappingsHiddenDontTouch"
 }

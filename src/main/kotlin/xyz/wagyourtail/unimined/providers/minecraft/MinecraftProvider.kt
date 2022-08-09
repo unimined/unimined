@@ -53,8 +53,8 @@ abstract class MinecraftProvider(
             .provide(this)
     )
 
-    private val mcRemapper = MinecraftRemapper(project, this)
-    private val modRemapper = ModRemapper(project, mcRemapper)
+    val mcRemapper = MinecraftRemapper(project, this)
+    val modRemapper = ModRemapper(project, mcRemapper)
 
     abstract val overrideMainClassClient: Property<String?>
     abstract val overrideMainClassServer: Property<String?>
@@ -108,16 +108,6 @@ abstract class MinecraftProvider(
         main.compileClasspath += combined
         main.runtimeClasspath += combined
 
-        val jarServer = project.tasks.create("jarServer", Jar::class.java) {
-            it.from(server?.allSource ?: main)
-        }
-
-        project.tasks.named("jar", Jar::class.java) {
-            it.from(client?.allSource ?: main)
-            it.archiveClassifier.set("mapped-${targetNamespace.get()}")
-            it.dependsOn += jarServer
-        }
-
         addMcLibraries()
 
         minecraftTransformer = when(transformer.get()) {
@@ -134,7 +124,7 @@ abstract class MinecraftProvider(
 
     private fun addMcLibraries() {
         extractDependencies = mutableMapOf()
-        for (library in minecraftDownloader.metadata.get().libraries) {
+        for (library in minecraftDownloader.metadata.libraries) {
             project.logger.debug("Added dependency ${library.name}")
             if (library.rules.all { it.testRule() }) {
                 if (library.url != null || library.downloads?.artifact != null) {
@@ -159,19 +149,19 @@ abstract class MinecraftProvider(
 
     fun getMinecraftClientWithMapping(namespace: String): Path {
         return minecraftClientMapped.computeIfAbsent(namespace) {
-            mcRemapper.provide(minecraftTransformer.transformClient(minecraftDownloader.minecraftClient.get()), targetNamespace.get())
+            mcRemapper.provide(minecraftTransformer.transformClient(minecraftDownloader.minecraftClient), namespace)
         }
     }
 
     fun getMinecraftServerWithMapping(namespace: String): Path {
         return minecraftServerMapped.computeIfAbsent(namespace) {
-            mcRemapper.provide(minecraftTransformer.transformServer(minecraftDownloader.minecraftServer.get()), targetNamespace.get())
+            mcRemapper.provide(minecraftTransformer.transformServer(minecraftDownloader.minecraftServer), namespace)
         }
     }
 
     fun getMinecraftCombinedWithMapping(namespace: String): Path {
         return minecraftClientMapped.computeIfAbsent(namespace) {
-            mcRemapper.provide(minecraftTransformer.transformCombined(minecraftDownloader.minecraftCombined.get()), targetNamespace.get())
+            mcRemapper.provide(minecraftTransformer.transformCombined(minecraftDownloader.minecraftCombined), namespace)
         }
     }
 
@@ -228,7 +218,7 @@ abstract class MinecraftProvider(
         })
 
         //test if betacraft has our version on file
-        val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${minecraftDownloader.metadata.get().id}.info")
+        val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${minecraftDownloader.metadata.id}.info")
             .toURL()
             .openConnection() as HttpURLConnection
         url.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
@@ -245,24 +235,24 @@ abstract class MinecraftProvider(
         project.tasks.create("runClient", JavaExec::class.java, consumerApply {
             group = "Unimined"
             description = "Runs Minecraft Client"
-            mainClass.set(overrideMainClassClient.getOrElse(minecraftDownloader.metadata.get().mainClass))
+            mainClass.set(overrideMainClassClient.getOrElse(minecraftDownloader.metadata.mainClass))
             workingDir = clientWorkingDirectory.get()
             workingDir.mkdirs()
 
             classpath = sourceSets.findByName("client")?.runtimeClasspath
                 ?: sourceSets.getByName("main").runtimeClasspath
 
-            jvmArgs = minecraftDownloader.metadata.get()
+            jvmArgs = minecraftDownloader.metadata
                 .getJVMArgs(workingDir.resolve("libraries").toPath(), nativeDir.toPath()) + betacraftArgs
 
 
-            val assetsDir = minecraftDownloader.metadata.get().assetIndex?.let {
+            val assetsDir = minecraftDownloader.metadata.assetIndex?.let {
                 assetsDownloader.downloadAssets(
                     project,
                     it
                 )
             }
-            args = minecraftDownloader.metadata.get().getGameArgs(
+            args = minecraftDownloader.metadata.getGameArgs(
                 "Dev",
                 workingDir.toPath(),
                 assetsDir ?: workingDir.resolve("assets").toPath()
@@ -273,8 +263,8 @@ abstract class MinecraftProvider(
             dependsOn.add(preRun)
 
             doFirst {
-                if (!org.gradle.api.JavaVersion.current().equals(minecraftDownloader.metadata.get().javaVersion)) {
-                    project.logger.error("Java version is ${org.gradle.api.JavaVersion.current()}, expected ${minecraftDownloader.metadata.get().javaVersion}, Minecraft may not launch properly")
+                if (!org.gradle.api.JavaVersion.current().equals(minecraftDownloader.metadata.javaVersion)) {
+                    project.logger.error("Java version is ${org.gradle.api.JavaVersion.current()}, expected ${minecraftDownloader.metadata.javaVersion}, Minecraft may not launch properly")
                 }
             }
         })
@@ -284,7 +274,7 @@ abstract class MinecraftProvider(
         project.tasks.create("runServer", JavaExec::class.java, consumerApply {
             group = "Unimined"
             description = "Runs Minecraft Server"
-            mainClass.set(overrideMainClassServer.getOrElse(minecraftDownloader.metadata.get().mainClass)) // TODO: get from meta-inf
+            mainClass.set(overrideMainClassServer.getOrElse(minecraftDownloader.metadata.mainClass)) // TODO: get from meta-inf
             workingDir = project.projectDir.resolve("run").resolve("server")
             workingDir.mkdirs()
 

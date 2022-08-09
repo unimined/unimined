@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.providers.minecraft
 
-import com.google.common.base.Suppliers
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
@@ -17,6 +16,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import java.util.zip.ZipInputStream
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
@@ -42,14 +42,14 @@ class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
         if (client) {
             parent.client.dependencies.add(
                 project.dependencies.create(
-                    "net.minecraft:minecraft:${version.get()}:client"
+                    "net.minecraft:minecraft:${version}:client"
                 )
             )
         }
         if (server) {
             parent.server.dependencies.add(
                 project.dependencies.create(
-                    "net.minecraft:minecraft:${version.get()}:server"
+                    "net.minecraft:minecraft:${version}:server"
                 )
             )
         }
@@ -60,14 +60,14 @@ class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
                 if (client) {
                     it.dependencies.add(
                         project.dependencies.create(
-                            "net.minecraft:minecraft:${version.get()}:client"
+                            "net.minecraft:minecraft:${version}:client"
                         )
                     )
                 }
                 if (server) {
                     it.dependencies.add(
                         project.dependencies.create(
-                            "net.minecraft:minecraft:${version.get()}:server"
+                            "net.minecraft:minecraft:${version}:server"
                         )
                     )
                 }
@@ -75,7 +75,7 @@ class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
         }
     }
 
-    private fun _getVersion(): String {
+    val version: String by lazy {
         val dependencies = parent.combined.dependencies
 
         if (dependencies.isEmpty()) {
@@ -97,16 +97,14 @@ class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
             throw IllegalArgumentException("Dependency $dependency is not a Minecraft dependency")
         }
 
-        return dependency.version!!
+        dependency.version!!
     }
 
-    val version = Suppliers.memoize { _getVersion() }
-
-    private fun _getMetadata(): VersionData {
-        val version = version.get()
+    val metadata: VersionData by lazy {
+        val version = version
         val path = versionJsonDownloadPath(version)
         if (path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-            return parseVersionData(
+            return@lazy parseVersionData(
                 InputStreamReader(path.inputStream()).use { reader ->
                     JsonParser.parseReader(reader).asJsonObject
                 }
@@ -114,6 +112,7 @@ class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
         } else {
             val versionIndex = getVersionFromLauncherMeta(version)
             val downloadPath = versionJsonDownloadPath(version)
+            downloadPath.parent.maybeCreate()
 
             if (project.gradle.startParameter.isOffline) {
                 throw IllegalStateException("Cannot download version metadata while offline")
@@ -130,24 +129,19 @@ class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
                     throw IOException("Failed to get version data, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
                 }
 
-                if (!testSha1(-1, versionIndex.get("sha1").asString, downloadPath)) {
-                    throw IOException("Failed to get version, checksum mismatch")
+                urlConnection.inputStream.use {
+                    Files.write(downloadPath, it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
                 }
 
-                urlConnection.inputStream.use {
-                    Files.copy(it, downloadPath, StandardCopyOption.REPLACE_EXISTING)
-                }
             }
 
-            return parseVersionData(
+            parseVersionData(
                 InputStreamReader(path.inputStream()).use { reader ->
                     JsonParser.parseReader(reader).asJsonObject
                 }
             )
         }
     }
-
-    val metadata = Suppliers.memoize { _getMetadata() }
 
     private fun getVersionFromLauncherMeta(versionId: String): JsonObject {
         if (project.gradle.startParameter.isOffline) {
@@ -180,48 +174,42 @@ class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
         throw IllegalStateException("Failed to get metadata, no version found for $versionId")
     }
 
-    private fun _provideMinecraftClient(): Path {
-        val version = version.get()
+    val minecraftClient: Path by lazy {
+        val version = version
 
         val clientPath = clientJarDownloadPath(version)
         if (clientPath.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-            return clientPath
+            clientPath
         } else {
-            val metadata = metadata.get()
+            val metadata = metadata
             val clientJar = metadata.downloads["client"] ?: throw IllegalStateException("No client jar found for version $version")
 
             clientPath.parent.maybeCreate()
             download(clientJar, clientPath)
+            clientPath
         }
-        return clientPath
     }
 
-    val minecraftClient = Suppliers.memoize { _provideMinecraftClient() }
-
-    private fun _provideMinecraftServer(): Path {
-        val version = version.get()
+    val minecraftServer: Path by lazy {
+        val version = version
 
         val serverPath = serverJarDownloadPath(version)
         if (serverPath.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-            return serverPath
+            serverPath
         } else {
-            val metadata = metadata.get()
+            val metadata = metadata
             val serverJar = metadata.downloads["server"] ?: throw IllegalStateException("No server jar found for version $version")
 
             serverPath.parent.maybeCreate()
             download(serverJar, serverPath)
+            serverPath
         }
-        return serverPath
     }
 
-    val minecraftServer = Suppliers.memoize { _provideMinecraftServer() }
-
-    private fun _provideMinecraftCombined(): Path {
+    val minecraftCombined: Path by lazy {
         //TODO: actually combine the two
-        return minecraftClient.get()
+        minecraftClient
     }
-
-    val minecraftCombined = Suppliers.memoize { _provideMinecraftCombined() }
 
     private fun download(download: Download, path: Path) {
 
@@ -280,48 +268,31 @@ class MinecraftDownloader(val project: Project, val parent: MinecraftProvider) {
         }
     }
 
-    fun clientJarDownloadPath(version: String): Path {
+    fun mcVersionFolder(version: String): Path {
         return parent.parent.getGlobalCache()
             .resolve("net")
             .resolve("minecraft")
             .resolve("minecraft")
             .resolve(version)
-            .resolve("client.jar")
+    }
+
+    fun clientJarDownloadPath(version: String): Path {
+        return mcVersionFolder(version).resolve("client.jar")
     }
 
     fun serverJarDownloadPath(version: String): Path {
-        return parent.parent.getGlobalCache()
-            .resolve("net")
-            .resolve("minecraft")
-            .resolve("minecraft")
-            .resolve(version)
-            .resolve("server.jar")
+        return mcVersionFolder(version).resolve("server.jar")
     }
 
     fun combinedPomPath(version: String): Path {
-        return parent.parent.getGlobalCache()
-            .resolve("net")
-            .resolve("minecraft")
-            .resolve("minecraft")
-            .resolve(version)
-            .resolve("minecraft-$version.xml")
+        return mcVersionFolder(version).resolve("minecraft-$version.xml")
     }
 
     fun combinedJarDownloadPath(version: String): Path {
-        return parent.parent.getGlobalCache()
-            .resolve("net")
-            .resolve("minecraft")
-            .resolve("minecraft")
-            .resolve(version)
-            .resolve("minecraft-$version.jar")
+        return mcVersionFolder(version).resolve("minecraft-$version.jar")
     }
 
     fun versionJsonDownloadPath(version: String): Path {
-        return parent.parent.getGlobalCache()
-            .resolve("net")
-            .resolve("minecraft")
-            .resolve("minecraft")
-            .resolve(version)
-            .resolve("version.json")
+        return mcVersionFolder(version).resolve("version.json")
     }
 }

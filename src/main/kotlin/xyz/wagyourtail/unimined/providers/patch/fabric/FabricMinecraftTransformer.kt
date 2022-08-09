@@ -7,9 +7,13 @@ import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
+import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.writeText
 
 class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(
     project,
@@ -144,18 +148,25 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         return baseMinecraft
     }
 
+    private fun getIntermediaryClassPath(): String {
+        val remapClasspath = provider.parent.getLocalCache().resolve("remapClasspath.txt")
+        val s = provider.mcLibraries.files.joinToString(":") + ":" + provider.modRemapper.internalModRemapperConfiguration.files.joinToString(":") + ":" + provider.getMinecraftCombinedWithMapping("intermediary")
+        remapClasspath.writeText(s, options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
+        return remapClasspath.absolutePathString()
+    }
+
 
     override fun applyClientRunConfig() {
         provider.provideRunClientTask { task ->
             clientMainClass?.let { task.mainClass.set(it) }
-            task.jvmArgs = listOf("-Dfabric.development=true") + (task.jvmArgs ?: emptyList())
+            task.jvmArgs = listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath()}") + (task.jvmArgs ?: emptyList())
          }
     }
 
     override fun applyServerRunConfig() {
         provider.provideRunServerTask { task ->
             serverMainClass?.let { task.mainClass.set(it) }
-            task.jvmArgs = listOf("-Dfabric.development=true") + (task.jvmArgs ?: emptyList())
+            task.jvmArgs = listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath()}") + (task.jvmArgs ?: emptyList())
         }
     }
 }
