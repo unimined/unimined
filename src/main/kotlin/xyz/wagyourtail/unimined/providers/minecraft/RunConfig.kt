@@ -55,6 +55,7 @@ data class RunConfig(
             it.classpath = classpath.runtimeClasspath
 
             it.args = args
+            it.jvmArgs = jvmArgs
         }
     }
 }

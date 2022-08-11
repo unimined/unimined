@@ -209,6 +209,32 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         minecraftClient
     }
 
+    val clientMappings: Path by lazy {
+        val mappings = metadata.downloads.get("client_mappings") ?: throw IllegalStateException("No client mappings found for version $version")
+        val mappingsPath = clientMappingsDownloadPath(version)
+
+        if (mappingsPath.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            mappingsPath
+        } else {
+            mappingsPath.parent.maybeCreate()
+            download(mappings, mappingsPath)
+            mappingsPath
+        }
+    }
+
+    val serverMappings: Path by lazy {
+        val mappings = metadata.downloads.get("server_mappings") ?: throw IllegalStateException("No server mappings found for version $version")
+        val mappingsPath = serverMappingsDownloadPath(version)
+
+        if (mappingsPath.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            mappingsPath
+        } else {
+            mappingsPath.parent.maybeCreate()
+            download(mappings, mappingsPath)
+            mappingsPath
+        }
+    }
+
     private fun download(download: Download, path: Path) {
 
         if (testSha1(download.size, download.sha1, path)) {
@@ -254,11 +280,19 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     fun clientJarDownloadPath(version: String): Path {
-        return mcVersionFolder(version).resolve("client.jar")
+        return mcVersionFolder(version).resolve("minecraft-$version-client.jar")
     }
 
     fun serverJarDownloadPath(version: String): Path {
-        return mcVersionFolder(version).resolve("server.jar")
+        return mcVersionFolder(version).resolve("minecraft-$version-server.jar")
+    }
+
+    fun clientMappingsDownloadPath(version: String): Path {
+        return mcVersionFolder(version).resolve("client_mappings.txt")
+    }
+
+    fun serverMappingsDownloadPath(version: String): Path {
+        return mcVersionFolder(version).resolve("server_mappings.txt")
     }
 
     fun combinedJarDownloadPath(version: String): Path {

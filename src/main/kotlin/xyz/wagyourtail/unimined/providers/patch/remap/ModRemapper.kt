@@ -88,10 +88,15 @@ class ModRemapper(
     }
     init {
         mcRemapper.provider.parent.events.register(::sourceSets)
+        project.repositories.forEach {
+            it.content {
+                it.excludeGroupByRegex("remapped_.+")
+            }
+        }
         project.repositories.flatDir { repo ->
-            repo.dir(modTransformFolder().toString())
+            repo.dirs(modTransformFolder().toAbsolutePath().toString())
             repo.content {
-                it.includeGroupByRegex("remapped_*")
+                it.includeGroupByRegex("remapped_.+")
             }
         }
     }
@@ -120,7 +125,7 @@ class ModRemapper(
         configurations.forEach {
             preTransform(it)
         }
-        tinyRemapper = TinyRemapper.newRemapper().withMappings(mcRemapper.getMappingProvider(mcRemapper.fallbackTarget, mcRemapper.fallbackTarget, mcRemapper.provider.targetNamespace.get()))
+        tinyRemapper = TinyRemapper.newRemapper().withMappings(mcRemapper.getMappingProvider(mcRemapper.fallbackTarget, mcRemapper.fallbackTarget, mcRemapper.provider.targetNamespace.get(), mcRemapper.mappingTree))
             .renameInvalidLocals(true)
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())

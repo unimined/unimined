@@ -26,6 +26,7 @@ import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.fabric.FabricMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.remap.MinecraftRemapper
 import xyz.wagyourtail.unimined.providers.patch.remap.ModRemapper
 import java.io.File
@@ -100,6 +101,7 @@ abstract class MinecraftProvider(
         minecraftTransformer = when(transformer.get()) {
             "none", null -> NoTransformMinecraftTransformer(project, this)
             "fabric" -> FabricMinecraftTransformer(project, this)
+            "jarMod" -> JarModMinecraftTransformer(project, this)
             else -> throw IllegalArgumentException("Unknown transformer: ${transformer.get()}")
         }
         minecraftTransformer.afterEvaluate()
@@ -157,19 +159,19 @@ abstract class MinecraftProvider(
 
     fun getMinecraftClientWithMapping(namespace: String): Path {
         return minecraftClientMapped.computeIfAbsent(namespace) {
-            mcRemapper.provide(minecraftTransformer.transformClient(minecraftDownloader.minecraftClient), namespace)
+            mcRemapper.provideClient(minecraftTransformer.transformClient(minecraftDownloader.minecraftClient), namespace)
         }
     }
 
     fun getMinecraftServerWithMapping(namespace: String): Path {
         return minecraftServerMapped.computeIfAbsent(namespace) {
-            mcRemapper.provide(minecraftTransformer.transformServer(minecraftDownloader.minecraftServer), namespace)
+            mcRemapper.provideServer(minecraftTransformer.transformServer(minecraftDownloader.minecraftServer), namespace)
         }
     }
 
     fun getMinecraftCombinedWithMapping(namespace: String): Path {
         return minecraftClientMapped.computeIfAbsent(namespace) {
-            mcRemapper.provide(minecraftTransformer.transformCombined(minecraftDownloader.minecraftCombined), namespace)
+            mcRemapper.provideClient(minecraftTransformer.transformCombined(minecraftDownloader.minecraftCombined), namespace)
         }
     }
 
@@ -197,6 +199,18 @@ abstract class MinecraftProvider(
                         info,
                         ArtifactType.BINARY,
                         getMinecraftServerWithMapping(targetNamespace.get()).toFile()
+                    )
+
+                    "client-mappings" -> StreamableArtifact.ofFile(
+                        info,
+                        ArtifactType.BINARY,
+                        minecraftDownloader.clientMappings.toFile()
+                    )
+
+                    "server-mappings" -> StreamableArtifact.ofFile(
+                        info,
+                        ArtifactType.BINARY,
+                        minecraftDownloader.serverMappings.toFile()
                     )
 
                     null -> StreamableArtifact.ofFile(
@@ -315,5 +329,11 @@ abstract class MinecraftProvider(
         if (isIdeaSync()) {
             runConfig.createIdeaRunConfig(minecraftDownloader.metadata.javaVersion)
         }
+    }
+
+    enum class EnvType {
+        COMBINED,
+        CLIENT,
+        SERVER
     }
 }

@@ -57,3 +57,13 @@ fun testSha1(size: Long, sha1: String, path: Path): Boolean {
     }
     return false
 }
+
+fun getSha1(path: Path): String {
+    val digestSha1 = MessageDigest.getInstance("SHA-1")
+    path.inputStream().use {
+        digestSha1.update(it.readBytes())
+    }
+    val hashBytes = digestSha1.digest()
+    val hash = hashBytes.joinToString("") { String.format("%02x", it) }
+    return hash
+}
