@@ -2,8 +2,9 @@ package xyz.wagyourtail.unimined.providers.patch.jarmod
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
+import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
 import java.io.IOException
@@ -18,48 +19,47 @@ import kotlin.io.path.nameWithoutExtension
 open class JarModMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider,
-    jarModProvider: String = Constants.JARMOD_PROVIDER,
-    jarModServerProvider: String = Constants.JARMODSERVER_PROVIDER
+    private val jarModProvider: String = Constants.JARMOD_PROVIDER,
 ) : AbstractMinecraftTransformer(
-    project,
-    provider
+    project, provider
 ) {
-    val jarMod: Configuration by lazy { project.configurations.getByName(jarModProvider) }
-    val jarModServer: Configuration by lazy { project.configurations.getByName(jarModServerProvider) }
+    private fun jarModConfiguration(envType: EnvType): Configuration? {
+        return project.configurations.findByName(jarModProvider + (envType.classifier?.capitalized() ?: ""))
+    }
 
     var clientMainClass: String? = null
     var serverMainClass: String? = null
 
-    val combinedNames: String by lazy {
-        val jarMod = (jarMod.dependencies as Set<Dependency>).sortedBy { "${it.name}-${it.version}" }
-        jarMod.joinToString("+") { it.name + "-" + it.version }
+
+    private val combinedNamesMap = mutableMapOf<EnvType, String>()
+    private fun getCombinedNames(envType: EnvType): String {
+        return combinedNamesMap.computeIfAbsent(envType) {
+            val thisEnv = jarModConfiguration(envType)?.dependencies?.toMutableSet() ?: mutableSetOf()
+            if (envType != EnvType.COMBINED) {
+                thisEnv.addAll(jarModConfiguration(EnvType.COMBINED)?.dependencies ?: setOf())
+            }
+            val jarMod = thisEnv.sortedBy { "${it.name}-${it.version}" }
+            jarMod.joinToString("+") { it.name + "-" + it.version }
+        }
     }
 
-    val combinedNamesServer: String by lazy {
-        val jarMod = (jarModServer.dependencies as Set<Dependency>).sortedBy { "${it.name}-${it.version}" }
-        jarMod.joinToString("+") { it.name + "-" + it.version }
-    }
-
-    override fun transformClient(baseMinecraft: Path): Path = transformCombined(baseMinecraft, jarMod, combinedNames)
-
-    override fun transformServer(baseMinecraft: Path): Path =
-        transformCombined(baseMinecraft, jarModServer, combinedNamesServer)
-
-
-    override fun transformCombined(baseMinecraft: Path): Path {
-        return transformClient(baseMinecraft)
-    }
-
-    fun transformCombined(baseMinecraft: Path, jarmod: Configuration, combinedNames: String): Path {
+    override fun transform(envType: EnvType, baseMinecraft: Path): Path {
+        val combinedNames = getCombinedNames(envType)
         val target = getTransformedMinecraftPath(baseMinecraft, combinedNames)
         if (target.exists() && !project.gradle.startParameter.isRefreshDependencies) {
             return target
         }
+
+        val jarmod = jarModConfiguration(envType)?.resolve()?.toMutableSet() ?: mutableSetOf()
+        if (envType != EnvType.COMBINED) {
+            jarmod.addAll(jarModConfiguration(EnvType.COMBINED)?.resolve() ?: setOf())
+        }
+
         Files.copy(baseMinecraft, target, StandardCopyOption.REPLACE_EXISTING)
         val mc = URI.create("jar:${target.toUri()}")
         try {
             FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
-                for (file in jarmod.resolve()) {
+                for (file in jarmod) {
                     ZipInputStream(file.inputStream()).use {
                         var entry = it.nextEntry
                         while (entry != null) {

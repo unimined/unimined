@@ -19,18 +19,18 @@ object Constants {
 
     const val FABRIC_PROVIDER = "fabric"
 
-    const val JARMOD_PROVIDER = "jarMod"
-    const val JARMODSERVER_PROVIDER = "jarModServer"
-
-    const val ASSET_BASE_URL = "https://resources.download.minecraft.net/"
+    val ASSET_BASE_URL: URI = URI.create("https://resources.download.minecraft.net/")
 
     val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
 
+
+
+    const val JARMOD_PROVIDER = "jarMod"
+
     @ApiStatus.Internal
     const val FABRIC_JSON = "fabricHiddenDontTouch"
+
     @ApiStatus.Internal
     const val MAPPINGS_INTERNAL = "mappingsHiddenDontTouch"
-    @ApiStatus.Internal
-    const val MAPPINGS_INTERNAL_SERVER = "mappingsHiddenDontTouchServer"
 }
 

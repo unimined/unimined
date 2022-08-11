@@ -16,6 +16,7 @@ private fun ColumnFileReader.readCell(): String {
     return source
 }
 
+@Suppress("UNUSED")
 object MCPReader {
     fun readMethod(reader: Reader, visitor: MemoryMappingTree) {
         readMethod(reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
@@ -40,6 +41,7 @@ object MCPReader {
         }
 
         val parentVisitor = visitor
+        @Suppress("NAME_SHADOWING")
         val visitor = MemoryMappingTree()
 
         val visitHeader = visitor.visitHeader()
@@ -104,6 +106,7 @@ object MCPReader {
         }
 
         val parentVisitor = visitor
+        @Suppress("NAME_SHADOWING")
         val visitor = MemoryMappingTree()
 
         val visitHeader = visitor.visitHeader()

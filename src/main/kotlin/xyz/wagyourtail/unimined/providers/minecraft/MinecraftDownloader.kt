@@ -172,7 +172,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         throw IllegalStateException("Failed to get metadata, no version found for $versionId")
     }
 
-    val minecraftClient: Path by lazy {
+    private val minecraftClient: Path by lazy {
         val version = version
 
         val clientPath = clientJarDownloadPath(version)
@@ -188,7 +188,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
     }
 
-    val minecraftServer: Path by lazy {
+    private val minecraftServer: Path by lazy {
         val version = version
 
         val serverPath = serverJarDownloadPath(version)
@@ -204,12 +204,12 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
     }
 
-    val minecraftCombined: Path by lazy {
+    private val minecraftCombined: Path by lazy {
         //TODO: actually combine the two
         minecraftClient
     }
 
-    val clientMappings: Path by lazy {
+    private val clientMappings: Path by lazy {
         val mappings = metadata.downloads.get("client_mappings") ?: throw IllegalStateException("No client mappings found for version $version")
         val mappingsPath = clientMappingsDownloadPath(version)
 
@@ -222,7 +222,15 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
     }
 
-    val serverMappings: Path by lazy {
+    fun getMinecraft(envType: EnvType): Path {
+        return when (envType) {
+            EnvType.CLIENT -> minecraftClient
+            EnvType.SERVER -> minecraftServer
+            EnvType.COMBINED -> minecraftCombined
+        }
+    }
+
+    private val serverMappings: Path by lazy {
         val mappings = metadata.downloads.get("server_mappings") ?: throw IllegalStateException("No server mappings found for version $version")
         val mappingsPath = serverMappingsDownloadPath(version)
 
@@ -232,6 +240,14 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
             mappingsPath.parent.maybeCreate()
             download(mappings, mappingsPath)
             mappingsPath
+        }
+    }
+
+    fun getMappings(envType: EnvType): Path {
+        return when (envType) {
+            EnvType.CLIENT -> clientMappings
+            EnvType.SERVER -> serverMappings
+            EnvType.COMBINED -> clientMappings
         }
     }
 

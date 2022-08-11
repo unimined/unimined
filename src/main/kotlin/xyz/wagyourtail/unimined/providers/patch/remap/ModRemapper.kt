@@ -13,8 +13,9 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
-import org.jetbrains.annotations.ApiStatus
+import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.maybeCreate
+import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -23,71 +24,35 @@ import kotlin.io.path.exists
 import kotlin.io.path.extension
 import kotlin.io.path.name
 
-@Suppress("INACCESSIBLE_TYPE")
 class ModRemapper(
     val project: Project,
     val mcRemapper: MinecraftRemapper
 ) {
 
-    private val configurations = mutableSetOf<Configuration>()
 
-    val modCompileOnly: Configuration = registerConfiguration(
-        project.configurations.maybeCreate("modCompileOnly")
-            .apply {
-                extendsFrom(project.configurations.getByName("compileOnly"))
-                exclude(mapOf(
-                    "group" to "net.fabricmc",
-                    "module" to "fabric-loader"
-                ))
-            })
+    private val combinedConfig = Configs(project, EnvType.COMBINED, this)
+    private val clientConfig = Configs(project, EnvType.CLIENT, this)
+    private val serverConfig = Configs(project, EnvType.SERVER, this)
 
-    val modRuntimeOnly: Configuration = registerConfiguration(
-        project.configurations.maybeCreate("modRuntimeOnly")
-            .apply {
-                extendsFrom(project.configurations.getByName("runtimeOnly"))
-                exclude(mapOf(
-                    "group" to "net.fabricmc",
-                    "module" to "fabric-loader"
-                ))
-            })
 
-    val localRuntime: Configuration = project.configurations.maybeCreate("localRuntime").apply {
-        extendsFrom(project.configurations.getByName("runtimeOnly"))
+    private val internalCombinedModRemapperConfiguration: Configuration = project.configurations.maybeCreate("internalModRemapper").apply {
         exclude(mapOf(
             "group" to "net.fabricmc",
             "module" to "fabric-loader"
         ))
     }
 
-    val modLocalRuntime: Configuration = registerConfiguration(
-        project.configurations.maybeCreate("modLocalRuntime")
-            .apply {
-                extendsFrom(project.configurations.getByName("localRuntime"))
-                exclude(mapOf(
-                    "group" to "net.fabricmc",
-                    "module" to "fabric-loader"
-                ))
-            })
-
-    val modImplementation: Configuration = registerConfiguration(
-        project.configurations.maybeCreate("modImplementation")
-            .apply {
-                extendsFrom(project.configurations.getByName("implementation"))
-                exclude(mapOf(
-                    "group" to "net.fabricmc",
-                    "module" to "fabric-loader"
-                ))
-            })
-
-    @ApiStatus.Internal
-    val internalModRemapperConfiguration: Configuration = project.configurations.maybeCreate("internalModRemapper").apply {
-        exclude(mapOf(
-            "group" to "net.fabricmc",
-            "module" to "fabric-loader"
-        ))
+    fun internalModRemapperConfiguration(envType: EnvType) = when (envType) {
+        EnvType.COMBINED -> internalCombinedModRemapperConfiguration
+        EnvType.CLIENT -> project.configurations.maybeCreate("internalModRemapperClient").apply {
+            extendsFrom(internalCombinedModRemapperConfiguration)
+        }
+        EnvType.SERVER -> project.configurations.maybeCreate("internalModRemapperServer").apply {
+            extendsFrom(internalCombinedModRemapperConfiguration)
+        }
     }
+
     init {
-        mcRemapper.provider.parent.events.register(::sourceSets)
         project.repositories.forEach {
             it.content {
                 it.excludeGroupByRegex("remapped_.+")
@@ -101,70 +66,57 @@ class ModRemapper(
         }
     }
 
-    private fun sourceSets(sourceSets: SourceSetContainer) {
-        sourceSets.findByName("main")?.apply {
-            compileClasspath += modCompileOnly + modImplementation
-            runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-        }
-        sourceSets.findByName("client")?.apply {
-            compileClasspath += modCompileOnly + modImplementation
-            runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-        }
-        sourceSets.findByName("server")?.apply {
-            compileClasspath += modCompileOnly + modImplementation
-            runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-        }
-    }
 
-    private fun registerConfiguration(configuration: Configuration): Configuration {
-        configurations += configuration
-        return configuration
-    }
-
-    fun remap() {
-        configurations.forEach {
-            preTransform(it)
+    fun remap(envType: EnvType) {
+        val configs = when (envType) {
+            EnvType.COMBINED -> combinedConfig
+            EnvType.CLIENT -> clientConfig
+            EnvType.SERVER -> serverConfig
         }
-        tinyRemapper = TinyRemapper.newRemapper().withMappings(mcRemapper.getMappingProvider(mcRemapper.fallbackTarget, mcRemapper.fallbackTarget, mcRemapper.provider.targetNamespace.get(), mcRemapper.mappingTree))
+        configs.configurations.forEach {
+            preTransform(configs.envType, it)
+        }
+        @Suppress("unused")
+        tinyRemapper = TinyRemapper.newRemapper().withMappings(mcRemapper.getMappingProvider(mcRemapper.fallbackTarget, mcRemapper.fallbackTarget, mcRemapper.provider.targetNamespace.get(), mcRemapper.getMappingTree(configs.envType)))
             .renameInvalidLocals(true)
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .rebuildSourceFilenames(true)
 //            .extension(MixinExtension())
             .build()
-        val mc = mcRemapper.provider.getMinecraftCombinedWithMapping(mcRemapper.fallbackTarget)
+        val mc = mcRemapper.provider.getMinecraftWithMapping(configs.envType, mcRemapper.fallbackTarget)
         tinyRemapper.readClassPathAsync(mc)
         project.logger.warn("Remapping mods using $mc")
         tinyRemapper.readClassPathAsync(*mcRemapper.provider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
-        configurations.forEach {
-            transform(it)
+        configs.configurations.forEach {
+            transform(configs.envType, it)
         }
-        configurations.forEach {
-            postTransform(it)
+        configs.configurations.forEach {
+            postTransform(configs.envType, it)
         }
         tinyRemapper.finish()
     }
 
     private val dependencyMap = mutableMapOf<Configuration, MutableSet<Dependency>>()
 
-    private fun preTransform(configuration: Configuration) {
+    private fun preTransform(envType: EnvType, configuration: Configuration) {
         configuration.dependencies.forEach {
-            internalModRemapperConfiguration.dependencies.add(it)
+            internalModRemapperConfiguration(envType).dependencies.add(it)
             dependencyMap.computeIfAbsent(configuration) { mutableSetOf() } += (it)
         }
         configuration.dependencies.clear()
     }
 
-    private fun transform(configuration: Configuration) {
+    private fun transform(envType: EnvType, configuration: Configuration) {
         dependencyMap[configuration]?.forEach {
-            transformMod(it)
+            transformMod(envType, it)
         }
     }
 
-    private fun postTransform(configuration: Configuration) {
+    private fun postTransform(envType: EnvType, configuration: Configuration) {
         dependencyMap[configuration]?.forEach {
 
-            getOutputs(it).forEach { artifact ->
+            getOutputs(envType, it).forEach { artifact ->
                 configuration.dependencies.add(
                     project.dependencies.create(
                         artifact
@@ -182,8 +134,8 @@ class ModRemapper(
     private lateinit var tinyRemapper: TinyRemapper
     private val outputMap = mutableMapOf<File, InputTag>()
 
-    private fun transformMod(dependency: Dependency) {
-        val files = internalModRemapperConfiguration.files(dependency)
+    private fun transformMod(envType: EnvType, dependency: Dependency) {
+        val files = internalModRemapperConfiguration(envType).files(dependency)
         for (file in files) {
             if (file.extension == "jar") {
                 val targetTag = tinyRemapper.createInputTag()
@@ -193,11 +145,10 @@ class ModRemapper(
         }
     }
 
-    private fun getOutputs(dependency: Dependency): Set<String> {
-        val mappingsDependecies = (mcRemapper.mappings.dependencies as Set<Dependency>).sortedBy { "${it.name}-${it.version}" }
-        val combinedNames = mappingsDependecies.joinToString("+") { it.name + "-" + it.version }
+    private fun getOutputs(envType: EnvType, dependency: Dependency): Set<String> {
+        val combinedNames = mcRemapper.getCombinedNames(envType)
         val outputs = mutableSetOf<String>()
-        for (innerDep in internalModRemapperConfiguration.resolvedConfiguration.getFirstLevelModuleDependencies { it == dependency }) {
+        for (innerDep in internalModRemapperConfiguration(envType).resolvedConfiguration.getFirstLevelModuleDependencies { it == dependency }) {
             for (artifact in innerDep.allModuleArtifacts) {
                 if (artifact.file.extension == "jar") {
                     val target = modTransformFolder().resolve("${artifact.file.nameWithoutExtension}-mapped-${combinedNames}-${mcRemapper.provider.targetNamespace.get()}.${artifact.file.extension}")
@@ -210,7 +161,7 @@ class ModRemapper(
                         it.addNonClassFiles(
                             artifact.file.toPath(),
                             tinyRemapper,
-                            listOf(awRemapper, innerJarStripper) + NonClassCopyMode.FIX_META_INF.remappers
+                            listOf(awRemapper(envType), innerJarStripper) + NonClassCopyMode.FIX_META_INF.remappers
                         )
                         tinyRemapper.apply(it, outputMap[artifact.file])
                     }
@@ -222,7 +173,7 @@ class ModRemapper(
         return outputs
     }
 
-    private val awRemapper : ResourceRemapper = object : ResourceRemapper {
+    private fun awRemapper(envType: EnvType) : ResourceRemapper = object : ResourceRemapper {
         override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
             // read the beginning of the file and see if it begins with "accessWidener"
             return relativePath.extension.equals("accesswidener", true) ||
@@ -237,7 +188,7 @@ class ModRemapper(
         ) {
             val output = destinationDirectory.resolve(relativePath)
             output.parent.maybeCreate()
-            val mappingTree = mcRemapper.mappingTree
+            val mappingTree = mcRemapper.getMappingTree(envType)
             BufferedReader(InputStreamReader(input)).use { reader ->
                 BufferedWriter(OutputStreamWriter(BufferedOutputStream(Files.newOutputStream(output, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)))).use { writer ->
                     var line: List<String>? = reader.readLine().split("\\s+".toRegex())
@@ -325,6 +276,101 @@ class ModRemapper(
                 json.asJsonObject.remove("quilt_loader")
                 BufferedWriter(OutputStreamWriter(BufferedOutputStream(Files.newOutputStream(output, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)))).use { writer ->
                     GsonBuilder().setPrettyPrinting().create().toJson(json, writer)
+                }
+            }
+        }
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    data class Configs(val project: Project, val envType: EnvType, val parent: ModRemapper) {
+        val configurations = mutableSetOf<Configuration>()
+        private val envTypeName  = envType.classifier?.capitalized() ?: ""
+
+        private fun registerConfiguration(configuration: Configuration): Configuration {
+            configurations += configuration
+            return configuration
+        }
+
+        val modCompileOnly: Configuration = registerConfiguration(
+            project.configurations.maybeCreate("modCompileOnly$envTypeName")
+                .apply {
+                    extendsFrom(project.configurations.getByName("compileOnly"))
+                    exclude(mapOf(
+                        "group" to "net.fabricmc",
+                        "module" to "fabric-loader"
+                    ))
+                })
+
+        val modRuntimeOnly: Configuration = registerConfiguration(
+            project.configurations.maybeCreate("modRuntimeOnly$envTypeName")
+                .apply {
+                    extendsFrom(project.configurations.getByName("runtimeOnly"))
+                    exclude(mapOf(
+                        "group" to "net.fabricmc",
+                        "module" to "fabric-loader"
+                    ))
+                })
+
+        val localRuntime: Configuration = project.configurations.maybeCreate("localRuntime$envTypeName").apply {
+            extendsFrom(project.configurations.getByName("runtimeOnly"))
+            exclude(mapOf(
+                "group" to "net.fabricmc",
+                "module" to "fabric-loader"
+            ))
+        }
+
+        val modLocalRuntime: Configuration = registerConfiguration(
+            project.configurations.maybeCreate("modLocalRuntime" + envTypeName)
+                .apply {
+                    extendsFrom(project.configurations.getByName("localRuntime"))
+                    exclude(mapOf(
+                        "group" to "net.fabricmc",
+                        "module" to "fabric-loader"
+                    ))
+                })
+
+        val modImplementation: Configuration = registerConfiguration(
+            project.configurations.maybeCreate("modImplementation" + envTypeName)
+                .apply {
+                    extendsFrom(project.configurations.getByName("implementation"))
+                    exclude(mapOf(
+                        "group" to "net.fabricmc",
+                        "module" to "fabric-loader"
+                    ))
+                })
+
+
+        init {
+            parent.mcRemapper.provider.parent.events.register(::sourceSets)
+        }
+
+        private fun sourceSets(sourceSets: SourceSetContainer) {
+            when (envType) {
+                EnvType.SERVER -> {
+                    sourceSets.findByName("server")?.apply {
+                        compileClasspath += modCompileOnly + modImplementation
+                        runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+                    }
+                }
+                EnvType.CLIENT -> {
+                    sourceSets.findByName("client")?.apply {
+                        compileClasspath += modCompileOnly + modImplementation
+                        runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+                    }
+                }
+                EnvType.COMBINED -> {
+                    sourceSets.findByName("main")?.apply {
+                        compileClasspath += modCompileOnly + modImplementation
+                        runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+                    }
+                    sourceSets.findByName("server")?.apply {
+                        compileClasspath += modCompileOnly + modImplementation
+                        runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+                    }
+                    sourceSets.findByName("client")?.apply {
+                        compileClasspath += modCompileOnly + modImplementation
+                        runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+                    }
                 }
             }
         }

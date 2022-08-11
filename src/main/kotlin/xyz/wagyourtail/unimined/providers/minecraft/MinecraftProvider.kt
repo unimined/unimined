@@ -105,7 +105,9 @@ abstract class MinecraftProvider(
             else -> throw IllegalArgumentException("Unknown transformer: ${transformer.get()}")
         }
         minecraftTransformer.afterEvaluate()
-        modRemapper.remap()
+        for (envType in EnvType.values()) {
+            modRemapper.remap(envType)
+        }
     }
 
     private fun sourceSets(sourceSets: SourceSetContainer) {
@@ -153,25 +155,12 @@ abstract class MinecraftProvider(
         }
     }
 
-    private val minecraftClientMapped = mutableMapOf<String, Path>()
-    private val minecraftServerMapped = mutableMapOf<String, Path>()
-//    private val minecraftCombinedMapped = mutableMapOf<String, Path>()
-
-    fun getMinecraftClientWithMapping(namespace: String): Path {
-        return minecraftClientMapped.computeIfAbsent(namespace) {
-            mcRemapper.provideClient(minecraftTransformer.transformClient(minecraftDownloader.minecraftClient), namespace)
-        }
-    }
-
-    fun getMinecraftServerWithMapping(namespace: String): Path {
-        return minecraftServerMapped.computeIfAbsent(namespace) {
-            mcRemapper.provideServer(minecraftTransformer.transformServer(minecraftDownloader.minecraftServer), namespace)
-        }
-    }
-
-    fun getMinecraftCombinedWithMapping(namespace: String): Path {
-        return minecraftClientMapped.computeIfAbsent(namespace) {
-            mcRemapper.provideClient(minecraftTransformer.transformCombined(minecraftDownloader.minecraftCombined), namespace)
+    private val minecraftMapped = mutableMapOf<EnvType, MutableMap<String, Path>>()
+    fun getMinecraftWithMapping(envType: EnvType, namespace: String): Path {
+        return minecraftMapped.computeIfAbsent(envType) {
+            mutableMapOf()
+        }.computeIfAbsent(namespace) {
+            mcRemapper.provide(envType, minecraftTransformer.transform(envType, minecraftDownloader.getMinecraft(envType)), namespace)
         }
     }
 
@@ -192,31 +181,31 @@ abstract class MinecraftProvider(
                     "client" -> StreamableArtifact.ofFile(
                         info,
                         ArtifactType.BINARY,
-                        getMinecraftClientWithMapping(targetNamespace.get()).toFile()
+                        getMinecraftWithMapping(EnvType.CLIENT, targetNamespace.get()).toFile()
                     )
 
                     "server" -> StreamableArtifact.ofFile(
                         info,
                         ArtifactType.BINARY,
-                        getMinecraftServerWithMapping(targetNamespace.get()).toFile()
+                        getMinecraftWithMapping(EnvType.SERVER, targetNamespace.get()).toFile()
                     )
 
                     "client-mappings" -> StreamableArtifact.ofFile(
                         info,
                         ArtifactType.BINARY,
-                        minecraftDownloader.clientMappings.toFile()
+                        minecraftDownloader.getMappings(EnvType.CLIENT).toFile()
                     )
 
                     "server-mappings" -> StreamableArtifact.ofFile(
                         info,
                         ArtifactType.BINARY,
-                        minecraftDownloader.serverMappings.toFile()
+                        minecraftDownloader.getMappings(EnvType.SERVER).toFile()
                     )
 
                     null -> StreamableArtifact.ofFile(
                         info,
                         ArtifactType.BINARY,
-                        getMinecraftCombinedWithMapping(targetNamespace.get()).toFile()
+                        getMinecraftWithMapping(EnvType.COMBINED, targetNamespace.get()).toFile()
                     )
 
                     else -> throw IllegalArgumentException("Unknown classifier ${info.classifier}")
@@ -225,11 +214,12 @@ abstract class MinecraftProvider(
     }
 
 
-    fun provideRunClientTask(tasks: TaskContainer, overrides: (JavaExec) -> Unit) {
+    fun provideRunClientTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
         val nativeDir = clientWorkingDirectory.get().resolve("natives")
-        val preRun = project.tasks.create("preRunClient", consumerApply {
+
+        project.tasks.create("preRunClient", consumerApply {
             doLast {
                 if (nativeDir.exists()) {
                     nativeDir.deleteRecursively()
@@ -297,6 +287,9 @@ abstract class MinecraftProvider(
             (minecraftDownloader.metadata.getJVMArgs(clientWorkingDirectory.get().resolve("libraries").toPath(), nativeDir.toPath()) + betacraftArgs).toMutableList(),
             clientWorkingDirectory.get()
         )
+
+        overrides(runConfig)
+
         val task = runConfig.createGradleTask(tasks, "Unimined")
         task.doFirst {
             if (!JavaVersion.current().equals(minecraftDownloader.metadata.javaVersion)) {
@@ -331,9 +324,4 @@ abstract class MinecraftProvider(
         }
     }
 
-    enum class EnvType {
-        COMBINED,
-        CLIENT,
-        SERVER
-    }
 }

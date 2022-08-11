@@ -6,6 +6,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
 import java.io.InputStreamReader
@@ -137,21 +138,16 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
 
     }
 
-    override fun transformClient(baseMinecraft: Path): Path {
+    override fun transform(envType: EnvType, baseMinecraft: Path): Path {
         return baseMinecraft
     }
 
-    override fun transformServer(baseMinecraft: Path): Path {
-        return baseMinecraft
-    }
-
-    override fun transformCombined(baseMinecraft: Path): Path {
-        return baseMinecraft
-    }
-
-    private fun getIntermediaryClassPath(): String {
+    private fun getIntermediaryClassPath(envType: EnvType): String {
         val remapClasspath = provider.parent.getLocalCache().resolve("remapClasspath.txt")
-        val s = provider.mcLibraries.files.joinToString(":") + ":" + provider.modRemapper.internalModRemapperConfiguration.files.joinToString(":") + ":" + provider.getMinecraftCombinedWithMapping("intermediary")
+        val s = provider.mcLibraries.files.joinToString(":") + ":" +
+            provider.modRemapper.internalModRemapperConfiguration(envType).files.joinToString(":") + ":" +
+            provider.getMinecraftWithMapping(envType, "intermediary")
+
         remapClasspath.writeText(s, options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
         return remapClasspath.absolutePathString()
     }
@@ -159,15 +155,15 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
         provider.provideRunClientTask(tasks) { task ->
-            clientMainClass?.let { task.mainClass.set(it) }
-            task.jvmArgs = listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath()}") + (task.jvmArgs ?: emptyList())
+            clientMainClass?.let { task.mainClass = it }
+            task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath(EnvType.CLIENT)}")
         }
     }
 
     override fun applyServerRunConfig(tasks: TaskContainer) {
         provider.provideRunServerTask(tasks) { task ->
             serverMainClass?.let { task.mainClass = it }
-            task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath()}")
+            task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath(EnvType.SERVER)}")
         }
     }
 }

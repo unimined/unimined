@@ -9,6 +9,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.tasks.Jar
+import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 
 abstract class RemapJarTask : Jar() {
@@ -23,21 +24,26 @@ abstract class RemapJarTask : Jar() {
     @get:Input
     abstract val targetNamespace: Property<String>
 
+    @get:Input
+    abstract val minecraftTarget: Property<String>
+
     init {
         sourceNamespace.convention(minecraftProvider.targetNamespace)
         targetNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
+        minecraftTarget.convention(EnvType.COMBINED.name)
     }
 
     @TaskAction
     fun run() {
+        val envType = EnvType.valueOf(minecraftTarget.get())
         val remapper = TinyRemapper.newRemapper()
-            .withMappings(minecraftProvider.mcRemapper.getMappingProvider(sourceNamespace.get(), targetNamespace.get(), targetNamespace.get(), minecraftProvider.mcRemapper.mappingTree,false))
+            .withMappings(minecraftProvider.mcRemapper.getMappingProvider(sourceNamespace.get(), targetNamespace.get(), targetNamespace.get(), minecraftProvider.mcRemapper.getMappingTree(envType),false))
             .skipLocalVariableMapping(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .extension(MixinExtension())
             .build()
 
-        val mc = minecraftProvider.mcRemapper.provider.getMinecraftCombinedWithMapping(minecraftProvider.targetNamespace.get())
+        val mc = minecraftProvider.mcRemapper.provider.getMinecraftWithMapping(envType, minecraftProvider.targetNamespace.get())
         remapper.readClassPathAsync(mc)
         project.logger.warn("Remapping mods using $mc")
         remapper.readClassPathAsync(*minecraftProvider.mcRemapper.provider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
