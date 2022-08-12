@@ -18,7 +18,6 @@ import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import java.io.File
-import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.nio.file.Path
@@ -33,7 +32,6 @@ class MinecraftRemapper(
     val provider: MinecraftProvider,
 ) {
 
-    //TODO: make this configurable
     var remapFrom = "official"
     var fallbackTarget = "intermediary"
     fun getMappings(envType: EnvType): Configuration {
@@ -67,25 +65,9 @@ class MinecraftRemapper(
         } else {
             for (mapping in mappingsFiles(envType)) {
                 if (mapping.extension == "zip" || mapping.extension == "jar") {
-                    forEachInZip(mapping) { type, stream ->
-                        when (type) {
-                            MappingType.TINY_2 -> MappingReader.read(InputStreamReader(stream), mappingTree)
-                            MappingType.MCP_METHODS -> MCPReader.readMethod(InputStreamReader(stream), "searge", "named", mappingTree)
-                            MappingType.MCP_PARAMS -> MCPReader.readParam(InputStreamReader(stream), "searge", "named", mappingTree)
-                            MappingType.MCP_FIELDS -> MCPReader.readField(InputStreamReader(stream), "searge", "named", mappingTree)
-                            MappingType.SRG_CLIENT -> {
-                                if (envType != EnvType.SERVER)
-                                    SrgReader.read(InputStreamReader(stream), "official", "searge", MappingSourceNsSwitch(mappingTree, "searge"))
-                            }
-                            MappingType.SRG_SERVER -> {
-                                if (envType != EnvType.CLIENT)
-                                    SrgReader.read(InputStreamReader(stream), "official", "searge",  MappingSourceNsSwitch(mappingTree, "searge"))
-                            }
-                            MappingType.SRG_MERGED -> {
-                                SrgReader.read(InputStreamReader(stream), "official", "searge",  MappingSourceNsSwitch(mappingTree, "searge"))
-                            }
-                        }
-                    }
+                    val contents = ZipReader.readContents(mapping.toPath())
+                    project.logger.info("Detected mapping type: ${ZipReader.getZipTypeFromContentList(contents)}")
+                    ZipReader.readMappings(envType, mapping.toPath(), contents, mappingTree)
                 } else if (mapping.name == "client_mappings.txt" || mapping.name == "server_mappings.txt") {
                     InputStreamReader(mapping.inputStream()).use {
                         val temp = MemoryMappingTree()
@@ -138,40 +120,6 @@ class MinecraftRemapper(
         }
     }
 
-    private fun forEachInZip(zip: File, action: (MappingType, InputStream) -> Unit) {
-        val zipEntryList = mutableListOf<String>()
-        ZipInputStream(zip.inputStream()).use { zipStream ->
-            var entry: ZipEntry? = zipStream.nextEntry ?: throw IllegalStateException("Mappings jar is empty $zipStream")
-            while (entry != null) {
-                zipEntryList.add(entry.name)
-                entry = zipStream.nextEntry
-            }
-        }
-
-        val filterSrgSides = zipEntryList.any { it.matches(MappingType.SRG_MERGED.pattern) }
-
-        ZipInputStream(zip.inputStream()).use { stream ->
-            var entry = stream.nextEntry
-            while (entry != null) {
-                if (entry!!.isDirectory) {
-                    entry = stream.nextEntry
-                    continue
-                }
-                for (mappingT in MappingType.values()) {
-                    if (entry!!.name.matches(mappingT.pattern)) {
-                        if (filterSrgSides && mappingT == MappingType.SRG_CLIENT || mappingT == MappingType.SRG_SERVER) {
-                            continue
-                        }
-                        project.logger.warn("Found mapping file ${entry!!.name}")
-                        action(mappingT, stream)
-                        break
-                    }
-                }
-                entry = stream.nextEntry
-            }
-        }
-    }
-
     private fun memberOf(className: String, memberName: String, descriptor: String?): IMappingProvider.Member {
         return IMappingProvider.Member(className, memberName, descriptor)
     }
@@ -201,7 +149,7 @@ class MinecraftRemapper(
                 val toClassName = classDef.getName(toId) ?: classDef.getName(fallbackId) ?: fromClassName
 
                 if (fromClassName == null) {
-                    project.logger.warn("No class name for $fromClassName")
+                    project.logger.warn("No class name for $classDef")
                 }
                 acceptor.acceptClass(fromClassName, toClassName)
 
@@ -292,7 +240,7 @@ class MinecraftRemapper(
             .ignoreConflicts(true)
             .ignoreFieldDesc(true)
             .build()
-
+        project.logger.warn("Remapping ${file.name} to $target")
 
         OutputConsumerPath.Builder(target).build().use {
             it.addNonClassFiles(file, NonClassCopyMode.FIX_META_INF, null)
@@ -301,15 +249,5 @@ class MinecraftRemapper(
         }
         remapper.finish()
         return target
-    }
-
-    enum class MappingType(val pattern: Regex) {
-        MCP_METHODS(Regex(".+/methods.csv$")),
-        MCP_PARAMS(Regex(".+/params.csv$")),
-        MCP_FIELDS(Regex(".+/fields.csv$")),
-        SRG_CLIENT(Regex(".+/client.srg$")),
-        SRG_SERVER(Regex(".+/server.srg$")),
-        SRG_MERGED(Regex(".+/merged.srg$")),
-        TINY_2(Regex(".+/mappings.tiny$"));
     }
 }

@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.providers.patch.jarmod
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.tasks.TaskContainer
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
@@ -45,6 +46,9 @@ open class JarModMinecraftTransformer(
 
     override fun transform(envType: EnvType, baseMinecraft: Path): Path {
         val combinedNames = getCombinedNames(envType)
+        if (combinedNames.isEmpty()) {
+            return baseMinecraft
+        }
         val target = getTransformedMinecraftPath(baseMinecraft, combinedNames)
         if (target.exists() && !project.gradle.startParameter.isRefreshDependencies) {
             return target
@@ -99,6 +103,22 @@ open class JarModMinecraftTransformer(
             throw e
         }
         return target
+    }
+
+    override fun applyClientRunConfig(tasks: TaskContainer) {
+        provider.provideRunClientTask(tasks) {
+            if (clientMainClass != null) {
+                it.mainClass = clientMainClass as String
+            }
+        }
+    }
+
+    override fun applyServerRunConfig(tasks: TaskContainer) {
+        provider.provideRunServerTask(tasks) {
+            if (serverMainClass != null) {
+                it.mainClass = serverMainClass as String
+            }
+        }
     }
 
     private fun getTransformedMinecraftPath(baseMinecraft: Path, combinedNames: String): Path {

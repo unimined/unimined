@@ -196,7 +196,13 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
             serverPath
         } else {
             val metadata = metadata
-            val serverJar = metadata.downloads["server"] ?: throw IllegalStateException("No server jar found for version $version")
+            var serverJar = metadata.downloads["server"]
+
+            if (serverJar == null) {
+                // attempt to get off betacraft
+                val uriPart = if (version.startsWith("b")) "beta/$version" else if (version.startsWith("a")) "alpha/$version" else "release/$version"
+                serverJar = Download("", -1, URI.create("http://files.betacraft.uk/server-archive/$uriPart.jar"))
+            }
 
             serverPath.parent.maybeCreate()
             download(serverJar, serverPath)
@@ -276,7 +282,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                         entry = stream.nextEntry
                         continue
                     }
-                    if (extract.exclude.any { entry.name.startsWith(it) }) {
+                    if (extract.exclude.any { entry!!.name.startsWith(it) }) {
                         entry = stream.nextEntry
                         continue
                     }
@@ -311,6 +317,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         return mcVersionFolder(version).resolve("server_mappings.txt")
     }
 
+    @Suppress("UNUSED")
     fun combinedJarDownloadPath(version: String): Path {
         return mcVersionFolder(version).resolve("minecraft-$version.jar")
     }

@@ -26,6 +26,7 @@ import net.fabricmc.mappingio.MappingFlag;
 import net.fabricmc.mappingio.MappingVisitor;
 
 public final class Tiny2Reader2 {
+	@SuppressWarnings("unused")
 	public static List<String> getNamespaces(Reader reader) throws IOException {
 		return getNamespaces(new ColumnFileReader(reader, '\t'));
 	}
@@ -158,7 +159,7 @@ public final class Tiny2Reader2 {
 		while (reader.nextLine(2)) {
 			if (reader.nextCol("p")) { // method parameter: p <lv-index> <names>...
 				int lvIndex = reader.nextIntCol();
-				if (lvIndex < 0) throw new IOException("missing/invalid parameter lv-index in line "+reader.getLineNumber());
+//				if (lvIndex < 0) throw new IOException("missing/invalid parameter lv-index in line "+reader.getLineNumber());
 				String srcName = reader.nextCol(escapeNames);
 				if (srcName == null) throw new IOException("missing var-name-a column in line "+reader.getLineNumber());
 				if (srcName.isEmpty()) srcName = null;

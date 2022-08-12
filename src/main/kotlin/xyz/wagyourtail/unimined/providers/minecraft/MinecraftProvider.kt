@@ -14,7 +14,6 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.Constants
@@ -106,6 +105,7 @@ abstract class MinecraftProvider(
         }
         minecraftTransformer.afterEvaluate()
         for (envType in EnvType.values()) {
+            if (envType == EnvType.COMBINED && disableCombined.get()) continue
             modRemapper.remap(envType)
         }
     }
@@ -160,7 +160,10 @@ abstract class MinecraftProvider(
         return minecraftMapped.computeIfAbsent(envType) {
             mutableMapOf()
         }.computeIfAbsent(namespace) {
-            mcRemapper.provide(envType, minecraftTransformer.transform(envType, minecraftDownloader.getMinecraft(envType)), namespace)
+            if (envType == EnvType.COMBINED)
+                getMinecraftWithMapping(EnvType.CLIENT, namespace) //TODO: fix to actually merge
+            else
+                mcRemapper.provide(envType, minecraftTransformer.transform(envType, minecraftDownloader.getMinecraft(envType)), namespace)
         }
     }
 

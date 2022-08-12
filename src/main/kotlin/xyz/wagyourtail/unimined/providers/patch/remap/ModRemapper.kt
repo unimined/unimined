@@ -23,12 +23,40 @@ import java.nio.file.StandardOpenOption
 import kotlin.io.path.exists
 import kotlin.io.path.extension
 import kotlin.io.path.name
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
+
+// https://stackoverflow.com/questions/47947841/kotlin-var-lazy-init :)
+class LazyMutable<T>(val initializer: () -> T) : ReadWriteProperty<Any?, T> {
+
+    @Suppress("ClassName")
+    private object UNINITIALIZED_VALUE
+    private var prop: Any? = UNINITIALIZED_VALUE
+
+    @Suppress("UNCHECKED_CAST")
+    override fun getValue(thisRef: Any?, property: KProperty<*>): T {
+        return if (prop == UNINITIALIZED_VALUE) {
+            synchronized(this) {
+                return if (prop == UNINITIALIZED_VALUE) initializer().also { prop = it } else prop as T
+            }
+        } else prop as T
+    }
+
+    override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+        synchronized(this) {
+            prop = value
+        }
+    }
+}
 
 class ModRemapper(
     val project: Project,
     val mcRemapper: MinecraftRemapper
 ) {
 
+
+    var fromMappings: String by LazyMutable { mcRemapper.fallbackTarget }
+    var fallbackTo: String by LazyMutable { mcRemapper.fallbackTarget }
 
     private val combinedConfig = Configs(project, EnvType.COMBINED, this)
     private val clientConfig = Configs(project, EnvType.CLIENT, this)
@@ -42,7 +70,7 @@ class ModRemapper(
         ))
     }
 
-    fun internalModRemapperConfiguration(envType: EnvType) = when (envType) {
+    fun internalModRemapperConfiguration(envType: EnvType): Configuration = when (envType) {
         EnvType.COMBINED -> internalCombinedModRemapperConfiguration
         EnvType.CLIENT -> project.configurations.maybeCreate("internalModRemapperClient").apply {
             extendsFrom(internalCombinedModRemapperConfiguration)
@@ -53,8 +81,8 @@ class ModRemapper(
     }
 
     init {
-        project.repositories.forEach {
-            it.content {
+        project.repositories.forEach { repo ->
+            repo.content {
                 it.excludeGroupByRegex("remapped_.+")
             }
         }
@@ -77,14 +105,14 @@ class ModRemapper(
             preTransform(configs.envType, it)
         }
         @Suppress("unused")
-        tinyRemapper = TinyRemapper.newRemapper().withMappings(mcRemapper.getMappingProvider(mcRemapper.fallbackTarget, mcRemapper.fallbackTarget, mcRemapper.provider.targetNamespace.get(), mcRemapper.getMappingTree(configs.envType)))
+        tinyRemapper = TinyRemapper.newRemapper().withMappings(mcRemapper.getMappingProvider(fromMappings, fallbackTo, mcRemapper.provider.targetNamespace.get(), mcRemapper.getMappingTree(configs.envType)))
             .renameInvalidLocals(true)
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .rebuildSourceFilenames(true)
 //            .extension(MixinExtension())
             .build()
-        val mc = mcRemapper.provider.getMinecraftWithMapping(configs.envType, mcRemapper.fallbackTarget)
+        val mc = mcRemapper.provider.getMinecraftWithMapping(configs.envType, fromMappings)
         tinyRemapper.readClassPathAsync(mc)
         project.logger.warn("Remapping mods using $mc")
         tinyRemapper.readClassPathAsync(*mcRemapper.provider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
@@ -204,7 +232,7 @@ class ModRemapper(
                     if (mappingsTo == MappingTreeView.NULL_NAMESPACE_ID) {
                         throw IllegalStateException("Mappings to namespace ${mcRemapper.provider.targetNamespace.get()} not found")
                     }
-                    var fallbackTo = mappingTree.getNamespaceId(mcRemapper.fallbackTarget)
+                    var fallbackTo = mappingTree.getNamespaceId(fromMappings)
                     if (fallbackTo == MappingTreeView.NULL_NAMESPACE_ID) {
                         fallbackTo = mappingsFrom
                     }

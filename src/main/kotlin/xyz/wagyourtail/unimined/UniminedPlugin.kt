@@ -8,6 +8,7 @@ import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.remap.RemapJarTask
 
+@Suppress("UNUSED")
 class UniminedPlugin : Plugin<Project> {
     lateinit var ext: UniminedExtension
     lateinit var minecraftProvider: MinecraftProvider
@@ -26,7 +27,7 @@ class UniminedPlugin : Plugin<Project> {
 
         ext = project.extensions.create("unimined", UniminedExtension::class.java, project)
         minecraftProvider = project.extensions.create("minecraft", MinecraftProvider::class.java, project, ext)
-        ext.events.register(::remapJarTask)
+        remapJarTask(project.tasks)
     }
 
     fun remapJarTask(tasks: TaskContainer) {

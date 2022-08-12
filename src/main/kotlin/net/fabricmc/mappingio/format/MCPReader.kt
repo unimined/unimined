@@ -4,10 +4,11 @@ import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingUtil
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
+import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.Reader
 
 
-private fun ColumnFileReader.readCell(): String {
+internal fun ColumnFileReader.readCell(): String {
     var source = nextCol()
     if (source.startsWith("\"")) {
         while (!source.endsWith("\"")) source += nextCol() ?: throw IllegalStateException("String not closed at line $lineNumber")
@@ -18,26 +19,39 @@ private fun ColumnFileReader.readCell(): String {
 
 @Suppress("UNUSED")
 object MCPReader {
-    fun readMethod(reader: Reader, visitor: MemoryMappingTree) {
-        readMethod(reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
+
+    private fun checkHeader(reader: ColumnFileReader): Boolean {
+        return (reader.nextCol("searge") || reader.nextCol("param")) && reader.nextCol("name") && reader.nextCol("side")
     }
 
-    fun readMethod(reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
-        readMethod(ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
+    fun readMethod(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
+        readMethod(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
+    }
+
+    fun readMethod(envType: EnvType, reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+        readMethod(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
     }
 
     private fun readMethod(
+        envType: EnvType,
         reader: ColumnFileReader,
         sourceNamespace: String,
         targetNamespace: String,
         visitor: MemoryMappingTree
     ) {
 
+        reader.mark()
+        if (!checkHeader(reader)) {
+            reader.reset()
+            throw IllegalStateException("Invalid header")
+        }
 
         val methods = mutableMapOf<String, MethodData>()
         while (reader.nextLine(0)) {
             val src = reader.readCell()
-            methods[src] = MethodData(src, reader.readCell(), reader.readCell(), reader.readCell())
+            val data = MethodData(src, reader.readCell(), reader.readCell(), reader.readCell())
+            if (data.side != "2" && data.side.toInt() != envType.ordinal) continue
+            methods[src] = data
         }
 
         val parentVisitor = visitor
@@ -50,7 +64,7 @@ object MCPReader {
             visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
         }
 
-        val seargeNamespace = visitor.getNamespaceId(sourceNamespace)
+        val seargeNamespace = parentVisitor.getNamespaceId(sourceNamespace)
         if (seargeNamespace == MappingTreeView.NULL_NAMESPACE_ID) {
             throw IllegalStateException("Namespace $sourceNamespace not found")
         }
@@ -85,24 +99,34 @@ object MCPReader {
         visitor.accept(parentVisitor)
     }
 
-    fun readField(reader: Reader, visitor: MemoryMappingTree) {
-        readField(reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
+    fun readField(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
+        readField(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
     }
 
-    fun readField(reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
-        readField(ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
+    fun readField(envType: EnvType, reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+        readField(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
     }
 
     private fun readField(
+        envType: EnvType,
         reader: ColumnFileReader,
         sourceNamespace: String,
         targetNamespace: String,
         visitor: MemoryMappingTree
     ) {
+
+        reader.mark()
+        if (!checkHeader(reader)) {
+            reader.reset()
+            throw IllegalStateException("Invalid header")
+        }
+
         val fields = mutableMapOf<String, FieldData>()
         while (reader.nextLine(0)) {
             val src = reader.readCell()
-            fields[src] = FieldData(src, reader.readCell(), reader.readCell(), reader.readCell())
+            val data = FieldData(src, reader.readCell(), reader.readCell(), reader.readCell())
+            if (data.side != "2" && data.side.toInt() != envType.ordinal) continue
+            fields[src] = data
         }
 
         val parentVisitor = visitor
@@ -115,7 +139,7 @@ object MCPReader {
             visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
         }
 
-        val seargeNamespace = visitor.getNamespaceId(sourceNamespace)
+        val seargeNamespace = parentVisitor.getNamespaceId(sourceNamespace)
         if (seargeNamespace == MappingTreeView.NULL_NAMESPACE_ID) {
             throw IllegalStateException("Namespace $sourceNamespace not found")
         }
@@ -150,28 +174,38 @@ object MCPReader {
         visitor.accept(parentVisitor)
     }
 
-    fun readParam(reader: Reader, visitor: MemoryMappingTree) {
-        readParam(reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
+    fun readParam(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
+        readParam(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
     }
 
-    fun readParam(reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
-        readParam(ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
+    fun readParam(envType: EnvType, reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+        readParam(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
     }
 
     private fun readParam(
+        envType: EnvType,
         reader: ColumnFileReader,
         sourceNamespace: String,
         targetNamespace: String,
         visitor: MemoryMappingTree
     ) {
+
+        reader.mark()
+        if (!checkHeader(reader)) {
+            reader.reset()
+            throw IllegalStateException("Invalid header")
+        }
+
         val params = mutableMapOf<String, ParamData>()
         while (reader.nextLine(0)) {
             val src = reader.readCell().split("_")
-            params[src[1]] = ParamData(src[2], reader.readCell(), reader.readCell())
+            val data = ParamData(src[2], reader.readCell(), reader.readCell())
+            if (data.side != "2" && data.side.toInt() != envType.ordinal) continue
+            params[src[1]] = data
         }
 
         val parentVisitor = visitor
-        val visitor = MemoryMappingTree()
+        @Suppress("NAME_SHADOWING") val visitor = MemoryMappingTree()
 
         val visitHeader = visitor.visitHeader()
 
@@ -179,7 +213,7 @@ object MCPReader {
             visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
         }
 
-        val seargeNamespace = visitor.getNamespaceId(sourceNamespace)
+        val seargeNamespace = parentVisitor.getNamespaceId(sourceNamespace)
         if (seargeNamespace == MappingTreeView.NULL_NAMESPACE_ID) {
             throw IllegalStateException("Namespace $sourceNamespace not found")
         }
@@ -194,7 +228,9 @@ object MCPReader {
 
                     if (visitLastClass) {
                         for (meth in clazz.methods) {
-                            val srgId = meth.getName(seargeNamespace).split("_")[1]
+                            val srg = meth.getName(seargeNamespace).split("_")
+                            if (srg.size < 2) continue
+                            val srgId = srg[1]
                             if (srgId in params) {
                                 val param = params[srgId]!!
                                 visitor.visitMethod(meth.getName(seargeNamespace), meth.getDesc(seargeNamespace))
