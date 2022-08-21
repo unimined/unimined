@@ -2,7 +2,9 @@ package xyz.wagyourtail.unimined.providers.patch.remap
 
 import net.fabricmc.mappingio.MappingReader
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
-import net.fabricmc.mappingio.format.*
+import net.fabricmc.mappingio.format.Tiny2Reader2
+import net.fabricmc.mappingio.format.Tiny2Writer2
+import net.fabricmc.mappingio.format.ZipReader
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import net.fabricmc.tinyremapper.IMappingProvider
@@ -14,9 +16,12 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.patch.remap.stubmappings.MemoryMapping
 import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
@@ -34,21 +39,47 @@ class MinecraftRemapper(
 
     var remapFrom = "official"
     var fallbackTarget = "intermediary"
+    var tinyRemapperConf: (TinyRemapper.Builder) -> Unit = {}
+
+    init {
+        for (envType in EnvType.values()) {
+            getMappings(envType)
+        }
+    }
+
+    fun getStub(envType: String) = getStub(EnvType.valueOf(envType))
+
+    private val stubs = mutableMapOf<EnvType, MemoryMapping>()
+
+    private fun getStub(envType: EnvType): MemoryMapping {
+        return stubs.computeIfAbsent(envType) {
+            MemoryMapping()
+        }
+    }
+
+    @ApiStatus.Internal
     fun getMappings(envType: EnvType): Configuration {
-        return project.configurations.maybeCreate(Constants.MAPPINGS_PROVIDER + (envType.classifier?.capitalized() ?: ""))
+        return project.configurations.maybeCreate(
+            Constants.MAPPINGS_PROVIDER + (envType.classifier?.capitalized() ?: "")
+        )
     }
 
     private fun getInternalMappingsConfig(envType: EnvType): Configuration {
-        return project.configurations.maybeCreate(Constants.MAPPINGS_INTERNAL + (envType.classifier?.capitalized() ?: ""))
+        return project.configurations.maybeCreate(
+            Constants.MAPPINGS_INTERNAL + (envType.classifier?.capitalized() ?: "")
+        )
     }
 
     private val mappingTrees = mutableMapOf<EnvType, MappingTreeView>()
+
+    @ApiStatus.Internal
     fun getMappingTree(envType: EnvType): MappingTreeView {
         return mappingTrees.computeIfAbsent(envType, ::resolveMappingTree)
     }
 
     private fun resolveMappingTree(envType: EnvType): MemoryMappingTree {
-        val file = provider.minecraftDownloader.mcVersionFolder(provider.minecraftDownloader.version).resolve("mappings-${getCombinedNames(envType)}-${envType}.jar")
+        val file = provider.minecraftDownloader.mcVersionFolder(provider.minecraftDownloader.version)
+            .resolve("mappings-${getCombinedNames(envType)}-${envType}.jar")
         val mappingTree = MemoryMappingTree()
         if (file.exists()) {
             ZipInputStream(file.inputStream()).use { zip ->
@@ -80,6 +111,9 @@ class MinecraftRemapper(
                     throw IllegalStateException("Unknown mapping file type ${mapping.name}")
                 }
             }
+            if (stubs.contains(envType)) {
+                getStub(envType).visit(mappingTree)
+            }
             writeToFile(file, mappingTree)
         }
         getInternalMappingsConfig(envType).dependencies.add(
@@ -104,12 +138,20 @@ class MinecraftRemapper(
                 it.runtimeClasspath += getInternalMappingsConfig(envType)
             }
         }
+        project.logger.warn(
+            "mappings for $envType, srcNamespace: ${mappingTree.srcNamespace} dstNamespaces: ${
+                mappingTree.dstNamespaces.joinToString(
+                    ","
+                )
+            }"
+        )
         return mappingTree
     }
 
 
     private val mappingFileEnvs = mutableMapOf<EnvType, Set<File>>()
 
+    @ApiStatus.Internal
     fun mappingsFiles(envType: EnvType): Set<File> {
         return mappingFileEnvs.computeIfAbsent(envType) {
             if (envType != EnvType.COMBINED) {
@@ -124,6 +166,7 @@ class MinecraftRemapper(
         return IMappingProvider.Member(className, memberName, descriptor)
     }
 
+    @ApiStatus.Internal
     fun getMappingProvider(
         srcName: String,
         fallbackTarget: String,
@@ -141,8 +184,12 @@ class MinecraftRemapper(
             }
 
             if (fallbackId == MappingTreeView.NULL_NAMESPACE_ID) {
+                project.logger.warn("Namespace $fallbackTarget not found in mappings, using $srcName as fallback")
                 fallbackId = fromId
             }
+
+            project.logger.debug("Mapping from $srcName to $targetName")
+            project.logger.debug("ids: from $fromId to $toId fallback $fallbackId")
 
             for (classDef in mappingTree.classes) {
                 val fromClassName = classDef.getName(fromId) ?: classDef.getName(fallbackId)
@@ -151,6 +198,7 @@ class MinecraftRemapper(
                 if (fromClassName == null) {
                     project.logger.warn("No class name for $classDef")
                 }
+                project.logger.debug("fromClassName: $fromClassName toClassName: $toClassName")
                 acceptor.acceptClass(fromClassName, toClassName)
 
                 for (fieldDef in classDef.fields) {
@@ -160,6 +208,7 @@ class MinecraftRemapper(
                         project.logger.warn("No field name for $toFieldName")
                         continue
                     }
+                    project.logger.debug("fromFieldName: $fromFieldName toFieldName: $toFieldName")
                     acceptor.acceptField(memberOf(fromClassName, fromFieldName, fieldDef.getDesc(fromId)), toFieldName)
                 }
 
@@ -173,6 +222,7 @@ class MinecraftRemapper(
                     }
                     val method = memberOf(fromClassName, fromMethodName, fromMethodDesc)
 
+                    project.logger.debug("fromMethodName: $fromMethodName toMethodName: $toMethodName")
                     acceptor.acceptMethod(method, toMethodName)
 
                     if (remapLocalVariables) {
@@ -197,6 +247,7 @@ class MinecraftRemapper(
         }
     }
 
+    @ApiStatus.Internal
     fun writeToFile(file: Path, mappingTree: MappingTreeView) {
         ZipOutputStream(file.outputStream()).use {
             it.putNextEntry(ZipEntry("mappings/mappings.tiny"))
@@ -210,19 +261,27 @@ class MinecraftRemapper(
 
     private val combinedNamesMap = mutableMapOf<EnvType, String>()
 
+    @ApiStatus.Internal
     fun getCombinedNames(envType: EnvType): String {
         return combinedNamesMap.computeIfAbsent(envType) {
             val thisEnv = getMappings(envType).dependencies.toMutableSet()
             if (envType != EnvType.COMBINED) {
                 thisEnv.addAll(getMappings(EnvType.COMBINED).dependencies ?: setOf())
             }
-            val jarMod = thisEnv.sortedBy { "${it.name}-${it.version}" }
-            jarMod.joinToString("+") { it.name + "-" + it.version }
+            val mapping = thisEnv.sortedBy { "${it.name}-${it.version}" }
+                .map { it.name + "-" + it.version } + if (stubs.contains(envType)) listOf("stub-${getStub(it).hash}") else listOf()
+
+            mapping.joinToString("+")
         }
     }
 
+    @ApiStatus.Internal
     fun provide(envType: EnvType, file: Path, remapTo: String, remapFrom: String = this.remapFrom): Path {
-        val parent = file.parent
+        val parent = if (stubs.contains(envType)) {
+            provider.parent.getLocalCache().resolve("minecraft").maybeCreate()
+        } else {
+            file.parent
+        }
         val target = parent.resolve(getCombinedNames(envType))
             .resolve("${file.nameWithoutExtension}-mapped-${getCombinedNames(envType)}-${remapTo}.${file.extension}")
 
@@ -230,22 +289,28 @@ class MinecraftRemapper(
             return target
         }
 
-        val remapper = TinyRemapper.newRemapper().withMappings(getMappingProvider(remapFrom, fallbackTarget, remapTo, getMappingTree(envType)))
+        val remapperB = TinyRemapper.newRemapper()
+            .withMappings(getMappingProvider(remapFrom, fallbackTarget, remapTo, getMappingTree(envType)))
             .renameInvalidLocals(true)
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .checkPackageAccess(true)
             .fixPackageAccess(true)
             .rebuildSourceFilenames(true)
-            .ignoreConflicts(true)
-            .ignoreFieldDesc(true)
-            .build()
+        tinyRemapperConf(remapperB)
+        val remapper = remapperB.build()
+
         project.logger.warn("Remapping ${file.name} to $target")
 
-        OutputConsumerPath.Builder(target).build().use {
-            it.addNonClassFiles(file, NonClassCopyMode.FIX_META_INF, null)
-            remapper.readInputs(file)
-            remapper.apply(it)
+        try {
+            OutputConsumerPath.Builder(target).build().use {
+                it.addNonClassFiles(file, NonClassCopyMode.FIX_META_INF, null)
+                remapper.readInputs(file)
+                remapper.apply(it)
+            }
+        } catch (e: RuntimeException) {
+            project.logger.warn("Failed to remap ${file.name} to $target")
+            throw e
         }
         remapper.finish()
         return target

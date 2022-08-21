@@ -1,8 +1,13 @@
 package xyz.wagyourtail.unimined
 
-import java.nio.file.Path
+import java.io.IOException
+import java.io.PrintStream
+import java.io.PrintWriter
+import java.nio.file.*
+import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.*
+import kotlin.io.path.deleteExisting
 import kotlin.io.path.exists
 import kotlin.io.path.fileSize
 import kotlin.io.path.inputStream
@@ -58,12 +63,62 @@ fun testSha1(size: Long, sha1: String, path: Path): Boolean {
     return false
 }
 
-fun getSha1(path: Path): String {
+fun Path.getSha1(): String {
     val digestSha1 = MessageDigest.getInstance("SHA-1")
-    path.inputStream().use {
+    inputStream().use {
         digestSha1.update(it.readBytes())
     }
     val hashBytes = digestSha1.digest()
     val hash = hashBytes.joinToString("") { String.format("%02x", it) }
     return hash
+}
+
+fun runJarInSubprocess(
+    jar: Path,
+    vararg args: String,
+    mainClass: String? = null,
+    workingDir: Path = Paths.get("."),
+    env: Map<String, String> = mapOf(),
+    wait: Boolean = true,
+    jvmArgs: List<String> = listOf()
+) : Int? {
+    val javaHome = System.getProperty("java.home")
+    val javaBin = Paths.get(javaHome, "bin", if (OSUtils.oSId == "windows") "java.exe" else "java")
+    if (!javaBin.exists()) {
+        throw IllegalStateException("java binary not found at $javaBin")
+    }
+    val processArgs = if (mainClass == null) {
+        arrayOf("-jar", jar.toString())
+    } else {
+        arrayOf("-cp", jar.toString(), mainClass)
+    } + args
+    val processBuilder = ProcessBuilder(
+        javaBin.toString(),
+        *jvmArgs.toTypedArray(),
+        *processArgs,
+    )
+    processBuilder.directory(workingDir.toFile())
+    processBuilder.environment().putAll(env)
+//    processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT)
+    System.out.println("Running: ${processBuilder.command().joinToString(" ")}")
+    val process = processBuilder.start()
+    if (wait) {
+        process.waitFor()
+        return process.exitValue()
+    }
+    return null
+}
+
+fun Path.deleteRecursively() {
+    Files.walkFileTree(this, object : SimpleFileVisitor<Path>() {
+        override fun postVisitDirectory(dir: Path, exc: IOException?): FileVisitResult {
+            dir.deleteExisting()
+            return FileVisitResult.CONTINUE
+        }
+
+        override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+            file.deleteExisting()
+            return FileVisitResult.CONTINUE
+        }
+    })
 }

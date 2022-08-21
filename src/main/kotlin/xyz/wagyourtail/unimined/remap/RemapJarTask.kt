@@ -36,19 +36,21 @@ abstract class RemapJarTask : Jar() {
     @TaskAction
     fun run() {
         val envType = EnvType.valueOf(minecraftTarget.get())
-        val remapper = TinyRemapper.newRemapper()
+        val remapperB = TinyRemapper.newRemapper()
             .withMappings(minecraftProvider.mcRemapper.getMappingProvider(sourceNamespace.get(), targetNamespace.get(), targetNamespace.get(), minecraftProvider.mcRemapper.getMappingTree(envType),false))
             .skipLocalVariableMapping(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .extension(MixinExtension())
-            .build()
-
+        minecraftProvider.mcRemapper.tinyRemapperConf(remapperB)
+        val remapper = remapperB.build()
         val mc = minecraftProvider.mcRemapper.provider.getMinecraftWithMapping(envType, minecraftProvider.targetNamespace.get())
+        project.logger.warn("Remapping output ${inputFile.get()} using $mc")
+        project.logger.warn("Environment: $envType")
+        project.logger.warn("Remap from: ${sourceNamespace.get()} to: ${targetNamespace.get()}")
         remapper.readClassPathAsync(mc)
-        project.logger.warn("Remapping mods using $mc")
         remapper.readClassPathAsync(*minecraftProvider.mcRemapper.provider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
 
-        remapper.readInputs(inputFile.get().asFile.toPath())
+        remapper.readInputsAsync(inputFile.get().asFile.toPath())
 
         OutputConsumerPath.Builder(outputs.files.files.first().toPath()).build().use {
             it.addNonClassFiles(
@@ -56,7 +58,6 @@ abstract class RemapJarTask : Jar() {
             )
             remapper.apply(it)
         }
-
         remapper.finish()
 
     }

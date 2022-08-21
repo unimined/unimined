@@ -16,6 +16,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.OSUtils
 import xyz.wagyourtail.unimined.UniminedExtension
@@ -25,6 +26,9 @@ import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.fabric.FabricMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.patch.forge.FG1MinecraftTransformer
+import xyz.wagyourtail.unimined.providers.patch.forge.FG2MinecraftTransformer
+import xyz.wagyourtail.unimined.providers.patch.forge.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.remap.MinecraftRemapper
 import xyz.wagyourtail.unimined.providers.patch.remap.ModRemapper
@@ -67,9 +71,9 @@ abstract class MinecraftProvider(
     abstract val clientWorkingDirectory: Property<File>
     abstract val serverWorkingDirectory: Property<File>
     abstract val disableCombined: Property<Boolean>
-    abstract val transformer: Property<String>
+    abstract val alphaServerVersionOverride: Property<String?>
 
-    private lateinit var minecraftTransformer: AbstractMinecraftTransformer
+    private var minecraftTransformer: AbstractMinecraftTransformer = NoTransformMinecraftTransformer(project, this)
 
     init {
         overrideMainClassClient.convention(null as String?).finalizeValueOnRead()
@@ -78,7 +82,7 @@ abstract class MinecraftProvider(
         clientWorkingDirectory.convention(project.projectDir.resolve("run").resolve("client")).finalizeValueOnRead()
         serverWorkingDirectory.convention(project.projectDir.resolve("run").resolve("server")).finalizeValueOnRead()
         disableCombined.convention(false).finalizeValueOnRead()
-        transformer.convention("none").finalizeValueOnRead()
+        alphaServerVersionOverride.convention(null as String?).finalizeValueOnRead()
 
         project.repositories.maven {
             it.url = URI.create(Constants.MINECRAFT_MAVEN)
@@ -97,17 +101,71 @@ abstract class MinecraftProvider(
     private fun afterEvaluate() {
         addMcLibraries()
 
-        minecraftTransformer = when(transformer.get()) {
-            "none", null -> NoTransformMinecraftTransformer(project, this)
-            "fabric" -> FabricMinecraftTransformer(project, this)
-            "jarMod" -> JarModMinecraftTransformer(project, this)
-            else -> throw IllegalArgumentException("Unknown transformer: ${transformer.get()}")
-        }
         minecraftTransformer.afterEvaluate()
         for (envType in EnvType.values()) {
             if (envType == EnvType.COMBINED && disableCombined.get()) continue
             modRemapper.remap(envType)
         }
+    }
+
+    fun fabric() {
+        fabric {}
+    }
+
+    fun fabric(action: (FabricMinecraftTransformer) -> Unit) {
+        if (minecraftTransformer !is NoTransformMinecraftTransformer) {
+            throw IllegalStateException("Minecraft transformer already set")
+        }
+        minecraftTransformer = FabricMinecraftTransformer(project, this)
+        action(minecraftTransformer as FabricMinecraftTransformer)
+    }
+
+    fun jarMod() {
+        jarMod {}
+    }
+
+    fun jarMod(action: (JarModMinecraftTransformer) -> Unit) {
+        if (minecraftTransformer !is NoTransformMinecraftTransformer) {
+            throw IllegalStateException("Minecraft transformer already set")
+        }
+        minecraftTransformer = JarModMinecraftTransformer(project, this)
+        action(minecraftTransformer as JarModMinecraftTransformer)
+    }
+
+    fun forge1() {
+        forge1 {}
+    }
+
+    fun forge1(action: (FG1MinecraftTransformer) -> Unit) {
+        if (minecraftTransformer !is NoTransformMinecraftTransformer) {
+            throw IllegalStateException("Minecraft transformer already set")
+        }
+        minecraftTransformer = FG1MinecraftTransformer(project, this)
+        action(minecraftTransformer as FG1MinecraftTransformer)
+    }
+
+    fun forge2() {
+        forge2 {}
+    }
+
+    fun forge2(action: (FG2MinecraftTransformer) -> Unit) {
+        if (minecraftTransformer !is NoTransformMinecraftTransformer) {
+            throw IllegalStateException("Minecraft transformer already set")
+        }
+        minecraftTransformer = FG2MinecraftTransformer(project, this)
+        action(minecraftTransformer as FG2MinecraftTransformer)
+    }
+
+    fun forge3() {
+        forge3 {}
+    }
+
+    fun forge3(action: (FG3MinecraftTransformer) -> Unit) {
+        if (minecraftTransformer !is NoTransformMinecraftTransformer) {
+            throw IllegalStateException("Minecraft transformer already set")
+        }
+        minecraftTransformer = FG3MinecraftTransformer(project, this)
+        action(minecraftTransformer as FG3MinecraftTransformer)
     }
 
     private fun sourceSets(sourceSets: SourceSetContainer) {
@@ -156,6 +214,8 @@ abstract class MinecraftProvider(
     }
 
     private val minecraftMapped = mutableMapOf<EnvType, MutableMap<String, Path>>()
+
+    @ApiStatus.Internal
     fun getMinecraftWithMapping(envType: EnvType, namespace: String): Path {
         return minecraftMapped.computeIfAbsent(envType) {
             mutableMapOf()
@@ -163,10 +223,11 @@ abstract class MinecraftProvider(
             if (envType == EnvType.COMBINED)
                 getMinecraftWithMapping(EnvType.CLIENT, namespace) //TODO: fix to actually merge
             else
-                mcRemapper.provide(envType, minecraftTransformer.transform(envType, minecraftDownloader.getMinecraft(envType)), namespace)
+                minecraftTransformer.afterRemap(envType, namespace, mcRemapper.provide(envType, minecraftTransformer.transform(envType, minecraftDownloader.getMinecraft(envType)), namespace))
         }
     }
 
+    @ApiStatus.Internal
     override fun getArtifact(info: ArtifactIdentifier): Artifact {
 
         if (info.group != Constants.MINECRAFT_GROUP) {
@@ -216,7 +277,7 @@ abstract class MinecraftProvider(
             }
     }
 
-
+    @ApiStatus.Internal
     fun provideRunClientTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
@@ -304,6 +365,7 @@ abstract class MinecraftProvider(
         }
     }
 
+    @ApiStatus.Internal
     fun provideRunServerTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 

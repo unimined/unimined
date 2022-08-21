@@ -23,6 +23,7 @@ import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import kotlin.properties.Delegates
 
+@Suppress("MemberVisibilityCanBePrivate")
 class MinecraftDownloader(val project: Project, private val parent: MinecraftProvider) {
 
     var client by Delegates.notNull<Boolean>()
@@ -200,7 +201,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
             if (serverJar == null) {
                 // attempt to get off betacraft
-                val uriPart = if (version.startsWith("b")) "beta/$version" else if (version.startsWith("a")) "alpha/$version" else "release/$version"
+                val uriPart = if (version.startsWith("b")) "beta/$version" else if (version.startsWith("a")) "alpha/${parent.alphaServerVersionOverride.get() ?: version.replaceFirst("1", "0")}" else "release/$version"
                 serverJar = Download("", -1, URI.create("http://files.betacraft.uk/server-archive/$uriPart.jar"))
             }
 
@@ -306,7 +307,10 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     fun serverJarDownloadPath(version: String): Path {
-        return mcVersionFolder(version).resolve("minecraft-$version-server.jar")
+        val versionF = if (version.startsWith("a")) {
+             parent.alphaServerVersionOverride.get() ?: version.replaceFirst("1", "0")
+        } else version
+        return mcVersionFolder(version).resolve("minecraft-$versionF-server.jar")
     }
 
     fun clientMappingsDownloadPath(version: String): Path {

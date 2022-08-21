@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
+import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.remap.RemapJarTask
 
@@ -12,8 +13,6 @@ import xyz.wagyourtail.unimined.remap.RemapJarTask
 class UniminedPlugin : Plugin<Project> {
     lateinit var ext: UniminedExtension
     lateinit var minecraftProvider: MinecraftProvider
-
-    lateinit var sourceSets: SourceSetContainer
 
     override fun apply(project: Project) {
         project.apply(mapOf(
@@ -23,14 +22,13 @@ class UniminedPlugin : Plugin<Project> {
             "plugin" to "idea"
         ))
 
-        sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-
         ext = project.extensions.create("unimined", UniminedExtension::class.java, project)
         minecraftProvider = project.extensions.create("minecraft", MinecraftProvider::class.java, project, ext)
-        remapJarTask(project.tasks)
+        remapJarTask(project, project.tasks)
     }
 
-    fun remapJarTask(tasks: TaskContainer) {
+    fun remapJarTask(project: Project, tasks: TaskContainer) {
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
         val jarTask = tasks.getByName("jar") as Jar
         val client = sourceSets.findByName("client")
         val server = sourceSets.findByName("server")
@@ -48,6 +46,9 @@ class UniminedPlugin : Plugin<Project> {
             if (client != null) {
                 it.archiveClassifier.set("client")
             }
+            if (minecraftProvider.disableCombined.get()) {
+                it.minecraftTarget.convention(EnvType.CLIENT.name)
+            }
         }
         if (server != null || client != null) {
             val serverJar = tasks.register("serverJar", Jar::class.java) {
@@ -60,6 +61,9 @@ class UniminedPlugin : Plugin<Project> {
                 it.group = "unimined"
                 it.inputFile.convention(serverJar.archiveFile)
                 it.archiveClassifier.set("server")
+                if (minecraftProvider.disableCombined.get()) {
+                    it.minecraftTarget.convention(EnvType.SERVER.name)
+                }
             }
             build.dependsOn(serverRemapJar)
         }

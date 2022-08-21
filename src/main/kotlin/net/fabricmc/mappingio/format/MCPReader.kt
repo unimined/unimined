@@ -8,8 +8,8 @@ import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.Reader
 
 
-internal fun ColumnFileReader.readCell(): String {
-    var source = nextCol()
+internal fun ColumnFileReader.readCell(): String? {
+    var source: String = nextCol() ?: return null
     if (source.startsWith("\"")) {
         while (!source.endsWith("\"")) source += nextCol() ?: throw IllegalStateException("String not closed at line $lineNumber")
         source = source.substring(1, source.length - 1)
@@ -48,8 +48,8 @@ object MCPReader {
 
         val methods = mutableMapOf<String, MethodData>()
         while (reader.nextLine(0)) {
-            val src = reader.readCell()
-            val data = MethodData(src, reader.readCell(), reader.readCell(), reader.readCell())
+            val src = reader.readCell()!!
+            val data = MethodData(src, reader.readCell()!!, reader.readCell()!!, reader.readCell())
             if (data.side != "2" && data.side.toInt() != envType.ordinal) continue
             methods[src] = data
         }
@@ -69,9 +69,20 @@ object MCPReader {
             throw IllegalStateException("Namespace $sourceNamespace not found")
         }
 
-        var visitLastClass: Boolean
 
         if (visitor.visitContent()) {
+            var visitLastClass: Boolean
+
+            for (clazz in (parentVisitor as MappingTreeView).classes) {
+                val cn = clazz.getName(seargeNamespace)
+                visitLastClass = visitor.visitClass(cn)
+
+                if (visitLastClass) {
+                    visitor.visitDstName(MappedElementKind.CLASS, 0, cn)
+                    visitor.visitElementContent(MappedElementKind.CLASS)
+                }
+            }
+
             for (clazz in (parentVisitor as MappingTreeView).classes) {
                 visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace))
                 if (visitLastClass) {
@@ -123,8 +134,8 @@ object MCPReader {
 
         val fields = mutableMapOf<String, FieldData>()
         while (reader.nextLine(0)) {
-            val src = reader.readCell()
-            val data = FieldData(src, reader.readCell(), reader.readCell(), reader.readCell())
+            val src = reader.readCell()!!
+            val data = FieldData(src, reader.readCell()!!, reader.readCell()!!, reader.readCell())
             if (data.side != "2" && data.side.toInt() != envType.ordinal) continue
             fields[src] = data
         }
@@ -146,7 +157,18 @@ object MCPReader {
 
         var visitLastClass: Boolean
 
+
         if (visitor.visitContent()) {
+            for (clazz in (parentVisitor as MappingTreeView).classes) {
+                val cn = clazz.getName(seargeNamespace)
+                visitLastClass = visitor.visitClass(cn)
+
+                if (visitLastClass) {
+                    visitor.visitDstName(MappedElementKind.CLASS, 0, cn)
+                    visitor.visitElementContent(MappedElementKind.CLASS)
+                }
+            }
+
             for (clazz in (parentVisitor as MappingTreeView).classes) {
                 visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace))
                 if (visitLastClass) {
@@ -198,8 +220,8 @@ object MCPReader {
 
         val params = mutableMapOf<String, ParamData>()
         while (reader.nextLine(0)) {
-            val src = reader.readCell().split("_")
-            val data = ParamData(src[2], reader.readCell(), reader.readCell())
+            val src = reader.readCell()!!.split("_")
+            val data = ParamData(src[2], reader.readCell()!!, reader.readCell()!!)
             if (data.side != "2" && data.side.toInt() != envType.ordinal) continue
             params[src[1]] = data
         }
@@ -235,7 +257,9 @@ object MCPReader {
                                 val param = params[srgId]!!
                                 visitor.visitMethod(meth.getName(seargeNamespace), meth.getDesc(seargeNamespace))
                                 visitor.visitElementContent(MappedElementKind.METHOD)
-                                visitor.visitMethodArg(Integer.parseInt(param.source), -1, param.target)
+                                if (visitor.visitMethodArg(Integer.parseInt(param.source), -1, null)) {
+                                    visitor.visitDstName(MappedElementKind.METHOD_ARG, 0, param.target)
+                                }
                             }
                         }
                     }

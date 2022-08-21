@@ -5,6 +5,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.deleteRecursively
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
@@ -24,8 +25,21 @@ open class JarModMinecraftTransformer(
 ) : AbstractMinecraftTransformer(
     project, provider
 ) {
-    private fun jarModConfiguration(envType: EnvType): Configuration? {
-        return project.configurations.findByName(jarModProvider + (envType.classifier?.capitalized() ?: ""))
+
+    init {
+        for (envType in EnvType.values()) {
+            jarModConfiguration(envType)
+        }
+    }
+
+    private val transform = mutableListOf<(FileSystem) -> Unit>()
+
+    fun addTransform(pathFilter: (FileSystem) -> Unit) {
+        transform.add(pathFilter)
+    }
+
+    fun jarModConfiguration(envType: EnvType): Configuration {
+        return project.configurations.maybeCreate(jarModProvider + (envType.classifier?.capitalized() ?: ""))
     }
 
     var clientMainClass: String? = null
@@ -35,9 +49,9 @@ open class JarModMinecraftTransformer(
     private val combinedNamesMap = mutableMapOf<EnvType, String>()
     private fun getCombinedNames(envType: EnvType): String {
         return combinedNamesMap.computeIfAbsent(envType) {
-            val thisEnv = jarModConfiguration(envType)?.dependencies?.toMutableSet() ?: mutableSetOf()
+            val thisEnv = jarModConfiguration(envType).dependencies.toMutableSet()
             if (envType != EnvType.COMBINED) {
-                thisEnv.addAll(jarModConfiguration(EnvType.COMBINED)?.dependencies ?: setOf())
+                thisEnv.addAll(jarModConfiguration(EnvType.COMBINED).dependencies)
             }
             val jarMod = thisEnv.sortedBy { "${it.name}-${it.version}" }
             jarMod.joinToString("+") { it.name + "-" + it.version }
@@ -54,9 +68,9 @@ open class JarModMinecraftTransformer(
             return target
         }
 
-        val jarmod = jarModConfiguration(envType)?.resolve()?.toMutableSet() ?: mutableSetOf()
+        val jarmod = jarModConfiguration(envType).resolve().toMutableSet()
         if (envType != EnvType.COMBINED) {
-            jarmod.addAll(jarModConfiguration(EnvType.COMBINED)?.resolve() ?: setOf())
+            jarmod.addAll(jarModConfiguration(EnvType.COMBINED).resolve())
         }
 
         Files.copy(baseMinecraft, target, StandardCopyOption.REPLACE_EXISTING)
@@ -84,19 +98,10 @@ open class JarModMinecraftTransformer(
                         }
                     }
                     if (out.getPath("META-INF").exists()) {
-                        Files.walkFileTree(out.getPath("META-INF"), object : SimpleFileVisitor<Path>() {
-                            override fun postVisitDirectory(dir: Path, exc: IOException?): FileVisitResult {
-                                dir.deleteExisting()
-                                return FileVisitResult.CONTINUE
-                            }
-
-                            override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                                file.deleteExisting()
-                                return FileVisitResult.CONTINUE
-                            }
-                        })
+                        out.getPath("META-INF").deleteRecursively()
                     }
                 }
+                transform.forEach { it(out) }
             }
         } catch (e: Throwable) {
             target.deleteExisting()

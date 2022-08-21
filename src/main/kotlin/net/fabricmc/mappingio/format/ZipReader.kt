@@ -4,9 +4,6 @@ import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.InputStream
 import java.io.InputStreamReader
-import java.net.URI
-import java.nio.file.FileSystem
-import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.util.zip.ZipInputStream
 import kotlin.io.path.inputStream
@@ -43,174 +40,204 @@ object ZipReader {
     ) {
         val mcpConfigVersion = getZipTypeFromContentList(zipContents)
         System.out.println("Detected Zip Format: ${mcpConfigVersion.name} & envType: $envType")
-        createZipFS(zip).use { fs ->
-            for (entry in zipContents.mapNotNull { getTypeOf(it)?.let { t-> Pair(t, it) } }.sortedBy { it.first.ordinal }.map { it.second }) {
-                for (mappingType in MappingType.values()) {
-                    if (entry.matches(mappingType.pattern)) {
-                        if (mcpConfigVersion.ignore.contains(mappingType)) {
-                            break
-                        }
-                        System.out.println("Reading $entry")
-                        when (mappingType) {
-                            MappingType.MCP_METHODS -> {
-                                when (mcpConfigVersion) {
-                                    MCPConfigVersion.OLD_MCP -> {
-                                        OldMCPReader.readMethod(
-                                            envType,
-                                            InputStreamReader(fs.getPath(entry).inputStream()),
-                                            notchNamespaceName,
-                                            seargeNamespaceName,
-                                            mCPNamespaceName,
-                                            mappingTree
-                                        )
-                                    }
-
-                                    MCPConfigVersion.OLDER_MCP -> {
-//                                OlderMCPReader.readMethod(
-//                                    InputStreamReader(inputStream),
-//                                    seargeNamespaceName,
-//                                    mCPNamespaceName,
-//                                    mappingTree
-//                                )
-                                    }
-
-                                    else -> {
-                                        MCPReader.readMethod(
-                                            envType,
-                                            InputStreamReader(fs.getPath(entry).inputStream()),
-                                            seargeNamespaceName,
-                                            mCPNamespaceName,
-                                            mappingTree
-                                        )
-                                    }
-                                }
-                            }
-
-                            MappingType.MCP_PARAMS -> {
-                                MCPReader.readParam(
-                                    envType,
-                                    InputStreamReader(fs.getPath(entry).inputStream()),
-                                    seargeNamespaceName,
-                                    mCPNamespaceName,
-                                    mappingTree
-                                )
-                            }
-
-                            MappingType.MCP_FIELDS -> {
-                                when (mcpConfigVersion) {
-                                    MCPConfigVersion.OLD_MCP -> {
-                                        OldMCPReader.readField(
-                                            envType,
-                                            InputStreamReader(fs.getPath(entry).inputStream()),
-                                            notchNamespaceName,
-                                            seargeNamespaceName,
-                                            mCPNamespaceName,
-                                            mappingTree
-                                        )
-                                    }
-
-                                    MCPConfigVersion.OLDER_MCP -> {
-//                                OlderMCPReader.readField(
-//                                    InputStreamReader(inputStream),
-//                                    seargeNamespaceName,
-//                                    mCPNamespaceName,
-//                                    mappingTree
-//                                )
-                                    }
-
-                                    else -> {
-                                        MCPReader.readField(
-                                            envType,
-                                            InputStreamReader(fs.getPath(entry).inputStream()),
-                                            seargeNamespaceName,
-                                            mCPNamespaceName,
-                                            mappingTree
-                                        )
-                                    }
-                                }
-                            }
-
-                            MappingType.MCP_CLASSES -> {
-                                OldMCPReader.readClasses(
-                                    envType,
-                                    InputStreamReader(fs.getPath(entry).inputStream()),
-                                    notchNamespaceName,
-                                    seargeNamespaceName,
-                                    mCPNamespaceName,
-                                    mappingTree
-                                )
-                            }
-
-                            MappingType.SRG_CLIENT -> {
-                                if (envType == EnvType.CLIENT) {
-                                    SrgReader.read(
-                                        InputStreamReader(fs.getPath(entry).inputStream()),
-                                        notchNamespaceName,
-                                        seargeNamespaceName,
-                                        mappingTree
-                                    )
-                                }
-                            }
-
-                            MappingType.SRG_SERVER -> {
-                                if (envType == EnvType.SERVER) {
-                                    SrgReader.read(
-                                        InputStreamReader(fs.getPath(entry).inputStream()),
-                                        notchNamespaceName,
-                                        seargeNamespaceName,
-                                        mappingTree
-                                    )
-                                }
-                            }
-
-                            MappingType.SRG_MERGED -> {
-                                if (envType == EnvType.COMBINED) {
-                                    SrgReader.read(
-                                        InputStreamReader(fs.getPath(entry).inputStream()),
-                                        notchNamespaceName,
-                                        seargeNamespaceName,
-                                        mappingTree
-                                    )
-                                }
-                            }
-
-                            MappingType.RGS_CLIENT -> {
-                                if (envType == EnvType.CLIENT) {
-                                    RGSReader.read(
-                                        InputStreamReader(fs.getPath(entry).inputStream()),
-                                        notchNamespaceName,
-                                        seargeNamespaceName,
-                                        mappingTree
-                                    )
-                                }
-                            }
-
-                            MappingType.RGS_SERVER -> {
-                                if (envType == EnvType.SERVER) {
-                                    RGSReader.read(
-                                        InputStreamReader(fs.getPath(entry).inputStream()),
-                                        notchNamespaceName,
-                                        seargeNamespaceName,
-                                        mappingTree
-                                    )
-                                }
-                            }
-
-                            MappingType.TSRG -> {
-                                TsrgReader.read(
-                                    InputStreamReader(fs.getPath(entry).inputStream()),
-                                    notchNamespaceName,
-                                    seargeNamespaceName,
-                                    mappingTree
-                                )
-                            }
-
-                            MappingType.TINY -> {
-                                Tiny2Reader.read(InputStreamReader(fs.getPath(entry).inputStream()), mappingTree)
-                            }
-                        }
+        for (entry in zipContents.mapNotNull { getTypeOf(it)?.let { t-> Pair(t, it) } }.sortedBy { it.first.ordinal }.map { it.second }) {
+            for (mappingType in MappingType.values()) {
+                if (entry.matches(mappingType.pattern)) {
+                    if (mcpConfigVersion.ignore.contains(mappingType)) {
                         break
                     }
+                    System.out.println("Reading $entry")
+                    when (mappingType) {
+                        MappingType.MCP_METHODS -> {
+                            when (mcpConfigVersion) {
+                                MCPConfigVersion.OLD_MCP -> {
+                                    readInputStreamFor(entry, zip) {
+                                        OldMCPReader.readMethod(
+                                            envType,
+                                            InputStreamReader(it),
+                                            notchNamespaceName,
+                                            seargeNamespaceName,
+                                            mCPNamespaceName,
+                                            mappingTree
+                                        )
+                                    }
+                                }
+
+                                MCPConfigVersion.OLDER_MCP -> {
+                                    readInputStreamFor(entry, zip) {
+                                        OlderMCPReader.readMethod(
+                                            envType,
+                                            InputStreamReader(it),
+                                            seargeNamespaceName,
+                                            mCPNamespaceName,
+                                            mappingTree
+                                        )
+                                    }
+                                }
+
+                                else -> {
+                                    readInputStreamFor(entry, zip) {
+                                        MCPReader.readMethod(
+                                            envType,
+                                            InputStreamReader(it),
+                                            seargeNamespaceName,
+                                            mCPNamespaceName,
+                                            mappingTree
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        MappingType.MCP_PARAMS -> {
+                            readInputStreamFor(entry, zip) {
+                                MCPReader.readParam(
+                                    envType,
+                                    InputStreamReader(it),
+                                    seargeNamespaceName,
+                                    mCPNamespaceName,
+                                    mappingTree
+                                )
+                            }
+                        }
+
+                        MappingType.MCP_FIELDS -> {
+                            when (mcpConfigVersion) {
+                                MCPConfigVersion.OLD_MCP -> {
+                                    readInputStreamFor(entry, zip) {
+                                        OldMCPReader.readField(
+                                            envType,
+                                            InputStreamReader(it),
+                                            notchNamespaceName,
+                                            seargeNamespaceName,
+                                            mCPNamespaceName,
+                                            mappingTree
+                                        )
+                                    }
+                                }
+
+                                MCPConfigVersion.OLDER_MCP -> {
+                                    readInputStreamFor(entry, zip) {
+                                        OlderMCPReader.readField(
+                                            envType,
+                                            InputStreamReader(it),
+                                            seargeNamespaceName,
+                                            mCPNamespaceName,
+                                            mappingTree
+                                        )
+                                    }
+                                }
+
+                                else -> {
+                                    readInputStreamFor(entry, zip) {
+                                        MCPReader.readField(
+                                            envType,
+                                            InputStreamReader(it),
+                                            seargeNamespaceName,
+                                            mCPNamespaceName,
+                                            mappingTree
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        MappingType.MCP_CLASSES -> {
+                            readInputStreamFor(entry, zip) {
+                                OldMCPReader.readClasses(
+                                    envType,
+                                    InputStreamReader(it),
+                                    notchNamespaceName,
+                                    seargeNamespaceName,
+                                    mCPNamespaceName,
+                                    mappingTree
+                                )
+                            }
+                        }
+
+                        MappingType.SRG_CLIENT -> {
+                            if (envType == EnvType.CLIENT) {
+                                readInputStreamFor(entry, zip) {
+                                    SrgReader.read(
+                                        InputStreamReader(it),
+                                        notchNamespaceName,
+                                        seargeNamespaceName,
+                                        mappingTree
+                                    )
+                                }
+                            }
+                        }
+
+                        MappingType.SRG_SERVER -> {
+                            readInputStreamFor(entry, zip) {
+                                if (envType == EnvType.SERVER) {
+                                    SrgReader.read(
+                                        InputStreamReader(it),
+                                        notchNamespaceName,
+                                        seargeNamespaceName,
+                                        mappingTree
+                                    )
+                                }
+                            }
+                        }
+
+                        MappingType.SRG_MERGED -> {
+                            if (envType == EnvType.COMBINED) {
+                                readInputStreamFor(entry, zip) {
+                                    SrgReader.read(
+                                        InputStreamReader(it),
+                                        notchNamespaceName,
+                                        seargeNamespaceName,
+                                        mappingTree
+                                    )
+                                }
+                            }
+                        }
+
+                        MappingType.RGS_CLIENT -> {
+                            if (envType == EnvType.CLIENT) {
+                                readInputStreamFor(entry, zip) {
+                                    RGSReader.read(
+                                        InputStreamReader(it),
+                                        notchNamespaceName,
+                                        seargeNamespaceName,
+                                        mappingTree
+                                    )
+                                }
+                            }
+                        }
+
+                        MappingType.RGS_SERVER -> {
+                            if (envType == EnvType.SERVER) {
+                                readInputStreamFor(entry, zip) {
+                                    RGSReader.read(
+                                        InputStreamReader(it),
+                                        notchNamespaceName,
+                                        seargeNamespaceName,
+                                        mappingTree
+                                    )
+                                }
+                            }
+                        }
+
+                        MappingType.TSRG -> {
+                            readInputStreamFor(entry, zip) {
+                                TsrgReader.read(
+                                    InputStreamReader(it),
+                                    notchNamespaceName,
+                                    seargeNamespaceName,
+                                    mappingTree
+                                )
+                            }
+                        }
+
+                        MappingType.TINY -> {
+                            readInputStreamFor(entry, zip) {
+                                Tiny2Reader.read(InputStreamReader(it), mappingTree)
+                            }
+                        }
+                    }
+                    break
                 }
             }
         }
@@ -238,8 +265,21 @@ object ZipReader {
         }
     }
 
-    fun createZipFS(zip: Path, mutable: Boolean = false): FileSystem {
-        return FileSystems.newFileSystem(URI.create("jar:${zip.toUri()}"), mapOf("mutable" to mutable), null)
+    fun readInputStreamFor(path: String, zip: Path, action: (InputStream) -> Unit) {
+        ZipInputStream(zip.inputStream()).use { stream ->
+            var entry = stream.nextEntry
+            while (entry != null) {
+                if (entry.isDirectory) {
+                    entry = stream.nextEntry
+                    continue
+                }
+                if (entry.name == path) {
+                    action(stream)
+                    return
+                }
+                entry = stream.nextEntry
+            }
+        }
     }
 
     enum class MappingType(val pattern: Regex) {

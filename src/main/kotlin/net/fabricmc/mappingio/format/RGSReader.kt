@@ -58,7 +58,7 @@ object RGSReader {
                                 val dstName = reader.nextCol()
                                 if (dstName == null || dstName.isEmpty()) throw IOException("missing class-name-b in line ${reader.lineNumber}")
 
-                                visitor.visitDstName(MappedElementKind.CLASS, 0, dstName)
+                                visitor.visitDstName(MappedElementKind.CLASS, 0, "net/minecraft/src/$dstName")
                                 visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
                             }
                         }
@@ -81,6 +81,7 @@ object RGSReader {
                             visitLastClass = visitor.visitClass(srcOwner)
 
                             if (visitLastClass) {
+                                visitor.visitDstName(MappedElementKind.CLASS, 0, srcOwner)
                                 visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
                             }
                         }
@@ -109,6 +110,7 @@ object RGSReader {
                             visitLastClass = visitor.visitClass(srcOwner)
 
                             if (visitLastClass) {
+                                visitor.visitDstName(MappedElementKind.CLASS, 0, srcOwner)
                                 visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
                             }
                         }

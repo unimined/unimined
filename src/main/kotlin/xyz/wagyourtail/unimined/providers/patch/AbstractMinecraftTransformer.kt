@@ -1,8 +1,10 @@
 package xyz.wagyourtail.unimined.providers.patch
 
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
+import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import java.nio.file.Path
@@ -12,10 +14,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     val provider: MinecraftProvider
 ) {
 
-    init {
-        provider.parent.events.register(::sourceSets)
-        provider.parent.events.register(::applyRunConfigs)
-    }
+    internal val dynamicTransformerDependencies: Configuration = project.configurations.maybeCreate(Constants.DYNAMIC_TRANSFORMER_DEPENDENCIES)
 
     abstract fun transform(envType: EnvType, baseMinecraft: Path): Path
     private fun applyRunConfigs(tasks: TaskContainer) {
@@ -35,6 +34,13 @@ abstract class AbstractMinecraftTransformer protected constructor(
         provider.provideRunServerTask(tasks) {  }
     }
 
-    open fun afterEvaluate() {}
+    open fun afterEvaluate() {
+        provider.parent.events.register(::sourceSets)
+        provider.parent.events.register(::applyRunConfigs)
+    }
     open fun sourceSets(sourceSets: SourceSetContainer) {}
+
+    open fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
+        return baseMinecraft
+    }
 }

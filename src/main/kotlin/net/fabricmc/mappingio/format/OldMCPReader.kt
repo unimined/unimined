@@ -77,12 +77,12 @@ object OldMCPReader {
                 val searge = reader.readCell()
                 val name = reader.readCell()
                 val notch = reader.readCell()
-                val sig = reader.readCell()
-                var notchSig = reader.readCell()
+                val sig = reader.readCell()!!
+                var notchSig = reader.readCell()!!
                 val className = reader.readCell()
                 var classNotch = reader.readCell()
                 val packageName = reader.readCell()
-                val side = reader.readCell()
+                val side = reader.readCell()!!
                 if (side != "2" && side.toInt() != envType.ordinal) continue
 
                 if (className == classNotch) {
@@ -165,12 +165,12 @@ object OldMCPReader {
                 val searge = reader.readCell()
                 val name = reader.readCell()
                 val notch = reader.readCell()
-                val sig = reader.readCell()
-                var notchSig = reader.readCell()
+                val sig = reader.readCell()!!
+                var notchSig = reader.readCell()!!
                 val className = reader.readCell()
                 var classNotch = reader.readCell()
                 val packageName = reader.readCell()
-                val side = reader.readCell()
+                val side = reader.readCell()!!
                 if (side != "2" && side.toInt() != envType.ordinal) continue
 
                 if (className == classNotch) {
@@ -304,7 +304,7 @@ object OldMCPReader {
                 val notch = reader.readCell()
                 reader.readCell() // superName
                 val packageName = reader.readCell()
-                val side = reader.readCell()
+                val side = reader.readCell()!!
                 if (side != "2" && side.toInt() != envType.ordinal) continue
 
                 if (name == notch) continue

@@ -57,6 +57,7 @@ class ModRemapper(
 
     var fromMappings: String by LazyMutable { mcRemapper.fallbackTarget }
     var fallbackTo: String by LazyMutable { mcRemapper.fallbackTarget }
+    var tinyRemapperConf: (TinyRemapper.Builder) -> Unit = {}
 
     private val combinedConfig = Configs(project, EnvType.COMBINED, this)
     private val clientConfig = Configs(project, EnvType.CLIENT, this)
@@ -105,13 +106,13 @@ class ModRemapper(
             preTransform(configs.envType, it)
         }
         @Suppress("unused")
-        tinyRemapper = TinyRemapper.newRemapper().withMappings(mcRemapper.getMappingProvider(fromMappings, fallbackTo, mcRemapper.provider.targetNamespace.get(), mcRemapper.getMappingTree(configs.envType)))
+        val tr = TinyRemapper.newRemapper().withMappings(mcRemapper.getMappingProvider(fromMappings, fallbackTo, mcRemapper.provider.targetNamespace.get(), mcRemapper.getMappingTree(configs.envType)))
             .renameInvalidLocals(true)
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .rebuildSourceFilenames(true)
-//            .extension(MixinExtension())
-            .build()
+        tinyRemapperConf(tr)
+        tinyRemapper = tr.build()
         val mc = mcRemapper.provider.getMinecraftWithMapping(configs.envType, fromMappings)
         tinyRemapper.readClassPathAsync(mc)
         project.logger.warn("Remapping mods using $mc")

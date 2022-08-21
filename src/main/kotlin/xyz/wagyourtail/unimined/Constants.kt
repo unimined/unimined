@@ -19,18 +19,25 @@ object Constants {
 
     const val FABRIC_PROVIDER = "fabric"
 
+    const val FORGE_PROVIDER = "forge"
+
     val ASSET_BASE_URL: URI = URI.create("https://resources.download.minecraft.net/")
 
     val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
 
 
-
     const val JARMOD_PROVIDER = "jarMod"
+
+    @ApiStatus.Internal
+    val DYNAMIC_TRANSFORMER_DEPENDENCIES = "dynamicTransformerDependencies"
 
     @ApiStatus.Internal
     const val FABRIC_JSON = "fabricHiddenDontTouch"
 
     @ApiStatus.Internal
     const val MAPPINGS_INTERNAL = "mappingsHiddenDontTouch"
+
+    @ApiStatus.Internal
+    const val FORGE_DEPS = "forgeDeps"
 }
 
