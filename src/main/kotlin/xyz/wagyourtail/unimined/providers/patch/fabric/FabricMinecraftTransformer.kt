@@ -140,6 +140,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     }
 
     override fun transform(envType: EnvType, baseMinecraft: Path): Path {
+        //TODO AW
         return baseMinecraft
     }
 
@@ -157,14 +158,14 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     override fun applyClientRunConfig(tasks: TaskContainer) {
         provider.provideRunClientTask(tasks) { task ->
             clientMainClass?.let { task.mainClass = it }
-            task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath(EnvType.CLIENT)}")
+            task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.CLIENT)}\"")
         }
     }
 
     override fun applyServerRunConfig(tasks: TaskContainer) {
         provider.provideRunServerTask(tasks) { task ->
             serverMainClass?.let { task.mainClass = it }
-            task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=${getIntermediaryClassPath(EnvType.SERVER)}")
+            task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.SERVER)}\"")
         }
     }
 }

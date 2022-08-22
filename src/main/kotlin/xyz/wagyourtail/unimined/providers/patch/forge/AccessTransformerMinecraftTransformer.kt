@@ -54,6 +54,9 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
     }
 
     override fun transform(envType: EnvType, baseMinecraft: Path): Path {
+        if (transformers.isEmpty()) {
+            return baseMinecraft
+        }
         val atjar = dynamicTransformerDependencies.files(atDep).first { it.extension == "jar" }
         val outFile = getOutputJarLocation(baseMinecraft)
         if (outFile.exists()) {

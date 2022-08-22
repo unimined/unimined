@@ -23,12 +23,13 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
     provider
 ) {
 
-    val jarModder = JarModMinecraftTransformer(project, provider, Constants.FORGE_PROVIDER)
+    val forgeJarModder = JarModMinecraftTransformer(project, provider, Constants.FORGE_PROVIDER)
+    val afterForgeJarModder = JarModMinecraftTransformer(project, provider)
     val accessTransformer: File? = null
 
     override fun afterEvaluate() {
         // get and add forge-src to mappings
-        val forge = jarModder.jarModConfiguration(EnvType.COMBINED).dependencies.first()
+        val forge = forgeJarModder.jarModConfiguration(EnvType.COMBINED).dependencies.last()
 
         val forgeSrc = "${forge.group}:${forge.name}:${forge.version}:src@zip"
         provider.mcRemapper.getMappings(EnvType.COMBINED).dependencies.apply {
@@ -38,10 +39,27 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
 
         // replace forge with universal
         val forgeUniversal = "${forge.group}:${forge.name}:${forge.version}:universal@zip"
-        jarModder.jarModConfiguration(EnvType.COMBINED).dependencies.apply {
-            clear()
-            add(project.dependencies.create(forgeUniversal))
+        forgeJarModder.jarModConfiguration(EnvType.COMBINED).dependencies.apply {
+            remove(forge)
+            if (!provider.disableCombined.get()) {
+                add(project.dependencies.create(forgeUniversal))
+            }
         }
+
+        // add forge client/server if universal is disabled
+        val forgeClient = "${forge.group}:${forge.name}:${forge.version}:client@zip"
+        val forgeServer = "${forge.group}:${forge.name}:${forge.version}:server@zip"
+        if (provider.disableCombined.get()) {
+            forgeJarModder.jarModConfiguration(EnvType.CLIENT).dependencies.apply {
+                clear()
+                add(project.dependencies.create(forgeClient))
+            }
+            forgeJarModder.jarModConfiguration(EnvType.SERVER).dependencies.apply {
+                clear()
+                add(project.dependencies.create(forgeServer))
+            }
+        }
+
         super.afterEvaluate()
     }
 
@@ -52,19 +70,19 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
         }
 
         // resolve forge
-        val forge = jarModder.jarModConfiguration(envType).resolve().firstOrNull()?.toPath()
-            ?: jarModder.jarModConfiguration(EnvType.COMBINED).resolve().first().toPath()
+        val forge = forgeJarModder.jarModConfiguration(envType).resolve().firstOrNull()?.toPath()
+            ?: forgeJarModder.jarModConfiguration(EnvType.COMBINED).resolve().first().toPath()
         // resolve ats from froge
-        ZipReader.readInputStreamFor("fml_at.cfg", forge) {
+        ZipReader.readInputStreamFor("fml_at.cfg", forge, false) {
             accessModder.addAccessTransformer(it)
         }
-        ZipReader.readInputStreamFor("forge_at.cfg", forge) {
+        ZipReader.readInputStreamFor("forge_at.cfg", forge, false) {
             accessModder.addAccessTransformer(it)
         }
         // apply ats
         val atsOut = accessModder.transform(envType, baseMinecraft)
         // apply jarMod
-        return jarModder.transform(envType, atsOut)
+        return afterForgeJarModder.transform(envType, forgeJarModder.transform(envType, atsOut))
     }
 
     private val forgeDeps: Configuration = project.configurations.maybeCreate(Constants.FORGE_DEPS)
@@ -161,7 +179,6 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
                 } else {
                     file.copyTo(path.resolve(file.name).toFile(), true)
                 }
-
             }
         }
 

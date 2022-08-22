@@ -23,6 +23,7 @@ import xyz.wagyourtail.unimined.UniminedExtension
 import xyz.wagyourtail.unimined.consumerApply
 import xyz.wagyourtail.unimined.idea.isIdeaSync
 import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
+import xyz.wagyourtail.unimined.providers.minecraft.version.Library
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.fabric.FabricMinecraftTransformer
@@ -194,7 +195,11 @@ abstract class MinecraftProvider(
 
     private fun addMcLibraries() {
         extractDependencies = mutableMapOf()
-        for (library in minecraftDownloader.metadata.libraries) {
+        addMcLibraries(minecraftDownloader.metadata.libraries)
+    }
+
+    fun addMcLibraries(libs: List<Library>) {
+        for (library in libs) {
             project.logger.debug("Added dependency ${library.name}")
             if (library.rules.all { it.testRule() }) {
                 if (library.url != null || library.downloads?.artifact != null) {

@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.Constants.METADATA_URL
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.version.*
 import xyz.wagyourtail.unimined.testSha1
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -201,12 +202,16 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
             if (serverJar == null) {
                 // attempt to get off betacraft
-                val uriPart = if (version.startsWith("b")) "beta/$version" else if (version.startsWith("a")) "alpha/${parent.alphaServerVersionOverride.get() ?: version.replaceFirst("1", "0")}" else "release/$version"
+                val uriPart = if (version.startsWith("b")) "beta/$version" else if (version.startsWith("a")) "alpha/${parent.alphaServerVersionOverride.get() ?: version.replaceFirst("1", "0")}" else "release/$version/$version"
                 serverJar = Download("", -1, URI.create("http://files.betacraft.uk/server-archive/$uriPart.jar"))
             }
 
             serverPath.parent.maybeCreate()
-            download(serverJar, serverPath)
+            try {
+                download(serverJar, serverPath)
+            } catch (e: FileNotFoundException) {
+                throw IllegalStateException("No server jar found for version $version", e)
+            }
             serverPath
         }
     }

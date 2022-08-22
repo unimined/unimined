@@ -206,9 +206,9 @@ object SemVerUtils {
             fun parse(range: String): PrefixedRange {
                 val m = prefixedRangePattern.find(range) ?: throw IllegalArgumentException("Invalid version range: $range")
                 val prefix: String = m.groups[1]?.value!!
-                val major: String = m.groups[2]?.value!!
-                val minor: String = m.groups[4]?.value!!
-                val patch: String = m.groups[6]?.value!!
+                val major: String? = m.groups[2]?.value
+                val minor: String? = m.groups[4]?.value
+                val patch: String? = m.groups[6]?.value
                 return PrefixedRange(prefix, major, minor, patch)
             }
         }

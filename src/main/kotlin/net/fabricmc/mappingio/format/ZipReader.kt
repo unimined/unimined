@@ -277,7 +277,7 @@ object ZipReader {
         }
     }
 
-    fun readInputStreamFor(path: String, zip: Path, action: (InputStream) -> Unit) {
+    fun <T> readInputStreamFor(path: String, zip: Path, throwIfMissing: Boolean = true, action: (InputStream) -> T): T {
         ZipInputStream(zip.inputStream()).use { stream ->
             var entry = stream.nextEntry
             while (entry != null) {
@@ -286,12 +286,16 @@ object ZipReader {
                     continue
                 }
                 if (entry.name == path) {
-                    action(stream)
-                    return
+                    return action(stream)
                 }
                 entry = stream.nextEntry
             }
         }
+        if (throwIfMissing) {
+            throw IllegalArgumentException("Missing file $path in $zip")
+        }
+        @Suppress("UNCHECKED_CAST")
+        return null as T
     }
 
     enum class MappingType(val pattern: Regex) {
