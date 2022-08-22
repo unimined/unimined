@@ -79,13 +79,13 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
     fun transformLegacyTransformer(file: String): String {
         var file = file
         // transform methods
-        val legacyMethod = Regex("^(\\w+(?:-f)?)\\s([\\w.]+)\\.([\\w*<>]+)(\\(.+)\$", RegexOption.MULTILINE)
+        val legacyMethod = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.]+)\\.([\\w*<>]+)(\\(.+)\$", RegexOption.MULTILINE)
         file = file.replace(legacyMethod) {
             "${it.groupValues[1]} ${it.groupValues[2]} ${it.groupValues[3]}${it.groupValues[4]}"
         }
 
         // transform fields
-        val legacyField = Regex("^(\\w+(?:-f)?)\\s([\\w.]+)\\.([\\w*<>]+)\\s*(?:#.+)?\$", RegexOption.MULTILINE)
+        val legacyField = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.]+)\\.([\\w*<>]+)\\s*(?:#.+)?\$", RegexOption.MULTILINE)
         file = file.replace(legacyField) {
             "${it.groupValues[1]} ${it.groupValues[2]} ${it.groupValues[3]}"
         }

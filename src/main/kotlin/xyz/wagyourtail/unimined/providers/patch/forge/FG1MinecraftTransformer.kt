@@ -26,6 +26,24 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
     val jarModder = JarModMinecraftTransformer(project, provider, Constants.FORGE_PROVIDER)
     val accessTransformer: File? = null
 
+    override fun afterEvaluate() {
+        // get and add forge-src to mappings
+        val forge = jarModder.jarModConfiguration(EnvType.COMBINED).dependencies.first()
+
+        val forgeSrc = "${forge.group}:${forge.name}:${forge.version}:src@zip"
+        provider.mcRemapper.getMappings(EnvType.COMBINED).dependencies.apply {
+           clear()
+           add(project.dependencies.create(forgeSrc))
+        }
+
+        // replace forge with universal
+        val forgeUniversal = "${forge.group}:${forge.name}:${forge.version}:universal@zip"
+        jarModder.jarModConfiguration(EnvType.COMBINED).dependencies.apply {
+            clear()
+            add(project.dependencies.create(forgeUniversal))
+        }
+    }
+
     override fun transform(envType: EnvType, baseMinecraft: Path): Path {
         val accessModder = AccessTransformerMinecraftTransformer(project, provider)
         if (accessTransformer != null) {
@@ -63,6 +81,21 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
                 Pair("guava-12.0.1.jar", "guava-12.0.1.jar"), project.dependencies.create(
                     "com.google.guava:guava:12.0.1"
                 )
+            ),
+            Pair(
+                Pair("guava-14.0-rc3.jar", "guava-14.0-rc3.jar"), project.dependencies.create(
+                    "com.google.guava:guava:14.0-rc3"
+                )
+            ),
+            Pair(
+                Pair("asm-all-4.1.jar", "asm-all-4.1.jar"), project.dependencies.create(
+                    "org.ow2.asm:asm-all:4.1"
+                )
+            ),
+            Pair(
+                Pair("bcprov-jdk15on-1.48.jar", "bcprov-jdk15on-148.jar"), project.dependencies.create(
+                    "org.bouncycastle:bcprov-jdk15on:1.48"
+                )
             )
         )
         deps.forEach { dep ->
@@ -83,6 +116,27 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
             path2.resolve("asm-all-4.0.jar")
                 .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
+        URI.create("https://web.archive.org/web/20130708223654if_/http://files.minecraftforge.net/fmllibs/scala-library.jar").toURL().openStream().use { it1 ->
+            val bytes = it1.readBytes()
+            path.resolve("scala-library.jar")
+                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            path2.resolve("scala-library.jar")
+                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        }
+        URI.create("https://web.archive.org/web/20130708175450if_/http://files.minecraftforge.net/fmllibs/argo-small-3.2.jar").toURL().openStream().use { it1 ->
+            val bytes = it1.readBytes()
+            path.resolve("argo-small-3.2.jar")
+                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            path2.resolve("argo-small-3.2.jar")
+                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        }
+        URI.create("https://web.archive.org/web/20140626042316if_/http://files.minecraftforge.net/fmllibs/deobfuscation_data_1.5.2.zip").toURL().openStream().use { it1 ->
+            val bytes = it1.readBytes()
+            path.resolve("deobfuscation_data_1.5.2.zip")
+                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            path2.resolve("deobfuscation_data_1.5.2.zip")
+                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        }
 
         forgeDeps.dependencies.add(
             project.dependencies.create(
@@ -90,6 +144,23 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
             )
         )
 
+        forgeDeps.dependencies.add(
+            project.dependencies.create(
+                project.files(path.resolve("scala-library.jar").toString())
+            )
+        )
+
+        forgeDeps.dependencies.add(
+            project.dependencies.create(
+                project.files(path.resolve("argo-small-3.2.jar").toString())
+            )
+        )
+
+        forgeDeps.dependencies.add(
+            project.dependencies.create(
+                project.files(path.resolve("deobfuscation_data_1.5.2.zip").toString())
+            )
+        )
 
         forgeDeps.resolve()
 
@@ -168,6 +239,9 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
                     if (out.getPath("argo").exists()) {
                         out.getPath("argo").deleteRecursively()
+                    }
+                    if (out.getPath("org/bouncycastle").exists()) {
+                        out.getPath("org/bouncycastle").deleteRecursively()
                     }
                 }
             } catch (e: Throwable) {

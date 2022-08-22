@@ -182,7 +182,7 @@ object ZipReader {
                         }
 
                         MappingType.SRG_MERGED -> {
-                            if (envType == EnvType.COMBINED) {
+//                            if (envType == EnvType.COMBINED) {
                                 readInputStreamFor(entry, zip) {
                                     SrgReader.read(
                                         InputStreamReader(it),
@@ -191,7 +191,7 @@ object ZipReader {
                                         mappingTree
                                     )
                                 }
-                            }
+//                            }
                         }
 
                         MappingType.RGS_CLIENT -> {
@@ -234,6 +234,18 @@ object ZipReader {
                         MappingType.TINY -> {
                             readInputStreamFor(entry, zip) {
                                 Tiny2Reader.read(InputStreamReader(it), mappingTree)
+                            }
+                        }
+
+                        MappingType.MCP_PACKAGES -> {
+                            readInputStreamFor(entry, zip) {
+                                MCPReader.readPackages(
+                                    envType,
+                                    InputStreamReader(it),
+                                    seargeNamespaceName,
+                                    mCPNamespaceName,
+                                    mappingTree
+                                )
                             }
                         }
                     }
@@ -294,7 +306,7 @@ object ZipReader {
         MCP_METHODS(Regex("""((.+[/\\]|^)|^)methods.csv$""")),
         MCP_PARAMS(Regex("""(.+[/\\]|^)params.csv$""")),
         MCP_FIELDS(Regex("""(.+[/\\]|^)fields.csv$""")),
-
+        MCP_PACKAGES(Regex("""(.+[/\\]|^)packages.csv$""")),
     }
 
     enum class MCPConfigVersion(val contains: Set<MappingType>,
@@ -314,7 +326,7 @@ object ZipReader {
             setOf(MappingType.MCP_CLASSES, MappingType.RGS_SERVER, MappingType.RGS_CLIENT, MappingType.SRG_SERVER, MappingType.SRG_CLIENT, MappingType.SRG_MERGED)
         ),
         MCP(
-            setOf(MappingType.MCP_METHODS, MappingType.MCP_FIELDS, MappingType.SRG_CLIENT),
+            setOf(MappingType.MCP_METHODS, MappingType.MCP_FIELDS),
             setOf(MappingType.RGS_CLIENT, MappingType.RGS_SERVER, MappingType.MCP_CLASSES, MappingType.TSRG),
         ),
         OLD_MCP(
