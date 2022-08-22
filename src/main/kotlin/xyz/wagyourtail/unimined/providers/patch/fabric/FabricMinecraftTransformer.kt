@@ -114,6 +114,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         if (server) {
             serverMainClass = mainClass?.get("server")?.asString
         }
+        super.afterEvaluate()
     }
 
     override fun sourceSets(sourceSets: SourceSetContainer) {

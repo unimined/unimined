@@ -47,7 +47,7 @@ class XMLBuilder {
     }
 
     fun addStringOption(key: String, option: String): XMLBuilder {
-        options[key] = "\"" + option + "\""
+        options[key] = "\"" + option.replace("\"", "&quot;") + "\""
         return this
     }
 

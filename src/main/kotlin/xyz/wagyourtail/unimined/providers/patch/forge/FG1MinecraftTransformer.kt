@@ -42,6 +42,7 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
             clear()
             add(project.dependencies.create(forgeUniversal))
         }
+        super.afterEvaluate()
     }
 
     override fun transform(envType: EnvType, baseMinecraft: Path): Path {
@@ -104,37 +105,26 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
 
         // copy in
         val path = provider.clientWorkingDirectory.get().resolve("lib").toPath().maybeCreate()
-        // because forge 1.3.2 dumb and doesn't go after vanillatweaker's patch for game dir
-        val path2 = getAppDir("minecraft").resolve("lib").toPath().maybeCreate()
 
         //TODO: don't rely on this random path, (maven has different hash that's why we're doing this)
         URI.create("https://ftp.osuosl.org/pub/netbeans/binaries/98308890597ACB64047F7E896638E0D98753AE82-asm-all-4.0.jar").toURL().openStream().use { it1 ->
             val bytes = it1.readBytes()
             path.resolve("asm-all-4.0.jar")
                 .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-
-            path2.resolve("asm-all-4.0.jar")
-                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
         URI.create("https://web.archive.org/web/20130708223654if_/http://files.minecraftforge.net/fmllibs/scala-library.jar").toURL().openStream().use { it1 ->
             val bytes = it1.readBytes()
             path.resolve("scala-library.jar")
-                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-            path2.resolve("scala-library.jar")
                 .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
         URI.create("https://web.archive.org/web/20130708175450if_/http://files.minecraftforge.net/fmllibs/argo-small-3.2.jar").toURL().openStream().use { it1 ->
             val bytes = it1.readBytes()
             path.resolve("argo-small-3.2.jar")
                 .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-            path2.resolve("argo-small-3.2.jar")
-                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
         URI.create("https://web.archive.org/web/20140626042316if_/http://files.minecraftforge.net/fmllibs/deobfuscation_data_1.5.2.zip").toURL().openStream().use { it1 ->
             val bytes = it1.readBytes()
             path.resolve("deobfuscation_data_1.5.2.zip")
-                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-            path2.resolve("deobfuscation_data_1.5.2.zip")
                 .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
 
@@ -168,10 +158,8 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
             forgeDeps.files(dep.second).forEach { file ->
                 if (file.name == dep.first.first) {
                     file.copyTo(path.resolve(dep.first.second).toFile(), true)
-                    file.copyTo(path2.resolve(dep.first.second).toFile(), true)
                 } else {
                     file.copyTo(path.resolve(file.name).toFile(), true)
-                    file.copyTo(path2.resolve(file.name).toFile(), true)
                 }
 
             }
@@ -222,6 +210,12 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
             throw RuntimeException("The working directory could not be created: $var2")
         } else {
             var2
+        }
+    }
+
+    override fun applyClientRunConfig(tasks: TaskContainer) {
+        provider.provideRunClientTask(tasks) {
+            it.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${it.workingDir.absolutePath}\"")
         }
     }
 

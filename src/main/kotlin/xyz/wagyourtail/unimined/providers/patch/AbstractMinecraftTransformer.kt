@@ -18,6 +18,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     abstract fun transform(envType: EnvType, baseMinecraft: Path): Path
     private fun applyRunConfigs(tasks: TaskContainer) {
+        project.logger.warn("client: ${provider.client}, server: ${provider.server}")
         if (provider.minecraftDownloader.client) {
             applyClientRunConfig(tasks)
         }

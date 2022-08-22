@@ -19,7 +19,8 @@ data class RunConfig(
     var mainClass: String,
     val args: MutableList<String>,
     val jvmArgs: MutableList<String>,
-    val workingDir: File
+    val workingDir: File,
+    val env: MutableMap<String, String>,
 ) {
 
     fun createIdeaRunConfig(javaVersion: JavaVersion) {
@@ -30,6 +31,11 @@ data class RunConfig(
                 XMLBuilder("configuration").addStringOption("default", "false").addStringOption("name", description).addStringOption("type", "Application").addStringOption("factoryName", "Application").append(
                     XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH").addStringOption("value", javaVersion.toString()),
                     XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH_ENABLED").addStringOption("value", "true"),
+                    XMLBuilder("envs").append(
+                        *env.map { (key, value) ->
+                            XMLBuilder("env").addStringOption("name", key).addStringOption("value", value)
+                        }.toTypedArray()
+                    ),
                     XMLBuilder("option").addStringOption("name", "MAIN_CLASS_NAME").addStringOption("value", mainClass),
                     XMLBuilder("module").addStringOption("name", "${project.name}.${classpath.name}"),
                     XMLBuilder("option").addStringOption("name", "WORKING_DIRECTORY").addStringOption("value", "\$PROJECT_DIR\$/${workingDir.toPath().relativeTo(project.rootProject.projectDir.toPath())}"),
@@ -50,6 +56,7 @@ data class RunConfig(
             it.description = description
             it.mainClass.set(mainClass)
             it.workingDir = workingDir
+            it.environment.putAll(env)
             workingDir.mkdirs()
 
             it.classpath = classpath.runtimeClasspath

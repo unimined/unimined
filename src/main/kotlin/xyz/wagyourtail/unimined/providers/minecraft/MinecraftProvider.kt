@@ -349,7 +349,8 @@ abstract class MinecraftProvider(
                 assetsDir ?: clientWorkingDirectory.get().resolve("assets").toPath()
             ),
             (minecraftDownloader.metadata.getJVMArgs(clientWorkingDirectory.get().resolve("libraries").toPath(), nativeDir.toPath()) + betacraftArgs).toMutableList(),
-            clientWorkingDirectory.get()
+            clientWorkingDirectory.get(),
+            mutableMapOf()
         )
 
         overrides(runConfig)
@@ -360,6 +361,7 @@ abstract class MinecraftProvider(
                 project.logger.error("Java version is ${JavaVersion.current()}, expected ${minecraftDownloader.metadata.javaVersion}, Minecraft may not launch properly")
             }
         }
+        project.logger.warn("IDEA Sync is ${if (isIdeaSync()) "true" else "false"}")
         if (isIdeaSync()) {
             runConfig.createIdeaRunConfig(minecraftDownloader.metadata.javaVersion)
         }
@@ -375,10 +377,11 @@ abstract class MinecraftProvider(
             "runServer",
             "Minecraft Server",
             sourceSets.findByName("server") ?: sourceSets.getByName("main"),
-            overrideMainClassServer.getOrElse(minecraftDownloader.metadata.mainClass)!!, // TODO: get from meta-inf
+            overrideMainClassServer.getOrElse(minecraftDownloader.metadata.mainClass)!!, // TODO: get from meta-inf, this is wrong
             mutableListOf("nogui"),
             mutableListOf(),
-            project.projectDir.resolve("run").resolve("server")
+            project.projectDir.resolve("run").resolve("server"),
+            mutableMapOf()
         )
 
         overrides(runConfig)
