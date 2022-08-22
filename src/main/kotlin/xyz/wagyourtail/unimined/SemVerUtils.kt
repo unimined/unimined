@@ -1,5 +1,10 @@
 package xyz.wagyourtail.unimined
 
+
+fun main(args: Array<String>) {
+    System.out.println(SemVerUtils.matches("1.8.9", "<1.7"))
+}
+
 @Suppress("UNUSED")
 object SemVerUtils {
     private val semverPattern = Regex("^(\\d+)(\\.(\\d+)(\\.(\\d+))?)?(-(\\w+)(.(\\d+))?)?(\\+([0-9a-zA-Z-.]+))?$")
@@ -150,51 +155,73 @@ object SemVerUtils {
             if (version.prerelease != null) {
                 return false
             }
-            val major = if (this.major == null || this.major == "X" || this.major == "*") -1 else
+            val major = if (this.major == null) -2 else if (this.major == "X" || this.major == "*") -1 else
                 this.major.toInt()
-            val minor = if (this.minor == null || this.minor == "X" || this.minor == "*") -1 else
+            val minor = if (this.minor == null) -2 else if (this.minor == "X" || this.minor == "*") -1 else
                 this.minor.toInt()
-            val patch = if (this.patch == null || this.patch == "X" || this.patch == "*") -1 else
+            val patch = if (this.patch == null) -2 else if (this.patch == "X" || this.patch == "*") -1 else
                 this.patch.toInt()
             if (prefix == "=") {
-                if (major != -1 && version.major != major) {
-                    return false
+                if (version.major == major || major == -1) {
+                    if (version.minor == minor || minor == -1) {
+                        if (version.patch == patch || patch == -1) {
+                            return true
+                        }
+                    }
                 }
-                return if (minor != -1 && version.minor != minor) {
-                    false
-                } else patch == -1 || version.patch == patch
+                return false
             }
             if (prefix == ">") {
-                if (major != -1 && version.major > major) {
+                if (version.major > major) {
                     return true
+                } else if (version.major == major) {
+                    if (version.minor > minor) {
+                        return true
+                    } else if (version.minor == minor) {
+                        if (version.patch > patch) {
+                            return true
+                        }
+                    }
                 }
-                return if (minor != -1 && version.minor > minor) {
-                    true
-                } else patch == -1 || version.patch > patch
             }
             if (prefix == "<") {
-                if (major != -1 && version.major < major) {
+                if (version.major < major) {
                     return true
+                } else if (version.major == major) {
+                    if (version.minor < minor) {
+                        return true
+                    } else if (version.minor == minor) {
+                        if (version.patch < patch) {
+                            return true
+                        }
+                    }
                 }
-                return if (minor != -1 && version.minor < minor) {
-                    true
-                } else patch == -1 || version.patch < patch
             }
             if (prefix == ">=") {
-                if (major != -1 && version.major < major) {
-                    return false
+                if (version.major > major) {
+                    return true
+                } else if (version.major == major) {
+                    if (version.minor > minor) {
+                        return true
+                    } else if (version.minor == minor) {
+                        if (version.patch >= patch) {
+                            return true
+                        }
+                    }
                 }
-                return if (minor != -1 && version.minor < minor) {
-                    false
-                } else patch == -1 || version.patch >= patch
             }
             if (prefix == "<=") {
-                if (major != -1 && version.major > major) {
-                    return false
+                if (version.major < major) {
+                    return true
+                } else if (version.major == major) {
+                    if (version.minor < minor) {
+                        return true
+                    } else if (version.minor == minor) {
+                        if (version.patch <= patch) {
+                            return true
+                        }
+                    }
                 }
-                return if (minor != -1 && version.minor > minor) {
-                    false
-                } else patch == -1 || version.patch <= patch
             }
             return false
         }

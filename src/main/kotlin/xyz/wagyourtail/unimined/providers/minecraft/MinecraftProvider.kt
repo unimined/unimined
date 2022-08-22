@@ -191,23 +191,22 @@ abstract class MinecraftProvider(
         main.runtimeClasspath += combined
     }
 
-    private lateinit var extractDependencies: MutableMap<Dependency, Extract>
+    private var extractDependencies: MutableMap<Dependency, Extract> = mutableMapOf()
 
     private fun addMcLibraries() {
-        extractDependencies = mutableMapOf()
         addMcLibraries(minecraftDownloader.metadata.libraries)
     }
 
     fun addMcLibraries(libs: List<Library>) {
         for (library in libs) {
-            project.logger.debug("Added dependency ${library.name}")
             if (library.rules.all { it.testRule() }) {
-                if (library.url != null || library.downloads?.artifact != null) {
+                project.logger.warn("Added dependency ${library.name}")
+                val native = library.natives[OSUtils.oSId]
+                if (library.url != null || library.downloads?.artifact != null || native == null) {
                     val dep = project.dependencies.create(library.name)
                     mcLibraries.dependencies.add(dep)
                     library.extract?.let { extractDependencies[dep] = it }
                 }
-                val native = library.natives[OSUtils.oSId]
                 if (native != null) {
                     project.logger.debug("Added native dependency ${library.name}:$native")
                     val nativeDep = project.dependencies.create("${library.name}:$native")

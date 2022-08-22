@@ -81,7 +81,6 @@ object RGSReader {
                             visitLastClass = visitor.visitClass(srcOwner)
 
                             if (visitLastClass) {
-                                visitor.visitDstName(MappedElementKind.CLASS, 0, srcOwner)
                                 visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
                             }
                         }
@@ -110,7 +109,6 @@ object RGSReader {
                             visitLastClass = visitor.visitClass(srcOwner)
 
                             if (visitLastClass) {
-                                visitor.visitDstName(MappedElementKind.CLASS, 0, srcOwner)
                                 visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
                             }
                         }

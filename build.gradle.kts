@@ -46,6 +46,12 @@ dependencies {
 
     // jetbrains annotations
     implementation("org.jetbrains:annotations-java5:23.0.0")
+
+    // binpatcher
+    implementation("net.minecraftforge:binarypatcher:1.1.1")
+
+    // pack200 provided by apache commons-compress
+    implementation("org.apache.commons:commons-compress:1.21")
 }
 
 tasks.jar {

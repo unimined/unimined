@@ -22,7 +22,7 @@ object ZipReader {
                 return value
             }
         }
-        throw IllegalArgumentException("No MCP config version detected")
+        throw IllegalArgumentException("No MCP config version detected, found: ${mappingFormats.joinToString { it.name }}")
     }
 
     private fun getTypeOf(path: String): MappingType? {
@@ -324,6 +324,10 @@ object ZipReader {
         NEW_MCPCONFIG(
             setOf(MappingType.TSRG),
             setOf(MappingType.MCP_FIELDS, MappingType.MCP_METHODS, MappingType.MCP_PARAMS, MappingType.MCP_CLASSES, MappingType.RGS_SERVER, MappingType.RGS_CLIENT, MappingType.SRG_SERVER, MappingType.SRG_CLIENT, MappingType.SRG_MERGED)
+        ),
+        MCPCONFIG(
+            setOf(MappingType.SRG_MERGED),
+            setOf(MappingType.MCP_FIELDS, MappingType.MCP_METHODS, MappingType.MCP_PARAMS, MappingType.MCP_CLASSES, MappingType.RGS_SERVER, MappingType.RGS_CLIENT)
         ),
         NEWFORGE_MCP(
             setOf(MappingType.MCP_METHODS, MappingType.MCP_PARAMS, MappingType.MCP_FIELDS),

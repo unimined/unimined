@@ -271,19 +271,26 @@ class MinecraftRemapper(
             val mapping = thisEnv.sortedBy { "${it.name}-${it.version}" }
                 .map { it.name + "-" + it.version } + if (stubs.contains(envType)) listOf("stub-${getStub(it).hash}") else listOf()
 
-            mapping.joinToString("+")
+            mapping.joinToString("-")
         }
     }
 
     @ApiStatus.Internal
-    fun provide(envType: EnvType, file: Path, remapTo: String, remapFrom: String = this.remapFrom): Path {
+    fun provide(envType: EnvType, file: Path, remapTo: String, remapFrom: String = this.remapFrom, skipMappingId: Boolean = false): Path {
         val parent = if (stubs.contains(envType)) {
             provider.parent.getLocalCache().resolve("minecraft").maybeCreate()
         } else {
             file.parent
         }
-        val target = parent.resolve(getCombinedNames(envType))
-            .resolve("${file.nameWithoutExtension}-mapped-${getCombinedNames(envType)}-${remapTo}.${file.extension}")
+        val target = if (skipMappingId) {
+            parent.resolve(getCombinedNames(envType))
+                .resolve("${file.nameWithoutExtension}-${remapTo}.${file.extension}")
+        } else {
+            parent.resolve(getCombinedNames(envType))
+                .resolve("${file.nameWithoutExtension}-mapped-${getCombinedNames(envType)}-${remapTo}.${file.extension}")
+        }
+
+
 
         if (target.exists() && !project.gradle.startParameter.isRefreshDependencies) {
             return target

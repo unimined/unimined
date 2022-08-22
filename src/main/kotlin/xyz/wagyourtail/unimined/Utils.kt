@@ -1,8 +1,7 @@
 package xyz.wagyourtail.unimined
 
+import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.io.PrintStream
-import java.io.PrintWriter
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
@@ -99,8 +98,10 @@ fun runJarInSubprocess(
     )
     processBuilder.directory(workingDir.toFile())
     processBuilder.environment().putAll(env)
+    processBuilder.redirectOutput()
+    processBuilder.redirectError()
 //    processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT)
-    System.out.println("Running: ${processBuilder.command().joinToString(" ")}")
+    LoggerFactory.getLogger(UniminedExtension::class.java).warn("Running: ${processBuilder.command().joinToString(" ")}")
     val process = processBuilder.start()
     if (wait) {
         process.waitFor()
