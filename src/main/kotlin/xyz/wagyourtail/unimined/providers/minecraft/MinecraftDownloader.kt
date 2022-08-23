@@ -202,7 +202,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
             if (serverJar == null) {
                 // attempt to get off betacraft
-                val uriPart = if (version.startsWith("b")) "beta/$version" else if (version.startsWith("a")) "alpha/${parent.alphaServerVersionOverride.get() ?: version.replaceFirst("1", "0")}" else "release/$version/$version"
+                val uriPart = if (version.startsWith("b")) "beta/${parent.alphaServerVersionOverride.get() ?: version}" else if (version.startsWith("a")) "alpha/${parent.alphaServerVersionOverride.get() ?: version.replaceFirst("1", "0")}" else "release/$version/$version"
                 serverJar = Download("", -1, URI.create("http://files.betacraft.uk/server-archive/$uriPart.jar"))
             }
 

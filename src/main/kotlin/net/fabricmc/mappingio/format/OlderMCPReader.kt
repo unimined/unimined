@@ -73,6 +73,9 @@ object OlderMCPReader {
         if (visitor.visitContent()) {
             for (clazz in (parentVisitor as MappingTreeView).classes) {
                 val cn = clazz.getName(seargeNamespace)
+                if (cn == null) {
+                    continue
+                }
                 visitLastClass = visitor.visitClass(cn)
 
                 if (visitLastClass) {
@@ -84,7 +87,7 @@ object OlderMCPReader {
             for (clazz in (parentVisitor as MappingTreeView).classes) {
                 val cln = clazz.getName(seargeNamespace)
                 if (cln == null) {
-                    throw IllegalStateException("Class $clazz not found")
+                    continue
                 }
                 visitLastClass = visitor.visitClass(cln)
                 if (visitLastClass) {
@@ -181,6 +184,9 @@ object OlderMCPReader {
         if (visitor.visitContent()) {
             for (clazz in (parentVisitor as MappingTreeView).classes) {
                 val cn = clazz.getName(seargeNamespace)
+                if (cn == null) {
+                    continue
+                }
                 visitLastClass = visitor.visitClass(cn)
 
                 if (visitLastClass) {
@@ -192,7 +198,7 @@ object OlderMCPReader {
             for (clazz in (parentVisitor as MappingTreeView).classes) {
                 val cln = clazz.getName(seargeNamespace)
                 if (cln == null) {
-                    throw IllegalStateException("Class $clazz not found")
+                    continue
                 }
                 visitLastClass = visitor.visitClass(cln)
                 if (visitLastClass) {

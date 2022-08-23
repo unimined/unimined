@@ -44,8 +44,21 @@ object RGSReader {
                 var visitLastClass = false
 
                 do {
+                    if (reader.nextCol(".class")) {
+                        val srcName = reader.nextCol()
+                        if (srcName.contains("*")) {
+                            continue
+                        }
+                        if (!srcName.equals(lastClass)) {
+                            lastClass = srcName
+                            visitLastClass = visitor.visitClass(srcName)
 
-                    if (reader.nextCol(".class_map")) {
+                            if (visitLastClass) {
+                                visitor.visitDstName(MappedElementKind.CLASS, 0, srcName)
+                                visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
+                            }
+                        }
+                    } else if (reader.nextCol(".class_map")) {
                         val srcName = reader.nextCol()
                         if (srcName.contains("$")) {
                             continue
