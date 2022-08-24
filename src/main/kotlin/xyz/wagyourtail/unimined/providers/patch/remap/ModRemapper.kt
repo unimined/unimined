@@ -4,16 +4,14 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MappingTreeView.ClassMappingView
-import net.fabricmc.tinyremapper.InputTag
-import net.fabricmc.tinyremapper.NonClassCopyMode
-import net.fabricmc.tinyremapper.OutputConsumerPath
+import net.fabricmc.tinyremapper.*
 import net.fabricmc.tinyremapper.OutputConsumerPath.ResourceRemapper
-import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.*
@@ -95,6 +93,91 @@ class ModRemapper(
         }
     }
 
+    private fun memberOf(className: String, memberName: String, descriptor: String?): IMappingProvider.Member {
+        return IMappingProvider.Member(className, memberName, descriptor)
+    }
+
+    @ApiStatus.Internal
+    fun getMappingProvider(
+        srcName: String,
+        fallbackSrc: String,
+        targetName: String,
+        mappingTree: MappingTreeView,
+        remapLocalVariables: Boolean = true,
+    ): (IMappingProvider.MappingAcceptor) -> Unit {
+        return { acceptor: IMappingProvider.MappingAcceptor ->
+            val fromId = mappingTree.getNamespaceId(srcName)
+            var fallbackId = mappingTree.getNamespaceId(fallbackSrc)
+            val toId = mappingTree.getNamespaceId(targetName)
+
+            if (toId == MappingTreeView.NULL_NAMESPACE_ID) {
+                throw RuntimeException("Namespace $targetName not found in mappings")
+            }
+
+            if (fallbackId == MappingTreeView.NULL_NAMESPACE_ID) {
+                project.logger.warn("Namespace $fallbackSrc not found in mappings, using $targetName as fallback")
+                fallbackId = toId
+            }
+
+            project.logger.debug("Mapping from $srcName fallback $fallbackId to $targetName")
+            project.logger.debug("ids: from $fromId to $toId")
+
+            for (classDef in mappingTree.classes) {
+                val fromClassName = classDef.getName(fromId) ?: classDef.getName(fallbackId)
+                val toClassName = classDef.getName(toId) ?: classDef.getName(fallbackId) ?: fromClassName
+
+                if (fromClassName == null) {
+                    project.logger.warn("No class name for $classDef")
+                }
+                project.logger.debug("fromClassName: $fromClassName toClassName: $toClassName")
+                acceptor.acceptClass(fromClassName, toClassName)
+
+                for (fieldDef in classDef.fields) {
+                    val fromFieldName = fieldDef.getName(fromId) ?: fieldDef.getName(fallbackId)
+                    val toFieldName = fieldDef.getName(toId) ?: fieldDef.getName(fallbackId) ?: fromFieldName
+                    if (fromFieldName == null) {
+                        project.logger.warn("No field name for $toFieldName")
+                        continue
+                    }
+                    project.logger.debug("fromFieldName: $fromFieldName toFieldName: $toFieldName")
+                    acceptor.acceptField(memberOf(fromClassName, fromFieldName, fieldDef.getDesc(fromId)), toFieldName)
+                }
+
+                for (methodDef in classDef.methods) {
+                    val fromMethodName = methodDef.getName(fromId) ?: methodDef.getName(fallbackId)
+                    val toMethodName = methodDef.getName(toId) ?: methodDef.getName(fallbackId) ?: fromMethodName
+                    val fromMethodDesc = methodDef.getDesc(fromId) ?: methodDef.getDesc(fallbackId)
+                    if (fromMethodName == null) {
+                        project.logger.warn("No method name for $toMethodName")
+                        continue
+                    }
+                    val method = memberOf(fromClassName, fromMethodName, fromMethodDesc)
+
+                    project.logger.debug("fromMethodName: $fromMethodName toMethodName: $toMethodName")
+                    acceptor.acceptMethod(method, toMethodName)
+
+                    if (remapLocalVariables) {
+                        for (arg in methodDef.args) {
+                            val toArgName = arg.getName(toId) ?: arg.getName(fallbackId) ?: continue
+                            acceptor.acceptMethodArg(method, arg.lvIndex, toArgName)
+                        }
+
+                        for (localVar in methodDef.vars) {
+                            val toLocalVarName = localVar.getName(toId) ?: localVar.getName(fallbackId) ?: continue
+                            acceptor.acceptMethodVar(
+                                method,
+                                localVar.lvIndex,
+                                localVar.startOpIdx,
+                                localVar.lvtRowIndex,
+                                toLocalVarName
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
     fun remap(envType: EnvType) {
         val configs = when (envType) {
@@ -106,7 +189,7 @@ class ModRemapper(
             preTransform(configs.envType, it)
         }
         @Suppress("unused")
-        val tr = TinyRemapper.newRemapper().withMappings(mcRemapper.getMappingProvider(fromMappings, fallbackTo, mcRemapper.provider.targetNamespace.get(), mcRemapper.getMappingTree(configs.envType)))
+        val tr = TinyRemapper.newRemapper().withMappings(getMappingProvider(fromMappings, fallbackTo, mcRemapper.provider.targetNamespace.get(), mcRemapper.getMappingTree(configs.envType)))
             .renameInvalidLocals(true)
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())

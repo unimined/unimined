@@ -5,6 +5,7 @@ import java.net.URI
 
 object Constants {
     val MAPPINGS_PROVIDER = "mappings"
+
     const val MINECRAFT_COMBINED_PROVIDER = "minecraft"
 
     const val MINECRAFT_SERVER_PROVIDER = "minecraftServer"
