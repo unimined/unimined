@@ -1,50 +1,74 @@
-package xyz.wagyourtail.unimined.providers.patch.remap
+package xyz.wagyourtail.unimined.providers.mappings
 
 import net.fabricmc.mappingio.MappingReader
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
-import net.fabricmc.mappingio.format.Tiny2Reader2
-import net.fabricmc.mappingio.format.Tiny2Writer2
-import net.fabricmc.mappingio.format.ZipReader
+import net.fabricmc.mappingio.format.*
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import net.fabricmc.tinyremapper.IMappingProvider
-import net.fabricmc.tinyremapper.IMappingProvider.MappingAcceptor
-import net.fabricmc.tinyremapper.NonClassCopyMode
-import net.fabricmc.tinyremapper.OutputConsumerPath
-import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.UniminedExtension
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
-import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.patch.remap.stubmappings.MemoryMapping
 import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-import kotlin.io.path.*
+import kotlin.io.path.exists
+import kotlin.io.path.inputStream
+import kotlin.io.path.outputStream
+import kotlin.io.path.writer
 
-@Suppress("MemberVisibilityCanBePrivate")
-class MinecraftRemapper(
+abstract class MappingsProvider(
     val project: Project,
-    val provider: MinecraftProvider,
+    val parent: UniminedExtension
 ) {
-
-    var remapFrom = "official"
-    var fallbackTarget = "intermediary"
-    var tinyRemapperConf: (TinyRemapper.Builder) -> Unit = {}
 
     init {
         for (envType in EnvType.values()) {
             getMappings(envType)
         }
+    }
+
+    private val mappingExports = mutableListOf<MappingExport>()
+
+    fun addExport(envType: String, export: (MappingExport) -> Unit) {
+        addExport(EnvType.valueOf(envType), export)
+    }
+
+    @ApiStatus.Internal
+    fun addExport(envType: EnvType, export: (MappingExport) -> Unit) {
+        val me = MappingExport(envType)
+        export(me)
+        if (me.location != null && me.type != null) {
+            if (mappingTrees.contains(envType)) {
+                me.export(mappingTrees[envType]!!)
+            }
+            mappingExports.add(me)
+        }
+    }
+
+    @ApiStatus.Internal
+    fun getMappings(envType: EnvType): Configuration {
+        return project.configurations.maybeCreate(
+            Constants.MAPPINGS_PROVIDER + (envType.classifier?.capitalized() ?: "")
+        )
+    }
+
+    @ApiStatus.Internal
+    fun hasStubs(envType: EnvType): Boolean {
+        return stubs.contains(envType)
     }
 
     fun getStub(envType: String) = getStub(EnvType.valueOf(envType))
@@ -55,13 +79,6 @@ class MinecraftRemapper(
         return stubs.computeIfAbsent(envType) {
             MemoryMapping()
         }
-    }
-
-    @ApiStatus.Internal
-    fun getMappings(envType: EnvType): Configuration {
-        return project.configurations.maybeCreate(
-            Constants.MAPPINGS_PROVIDER + (envType.classifier?.capitalized() ?: "")
-        )
     }
 
     private fun getInternalMappingsConfig(envType: EnvType): Configuration {
@@ -77,9 +94,52 @@ class MinecraftRemapper(
         return mappingTrees.computeIfAbsent(envType, ::resolveMappingTree)
     }
 
+    private val combinedNamesMap = mutableMapOf<EnvType, String>()
+
+    @ApiStatus.Internal
+    fun getCombinedNames(envType: EnvType): String {
+        return combinedNamesMap.computeIfAbsent(envType) { env ->
+            val thisEnv = getMappings(envType).dependencies.toMutableSet()
+            if (envType != EnvType.COMBINED) {
+                thisEnv.addAll(getMappings(EnvType.COMBINED).dependencies ?: setOf())
+            }
+            val mapping = thisEnv.sortedBy { "${it.name}-${it.version}" }
+                .map { it.name + "-" + it.version } + if (stubs.contains(envType)) listOf("stub-${getStub(env).hash}") else listOf()
+
+            mapping.joinToString("-")
+        }
+    }
+
+    private val mappingFileEnvs = mutableMapOf<EnvType, Set<File>>()
+
+    private fun mappingsFiles(envType: EnvType): Set<File> {
+        return mappingFileEnvs.computeIfAbsent(envType) {
+            if (envType != EnvType.COMBINED) {
+                mappingsFiles(EnvType.COMBINED) + getMappings(envType).files
+            } else {
+                getMappings(envType).files
+            }
+        }
+    }
+
+    private fun writeToCache(file: Path, mappingTree: MappingTreeView) {
+        file.parent.maybeCreate()
+        ZipOutputStream(file.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use {
+            it.putNextEntry(ZipEntry("mappings/mappings.tiny"))
+            OutputStreamWriter(it).let { writer ->
+                mappingTree.accept(Tiny2Writer2(writer, false))
+                writer.flush()
+            }
+            it.closeEntry()
+        }
+    }
+
+    @ApiStatus.Internal
+    fun mappingCacheFile(envType: EnvType) = (if (stubs.contains(envType)) parent.getLocalCache() else parent.getGlobalCache()).resolve("mappings").resolve("mappings-${getCombinedNames(envType)}-${envType}.jar")
+
     private fun resolveMappingTree(envType: EnvType): MemoryMappingTree {
-        val file = provider.minecraftDownloader.mcVersionFolder(provider.minecraftDownloader.version)
-            .resolve("mappings-${getCombinedNames(envType)}-${envType}.jar")
+        val hasStub = stubs.contains(envType)
+        val file = mappingCacheFile(envType)
         val mappingTree = MemoryMappingTree()
         if (file.exists()) {
             ZipInputStream(file.inputStream()).use { zip ->
@@ -111,10 +171,10 @@ class MinecraftRemapper(
                     throw IllegalStateException("Unknown mapping file type ${mapping.name}")
                 }
             }
-            if (stubs.contains(envType)) {
+            if (hasStub) {
                 getStub(envType).visit(mappingTree)
             }
-            writeToFile(file, mappingTree)
+            writeToCache(file, mappingTree)
         }
         getInternalMappingsConfig(envType).dependencies.add(
             project.dependencies.create(
@@ -145,22 +205,12 @@ class MinecraftRemapper(
                 )
             }"
         )
+        for (export in mappingExports) {
+            if (export.envType == envType) export.export(mappingTree)
+        }
         return mappingTree
     }
 
-
-    private val mappingFileEnvs = mutableMapOf<EnvType, Set<File>>()
-
-    @ApiStatus.Internal
-    fun mappingsFiles(envType: EnvType): Set<File> {
-        return mappingFileEnvs.computeIfAbsent(envType) {
-            if (envType != EnvType.COMBINED) {
-                mappingsFiles(EnvType.COMBINED) + getMappings(envType).files
-            } else {
-                getMappings(envType).files
-            }
-        }
-    }
 
     private fun memberOf(className: String, memberName: String, descriptor: String?): IMappingProvider.Member {
         return IMappingProvider.Member(className, memberName, descriptor)
@@ -168,32 +218,40 @@ class MinecraftRemapper(
 
     @ApiStatus.Internal
     fun getMappingProvider(
+        envType: EnvType,
         srcName: String,
+        fallbackSrc: String,
         fallbackTarget: String,
         targetName: String,
-        mappingTree: MappingTreeView,
         remapLocalVariables: Boolean = true,
-    ): (MappingAcceptor) -> Unit {
-        return { acceptor: MappingAcceptor ->
+    ): (IMappingProvider.MappingAcceptor) -> Unit {
+        val mappingTree = getMappingTree(envType)
+        return { acceptor: IMappingProvider.MappingAcceptor ->
             val fromId = mappingTree.getNamespaceId(srcName)
-            var fallbackId = mappingTree.getNamespaceId(fallbackTarget)
+            var fallbackSrcId = mappingTree.getNamespaceId(fallbackSrc)
+            var fallbackToId = mappingTree.getNamespaceId(fallbackTarget)
             val toId = mappingTree.getNamespaceId(targetName)
 
             if (toId == MappingTreeView.NULL_NAMESPACE_ID) {
                 throw RuntimeException("Namespace $targetName not found in mappings")
             }
 
-            if (fallbackId == MappingTreeView.NULL_NAMESPACE_ID) {
+            if (fallbackToId == MappingTreeView.NULL_NAMESPACE_ID) {
                 project.logger.warn("Namespace $fallbackTarget not found in mappings, using $srcName as fallback")
-                fallbackId = fromId
+                fallbackToId = fromId
+            }
+
+            if (fallbackSrcId == MappingTreeView.NULL_NAMESPACE_ID) {
+                project.logger.warn("Namespace $fallbackSrc not found in mappings, using $srcName as fallback")
+                fallbackSrcId = fromId
             }
 
             project.logger.debug("Mapping from $srcName to $targetName")
-            project.logger.debug("ids: from $fromId to $toId fallback $fallbackId")
+            project.logger.debug("ids: from $fromId to $toId fallbackTo $fallbackToId fallbackFrom $fallbackSrcId")
 
             for (classDef in mappingTree.classes) {
-                val fromClassName = classDef.getName(fromId) ?: classDef.getName(fallbackId)
-                val toClassName = classDef.getName(toId) ?: classDef.getName(fallbackId) ?: fromClassName
+                val fromClassName = classDef.getName(fromId) ?: classDef.getName(fallbackSrcId)
+                val toClassName = classDef.getName(toId) ?: classDef.getName(fallbackToId)
 
                 if (fromClassName == null) {
                     project.logger.warn("No class name for $classDef")
@@ -202,8 +260,8 @@ class MinecraftRemapper(
                 acceptor.acceptClass(fromClassName, toClassName)
 
                 for (fieldDef in classDef.fields) {
-                    val fromFieldName = fieldDef.getName(fromId) ?: fieldDef.getName(fallbackId)
-                    val toFieldName = fieldDef.getName(toId) ?: fieldDef.getName(fallbackId) ?: fromFieldName
+                    val fromFieldName = fieldDef.getName(fromId) ?: fieldDef.getName(fallbackSrcId)
+                    val toFieldName = fieldDef.getName(toId) ?: fieldDef.getName(fallbackToId)
                     if (fromFieldName == null) {
                         project.logger.warn("No field name for $toFieldName")
                         continue
@@ -213,9 +271,9 @@ class MinecraftRemapper(
                 }
 
                 for (methodDef in classDef.methods) {
-                    val fromMethodName = methodDef.getName(fromId) ?: methodDef.getName(fallbackId)
-                    val toMethodName = methodDef.getName(toId) ?: methodDef.getName(fallbackId) ?: fromMethodName
-                    val fromMethodDesc = methodDef.getDesc(fromId) ?: methodDef.getDesc(fallbackId)
+                    val fromMethodName = methodDef.getName(fromId) ?: methodDef.getName(fallbackSrcId)
+                    val toMethodName = methodDef.getName(toId) ?: methodDef.getName(fallbackToId)
+                    val fromMethodDesc = methodDef.getDesc(fromId) ?: methodDef.getDesc(fallbackSrcId)
                     if (fromMethodName == null) {
                         project.logger.warn("No method name for $toMethodName")
                         continue
@@ -227,12 +285,12 @@ class MinecraftRemapper(
 
                     if (remapLocalVariables) {
                         for (arg in methodDef.args) {
-                            val toArgName = arg.getName(toId) ?: arg.getName(fallbackId) ?: continue
+                            val toArgName = arg.getName(toId) ?: arg.getName(fallbackToId) ?: continue
                             acceptor.acceptMethodArg(method, arg.lvIndex, toArgName)
                         }
 
                         for (localVar in methodDef.vars) {
-                            val toLocalVarName = localVar.getName(toId) ?: localVar.getName(fallbackId) ?: continue
+                            val toLocalVarName = localVar.getName(toId) ?: localVar.getName(fallbackToId) ?: continue
                             acceptor.acceptMethodVar(
                                 method,
                                 localVar.lvIndex,
@@ -247,79 +305,39 @@ class MinecraftRemapper(
         }
     }
 
-    @ApiStatus.Internal
-    fun writeToFile(file: Path, mappingTree: MappingTreeView) {
-        ZipOutputStream(file.outputStream()).use {
-            it.putNextEntry(ZipEntry("mappings/mappings.tiny"))
-            OutputStreamWriter(it).let { writer ->
-                mappingTree.accept(Tiny2Writer2(writer, false))
+    inner class MappingExport(val envType: EnvType) {
+        @set:ApiStatus.Internal
+        var type: MappingExportTypes? = null
+        var location: File? = null
+        var sourceNamespace: String? = null
+        var targetNamespace: List<String>? = null
+
+        fun setType(type: String) {
+            this.type = MappingExportTypes.valueOf(type.uppercase(Locale.getDefault()))
+        }
+
+        @ApiStatus.Internal
+        fun export(mappingTree: MappingTreeView) {
+            project.logger.warn("Exporting mappings for $envType to $location")
+            location!!.toPath().writer(StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { writer ->
+                mappingTree.accept(
+                    MappingSourceNsSwitch(
+                        MappingDstNsFilter(
+                            if (type == MappingExportTypes.TINY_V2) {
+                                Tiny2Writer2(writer, false)
+                            } else {
+                                SrgWriter(writer)
+                            }, targetNamespace ?: mappingTree.dstNamespaces
+                        ), sourceNamespace ?: mappingTree.srcNamespace
+                    )
+                )
                 writer.flush()
             }
-            it.closeEntry()
         }
     }
+}
 
-    private val combinedNamesMap = mutableMapOf<EnvType, String>()
-
-    @ApiStatus.Internal
-    fun getCombinedNames(envType: EnvType): String {
-        return combinedNamesMap.computeIfAbsent(envType) {
-            val thisEnv = getMappings(envType).dependencies.toMutableSet()
-            if (envType != EnvType.COMBINED) {
-                thisEnv.addAll(getMappings(EnvType.COMBINED).dependencies ?: setOf())
-            }
-            val mapping = thisEnv.sortedBy { "${it.name}-${it.version}" }
-                .map { it.name + "-" + it.version } + if (stubs.contains(envType)) listOf("stub-${getStub(it).hash}") else listOf()
-
-            mapping.joinToString("-")
-        }
-    }
-
-    @ApiStatus.Internal
-    fun provide(envType: EnvType, file: Path, remapTo: String, remapFrom: String = this.remapFrom, skipMappingId: Boolean = false): Path {
-        val parent = if (stubs.contains(envType)) {
-            provider.parent.getLocalCache().resolve("minecraft").maybeCreate()
-        } else {
-            file.parent
-        }
-        val target = if (skipMappingId) {
-            parent.resolve(getCombinedNames(envType))
-                .resolve("${file.nameWithoutExtension}-${remapTo}.${file.extension}")
-        } else {
-            parent.resolve(getCombinedNames(envType))
-                .resolve("${file.nameWithoutExtension}-mapped-${getCombinedNames(envType)}-${remapTo}.${file.extension}")
-        }
-
-
-
-        if (target.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-            return target
-        }
-
-        val remapperB = TinyRemapper.newRemapper()
-            .withMappings(getMappingProvider(remapFrom, fallbackTarget, remapTo, getMappingTree(envType)))
-            .renameInvalidLocals(true)
-            .inferNameFromSameLvIndex(true)
-            .threads(Runtime.getRuntime().availableProcessors())
-            .checkPackageAccess(true)
-            .fixPackageAccess(true)
-            .rebuildSourceFilenames(true)
-        tinyRemapperConf(remapperB)
-        val remapper = remapperB.build()
-
-        project.logger.warn("Remapping ${file.name} to $target")
-
-        try {
-            OutputConsumerPath.Builder(target).build().use {
-                it.addNonClassFiles(file, NonClassCopyMode.FIX_META_INF, null)
-                remapper.readInputs(file)
-                remapper.apply(it)
-            }
-        } catch (e: RuntimeException) {
-            project.logger.warn("Failed to remap ${file.name} to $target")
-            throw e
-        }
-        remapper.finish()
-        return target
-    }
+enum class MappingExportTypes {
+    TINY_V2,
+    SRG
 }

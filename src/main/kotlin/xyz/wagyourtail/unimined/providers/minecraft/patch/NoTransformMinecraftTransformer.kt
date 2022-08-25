@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.providers.patch
+package xyz.wagyourtail.unimined.providers.minecraft.patch
 
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType

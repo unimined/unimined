@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.providers.patch.jarmod
+package xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -8,11 +8,9 @@ import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.deleteRecursively
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
-import java.io.IOException
+import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
 import java.net.URI
 import java.nio.file.*
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.zip.ZipInputStream
 import kotlin.io.path.deleteExisting
 import kotlin.io.path.exists

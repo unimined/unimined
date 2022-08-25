@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.providers.patch.remap
+package xyz.wagyourtail.unimined.providers.mod
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
@@ -11,7 +11,6 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
-import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.*
@@ -49,11 +48,13 @@ class LazyMutable<T>(val initializer: () -> T) : ReadWriteProperty<Any?, T> {
 
 class ModRemapper(
     val project: Project,
-    val mcRemapper: MinecraftRemapper
+    val modProvider: ModProvider
 ) {
 
-
+    val mcRemapper by lazy { modProvider.parent.minecraftProvider.mcRemapper }
+    val mappings by lazy { modProvider.parent.mappingsProvider }
     var fromMappings: String by LazyMutable { mcRemapper.fallbackTarget }
+    var fallbackFrom: String by LazyMutable { mcRemapper.fallbackFrom }
     var fallbackTo: String by LazyMutable { mcRemapper.fallbackTarget }
     var tinyRemapperConf: (TinyRemapper.Builder) -> Unit = {}
 
@@ -93,91 +94,6 @@ class ModRemapper(
         }
     }
 
-    private fun memberOf(className: String, memberName: String, descriptor: String?): IMappingProvider.Member {
-        return IMappingProvider.Member(className, memberName, descriptor)
-    }
-
-    @ApiStatus.Internal
-    fun getMappingProvider(
-        srcName: String,
-        fallbackSrc: String,
-        targetName: String,
-        mappingTree: MappingTreeView,
-        remapLocalVariables: Boolean = true,
-    ): (IMappingProvider.MappingAcceptor) -> Unit {
-        return { acceptor: IMappingProvider.MappingAcceptor ->
-            val fromId = mappingTree.getNamespaceId(srcName)
-            var fallbackId = mappingTree.getNamespaceId(fallbackSrc)
-            val toId = mappingTree.getNamespaceId(targetName)
-
-            if (toId == MappingTreeView.NULL_NAMESPACE_ID) {
-                throw RuntimeException("Namespace $targetName not found in mappings")
-            }
-
-            if (fallbackId == MappingTreeView.NULL_NAMESPACE_ID) {
-                project.logger.warn("Namespace $fallbackSrc not found in mappings, using $targetName as fallback")
-                fallbackId = toId
-            }
-
-            project.logger.debug("Mapping from $srcName fallback $fallbackId to $targetName")
-            project.logger.debug("ids: from $fromId to $toId")
-
-            for (classDef in mappingTree.classes) {
-                val fromClassName = classDef.getName(fromId) ?: classDef.getName(fallbackId)
-                val toClassName = classDef.getName(toId) ?: classDef.getName(fallbackId) ?: fromClassName
-
-                if (fromClassName == null) {
-                    project.logger.warn("No class name for $classDef")
-                }
-                project.logger.debug("fromClassName: $fromClassName toClassName: $toClassName")
-                acceptor.acceptClass(fromClassName, toClassName)
-
-                for (fieldDef in classDef.fields) {
-                    val fromFieldName = fieldDef.getName(fromId) ?: fieldDef.getName(fallbackId)
-                    val toFieldName = fieldDef.getName(toId) ?: fieldDef.getName(fallbackId) ?: fromFieldName
-                    if (fromFieldName == null) {
-                        project.logger.warn("No field name for $toFieldName")
-                        continue
-                    }
-                    project.logger.debug("fromFieldName: $fromFieldName toFieldName: $toFieldName")
-                    acceptor.acceptField(memberOf(fromClassName, fromFieldName, fieldDef.getDesc(fromId)), toFieldName)
-                }
-
-                for (methodDef in classDef.methods) {
-                    val fromMethodName = methodDef.getName(fromId) ?: methodDef.getName(fallbackId)
-                    val toMethodName = methodDef.getName(toId) ?: methodDef.getName(fallbackId) ?: fromMethodName
-                    val fromMethodDesc = methodDef.getDesc(fromId) ?: methodDef.getDesc(fallbackId)
-                    if (fromMethodName == null) {
-                        project.logger.warn("No method name for $toMethodName")
-                        continue
-                    }
-                    val method = memberOf(fromClassName, fromMethodName, fromMethodDesc)
-
-                    project.logger.debug("fromMethodName: $fromMethodName toMethodName: $toMethodName")
-                    acceptor.acceptMethod(method, toMethodName)
-
-                    if (remapLocalVariables) {
-                        for (arg in methodDef.args) {
-                            val toArgName = arg.getName(toId) ?: arg.getName(fallbackId) ?: continue
-                            acceptor.acceptMethodArg(method, arg.lvIndex, toArgName)
-                        }
-
-                        for (localVar in methodDef.vars) {
-                            val toLocalVarName = localVar.getName(toId) ?: localVar.getName(fallbackId) ?: continue
-                            acceptor.acceptMethodVar(
-                                method,
-                                localVar.lvIndex,
-                                localVar.startOpIdx,
-                                localVar.lvtRowIndex,
-                                toLocalVarName
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
 
     fun remap(envType: EnvType) {
         val configs = when (envType) {
@@ -185,11 +101,11 @@ class ModRemapper(
             EnvType.CLIENT -> clientConfig
             EnvType.SERVER -> serverConfig
         }
-        configs.configurations.forEach {
+        val count = configs.configurations.sumOf {
             preTransform(configs.envType, it)
         }
-        @Suppress("unused")
-        val tr = TinyRemapper.newRemapper().withMappings(getMappingProvider(fromMappings, fallbackTo, mcRemapper.provider.targetNamespace.get(), mcRemapper.getMappingTree(configs.envType)))
+        if (count == 0) return
+        val tr = TinyRemapper.newRemapper().withMappings(mappings.getMappingProvider(configs.envType, fromMappings, fallbackFrom, fallbackTo, mcRemapper.provider.targetNamespace.get()))
             .renameInvalidLocals(true)
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())
@@ -211,12 +127,14 @@ class ModRemapper(
 
     private val dependencyMap = mutableMapOf<Configuration, MutableSet<Dependency>>()
 
-    private fun preTransform(envType: EnvType, configuration: Configuration) {
+    private fun preTransform(envType: EnvType, configuration: Configuration): Int {
+        val count = configuration.dependencies.size
         configuration.dependencies.forEach {
             internalModRemapperConfiguration(envType).dependencies.add(it)
             dependencyMap.computeIfAbsent(configuration) { mutableSetOf() } += (it)
         }
         configuration.dependencies.clear()
+        return count
     }
 
     private fun transform(envType: EnvType, configuration: Configuration) {
@@ -258,7 +176,7 @@ class ModRemapper(
     }
 
     private fun getOutputs(envType: EnvType, dependency: Dependency): Set<String> {
-        val combinedNames = mcRemapper.getCombinedNames(envType)
+        val combinedNames = mappings.getCombinedNames(envType)
         val outputs = mutableSetOf<String>()
         for (innerDep in internalModRemapperConfiguration(envType).resolvedConfiguration.getFirstLevelModuleDependencies { it == dependency }) {
             for (artifact in innerDep.allModuleArtifacts) {
@@ -300,7 +218,7 @@ class ModRemapper(
         ) {
             val output = destinationDirectory.resolve(relativePath)
             output.parent.maybeCreate()
-            val mappingTree = mcRemapper.getMappingTree(envType)
+            val mappingTree = mappings.getMappingTree(envType)
             BufferedReader(InputStreamReader(input)).use { reader ->
                 BufferedWriter(OutputStreamWriter(BufferedOutputStream(Files.newOutputStream(output, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)))).use { writer ->
                     var line: List<String>? = reader.readLine().split("\\s+".toRegex())

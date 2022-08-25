@@ -24,15 +24,15 @@ import xyz.wagyourtail.unimined.consumerApply
 import xyz.wagyourtail.unimined.idea.isIdeaSync
 import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
 import xyz.wagyourtail.unimined.providers.minecraft.version.Library
-import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.NoTransformMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.fabric.FabricMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.forge.FG1MinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.forge.FG2MinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.forge.FG3MinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.jarmod.JarModMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.remap.MinecraftRemapper
-import xyz.wagyourtail.unimined.providers.patch.remap.ModRemapper
+import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.NoTransformMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.fabric.FabricMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.FG1MinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.FG2MinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.FG3MinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.remap.MinecraftRemapper
+import xyz.wagyourtail.unimined.providers.mod.ModRemapper
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
@@ -64,7 +64,6 @@ abstract class MinecraftProvider(
     )
 
     val mcRemapper = MinecraftRemapper(project, this)
-    val modRemapper = ModRemapper(project, mcRemapper)
 
     abstract val overrideMainClassClient: Property<String?>
     abstract val overrideMainClassServer: Property<String?>
@@ -101,12 +100,7 @@ abstract class MinecraftProvider(
 
     private fun afterEvaluate() {
         addMcLibraries()
-
         minecraftTransformer.afterEvaluate()
-        for (envType in EnvType.values()) {
-            if (envType == EnvType.COMBINED && disableCombined.get()) continue
-            modRemapper.remap(envType)
-        }
     }
 
     fun fabric() {

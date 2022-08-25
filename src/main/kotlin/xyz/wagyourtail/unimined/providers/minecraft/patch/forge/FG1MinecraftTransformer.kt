@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.providers.patch.forge
+package xyz.wagyourtail.unimined.providers.minecraft.patch.forge
 
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
@@ -11,8 +11,8 @@ import xyz.wagyourtail.unimined.deleteRecursively
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import java.io.File
 import java.net.URI
 import java.nio.file.*
@@ -32,9 +32,9 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
         val forge = forgeJarModder.jarModConfiguration(EnvType.COMBINED).dependencies.last()
 
         val forgeSrc = "${forge.group}:${forge.name}:${forge.version}:src@zip"
-        provider.mcRemapper.getMappings(EnvType.COMBINED).dependencies.apply {
-           clear()
-           add(project.dependencies.create(forgeSrc))
+        provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).dependencies.apply {
+           if (isEmpty())
+               add(project.dependencies.create(forgeSrc))
         }
 
         // replace forge with universal
@@ -203,33 +203,6 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
 
     }
 
-    fun getAppDir(par0Str: String): File {
-        val var1 = System.getProperty("user.home", ".")
-        val var2: File = when (OSUtils.oSId) {
-            "linux", "unknown" -> File(
-                var1,
-                ".$par0Str/"
-            )
-
-            "windows" -> {
-                val var3 = System.getenv("APPDATA")
-                if (var3 != null) {
-                    File(var3, ".$par0Str/")
-                } else {
-                    File(var1, ".$par0Str/")
-                }
-            }
-
-            "osx" -> File(var1, "Library/Application Support/$par0Str")
-            else -> File(var1, "$par0Str/")
-        }
-        return if (!var2.exists() && !var2.mkdirs()) {
-            throw RuntimeException("The working directory could not be created: $var2")
-        } else {
-            var2
-        }
-    }
-
     override fun applyClientRunConfig(tasks: TaskContainer) {
         provider.provideRunClientTask(tasks) {
             it.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${it.workingDir.absolutePath}\"")
@@ -248,11 +221,15 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
             val mc = URI.create("jar:${target.toUri()}")
             try {
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
-                    if (out.getPath("argo").exists()) {
-                        out.getPath("argo").deleteRecursively()
+                    out.getPath("argo").apply {
+                        if (exists()) {
+                            deleteRecursively()
+                        }
                     }
-                    if (out.getPath("org/bouncycastle").exists()) {
-                        out.getPath("org/bouncycastle").deleteRecursively()
+                    out.getPath("org/bouncycastle").apply {
+                        if (exists()) {
+                            deleteRecursively()
+                        }
                     }
                 }
             } catch (e: Throwable) {

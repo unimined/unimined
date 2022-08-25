@@ -1,19 +1,21 @@
-package xyz.wagyourtail.unimined.providers.patch.forge
+package xyz.wagyourtail.unimined.providers.minecraft.patch.forge
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import xyz.wagyourtail.unimined.providers.patch.forge.fg2.FG2TaskApplyBinPatches
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg2.FG2TaskApplyBinPatches
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.*
+import xyz.wagyourtail.unimined.providers.mappings.MappingExportTypes
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.version.parseAllLibraries
-import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.mod.LazyMutable
 import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
@@ -31,17 +33,37 @@ class FG2MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
 
     val forge = project.configurations.maybeCreate(Constants.FORGE_PROVIDER)
     val accessTransformer: File? = null
+    var mcpVersion: String? = null
+    var mcpChannel: String? = null
+
+    val srgToMcpMappings by lazy { provider.parent.getLocalCache().resolve("mappings").maybeCreate().resolve("srg2mcp.srg").apply {
+            provider.parent.mappingsProvider.addExport(EnvType.COMBINED) {
+                it.location = toFile()
+                it.type = MappingExportTypes.SRG
+                it.sourceNamespace = "searge"
+                it.targetNamespace = listOf("named")
+            }
+        }
+    }
+
     private lateinit var forgeUniversal: Dependency
     private lateinit var tweakClass: String
     override fun afterEvaluate() {
         // get and add forge-src to mappings
         val forgeDep = forge.dependencies.last()
 
-        if (SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7")) {
-            val forgeSrc = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:src@zip"
-            provider.mcRemapper.getMappings(EnvType.COMBINED).dependencies.apply {
-                clear()
-                add(project.dependencies.create(forgeSrc))
+        val forgeSrc = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:src@zip"
+        provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).dependencies.apply {
+            if (isEmpty()) {
+                if (SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7")) {
+                    add(project.dependencies.create(forgeSrc))
+                } else if (SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7.10")) {
+                    throw UnsupportedOperationException("Forge 1.7-1.7.9 don't have automatic mappings support. please supply the mcp mappings or whatever manually")
+                } else {
+                    if (mcpVersion == null || mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
+                    add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraftDownloader.version}:srg@zip"))
+                    add(project.dependencies.create("de.oceanlabs.mcp:mcp_$mcpChannel:$mcpVersion@zip"))
+                }
             }
         }
 
@@ -91,16 +113,17 @@ class FG2MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
             patchedMC.deleteIfExists()
             FG2TaskApplyBinPatches(project).doTask(baseMinecraft.toFile(), binaryPatchFile.toFile(), patchedMC.toFile(), if (envType == EnvType.SERVER) "server" else "client")
         }
-        val accessModder = AccessTransformerMinecraftTransformer(project, provider)
-        if (accessTransformer != null) {
-            accessModder.addAccessTransformer(accessTransformer)
-        }
 
-        ZipReader.readInputStreamFor("fml_at.cfg", forgeJar.toPath(), false) {
-            accessModder.addAccessTransformer(it)
-        }
-        ZipReader.readInputStreamFor("forge_at.cfg", forgeJar.toPath(), false) {
-            accessModder.addAccessTransformer(it)
+        val accessModder = AccessTransformerMinecraftTransformer(project, provider).apply {
+            if (accessTransformer != null) {
+                addAccessTransformer(accessTransformer)
+            }
+            ZipReader.readInputStreamFor("fml_at.cfg", forgeJar.toPath(), false) {
+                addAccessTransformer(it)
+            }
+            ZipReader.readInputStreamFor("forge_at.cfg", forgeJar.toPath(), false) {
+                addAccessTransformer(it)
+            }
         }
 
         val patchedMCSrg = provider.mcRemapper.provide(envType, patchedMC, "searge", "official", true)
@@ -115,6 +138,7 @@ class FG2MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
     override fun applyClientRunConfig(tasks: TaskContainer) {
         provider.provideRunClientTask(tasks) {
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
+            it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${srgToMcpMappings}"
             it.args += "--tweakClass $tweakClass"
         }
     }
@@ -131,17 +155,25 @@ class FG2MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
             val mc = URI.create("jar:${target.toUri()}")
             try {
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
-                    if (out.getPath("argo").exists()) {
-                        out.getPath("argo").deleteRecursively()
+                    out.getPath("argo").apply {
+                        if (exists()) {
+                            deleteRecursively()
+                        }
                     }
-                    if (out.getPath("org/bouncycastle").exists()) {
-                        out.getPath("org/bouncycastle").deleteRecursively()
+                    out.getPath("org/bouncycastle").apply {
+                        if (exists()) {
+                            deleteRecursively()
+                        }
                     }
-                    if (out.getPath("com/google").exists()) {
-                        out.getPath("com/google").deleteRecursively()
+                    out.getPath("com/google").apply {
+                        if (exists()) {
+                            deleteRecursively()
+                        }
                     }
-                    if (out.getPath("org/apache").exists()) {
-                        out.getPath("org/apache").deleteRecursively()
+                    out.getPath("org/apache").apply {
+                        if (exists()) {
+                            deleteRecursively()
+                        }
                     }
 
                     out.getPath("binpatches.pack.lzma").deleteIfExists()

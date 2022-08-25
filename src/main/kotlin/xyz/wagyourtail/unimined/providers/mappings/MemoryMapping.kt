@@ -1,6 +1,6 @@
 @file:Suppress("unused")
 
-package xyz.wagyourtail.unimined.providers.patch.remap.stubmappings
+package xyz.wagyourtail.unimined.providers.mappings
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo

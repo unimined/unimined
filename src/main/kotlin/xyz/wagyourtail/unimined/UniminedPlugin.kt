@@ -12,7 +12,6 @@ import xyz.wagyourtail.unimined.remap.RemapJarTask
 @Suppress("UNUSED")
 class UniminedPlugin : Plugin<Project> {
     lateinit var ext: UniminedExtension
-    lateinit var minecraftProvider: MinecraftProvider
 
     override fun apply(project: Project) {
         project.apply(mapOf(
@@ -23,7 +22,6 @@ class UniminedPlugin : Plugin<Project> {
         ))
 
         ext = project.extensions.create("unimined", UniminedExtension::class.java, project)
-        minecraftProvider = project.extensions.create("minecraft", MinecraftProvider::class.java, project, ext)
         remapJarTask(project, project.tasks)
     }
 
@@ -46,7 +44,7 @@ class UniminedPlugin : Plugin<Project> {
             if (client != null) {
                 it.archiveClassifier.set("client")
             }
-            if (minecraftProvider.disableCombined.get()) {
+            if (ext.minecraftProvider.disableCombined.get()) {
                 it.minecraftTarget.convention(EnvType.CLIENT.name)
             }
         }
@@ -61,7 +59,7 @@ class UniminedPlugin : Plugin<Project> {
                 it.group = "unimined"
                 it.inputFile.convention(serverJar.archiveFile)
                 it.archiveClassifier.set("server")
-                if (minecraftProvider.disableCombined.get()) {
+                if (ext.minecraftProvider.disableCombined.get()) {
                     it.minecraftTarget.convention(EnvType.SERVER.name)
                 }
             }

@@ -20,6 +20,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util.zip.ZipInputStream
+import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import kotlin.properties.Delegates
@@ -292,6 +293,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                         entry = stream.nextEntry
                         continue
                     }
+                    path.resolve(entry.name).parent.createDirectories()
                     Files.copy(stream, path.resolve(entry.name), StandardCopyOption.REPLACE_EXISTING)
                     entry = stream.nextEntry
                 }

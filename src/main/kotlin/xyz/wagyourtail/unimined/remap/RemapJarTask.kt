@@ -9,11 +9,13 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.tasks.Jar
+import xyz.wagyourtail.unimined.UniminedExtension
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 
 abstract class RemapJarTask : Jar() {
     private val minecraftProvider = project.extensions.getByType(MinecraftProvider::class.java)
+    private val uniminedExtension = project.extensions.getByType(UniminedExtension::class.java)
 
     @get:InputFile
     abstract val inputFile: RegularFileProperty
@@ -22,7 +24,10 @@ abstract class RemapJarTask : Jar() {
     abstract val sourceNamespace: Property<String>
 
     @get:Input
-    abstract val fallbackNamespace: Property<String>
+    abstract val fallbackFromNamespace: Property<String>
+
+    @get:Input
+    abstract val fallbackToNamespace: Property<String>
 
     @get:Input
     abstract val targetNamespace: Property<String>
@@ -32,7 +37,8 @@ abstract class RemapJarTask : Jar() {
 
     init {
         sourceNamespace.convention(minecraftProvider.targetNamespace)
-        fallbackNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
+        fallbackFromNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
+        fallbackToNamespace.convention(minecraftProvider.mcRemapper.fallbackFrom)
         targetNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
         minecraftTarget.convention(EnvType.COMBINED.name)
     }
@@ -41,7 +47,7 @@ abstract class RemapJarTask : Jar() {
     fun run() {
         val envType = EnvType.valueOf(minecraftTarget.get())
         val remapperB = TinyRemapper.newRemapper()
-            .withMappings(minecraftProvider.modRemapper.getMappingProvider(sourceNamespace.get(), fallbackNamespace.get(), targetNamespace.get(), minecraftProvider.mcRemapper.getMappingTree(envType),false))
+            .withMappings(uniminedExtension.mappingsProvider.getMappingProvider(envType, sourceNamespace.get(), fallbackFromNamespace.get(), fallbackToNamespace.get(), targetNamespace.get()))
             .skipLocalVariableMapping(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .extension(MixinExtension())

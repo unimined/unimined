@@ -1,11 +1,11 @@
-package xyz.wagyourtail.unimined.providers.patch.forge
+package xyz.wagyourtail.unimined.providers.minecraft.patch.forge
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.getSha1
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.runJarInSubprocess
 import java.io.File
 import java.io.InputStream

@@ -1,9 +1,10 @@
-package xyz.wagyourtail.unimined.providers.patch
+package xyz.wagyourtail.unimined.providers.minecraft.patch
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
@@ -16,7 +17,9 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     internal val dynamicTransformerDependencies: Configuration = project.configurations.maybeCreate(Constants.DYNAMIC_TRANSFORMER_DEPENDENCIES)
 
+    @ApiStatus.Internal
     abstract fun transform(envType: EnvType, baseMinecraft: Path): Path
+
     private fun applyRunConfigs(tasks: TaskContainer) {
         project.logger.warn("client: ${provider.client}, server: ${provider.server}")
         if (provider.minecraftDownloader.client) {
@@ -35,12 +38,16 @@ abstract class AbstractMinecraftTransformer protected constructor(
         provider.provideRunServerTask(tasks) {  }
     }
 
+    @ApiStatus.Internal
     open fun afterEvaluate() {
         provider.parent.events.register(::sourceSets)
         provider.parent.events.register(::applyRunConfigs)
     }
+
+    @ApiStatus.Internal
     open fun sourceSets(sourceSets: SourceSetContainer) {}
 
+    @ApiStatus.Internal
     open fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
         return baseMinecraft
     }

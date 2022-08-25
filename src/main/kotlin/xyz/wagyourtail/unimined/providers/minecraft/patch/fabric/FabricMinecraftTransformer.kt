@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.providers.patch.fabric
+package xyz.wagyourtail.unimined.providers.minecraft.patch.fabric
 
 import com.google.gson.JsonParser
 import org.gradle.api.Project
@@ -8,7 +8,7 @@ import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
 import java.io.InputStreamReader
 import java.net.URI
 import java.nio.file.Path
@@ -147,7 +147,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     private fun getIntermediaryClassPath(envType: EnvType): String {
         val remapClasspath = provider.parent.getLocalCache().resolve("remapClasspath.txt")
         val s = provider.mcLibraries.files.joinToString(":") + ":" +
-            provider.modRemapper.internalModRemapperConfiguration(envType).files.joinToString(":") + ":" +
+            provider.parent.modProvider.modRemapper.internalModRemapperConfiguration(envType).files.joinToString(":") + ":" +
             provider.getMinecraftWithMapping(envType, "intermediary")
 
         remapClasspath.writeText(s, options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
