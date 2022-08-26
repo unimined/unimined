@@ -18,6 +18,8 @@ object Constants {
 
     const val MINECRAFT_GROUP = "net.minecraft"
 
+    const val JARMOD_PROVIDER = "jarMod"
+
     const val FABRIC_PROVIDER = "fabric"
 
     const val FORGE_PROVIDER = "forge"
@@ -25,9 +27,6 @@ object Constants {
     val ASSET_BASE_URL: URI = URI.create("https://resources.download.minecraft.net/")
 
     val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
-
-
-    const val JARMOD_PROVIDER = "jarMod"
 
     @ApiStatus.Internal
     val DYNAMIC_TRANSFORMER_DEPENDENCIES = "dynamicTransformerDependencies"
