@@ -75,19 +75,20 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
             forgeTransformer = determineForgeProviderFromUniversal(jar)
 
             //parse version json from universal jar and apply
-            val versionJson: JsonObject = ZipReader.readInputStreamFor("version.json", jar.toPath()) {
+            ZipReader.readInputStreamFor("version.json", jar.toPath(), false) {
                 JsonParser.parseReader(InputStreamReader(it)).asJsonObject
+            }?.let { versionJson ->
+                val libraries = parseAllLibraries(versionJson.getAsJsonArray("libraries"))
+                val mainClass = versionJson.get("mainClass").asString
+                val args = versionJson.get("minecraftArguments").asString
+                provider.overrideMainClassClient.set(mainClass)
+                provider.addMcLibraries(libraries.filter {
+                    !it.name.startsWith("net.minecraftforge:minecraftforge:") && !it.name.startsWith(
+                        "net.minecraftforge:forge:"
+                    )
+                })
+                tweakClass = args.split("--tweakClass")[1].trim()
             }
-            val libraries = parseAllLibraries(versionJson.getAsJsonArray("libraries"))
-            val mainClass = versionJson.get("mainClass").asString
-            val args = versionJson.get("minecraftArguments").asString
-            provider.overrideMainClassClient.set(mainClass)
-            provider.addMcLibraries(libraries.filter {
-                !it.name.startsWith("net.minecraftforge:minecraftforge:") && !it.name.startsWith(
-                    "net.minecraftforge:forge:"
-                )
-            })
-            tweakClass = args.split("--tweakClass")[1].trim()
         }
 
         forgeTransformer.afterEvaluate()
