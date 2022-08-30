@@ -5,6 +5,7 @@ unified minecraft modding environment.
 ## TODO for initial release
 * remap fg2+ era at's back to notch (fixing mc 1.7+)
 * remap user at's to notch
+* auto disable combined on <=1.2.5
 
 ## TODO
 * FG3+ support
