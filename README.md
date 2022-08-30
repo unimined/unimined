@@ -3,7 +3,7 @@
 unified minecraft modding environment.
 
 ## TODO for initial release
-* remap fg2+ era at's back to notch
+* remap fg2+ era at's back to notch (fixing mc 1.7+)
 * remap user at's to notch
 
 ## TODO
@@ -12,7 +12,7 @@ unified minecraft modding environment.
 * fabric aw support
 * combined jar support
 * figure out how to get forge to recognise resources as part of the dev mod
-
+* split fg2+ out of the mc jar
 
 ## Example Usage
 ```groovy
