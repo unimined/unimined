@@ -115,9 +115,9 @@ abstract class MappingsProvider(
     private fun mappingsFiles(envType: EnvType): Set<File> {
         return mappingFileEnvs.computeIfAbsent(envType) {
             if (envType != EnvType.COMBINED) {
-                mappingsFiles(EnvType.COMBINED) + getMappings(envType).files
+                mappingsFiles(EnvType.COMBINED) + getMappings(envType).resolve()
             } else {
-                getMappings(envType).files
+                getMappings(envType).resolve()
             }
         }
     }

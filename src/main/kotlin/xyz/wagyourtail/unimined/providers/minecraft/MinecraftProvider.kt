@@ -22,18 +22,14 @@ import xyz.wagyourtail.unimined.OSUtils
 import xyz.wagyourtail.unimined.UniminedExtension
 import xyz.wagyourtail.unimined.consumerApply
 import xyz.wagyourtail.unimined.idea.isIdeaSync
-import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
-import xyz.wagyourtail.unimined.providers.minecraft.version.Library
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.fabric.FabricMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.FG1MinecraftTransformer
-import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.FG2MinecraftTransformer
-import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.remap.MinecraftRemapper
-import xyz.wagyourtail.unimined.providers.mod.ModRemapper
+import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
+import xyz.wagyourtail.unimined.providers.minecraft.version.Library
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
@@ -212,22 +208,30 @@ abstract class MinecraftProvider(
         if (info.name != "minecraft") {
             return Artifact.none()
         }
-
-        return if (info.extension != "jar") {
+        try {
+            return if (info.extension != "jar") {
                 Artifact.none()
             } else {
                 when (info.classifier) {
-                    "client" -> StreamableArtifact.ofFile(
-                        info,
-                        ArtifactType.BINARY,
-                        getMinecraftWithMapping(EnvType.CLIENT, targetNamespace.get()).toFile()
-                    )
+                    "client" -> {
+                        val mc = getMinecraftWithMapping(EnvType.CLIENT, targetNamespace.get())
+                        project.logger.info("providing client minecraft jar at $mc")
+                        StreamableArtifact.ofFile(
+                            info,
+                            ArtifactType.BINARY,
+                            mc.toFile()
+                        )
+                    }
 
-                    "server" -> StreamableArtifact.ofFile(
-                        info,
-                        ArtifactType.BINARY,
-                        getMinecraftWithMapping(EnvType.SERVER, targetNamespace.get()).toFile()
-                    )
+                    "server" -> {
+                        val mc = getMinecraftWithMapping(EnvType.SERVER, targetNamespace.get())
+                        project.logger.info("providing server minecraft jar at $mc")
+                        StreamableArtifact.ofFile(
+                            info,
+                            ArtifactType.BINARY,
+                            mc.toFile()
+                        )
+                    }
 
                     "client-mappings" -> StreamableArtifact.ofFile(
                         info,
@@ -241,15 +245,23 @@ abstract class MinecraftProvider(
                         minecraftDownloader.getMappings(EnvType.SERVER).toFile()
                     )
 
-                    null -> StreamableArtifact.ofFile(
-                        info,
-                        ArtifactType.BINARY,
-                        getMinecraftWithMapping(EnvType.COMBINED, targetNamespace.get()).toFile()
-                    )
+                    null -> {
+                        val mc = getMinecraftWithMapping(EnvType.COMBINED, targetNamespace.get())
+                        project.logger.info("providing combined minecraft jar at $mc")
+                        StreamableArtifact.ofFile(
+                            info,
+                            ArtifactType.BINARY,
+                            mc.toFile()
+                        )
+                    }
 
                     else -> throw IllegalArgumentException("Unknown classifier ${info.classifier}")
                 }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw e
+        }
     }
 
     @ApiStatus.Internal
