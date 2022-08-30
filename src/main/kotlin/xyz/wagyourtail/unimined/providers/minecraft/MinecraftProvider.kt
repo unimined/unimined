@@ -30,6 +30,7 @@ import xyz.wagyourtail.unimined.providers.minecraft.patch.fabric.FabricMinecraft
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.FG1MinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.FG2MinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.FG3MinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.remap.MinecraftRemapper
 import xyz.wagyourtail.unimined.providers.mod.ModRemapper
@@ -91,7 +92,7 @@ abstract class MinecraftProvider(
         GradleRepositoryAdapter.add(
             project.repositories,
             "minecraft-transformer",
-            parent.getGlobalCache().toFile(),
+            parent.getLocalCache().toFile(),
             repo
         )
         parent.events.register(::afterEvaluate)
@@ -127,40 +128,16 @@ abstract class MinecraftProvider(
         action(minecraftTransformer as JarModMinecraftTransformer)
     }
 
-    fun forge1() {
-        forge1 {}
+    fun forge() {
+        forge {}
     }
 
-    fun forge1(action: (FG1MinecraftTransformer) -> Unit) {
+    fun forge(action: (ForgeMinecraftTransformer) -> Unit) {
         if (minecraftTransformer !is NoTransformMinecraftTransformer) {
             throw IllegalStateException("Minecraft transformer already set")
         }
-        minecraftTransformer = FG1MinecraftTransformer(project, this)
-        action(minecraftTransformer as FG1MinecraftTransformer)
-    }
-
-    fun forge2() {
-        forge2 {}
-    }
-
-    fun forge2(action: (FG2MinecraftTransformer) -> Unit) {
-        if (minecraftTransformer !is NoTransformMinecraftTransformer) {
-            throw IllegalStateException("Minecraft transformer already set")
-        }
-        minecraftTransformer = FG2MinecraftTransformer(project, this)
-        action(minecraftTransformer as FG2MinecraftTransformer)
-    }
-
-    fun forge3() {
-        forge3 {}
-    }
-
-    fun forge3(action: (FG3MinecraftTransformer) -> Unit) {
-        if (minecraftTransformer !is NoTransformMinecraftTransformer) {
-            throw IllegalStateException("Minecraft transformer already set")
-        }
-        minecraftTransformer = FG3MinecraftTransformer(project, this)
-        action(minecraftTransformer as FG3MinecraftTransformer)
+        minecraftTransformer = ForgeMinecraftTransformer(project, this)
+        action(minecraftTransformer as ForgeMinecraftTransformer)
     }
 
     private fun sourceSets(sourceSets: SourceSetContainer) {

@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined
 
 import org.gradle.api.Project
+import org.gradle.api.provider.Property
 import xyz.wagyourtail.unimined.providers.mappings.MappingsProvider
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.mod.ModProvider
@@ -14,8 +15,18 @@ abstract class UniminedExtension(val project: Project) {
     val mappingsProvider = project.extensions.create("mappings", MappingsProvider::class.java, project, this)
     val modProvider = ModProvider(project, this)
 
+    abstract val useGlobalCache: Property<Boolean>
+
+    init {
+        useGlobalCache.convention(true).finalizeValueOnRead()
+    }
+
     fun getGlobalCache(): Path {
-        return project.gradle.gradleUserHomeDir.toPath().resolve("caches").resolve("unimined").maybeCreate()
+        if (useGlobalCache.get()) {
+            return project.gradle.gradleUserHomeDir.toPath().resolve("caches").resolve("unimined").maybeCreate()
+        } else {
+            return getLocalCache()
+        }
     }
 
     fun getLocalCache(): Path {

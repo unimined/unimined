@@ -95,4 +95,8 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
         return file
     }
 
+    fun remapTransformer(file: String): String {
+        TODO()
+    }
+
 }

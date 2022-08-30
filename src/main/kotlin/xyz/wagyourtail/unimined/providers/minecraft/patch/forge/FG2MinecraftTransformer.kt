@@ -1,40 +1,31 @@
 package xyz.wagyourtail.unimined.providers.minecraft.patch.forge
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
-import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg2.FG2TaskApplyBinPatches
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.TaskContainer
-import xyz.wagyourtail.unimined.*
+import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.SemVerUtils
+import xyz.wagyourtail.unimined.deleteRecursively
+import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.mappings.MappingExportTypes
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
-import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.minecraft.version.parseAllLibraries
-import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg2.FG2TaskApplyBinPatches
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.mod.LazyMutable
 import java.io.File
-import java.io.InputStreamReader
 import java.net.URI
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
+import java.nio.file.*
 import kotlin.io.path.*
 
-class FG2MinecraftTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(
+class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer) : JarModMinecraftTransformer(
     project,
-    provider
+    parent.provider,
+    Constants.FORGE_PROVIDER
 ) {
 
-    val forge = project.configurations.maybeCreate(Constants.FORGE_PROVIDER)
-    val accessTransformer: File? = null
-    var mcpVersion: String? = null
-    var mcpChannel: String? = null
+    val forge = jarModConfiguration(EnvType.COMBINED)
+    var atMappings = "official"
 
     val srgToMcpMappings by lazy { provider.parent.getLocalCache().resolve("mappings").maybeCreate().resolve("srg2mcp.srg").apply {
             provider.parent.mappingsProvider.addExport(EnvType.COMBINED) {
@@ -46,8 +37,14 @@ class FG2MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
         }
     }
 
-    private lateinit var forgeUniversal: Dependency
-    private lateinit var tweakClass: String
+    init {
+        project.repositories.maven {
+            it.url = URI("https://maven.minecraftforge.net/")
+            it.metadataSources {
+                it.artifact()
+            }
+        }
+    }
     override fun afterEvaluate() {
         // get and add forge-src to mappings
         val forgeDep = forge.dependencies.last()
@@ -60,38 +57,13 @@ class FG2MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
                 } else if (SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7.10")) {
                     throw UnsupportedOperationException("Forge 1.7-1.7.9 don't have automatic mappings support. please supply the mcp mappings or whatever manually")
                 } else {
-                    if (mcpVersion == null || mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
+                    if (parent.mcpVersion == null || parent.mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
                     add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraftDownloader.version}:srg@zip"))
-                    add(project.dependencies.create("de.oceanlabs.mcp:mcp_$mcpChannel:$mcpVersion@zip"))
+                    add(project.dependencies.create("de.oceanlabs.mcp:mcp_${parent.mcpChannel}:${parent.mcpVersion}@zip"))
                 }
             }
         }
 
-        // replace forge with universal
-        forgeUniversal = project.dependencies.create("${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:universal")
-        forge.dependencies.apply {
-            remove(forgeDep)
-            add(forgeUniversal)
-        }
-
-        //parse version json from universal jar and apply
-        val forgeJar = forge.apply {
-            resolve()
-        }.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
-
-        val versionJson: JsonObject = ZipReader.readInputStreamFor("version.json", forgeJar.toPath()) {
-            JsonParser.parseReader(InputStreamReader(it)).asJsonObject
-        }
-        val libraries = parseAllLibraries(versionJson.getAsJsonArray("libraries"))
-        val mainClass = versionJson.get("mainClass").asString
-        val args = versionJson.get("minecraftArguments").asString
-        provider.overrideMainClassClient.set(mainClass)
-        provider.addMcLibraries(libraries.filter {
-            !it.name.startsWith("net.minecraftforge:minecraftforge:") && !it.name.startsWith(
-                "net.minecraftforge:forge:"
-            )
-        })
-        tweakClass = args.split("--tweakClass")[1].trim()
         super.afterEvaluate()
     }
 
@@ -101,9 +73,8 @@ class FG2MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
     }
 
     override fun transform(envType: EnvType, baseMinecraft: Path): Path {
-        val forgeJar = forge.apply {
-            resolve()
-        }.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+        val forgeUniversal = forge.dependencies.last()
+        val forgeJar = forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
         val outFolder = baseMinecraft.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}").maybeCreate()
 
@@ -118,9 +89,7 @@ class FG2MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
         }
 
         val accessModder = AccessTransformerMinecraftTransformer(project, provider).apply {
-            if (accessTransformer != null) {
-                addAccessTransformer(accessTransformer)
-            }
+            parent.accessTransformer?.let { addAccessTransformer(it) }
             ZipReader.readInputStreamFor("fml_at.cfg", forgeJar.toPath(), false) {
                 addAccessTransformer(it)
             }
@@ -129,20 +98,23 @@ class FG2MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
             }
         }
 
-        val patchedMCSrg = provider.mcRemapper.provide(envType, patchedMC, "searge", "official", true)
-        val atsOut = accessModder.transform(envType, patchedMCSrg)
-        val atOutOfficial = provider.mcRemapper.provide(envType, atsOut, "official", "searge", true)
+        val atOutOfficial = if (atMappings != "official") {
+            val patchedMCSrg = provider.mcRemapper.provide(envType, patchedMC, "searge", "official", true)
+            val atsOut = accessModder.transform(envType, patchedMCSrg)
+            provider.mcRemapper.provide(envType, atsOut, "official", "searge", true)
+        } else {
+            accessModder.transform(envType, patchedMC)
+        }
 
         //TODO remap forge separately
-        val jarmodder = JarModMinecraftTransformer(project, provider, Constants.FORGE_PROVIDER)
-        return jarmodder.transform(envType, atOutOfficial)
+        return super.transform(envType, atOutOfficial)
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
         provider.provideRunClientTask(tasks) {
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
             it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${srgToMcpMappings}"
-            it.args += "--tweakClass $tweakClass"
+            it.args += "--tweakClass ${parent.tweakClass ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
         }
     }
 

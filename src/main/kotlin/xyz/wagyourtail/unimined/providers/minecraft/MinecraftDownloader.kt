@@ -7,6 +7,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.Constants.METADATA_URL
+import xyz.wagyourtail.unimined.SemVerUtils
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.version.*
 import xyz.wagyourtail.unimined.testSha1
@@ -101,6 +102,45 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         dependency.version!!
     }
 
+    val launcherMeta by lazy {
+        if (project.gradle.startParameter.isOffline) {
+            throw IllegalStateException("Offline mode is enabled, but version metadata is not available")
+        }
+
+        val urlConnection = METADATA_URL.toURL().openConnection() as HttpURLConnection
+        urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+        urlConnection.requestMethod = "GET"
+        urlConnection.connect()
+
+        if (urlConnection.responseCode != 200) {
+            throw IOException("Failed to get metadata, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
+        }
+
+        val versionsList = urlConnection.inputStream.use {
+            InputStreamReader(it).use { reader ->
+                JsonParser.parseReader(reader).asJsonObject
+            }
+        }
+
+        versionsList.getAsJsonArray("versions") ?: throw Exception("Failed to get metadata, no versions")
+    }
+
+    fun mcVersionCompare(vers1: String, vers2: String): Int {
+        if (vers1 == vers2) return 0
+//        if (SemVerUtils.isSemVer(vers1) && SemVerUtils.isSemVer(vers2)) {
+//            return SemVerUtils.SemVer.create(vers1).compareTo(SemVerUtils.SemVer.create(vers2))
+//        }
+        for (i in launcherMeta) {
+            if (i.asJsonObject["id"].asString == vers1) {
+                return 1
+            }
+            if (i.asJsonObject["id"].asString == vers2) {
+                return -1
+            }
+        }
+        throw Exception("Failed to compare versions, $vers1 and $vers2 are not valid versions")
+    }
+
     val metadata: VersionData by lazy {
         val version = version
         val path = versionJsonDownloadPath(version)
@@ -145,27 +185,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     private fun getVersionFromLauncherMeta(versionId: String): JsonObject {
-        if (project.gradle.startParameter.isOffline) {
-            throw IllegalStateException("Offline mode is enabled, but version metadata is not available")
-        }
-
-        val urlConnection = METADATA_URL.toURL().openConnection() as HttpURLConnection
-        urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
-        urlConnection.requestMethod = "GET"
-        urlConnection.connect()
-
-        if (urlConnection.responseCode != 200) {
-            throw IOException("Failed to get metadata, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
-        }
-
-        val versionsList = urlConnection.inputStream.use {
-            InputStreamReader(it).use { reader ->
-                JsonParser.parseReader(reader).asJsonObject
-            }
-        }
-
-        val versions = versionsList.getAsJsonArray("versions") ?: throw Exception("Failed to get metadata, no versions")
-        for (version in versions) {
+        for (version in launcherMeta) {
             val versionObject = version.asJsonObject
             val id = versionObject.get("id").asString
             if (id == versionId) {

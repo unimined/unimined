@@ -26,13 +26,14 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
-class FG3MinecraftTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(
+class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer) : JarModMinecraftTransformer(
     project,
-    provider
+    parent.provider,
+    Constants.FORGE_PROVIDER
 ) {
 
     val forge = project.configurations.maybeCreate(Constants.FORGE_PROVIDER)
-    val accessTransformer: File? = null
+    var accessTransformer: File? = null
     var mcpVersion: String? = null
     var mcpChannel: String? = null
 
@@ -48,6 +49,16 @@ class FG3MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
 
     private lateinit var forgeUniversal: Dependency
     private lateinit var tweakClass: String
+
+    init {
+        project.repositories.maven {
+            it.url = URI("https://maven.minecraftforge.net/")
+            it.metadataSources {
+                it.artifact()
+            }
+        }
+    }
+
     override fun afterEvaluate() {
         // get and add forge-src to mappings
         val forgeDep = forge.dependencies.last()
@@ -118,9 +129,7 @@ class FG3MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
         }
 
         val accessModder = AccessTransformerMinecraftTransformer(project, provider).apply {
-            if (accessTransformer != null) {
-                addAccessTransformer(accessTransformer)
-            }
+            accessTransformer?.let { addAccessTransformer(it) }
             ZipReader.readInputStreamFor("fml_at.cfg", forgeJar.toPath(), false) {
                 addAccessTransformer(it)
             }

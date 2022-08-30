@@ -6,30 +6,34 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.OSUtils
 import xyz.wagyourtail.unimined.deleteRecursively
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
-import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
-import java.io.File
 import java.net.URI
 import java.nio.file.*
 import kotlin.io.path.*
 
-class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(
+class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer) : JarModMinecraftTransformer(
     project,
-    provider
+    parent.provider,
+    Constants.FORGE_PROVIDER
 ) {
 
-    val forgeJarModder = JarModMinecraftTransformer(project, provider, Constants.FORGE_PROVIDER)
     val afterForgeJarModder = JarModMinecraftTransformer(project, provider)
-    val accessTransformer: File? = null
+
+    init {
+        project.repositories.maven {
+            it.url = URI("https://maven.minecraftforge.net/")
+            it.metadataSources {
+                it.artifact()
+            }
+        }
+    }
 
     override fun afterEvaluate() {
         // get and add forge-src to mappings
-        val forge = forgeJarModder.jarModConfiguration(EnvType.COMBINED).dependencies.last()
+        val forge = jarModConfiguration(EnvType.COMBINED).dependencies.last()
 
         val forgeSrc = "${forge.group}:${forge.name}:${forge.version}:src@zip"
         provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).dependencies.apply {
@@ -37,41 +41,16 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
                add(project.dependencies.create(forgeSrc))
         }
 
-        // replace forge with universal
-        val forgeUniversal = "${forge.group}:${forge.name}:${forge.version}:universal@zip"
-        forgeJarModder.jarModConfiguration(EnvType.COMBINED).dependencies.apply {
-            remove(forge)
-            if (!provider.disableCombined.get()) {
-                add(project.dependencies.create(forgeUniversal))
-            }
-        }
-
-        // add forge client/server if universal is disabled
-        val forgeClient = "${forge.group}:${forge.name}:${forge.version}:client@zip"
-        val forgeServer = "${forge.group}:${forge.name}:${forge.version}:server@zip"
-        if (provider.disableCombined.get()) {
-            forgeJarModder.jarModConfiguration(EnvType.CLIENT).dependencies.apply {
-                clear()
-                add(project.dependencies.create(forgeClient))
-            }
-            forgeJarModder.jarModConfiguration(EnvType.SERVER).dependencies.apply {
-                clear()
-                add(project.dependencies.create(forgeServer))
-            }
-        }
-
         super.afterEvaluate()
     }
 
     override fun transform(envType: EnvType, baseMinecraft: Path): Path {
         val accessModder = AccessTransformerMinecraftTransformer(project, provider)
-        if (accessTransformer != null) {
-            accessModder.addAccessTransformer(accessTransformer)
-        }
+        parent.accessTransformer?.let { accessModder.addAccessTransformer(it) }
 
         // resolve forge
-        val forge = forgeJarModder.jarModConfiguration(envType).resolve().firstOrNull()?.toPath()
-            ?: forgeJarModder.jarModConfiguration(EnvType.COMBINED).resolve().first().toPath()
+        val forge = jarModConfiguration(envType).resolve().firstOrNull()?.toPath()
+            ?: jarModConfiguration(EnvType.COMBINED).resolve().first().toPath()
         // resolve ats from froge
         ZipReader.readInputStreamFor("fml_at.cfg", forge, false) {
             accessModder.addAccessTransformer(it)
@@ -82,7 +61,7 @@ class FG1MinecraftTransformer(project: Project, provider: MinecraftProvider) : A
         // apply ats
         val atsOut = accessModder.transform(envType, baseMinecraft)
         // apply jarMod
-        return afterForgeJarModder.transform(envType, forgeJarModder.transform(envType, atsOut))
+        return afterForgeJarModder.transform(envType, super.transform(envType, atsOut))
     }
 
     private val forgeDeps: Configuration = project.configurations.maybeCreate(Constants.FORGE_DEPS)
