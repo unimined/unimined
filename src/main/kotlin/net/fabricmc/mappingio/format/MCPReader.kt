@@ -261,7 +261,7 @@ object MCPReader {
                                 val param = params[srgId]!!
                                 visitor.visitMethod(meth.getName(seargeNamespace), meth.getDesc(seargeNamespace))
                                 visitor.visitElementContent(MappedElementKind.METHOD)
-                                if (visitor.visitMethodArg(Integer.parseInt(param.source), -1, null)) {
+                                if (visitor.visitMethodArg(-1, Integer.parseInt(param.source), null)) {
                                     visitor.visitDstName(MappedElementKind.METHOD_ARG, 0, param.target)
                                 }
                             }

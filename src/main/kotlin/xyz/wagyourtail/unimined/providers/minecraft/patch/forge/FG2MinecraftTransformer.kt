@@ -9,7 +9,6 @@ import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.SemVerUtils
 import xyz.wagyourtail.unimined.deleteRecursively
 import xyz.wagyourtail.unimined.maybeCreate
-import xyz.wagyourtail.unimined.providers.mappings.MappingExportTypes
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg2.FG2TaskApplyBinPatches
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
@@ -25,17 +24,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 ) {
 
     val forge = jarModConfiguration(EnvType.COMBINED)
-    var atMappings = "official"
-
-    val srgToMcpMappings by lazy { provider.parent.getLocalCache().resolve("mappings").maybeCreate().resolve("srg2mcp.srg").apply {
-            provider.parent.mappingsProvider.addExport(EnvType.COMBINED) {
-                it.location = toFile()
-                it.type = MappingExportTypes.SRG
-                it.sourceNamespace = "searge"
-                it.targetNamespace = listOf("named")
-            }
-        }
-    }
+    private val atMappings = "official"
 
     init {
         project.repositories.maven {
@@ -113,7 +102,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override fun applyClientRunConfig(tasks: TaskContainer) {
         provider.provideRunClientTask(tasks) {
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
-            it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${srgToMcpMappings}"
+            it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMcpMappings}"
             it.args += "--tweakClass ${parent.tweakClass ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
         }
     }

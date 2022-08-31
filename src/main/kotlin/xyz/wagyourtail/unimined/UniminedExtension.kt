@@ -11,8 +11,8 @@ import java.nio.file.Path
 abstract class UniminedExtension(val project: Project) {
     val events = GradleEvents(project)
 
-    val minecraftProvider = project.extensions.create("minecraft", MinecraftProvider::class.java, project, this)
-    val mappingsProvider = project.extensions.create("mappings", MappingsProvider::class.java, project, this)
+    val minecraftProvider: MinecraftProvider = project.extensions.create("minecraft", MinecraftProvider::class.java, project, this)
+    val mappingsProvider: MappingsProvider = project.extensions.create("mappings", MappingsProvider::class.java, project, this)
     val modProvider = ModProvider(project, this)
 
     abstract val useGlobalCache: Property<Boolean>

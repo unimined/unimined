@@ -191,9 +191,9 @@ abstract class MinecraftProvider(
         return minecraftMapped.computeIfAbsent(envType) {
             mutableMapOf()
         }.computeIfAbsent(namespace) {
-            if (envType == EnvType.COMBINED)
-                getMinecraftWithMapping(EnvType.CLIENT, namespace) //TODO: fix to actually merge
-            else
+//            if (envType == EnvType.COMBINED)
+//                getMinecraftWithMapping(EnvType.CLIENT, namespace) //TODO: fix to actually merge
+//            else
                 minecraftTransformer.afterRemap(envType, namespace, mcRemapper.provide(envType, minecraftTransformer.transform(envType, minecraftDownloader.getMinecraft(envType)), namespace))
         }
     }
@@ -253,6 +253,10 @@ abstract class MinecraftProvider(
                             ArtifactType.BINARY,
                             mc.toFile()
                         )
+                    }
+
+                    "sources" -> {
+                        Artifact.none()
                     }
 
                     else -> throw IllegalArgumentException("Unknown classifier ${info.classifier}")

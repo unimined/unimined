@@ -4,9 +4,12 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
+import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.SemVerUtils
+import xyz.wagyourtail.unimined.maybeCreate
+import xyz.wagyourtail.unimined.providers.mappings.MappingExportTypes
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
@@ -31,6 +34,17 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
 
     @ApiStatus.Internal
     var tweakClass: String? = null
+
+    @get:ApiStatus.Internal
+    val srgToMcpMappings by lazy { provider.parent.getLocalCache().resolve("mappings").maybeCreate().resolve("srg2mcp.srg").apply {
+            provider.parent.mappingsProvider.addExport(EnvType.COMBINED) {
+                it.location = toFile()
+                it.type = MappingExportTypes.SRG
+                it.sourceNamespace = "searge"
+                it.targetNamespace = listOf("named")
+            }
+        }
+    }
 
     init {
         project.repositories.maven {
@@ -92,6 +106,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         }
 
         forgeTransformer.afterEvaluate()
+
     }
 
     private fun determineForgeProviderFromUniversal(universal: File): JarModMinecraftTransformer {
@@ -185,6 +200,18 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
                 ForgeFiles.OLD_FORGE_AT
             )
         ),
+    }
+
+    override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
+        return forgeTransformer.afterRemap(envType, namespace, baseMinecraft)
+    }
+
+    override fun applyClientRunConfig(tasks: TaskContainer) {
+
+    }
+
+    override fun applyServerRunConfig(tasks: TaskContainer) {
+
     }
 
 }

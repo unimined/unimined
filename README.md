@@ -3,14 +3,15 @@
 unified minecraft modding environment.
 
 ## TODO for initial release
-* remap fg2+ era at's back to notch (fixing mc 1.7+)
-* remap user at's to notch
+* ~~remap fg2+ era at's back to notch (fixing mc 1.7+)~~
+* ~~remap user at's to notch~~
 * auto disable combined on <=1.2.5
-* figure out, why modloader not launching in dev due to classpath path instead of jar path crash
-* reverify versions work
+* figure out, why modloader not launching in dev due to classpath path instead of jar path
 
 ## TODO
+* Refactor, refactor, refactor
 * FG3+ support
+* test user AT support
 * fix fg3 versions of 1.12.2
 * fabric aw support
 * combined jar support
@@ -18,6 +19,16 @@ unified minecraft modding environment.
 * split fg2+ out of the mc jar
 * figure out how to do automated testing
   * figure out how to determine the correctness of remap output
+  * aka automate the verification that versions work
+    * list of versions to verify
+      * 1.12.2
+      * 1.7.10
+      * 1.6.4
+      * 1.5.2
+      * 1.2.5
+      * 1.7.3
+      * b1.3_01
+  * maybe by hash check?
 
 ## Example Usage
 ```groovy
@@ -43,7 +54,7 @@ minecraft {
     // if you don't include this, it will default to no mod loader transforms
     forge {
         // required for 1.7+
-        it.mcpVersion = '39'
+        it.mcpVersion = '39-1.12'
         it.mcpChannel = 'stable'
     }
     // required when using mcp mappings

@@ -27,7 +27,7 @@ class SrgWriter(val writer: Writer) : MappingWriter {
     private lateinit var field: String
     private var fieldName: String? = null
 
-    override fun visitField(srcName: String, srcDesc: String): Boolean {
+    override fun visitField(srcName: String, srcDesc: String?): Boolean {
         field = srcName
         fieldName = null
         return true

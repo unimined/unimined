@@ -53,6 +53,7 @@ abstract class MappingsProvider(
         export(me)
         if (me.location != null && me.type != null) {
             if (mappingTrees.contains(envType)) {
+                project.logger.warn("Mappings for $envType already exist, exporting ${me.location} directly.")
                 me.export(mappingTrees[envType]!!)
             }
             mappingExports.add(me)
@@ -206,7 +207,12 @@ abstract class MappingsProvider(
             }"
         )
         for (export in mappingExports) {
-            if (export.envType == envType) export.export(mappingTree)
+            if (export.envType == envType) {
+                project.logger.warn("Exporting ${export.location}")
+                export.export(mappingTree)
+            } else {
+                project.logger.warn("Skipping export ${export.location} for $envType")
+            }
         }
         return mappingTree
     }
