@@ -246,13 +246,17 @@ abstract class MinecraftProvider(
                     )
 
                     null -> {
-                        val mc = getMinecraftWithMapping(EnvType.COMBINED, targetNamespace.get())
-                        project.logger.info("providing combined minecraft jar at $mc")
-                        StreamableArtifact.ofFile(
-                            info,
-                            ArtifactType.BINARY,
-                            mc.toFile()
-                        )
+                        if (disableCombined.get()) {
+                            Artifact.none()
+                        } else {
+                            val mc = getMinecraftWithMapping(EnvType.COMBINED, targetNamespace.get())
+                            project.logger.info("providing combined minecraft jar at $mc")
+                            StreamableArtifact.ofFile(
+                                info,
+                                ArtifactType.BINARY,
+                                mc.toFile()
+                            )
+                        }
                     }
 
                     "sources" -> {

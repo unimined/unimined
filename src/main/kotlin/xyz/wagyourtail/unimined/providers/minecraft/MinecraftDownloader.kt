@@ -38,8 +38,13 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     private fun afterEvaluate() {
-        client = parent.disableCombined.get() || sourceSets.findByName("client") != null
-        server = parent.disableCombined.get() || sourceSets.findByName("server") != null
+        // if <=1.2.5 disable combined automagically
+        if (mcVersionCompare(version, "1.3") < 0) {
+            parent.disableCombined.set(true)
+        }
+
+        client = !parent.disableCombined.get() || sourceSets.findByName("client") != null
+        server = !parent.disableCombined.get() || sourceSets.findByName("server") != null
 
         if (client) {
             parent.client.dependencies.add(

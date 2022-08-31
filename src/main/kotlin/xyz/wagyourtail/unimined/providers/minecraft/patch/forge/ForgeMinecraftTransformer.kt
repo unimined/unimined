@@ -66,8 +66,6 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
             throw IllegalStateException("Invalid forge dependency found, if you are using multiple dependencies in the forge configuration, make sure the last one is the forge dependency!")
         }
 
-        forge.dependencies.remove(forgeDep)
-
         // test if pre unified jar
         if (provider.minecraftDownloader.mcVersionCompare(provider.minecraftDownloader.version, "1.3") < 0) {
             forgeTransformer = FG1MinecraftTransformer(project, this)
@@ -81,6 +79,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
                 add(project.dependencies.create(forgeServer))
             }
         } else {
+            forge.dependencies.remove(forgeDep)
+
             val zip = provider.minecraftDownloader.mcVersionCompare(provider.minecraftDownloader.version, "1.6") < 0
             val forgeUniversal = project.dependencies.create("${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:universal@${if (zip) "zip" else "jar"}")
             forge.dependencies.add(forgeUniversal)

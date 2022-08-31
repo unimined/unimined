@@ -34,6 +34,13 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override fun afterEvaluate() {
         // get and add forge-src to mappings
         val forge = jarModConfiguration(EnvType.COMBINED).dependencies.last()
+        if (forge.group != "net.minecraftforge" || !(forge.name == "minecraftforge" || forge.name == "forge")) {
+            throw IllegalStateException("Invalid forge dependency found, if you are using multiple dependencies in the forge configuration, make sure the last one is the forge dependency!")
+        }
+
+        if (provider.minecraftDownloader.mcVersionCompare(provider.minecraftDownloader.version, "1.3") < 0) {
+            jarModConfiguration(EnvType.COMBINED).dependencies.remove(forge)
+        }
 
         val forgeSrc = "${forge.group}:${forge.name}:${forge.version}:src@zip"
         provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).dependencies.apply {
@@ -49,8 +56,8 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         parent.accessTransformer?.let { accessModder.addAccessTransformer(it) }
 
         // resolve forge
-        val forge = jarModConfiguration(envType).resolve().firstOrNull()?.toPath()
-            ?: jarModConfiguration(EnvType.COMBINED).resolve().first().toPath()
+        val forge = jarModConfiguration(envType).resolve().firstOrNull()?.toPath() ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath() ?: throw IllegalStateException("No forge jar found for $envType!")
+
         // resolve ats from froge
         ZipReader.readInputStreamFor("fml_at.cfg", forge, false) {
             accessModder.addAccessTransformer(it)
