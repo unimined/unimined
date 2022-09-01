@@ -259,29 +259,35 @@ abstract class MappingsProvider(
                 val fromClassName = classDef.getName(fromId) ?: classDef.getName(fallbackSrcId)
                 val toClassName = classDef.getName(toId) ?: classDef.getName(fallbackToId)
 
-                if (fromClassName == null) {
+                if (fromClassName == null || toClassName == null) {
                     project.logger.warn("No class name for $classDef")
                 }
+
                 project.logger.debug("fromClassName: $fromClassName toClassName: $toClassName")
-                acceptor.acceptClass(fromClassName, toClassName)
+                if (toClassName != null) {
+                    acceptor.acceptClass(fromClassName, toClassName)
+                }
 
                 for (fieldDef in classDef.fields) {
                     val fromFieldName = fieldDef.getName(fromId) ?: fieldDef.getName(fallbackSrcId)
                     val toFieldName = fieldDef.getName(toId) ?: fieldDef.getName(fallbackToId)
-                    if (fromFieldName == null) {
-                        project.logger.warn("No field name for $toFieldName")
+                    if (fromFieldName == null || toFieldName == null) {
+                        project.logger.warn("No field name for $fieldDef")
                         continue
                     }
                     project.logger.debug("fromFieldName: $fromFieldName toFieldName: $toFieldName")
-                    acceptor.acceptField(memberOf(fromClassName, fromFieldName, fieldDef.getDesc(fromId)), toFieldName)
+                    acceptor.acceptField(
+                        memberOf(fromClassName, fromFieldName, fieldDef.getDesc(fromId)),
+                        toFieldName
+                    )
                 }
 
                 for (methodDef in classDef.methods) {
                     val fromMethodName = methodDef.getName(fromId) ?: methodDef.getName(fallbackSrcId)
                     val toMethodName = methodDef.getName(toId) ?: methodDef.getName(fallbackToId)
                     val fromMethodDesc = methodDef.getDesc(fromId) ?: methodDef.getDesc(fallbackSrcId)
-                    if (fromMethodName == null) {
-                        project.logger.warn("No method name for $toMethodName")
+                    if (fromMethodName == null || toMethodName == null) {
+                        project.logger.warn("No method name for $methodDef")
                         continue
                     }
                     val method = memberOf(fromClassName, fromMethodName, fromMethodDesc)
