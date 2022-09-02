@@ -19,6 +19,8 @@ object ModLoaderPatchClasspath {
         val classReader = ClassReader(modLoader.readBytes())
         classReader.accept(classNode, 0)
 
+        if (classNode.fields.any { it.name == "fmlMarker" }) return
+
         if (classNode.methods.any { it.name == "readFromClassPath" }) {
             System.out.println("ModLoader patch using newer method")
             newerURIFix(classNode)
