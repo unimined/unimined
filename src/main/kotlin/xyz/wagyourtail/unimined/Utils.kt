@@ -40,6 +40,16 @@ object OSUtils {
         get() = System.getProperty("os.version")
     val osArch: String
         get() = System.getProperty("os.arch")
+
+    val osArchNum: String
+        get() = when (osArch) {
+            "x86" -> "32"
+            "i386" -> "32"
+            "i686" -> "32"
+            "amd64" -> "64"
+            "x86_64" -> "64"
+            else -> "unknown"
+        }
 }
 
 fun testSha1(size: Long, sha1: String, path: Path): Boolean {

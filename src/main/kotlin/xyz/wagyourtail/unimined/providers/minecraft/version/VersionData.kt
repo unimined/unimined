@@ -354,7 +354,7 @@ fun parseLibrary(json: JsonObject): Library {
         } catch (e: MalformedURLException) {
             null
         },
-        json.get("natives")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString } ?: mapOf(),
+        json.get("natives")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString.replace("\${arch}", OSUtils.osArchNum) } ?: mapOf(),
         json.get("extract")?.asJsonObject?.let { parseExtract(it) },
         json.getAsJsonArray("rules")?.map { parseRule(it.asJsonObject) } ?: listOf()
     )
