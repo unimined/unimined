@@ -20,6 +20,7 @@ object ModLoaderPatchClasspath {
         classReader.accept(classNode, 0)
 
         if (classNode.fields.any { it.name == "fmlMarker" }) return
+        if (fileSystem.getPath("/cpw/mods/fml/common/modloader/ModLoaderHelper.class").exists()) return
 
         if (classNode.methods.any { it.name == "readFromClassPath" }) {
             System.out.println("ModLoader patch using newer method")
