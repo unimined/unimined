@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined
 
 
 fun main(args: Array<String>) {
-    System.out.println(SemVerUtils.matches("1.8.9", "<1.7"))
+    System.out.println(SemVerUtils.matches("11.1", "^10\\."))
 }
 
 @Suppress("UNUSED")
@@ -227,7 +227,7 @@ object SemVerUtils {
         }
 
         companion object {
-            var prefixedRangePattern = Regex("^(\\^|<=|>=|<|>|~|=)?(X|\\d+)?(\\.(\\*|X|\\d+|$))?(\\.(\\*|X|\\d+|$))?$")
+            var prefixedRangePattern = Regex("^(\\^|<=|>=|<|>|~|=)?(X|\\d+)?(\\.(\\*|X|\\d+|$)?)?(\\.(\\*|X|\\d+|$)?)?$")
 
 
             fun parse(range: String): PrefixedRange {

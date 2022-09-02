@@ -305,11 +305,10 @@ data class OperatingSystem(
 ) {
     fun test(): Boolean {
         if (name != null && name != OSUtils.oSId) return false
-        return if ((version != null) && !SemVerUtils.matches(
-                OSUtils.osVersion,
-                version
-            )
-        ) false else arch == null || arch == OSUtils.osArch
+        return if ((version != null) && !OSUtils.osVersion.contains(Regex(version)))
+             false 
+         else
+            arch == null || arch == OSUtils.osArch
     }
 }
 
