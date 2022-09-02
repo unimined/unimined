@@ -33,7 +33,7 @@ data class RunConfig(
                     XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH_ENABLED").addStringOption("value", "true"),
                     XMLBuilder("envs").append(
                         *env.map { (key, value) ->
-                            XMLBuilder("env").addStringOption("name", key).addStringOption("value", value)
+                            XMLBuilder("env").addStringOption("name", key).addStringOption("value", if (value.contains(" ")) "&quot;$value&quot;" else value)
                         }.toTypedArray()
                     ),
                     XMLBuilder("option").addStringOption("name", "MAIN_CLASS_NAME").addStringOption("value", mainClass),
