@@ -288,6 +288,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 if (insn.name == "libraries") {
                     break
                 } else {
+                    arrayFlag = false
                     outSet.clear()
                 }
             }
