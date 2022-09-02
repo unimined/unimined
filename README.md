@@ -30,6 +30,7 @@ unified minecraft modding environment.
       * b1.3_01
   * maybe by hash check?
 * figure out what versions need `-Djava.util.Arrays.useLegacyMergeSort=true` to not randomly crash, this should really be part of the legacy mc version.json, or at least betacraft's, but it's not
+* make myself a maven to host this on
 
 ## Example Usage
 ```groovy
