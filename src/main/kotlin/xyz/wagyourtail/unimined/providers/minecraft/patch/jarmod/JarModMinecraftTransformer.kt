@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.deleteRecursively
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.mod.ModLoaderPatchClasspath
 import java.net.URI
 import java.nio.file.*
 import java.util.zip.ZipInputStream
@@ -30,7 +31,9 @@ open class JarModMinecraftTransformer(
         }
     }
 
-    private val transform = mutableListOf<(FileSystem) -> Unit>()
+    private val transform = mutableListOf<(FileSystem) -> Unit>(
+        ModLoaderPatchClasspath::fixURIisNotHierarchicalException
+    )
 
     fun addTransform(pathFilter: (FileSystem) -> Unit) {
         transform.add(pathFilter)

@@ -25,7 +25,7 @@ abstract class UniminedExtension(val project: Project) {
         if (useGlobalCache.get()) {
             return project.gradle.gradleUserHomeDir.toPath().resolve("caches").resolve("unimined").maybeCreate()
         } else {
-            return getLocalCache()
+            return getLocalCache().resolve("fakeglobal").maybeCreate()
         }
     }
 

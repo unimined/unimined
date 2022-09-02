@@ -145,13 +145,13 @@ abstract class MinecraftProvider(
         main.runtimeClasspath += mcLibraries
 
         client?.let {
-            it.compileClasspath += this.client + main.compileClasspath
-            it.runtimeClasspath += this.client + main.runtimeClasspath
+            it.compileClasspath += this.client + main.compileClasspath + main.output
+            it.runtimeClasspath += this.client + main.runtimeClasspath + main.output
         }
 
         server?.let {
-            it.compileClasspath += this.server + main.compileClasspath
-            it.runtimeClasspath += this.server + main.runtimeClasspath
+            it.compileClasspath += this.server + main.compileClasspath + main.output
+            it.runtimeClasspath += this.server + main.runtimeClasspath + main.output
         }
 
         main.compileClasspath += combined

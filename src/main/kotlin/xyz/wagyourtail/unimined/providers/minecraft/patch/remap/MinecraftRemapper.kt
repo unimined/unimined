@@ -65,6 +65,7 @@ class MinecraftRemapper(
             }
         } catch (e: RuntimeException) {
             project.logger.warn("Failed to remap ${file.name} to $target")
+            target.deleteIfExists()
             throw e
         }
         remapper.finish()
