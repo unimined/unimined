@@ -9,6 +9,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.tasks.Jar
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.UniminedExtension
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
@@ -33,6 +34,7 @@ abstract class RemapJarTask : Jar() {
     abstract val targetNamespace: Property<String>
 
     @get:Input
+    @get:ApiStatus.Internal
     abstract val minecraftTarget: Property<String>
 
     init {

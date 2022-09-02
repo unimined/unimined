@@ -44,8 +44,10 @@ class UniminedPlugin : Plugin<Project> {
             if (client != null) {
                 it.archiveClassifier.set("client")
             }
-            if (ext.minecraftProvider.disableCombined.get()) {
-                it.minecraftTarget.convention(EnvType.CLIENT.name)
+            it.doFirst { _ ->
+                if (ext.minecraftProvider.disableCombined.get()) {
+                    it.minecraftTarget.set(EnvType.CLIENT.name)
+                }
             }
         }
         if (server != null || client != null) {
@@ -59,8 +61,10 @@ class UniminedPlugin : Plugin<Project> {
                 it.group = "unimined"
                 it.inputFile.convention(serverJar.archiveFile)
                 it.archiveClassifier.set("server")
-                if (ext.minecraftProvider.disableCombined.get()) {
-                    it.minecraftTarget.convention(EnvType.SERVER.name)
+                it.doFirst { _ ->
+                    if (ext.minecraftProvider.disableCombined.get()) {
+                        it.minecraftTarget.set(EnvType.SERVER.name)
+                    }
                 }
             }
             build.dependsOn(serverRemapJar)
