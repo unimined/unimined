@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTrans
 import xyz.wagyourtail.unimined.runJarInSubprocess
 import java.io.File
 import java.io.InputStream
+import java.lang.IllegalStateException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -98,10 +99,20 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
             "${it.groupValues[1]} ${it.groupValues[2]} ${it.groupValues[3]}${it.groupValues[4]}"
         }
 
+        val missingReturnOnInit = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.\$]+) ([\\w*<>]+)(\\(.+?\\))\\s*?(#.+?)?\$", RegexOption.MULTILINE)
+
+        file = file.replace(missingReturnOnInit) {
+            if (!it.groupValues[3].contains("<")) {
+                throw IllegalStateException("Missing return type in access transformer: ${it.value}")
+            }
+            "${it.groupValues[1]} ${it.groupValues[2]} ${it.groupValues[3]}${it.groupValues[4]}V${it.groupValues[5]}"
+        }
+
+
         // transform fields
-        val legacyField = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.$]+)\\.([\\w*<>]+)\\s*(?:#.+)?\$", RegexOption.MULTILINE)
+        val legacyField = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.$]+)\\.([\\w*<>]+)\\s*?(#.+?)?\$", RegexOption.MULTILINE)
         file = file.replace(legacyField) {
-            "${it.groupValues[1]} ${it.groupValues[2]} ${it.groupValues[3]}"
+            "${it.groupValues[1]} ${it.groupValues[2]} ${it.groupValues[3]} ${it.groupValues[4]}"
         }
         return file
     }
