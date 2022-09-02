@@ -31,8 +31,7 @@ import kotlin.io.path.outputStream
 import kotlin.io.path.writer
 
 abstract class MappingsProvider(
-    val project: Project,
-    val parent: UniminedExtension
+    val project: Project, val parent: UniminedExtension
 ) {
 
     init {
@@ -113,13 +112,14 @@ abstract class MappingsProvider(
 
     private val mappingFileEnvs = mutableMapOf<EnvType, Set<File>>()
 
+    @Synchronized
     private fun mappingsFiles(envType: EnvType): Set<File> {
-        return mappingFileEnvs.computeIfAbsent(envType) {
-            if (envType != EnvType.COMBINED) {
-                mappingsFiles(EnvType.COMBINED) + getMappings(envType).resolve()
-            } else {
-                getMappings(envType).resolve()
-            }
+        return if (envType != EnvType.COMBINED) {
+            mappingsFiles(EnvType.COMBINED)
+        } else {
+            setOf()
+        } + mappingFileEnvs.computeIfAbsent(envType) {
+            getMappings(envType).resolve()
         }
     }
 
@@ -136,7 +136,9 @@ abstract class MappingsProvider(
     }
 
     @ApiStatus.Internal
-    fun mappingCacheFile(envType: EnvType) = (if (stubs.contains(envType)) parent.getLocalCache() else parent.getGlobalCache()).resolve("mappings").resolve("mappings-${getCombinedNames(envType)}-${envType}.jar")
+    fun mappingCacheFile(envType: EnvType) =
+        (if (stubs.contains(envType)) parent.getLocalCache() else parent.getGlobalCache()).resolve("mappings")
+            .resolve("mappings-${getCombinedNames(envType)}-${envType}.jar")
 
     private fun resolveMappingTree(envType: EnvType): MemoryMappingTree {
         val hasStub = stubs.contains(envType)
@@ -252,7 +254,7 @@ abstract class MappingsProvider(
                 fallbackSrcId = fromId
             }
 
-            project.logger.debug("Mapping from $srcName to $targetName")
+            project.logger.debug("Mapping from $srcName to $targetName, fallbackSrc: $fallbackSrc, fallbackTarget: $fallbackTarget")
             project.logger.debug("ids: from $fromId to $toId fallbackTo $fallbackToId fallbackFrom $fallbackSrcId")
 
             for (classDef in mappingTree.classes) {
@@ -277,8 +279,7 @@ abstract class MappingsProvider(
                     }
                     project.logger.debug("fromFieldName: $fromFieldName toFieldName: $toFieldName")
                     acceptor.acceptField(
-                        memberOf(fromClassName, fromFieldName, fieldDef.getDesc(fromId)),
-                        toFieldName
+                        memberOf(fromClassName, fromFieldName, fieldDef.getDesc(fromId)), toFieldName
                     )
                 }
 
@@ -304,11 +305,7 @@ abstract class MappingsProvider(
                         for (localVar in methodDef.vars) {
                             val toLocalVarName = localVar.getName(toId) ?: localVar.getName(fallbackToId) ?: continue
                             acceptor.acceptMethodVar(
-                                method,
-                                localVar.lvIndex,
-                                localVar.startOpIdx,
-                                localVar.lvtRowIndex,
-                                toLocalVarName
+                                method, localVar.lvIndex, localVar.startOpIdx, localVar.lvtRowIndex, toLocalVarName
                             )
                         }
                     }
@@ -331,25 +328,26 @@ abstract class MappingsProvider(
         @ApiStatus.Internal
         fun export(mappingTree: MappingTreeView) {
             project.logger.warn("Exporting mappings for $envType to $location")
-            location!!.toPath().writer(StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { writer ->
-                mappingTree.accept(
-                    MappingSourceNsSwitch(
-                        MappingDstNsFilter(
-                            if (type == MappingExportTypes.TINY_V2) {
-                                Tiny2Writer2(writer, false)
-                            } else {
-                                SrgWriter(writer)
-                            }, targetNamespace ?: mappingTree.dstNamespaces
-                        ), sourceNamespace ?: mappingTree.srcNamespace
+            location!!.toPath()
+                .writer(StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                .use { writer ->
+                    mappingTree.accept(
+                        MappingSourceNsSwitch(
+                            MappingDstNsFilter(
+                                if (type == MappingExportTypes.TINY_V2) {
+                                    Tiny2Writer2(writer, false)
+                                } else {
+                                    SrgWriter(writer)
+                                }, targetNamespace ?: mappingTree.dstNamespaces
+                            ), sourceNamespace ?: mappingTree.srcNamespace
+                        )
                     )
-                )
-                writer.flush()
-            }
+                    writer.flush()
+                }
         }
     }
 }
 
 enum class MappingExportTypes {
-    TINY_V2,
-    SRG
+    TINY_V2, SRG
 }

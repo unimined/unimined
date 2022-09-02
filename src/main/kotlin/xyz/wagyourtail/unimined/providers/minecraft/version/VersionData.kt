@@ -5,7 +5,6 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.gradle.api.JavaVersion
 import xyz.wagyourtail.unimined.OSUtils
-import xyz.wagyourtail.unimined.SemVerUtils
 import xyz.wagyourtail.unimined.consumerApply
 import java.net.MalformedURLException
 import java.net.URI
@@ -39,7 +38,11 @@ data class VersionData(
 
     fun getJVMArgs(libDir: Path, nativeDir: Path): List<String> {
         val args = mutableListOf<String>()
-        args.addAll("-Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M".split(" "))
+        args.addAll(
+            "-Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M".split(
+                " "
+            )
+        )
         if (arguments?.jvm != null) {
             arguments.jvm.forEach(consumerApply {
                 if (rules.all { it.testRule() }) {
@@ -162,6 +165,7 @@ data class VersionData(
     }
 
 }
+
 // 2010-07-08T22:00:00+00:00
 val dateTimeFormat: DateTimeFormatter = DateTimeFormatterBuilder()
     .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
@@ -173,8 +177,16 @@ fun parseVersionData(json: JsonObject): VersionData {
     return VersionData(
         json.get("id").asString,
         json.get("type")?.asString,
-        json.get("time")?.asString?.let { LocalDateTime.parse(it, dateTimeFormat).toInstant(ZoneOffset.UTC).toEpochMilli() } ?: 0,
-        json.get("releaseTime")?.asString?.let { LocalDateTime.parse(it, dateTimeFormat).toInstant(ZoneOffset.UTC).toEpochMilli() } ?: 0,
+        json.get("time")?.asString?.let {
+            LocalDateTime.parse(it, dateTimeFormat)
+                .toInstant(ZoneOffset.UTC)
+                .toEpochMilli()
+        } ?: 0,
+        json.get("releaseTime")?.asString?.let {
+            LocalDateTime.parse(it, dateTimeFormat)
+                .toInstant(ZoneOffset.UTC)
+                .toEpochMilli()
+        } ?: 0,
         json.get("minimumLauncherVersion")?.asInt ?: 0,
         json.get("mainClass").asString,
         json.get("assetIndex")?.asJsonObject?.let { parseAssets(it) },
@@ -306,8 +318,8 @@ data class OperatingSystem(
     fun test(): Boolean {
         if (name != null && name != OSUtils.oSId) return false
         return if ((version != null) && !OSUtils.osVersion.contains(Regex(version)))
-             false 
-         else
+            false
+        else
             arch == null || arch == OSUtils.osArch
     }
 }
@@ -356,7 +368,8 @@ data class Downloads(
 fun parseDownloads(json: JsonObject): Downloads {
     return Downloads(
         json.get("artifact")?.asJsonObject?.let { parseArtifact(it) },
-        json.get("classifiers")?.asJsonObject?.entrySet()?.associate { it.key to parseArtifact(it.value.asJsonObject) } ?: mapOf()
+        json.get("classifiers")?.asJsonObject?.entrySet()?.associate { it.key to parseArtifact(it.value.asJsonObject) }
+            ?: mapOf()
     )
 }
 

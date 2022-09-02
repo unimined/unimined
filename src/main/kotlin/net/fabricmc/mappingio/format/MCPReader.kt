@@ -54,7 +54,7 @@ object MCPReader {
         while (reader.nextLine(0)) {
             val src = reader.readCell()!!
             val data = MethodData(src, reader.readCell()!!, reader.readCell()!!, reader.readCell())
-            if (data.side != "2" && data.side.toInt() != envType.ordinal) continue
+            if (envType != EnvType.COMBINED && data.side != "2" && data.side.toInt() != envType.ordinal) continue
             methods[src] = data
         }
 
@@ -97,6 +97,7 @@ object MCPReader {
                             if (meth.getName(seargeNamespace) in methods) {
                                 val method = methods[meth.getName(seargeNamespace)]!!
                                 visitor.visitMethod(method.source, meth.getDesc(seargeNamespace))
+//                                System.out.println("Owner ${clazz.getName(seargeNamespace)} Method: ${method.source} -> ${method.target}")
                                 visitor.visitDstName(MappedElementKind.METHOD, 0, method.target)
                                 visitor.visitElementContent(MappedElementKind.METHOD)
                                 if (method.desc != null) {
@@ -140,7 +141,10 @@ object MCPReader {
         while (reader.nextLine(0)) {
             val src = reader.readCell()!!
             val data = FieldData(src, reader.readCell()!!, reader.readCell()!!, reader.readCell())
-            if (data.side != "2" && data.side.toInt() != envType.ordinal) continue
+            if (envType != EnvType.COMBINED && data.side != "2" && data.side.toInt() != envType.ordinal) {
+//                System.out.println("Skipping ${data.source} ->  ${data.target} (side: ${data.side} env: ${envType.ordinal})")
+                continue
+            }
             fields[src] = data
         }
 
@@ -179,15 +183,18 @@ object MCPReader {
                     visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
 
                     if (visitLastClass) {
-                        for (meth in clazz.fields) {
-                            if (meth.getName(seargeNamespace) in fields) {
-                                val field = fields[meth.getName(seargeNamespace)]!!
-                                visitor.visitField(field.source, meth.getDesc(seargeNamespace))
+                        for (fd in clazz.fields) {
+                            if (fd.getName(seargeNamespace) in fields) {
+                                val field = fields[fd.getName(seargeNamespace)]!!
+                                visitor.visitField(field.source, fd.getDesc(seargeNamespace))
+//                                System.out.println("Owner ${clazz.getName(seargeNamespace)} Field: ${field.source} -> ${field.target}")
                                 visitor.visitDstName(MappedElementKind.FIELD, 0, field.target)
                                 visitor.visitElementContent(MappedElementKind.FIELD)
                                 if (field.desc != null) {
                                     visitor.visitComment(MappedElementKind.FIELD, field.desc)
                                 }
+                            } else {
+//                                System.out.println("Owner ${clazz.getName(seargeNamespace)} Field: ${fd.getName(seargeNamespace)} -> DNE")
                             }
                         }
                     }
@@ -226,7 +233,7 @@ object MCPReader {
         while (reader.nextLine(0)) {
             val src = reader.readCell()!!.split("_")
             val data = ParamData(src[2], reader.readCell()!!, reader.readCell()!!)
-            if (data.side != "2" && data.side.toInt() != envType.ordinal) continue
+            if (envType != EnvType.COMBINED && data.side != "2" && data.side.toInt() != envType.ordinal) continue
             params[src[1]] = data
         }
 
