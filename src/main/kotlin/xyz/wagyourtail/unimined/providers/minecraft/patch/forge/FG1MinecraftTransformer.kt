@@ -5,11 +5,18 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.FieldInsnNode
+import org.objectweb.asm.tree.LdcInsnNode
+import org.objectweb.asm.tree.TypeInsnNode
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.deleteRecursively
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
+import java.io.InputStream
 import java.net.URI
 import java.nio.file.*
 import kotlin.io.path.*
@@ -21,6 +28,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 ) {
 
     val afterForgeJarModder = JarModMinecraftTransformer(project, provider)
+    var resolvedForgeDeps = false
 
     init {
         project.repositories.maven {
@@ -65,6 +73,12 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         ZipReader.readInputStreamFor("forge_at.cfg", forge, false) {
             accessModder.addAccessTransformer(it)
         }
+
+        // resolve dyn libs
+        ZipReader.readInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", forge, false) {
+            getDynLibs(it)
+        }
+
         // apply ats
         val atsOut = accessModder.transform(envType, baseMinecraft)
         // apply jarMod
@@ -74,7 +88,9 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     private val forgeDeps: Configuration = project.configurations.maybeCreate(Constants.FORGE_DEPS)
 
 
-    override fun sourceSets(sourceSets: SourceSetContainer) {
+    fun resolveDynLibs(wanted: Set<String>) {
+        if (resolvedForgeDeps) return
+
         // provide and copy some old forge deps in
         val deps = listOf(
             Pair(
@@ -101,73 +117,93 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 Pair("bcprov-jdk15on-1.48.jar", "bcprov-jdk15on-148.jar"), project.dependencies.create(
                     "org.bouncycastle:bcprov-jdk15on:1.48"
                 )
-            )
+            ),
+            Pair(
+                Pair("bcprov-jdk15on-1.47.jar",  "bcprov-jdk15on-147.jar"), project.dependencies.create(
+                    "org.bouncycastle:bcprov-jdk15on:1.47"
+                )
+            ),
         )
         deps.forEach { dep ->
-            forgeDeps.dependencies.add(dep.second)
+            if (wanted.contains(dep.first.second)) {
+                forgeDeps.dependencies.add(dep.second)
+            }
         }
 
         // copy in
         val path = provider.clientWorkingDirectory.get().resolve("lib").toPath().maybeCreate()
 
-        //TODO: don't rely on this random path, (maven has different hash that's why we're doing this)
-        FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/asm-all-4.0.jar").use { it1 ->
-            val bytes = it1!!.readBytes()
-            path.resolve("asm-all-4.0.jar")
-                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-        }
-        FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/scala-library.jar").use { it1 ->
-            val bytes = it1!!.readBytes()
-            path.resolve("scala-library.jar")
-                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-        }
-        FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/argo-small-3.2.jar").use { it1 ->
-            val bytes = it1!!.readBytes()
-            path.resolve("argo-small-3.2.jar")
-                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-        }
-        FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.2.zip").use { it1 ->
-            val bytes = it1!!.readBytes()
-            path.resolve("deobfuscation_data_1.5.2.zip")
-                .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-        }
+        if (wanted.contains("asm-all-4.0.jar")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/asm-all-4.0.jar").use { it1 ->
+                val bytes = it1!!.readBytes()
+                path.resolve("asm-all-4.0.jar")
+                    .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            }
 
-        forgeDeps.dependencies.add(
-            project.dependencies.create(
-                project.files(path.resolve("asm-all-4.0.jar").toString())
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("asm-all-4.0.jar").toString())
+                )
             )
-        )
+        }
+        if (wanted.contains("scala-library.jar")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/scala-library.jar").use { it1 ->
+                val bytes = it1!!.readBytes()
+                path.resolve("scala-library.jar")
+                    .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            }
 
-        forgeDeps.dependencies.add(
-            project.dependencies.create(
-                project.files(path.resolve("scala-library.jar").toString())
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("scala-library.jar").toString())
+                )
             )
-        )
+        }
+        if (wanted.contains("argo-small.jar")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/argo-small-3.2.jar").use { it1 ->
+                val bytes = it1!!.readBytes()
+                path.resolve("argo-small-3.2.jar")
+                    .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            }
 
-        forgeDeps.dependencies.add(
-            project.dependencies.create(
-                project.files(path.resolve("argo-small-3.2.jar").toString())
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("argo-small-3.2.jar").toString())
+                )
             )
-        )
+        }
+        if (wanted.contains("deobfuscation_data_1.5.2.zip")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.2.zip")
+                .use { it1 ->
+                    val bytes = it1!!.readBytes()
+                    path.resolve("deobfuscation_data_1.5.2.zip")
+                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                }
 
-        forgeDeps.dependencies.add(
-            project.dependencies.create(
-                project.files(path.resolve("deobfuscation_data_1.5.2.zip").toString())
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("deobfuscation_data_1.5.2.zip").toString())
+                )
             )
-        )
+        }
 
+        resolvedForgeDeps = true
         forgeDeps.resolve()
 
         for (dep in deps) {
-            forgeDeps.files(dep.second).forEach { file ->
-                if (file.name == dep.first.first) {
-                    file.copyTo(path.resolve(dep.first.second).toFile(), true)
-                } else {
-                    file.copyTo(path.resolve(file.name).toFile(), true)
+            if (wanted.contains(dep.first.second)) {
+                forgeDeps.files(dep.second).forEach { file ->
+                    if (file.name == dep.first.first) {
+                        file.copyTo(path.resolve(dep.first.second).toFile(), true)
+                    } else {
+                        file.copyTo(path.resolve(file.name).toFile(), true)
+                    }
                 }
             }
         }
+    }
 
+    override fun sourceSets(sourceSets: SourceSetContainer) {
         val main = sourceSets.getByName("main")
 
         main.compileClasspath += forgeDeps
@@ -186,7 +222,6 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 it.runtimeClasspath += forgeDeps
             }
         }
-
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
@@ -225,6 +260,39 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             return target
         }
         return baseMinecraft
+    }
+
+    private fun getDynLibs(stream: InputStream) {
+        project.logger.warn("Getting dynamic libraries from FML")
+        val classReader = ClassReader(stream)
+
+        val classNode = ClassNode()
+        classReader.accept(classNode, 0)
+
+        // get string array stored to libraries from clinit
+        val clInit = classNode.methods.first { it.name == "<clinit>" }
+        val iterator = clInit.instructions.iterator()
+        val outSet = mutableSetOf<String>()
+        var arrayFlag = false
+        while (iterator.hasNext()) {
+            val insn = iterator.next()
+            if (insn is TypeInsnNode && insn.opcode == Opcodes.ANEWARRAY && insn.desc == "java/lang/String") {
+                arrayFlag = true
+            }
+            if (arrayFlag) {
+                if (insn is LdcInsnNode) {
+                    outSet.add(insn.cst as String)
+                }
+            }
+            if (insn is FieldInsnNode && insn.opcode == Opcodes.PUTSTATIC) {
+                if (insn.name == "libraries") {
+                    break
+                } else {
+                    outSet.clear()
+                }
+            }
+        }
+        resolveDynLibs(outSet)
     }
 }
 
