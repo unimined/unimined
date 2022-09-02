@@ -111,23 +111,23 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         val path = provider.clientWorkingDirectory.get().resolve("lib").toPath().maybeCreate()
 
         //TODO: don't rely on this random path, (maven has different hash that's why we're doing this)
-        URI.create("https://ftp.osuosl.org/pub/netbeans/binaries/98308890597ACB64047F7E896638E0D98753AE82-asm-all-4.0.jar").toURL().openStream().use { it1 ->
-            val bytes = it1.readBytes()
+        FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/asm-all-4.0.jar").use { it1 ->
+            val bytes = it1!!.readBytes()
             path.resolve("asm-all-4.0.jar")
                 .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
-        URI.create("https://web.archive.org/web/20130708223654if_/http://files.minecraftforge.net/fmllibs/scala-library.jar").toURL().openStream().use { it1 ->
-            val bytes = it1.readBytes()
+        FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/scala-library.jar").use { it1 ->
+            val bytes = it1!!.readBytes()
             path.resolve("scala-library.jar")
                 .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
-        URI.create("https://web.archive.org/web/20130708175450if_/http://files.minecraftforge.net/fmllibs/argo-small-3.2.jar").toURL().openStream().use { it1 ->
-            val bytes = it1.readBytes()
+        FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/argo-small-3.2.jar").use { it1 ->
+            val bytes = it1!!.readBytes()
             path.resolve("argo-small-3.2.jar")
                 .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
-        URI.create("https://web.archive.org/web/20140626042316if_/http://files.minecraftforge.net/fmllibs/deobfuscation_data_1.5.2.zip").toURL().openStream().use { it1 ->
-            val bytes = it1.readBytes()
+        FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.2.zip").use { it1 ->
+            val bytes = it1!!.readBytes()
             path.resolve("deobfuscation_data_1.5.2.zip")
                 .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
