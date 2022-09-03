@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.providers.mod
+package xyz.wagyourtail.unimined.providers.minecraft.patch.modloader
 
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
@@ -7,11 +7,12 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import java.nio.file.FileSystem
 import java.nio.file.StandardOpenOption
+import java.util.stream.Stream
 import kotlin.io.path.exists
 import kotlin.io.path.readBytes
 import kotlin.io.path.writeBytes
 
-object ModLoaderPatchClasspath {
+object ModLoaderPatches {
     fun fixURIisNotHierarchicalException(fileSystem: FileSystem) {
         val modLoader = fileSystem.getPath("/ModLoader.class")
         if (!modLoader.exists()) return
@@ -29,42 +30,12 @@ object ModLoaderPatchClasspath {
             System.out.println("ModLoader patch using older method")
             olderURIFix(classNode)
         }
-
-        val classWriter = object : ClassWriter(COMPUTE_MAXS or COMPUTE_FRAMES) {
-            override fun getCommonSuperClass(type1: String, type2: String): String {
-                try {
-                    return super.getCommonSuperClass(type1, type2)
-                } catch (e: Exception) {
-                    // one of the classes was not found, so we now need to calculate it
-                    val it1 = buildInheritanceTree(type1)
-                    val it2 = buildInheritanceTree(type2)
-                    val common = it1.intersect(it2)
-                    return common.first()
-                }
-            }
-
-            fun buildInheritanceTree(type1: String): List<String> {
-                val tree = mutableListOf<String>()
-                var current = type1
-                while (current != "java/lang/Object") {
-                    tree.add(current)
-                    val currentClassFile = fileSystem.getPath("/${current}.class")
-                    if (!currentClassFile.exists()) {
-                        current = "java/lang/Object"
-                    } else {
-                        val classReader = ClassReader(currentClassFile.readBytes())
-                        current = classReader.superName
-                    }
-                }
-                tree.add("java/lang/Object")
-                return tree
-            }
-        }
+        val classWriter = ClassWriterASM(fileSystem)
         classNode.accept(classWriter)
         modLoader.writeBytes(classWriter.toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
     }
 
-    fun newerURIFix(classNode: ClassNode) {
+    private fun newerURIFix(classNode: ClassNode) {
         val method = classNode.methods.first { it.name == "init" && it.desc == "()V" }
             // find the lines
             //     L92
@@ -237,7 +208,7 @@ object ModLoaderPatchClasspath {
 //            classNode.methods.add(newMethod)
         }
 
-    fun olderURIFix(classNode: ClassNode) {
+    private fun olderURIFix(classNode: ClassNode) {
         val method = classNode.methods.first { it.name == "<clinit>" }
 
         // extract part of this function out to a new function
@@ -317,5 +288,194 @@ object ModLoaderPatchClasspath {
         newClinit.visitInsn(Opcodes.RETURN)
         newClinit.visitMaxs(0, 0)
         newClinit.visitEnd()
+    }
+
+    fun fixLoadingModFromOtherPackages(fileSystem: FileSystem) {
+        val modLoader = fileSystem.getPath("/ModLoader.class")
+        if (!modLoader.exists()) return
+        val classNode = ClassNode()
+        val classReader = ClassReader(modLoader.readBytes())
+        classReader.accept(classNode, 0)
+
+        if (classNode.fields.any { it.name == "fmlMarker" }) return
+        if (fileSystem.getPath("/cpw/mods/fml/common/modloader/ModLoaderHelper.class").exists()) return
+
+        if (classNode.methods.any { it.name == "readFromClassPath" }) {
+            System.out.println("ModLoader patch pkgs using newer method")
+            newerPackageFix(classNode)
+        } else {
+            throw IllegalStateException("ModLoader patch pkgs should be run after other patches")
+        }
+
+        val classWriter = ClassWriterASM(fileSystem)
+        classNode.accept(classWriter)
+        modLoader.writeBytes(classWriter.toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
+    }
+
+    fun newerPackageFix(classNode: ClassNode) {
+        // find
+        // File[] files = source.listFiles();
+        // replace with file tree walker to File[] files
+        val method = classNode.methods.first { it.name == "readFromClassPath" }
+
+        val instructions = method.instructions
+        val newInstructions = InsnList()
+        val iterator = instructions.iterator()
+        var slice = false
+
+        var foundFileArr = false
+
+        while (iterator.hasNext()) {
+            var insn = iterator.next()
+            if (insn is MethodInsnNode && insn.name == "listFiles" && insn.owner == "java/io/File") {
+                slice = true
+            }
+            if (slice) {
+                // File.toPath()
+                newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/File", "toPath", "()Ljava/nio/file/Path;", false))
+                // new FileVisitOption[]
+                newInstructions.add(InsnNode(Opcodes.ICONST_0))
+                newInstructions.add(TypeInsnNode(Opcodes.ANEWARRAY, "java/nio/file/FileVisitOption"))
+                // Files.walk()
+                newInstructions.add(MethodInsnNode(Opcodes.INVOKESTATIC, "java/nio/file/Files", "walk", "(Ljava/nio/file/Path;[Ljava/nio/file/FileVisitOption;)Ljava/util/stream/Stream;", false))
+                // Collectors.toList()
+                newInstructions.add(MethodInsnNode(Opcodes.INVOKESTATIC, "java/util/stream/Collectors", "toList", "()Ljava/util/stream/Collector;", false))
+                // Stream.collect()
+                newInstructions.add(MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "collect", "(Ljava/util/stream/Collector;)Ljava/lang/Object;", true))
+                // List.toArray()
+                newInstructions.add(MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/util/List", "toArray", "()[Ljava/lang/Object;", true))
+                // (Object[]) List.toArray()
+                val aStore = iterator.next()
+                if (aStore !is VarInsnNode || aStore.opcode != Opcodes.ASTORE) {
+                    throw IllegalStateException("Expected astore")
+                }
+                newInstructions.add(VarInsnNode(Opcodes.ASTORE, aStore.`var` + 1))
+                // File[] files = new File[paths.length];
+                newInstructions.add(VarInsnNode(Opcodes.ALOAD, aStore.`var` + 1))
+                newInstructions.add(InsnNode(Opcodes.ARRAYLENGTH))
+                newInstructions.add(TypeInsnNode(Opcodes.ANEWARRAY, "java/io/File"))
+                newInstructions.add(aStore)
+                // for (int i = 0; i < paths.length; i++) {
+                //     files[i] = ((Path) paths[i]).toFile();
+                // }
+                val loopStart = LabelNode()
+                val loopEnd = LabelNode()
+                newInstructions.add(InsnNode(Opcodes.ICONST_0))
+                newInstructions.add(VarInsnNode(Opcodes.ISTORE, aStore.`var` + 2))
+                newInstructions.add(loopStart)
+                newInstructions.add(VarInsnNode(Opcodes.ILOAD, aStore.`var` + 2))
+                newInstructions.add(VarInsnNode(Opcodes.ALOAD, aStore.`var` + 1))
+                newInstructions.add(InsnNode(Opcodes.ARRAYLENGTH))
+                newInstructions.add(JumpInsnNode(Opcodes.IF_ICMPGE, loopEnd))
+                newInstructions.add(VarInsnNode(Opcodes.ALOAD, aStore.`var`))
+                newInstructions.add(VarInsnNode(Opcodes.ILOAD, aStore.`var` + 2))
+                newInstructions.add(VarInsnNode(Opcodes.ALOAD, aStore.`var` + 1))
+                newInstructions.add(VarInsnNode(Opcodes.ILOAD, aStore.`var` + 2))
+                newInstructions.add(InsnNode(Opcodes.AALOAD))
+                newInstructions.add(MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/nio/file/Path", "toFile", "()Ljava/io/File;", true))
+                newInstructions.add(InsnNode(Opcodes.AASTORE))
+                newInstructions.add(VarInsnNode(Opcodes.ILOAD, aStore.`var` + 2))
+                newInstructions.add(InsnNode(Opcodes.ICONST_1))
+                newInstructions.add(InsnNode(Opcodes.IADD))
+                newInstructions.add(VarInsnNode(Opcodes.ISTORE, aStore.`var` + 2))
+                newInstructions.add(JumpInsnNode(Opcodes.GOTO, loopStart))
+                newInstructions.add(loopEnd)
+                foundFileArr = true
+                slice = false
+            } else {
+                if (foundFileArr) {
+                    // replace
+                    // String name = files[i].getName();
+                    // with
+                    // String name = files[i].toPath().relativize(arg0.toPath()).toString());
+                    if (insn is MethodInsnNode && insn.name == "getName" && insn.owner == "java/io/File") {
+                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/File", "toPath", "()Ljava/nio/file/Path;", false))
+                        newInstructions.add(VarInsnNode(Opcodes.ALOAD, 0))
+                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/File", "toPath", "()Ljava/nio/file/Path;", false))
+                        // dup2 and pop
+                        newInstructions.add(InsnNode(Opcodes.DUP2))
+                        newInstructions.add(InsnNode(Opcodes.POP))
+                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/nio/file/Path", "relativize", "(Ljava/nio/file/Path;)Ljava/nio/file/Path;", true))
+                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/nio/file/Path", "toString", "()Ljava/lang/String;", true))
+                        val aStore2 = iterator.next()
+                        if (aStore2 !is VarInsnNode || aStore2.opcode != Opcodes.ASTORE) {
+                            throw IllegalStateException("Expected astore")
+                        }
+                        newInstructions.add(aStore2)
+                        // pop
+                        newInstructions.add(InsnNode(Opcodes.POP))
+                        continue
+                    }
+                    if (insn is LdcInsnNode && insn.cst == "mod_") {
+                        continue
+                    }
+                    // replace
+                    // name.startsWith("mod_")
+                    // with
+                    // name.matches(".*mod_.*\\.class")
+                    if (insn is MethodInsnNode && insn.name == "startsWith" && insn.owner == "java/lang/String") {
+                        newInstructions.add(LdcInsnNode(".*mod_.*\\.class"))
+                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "matches", "(Ljava/lang/String;)Z", false))
+                        continue
+                    }
+                }
+
+                newInstructions.add(insn)
+            }
+        }
+
+        method.instructions = newInstructions
+
+        // find addMod
+        val addMod = classNode.methods.firstOrNull { it.name == "addMod" } ?: throw IllegalStateException("addMod not found")
+        val addModInstructions = addMod.instructions
+        val addModIterator = addModInstructions.iterator()
+        val addModNewInstructions = InsnList()
+
+        while (addModIterator.hasNext()) {
+            val insn = addModIterator.next()
+            // if insn is loadClass(String)
+            if (insn is MethodInsnNode && insn.name == "loadClass" && insn.owner == "java/lang/ClassLoader") {
+                // String.replace('/', '.')
+                addModNewInstructions.add(LdcInsnNode("/"))
+                addModNewInstructions.add(LdcInsnNode("."))
+                addModNewInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "replace", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/String;", false))
+            }
+
+            addModNewInstructions.add(insn)
+        }
+
+        addMod.instructions = addModNewInstructions
+    }
+
+    class ClassWriterASM(val fileSystem: FileSystem) : ClassWriter(COMPUTE_MAXS or COMPUTE_FRAMES) {
+        override fun getCommonSuperClass(type1: String, type2: String): String {
+            try {
+                return super.getCommonSuperClass(type1, type2)
+            } catch (e: Exception) {
+                // one of the classes was not found, so we now need to calculate it
+                val it1 = buildInheritanceTree(type1)
+                val it2 = buildInheritanceTree(type2)
+                val common = it1.intersect(it2)
+                return common.first()
+            }
+        }
+
+        fun buildInheritanceTree(type1: String): List<String> {
+            val tree = mutableListOf<String>()
+            var current = type1
+            while (current != "java/lang/Object") {
+                tree.add(current)
+                val currentClassFile = fileSystem.getPath("/${current}.class")
+                if (!currentClassFile.exists()) {
+                    current = "java/lang/Object"
+                } else {
+                    val classReader = ClassReader(currentClassFile.readBytes())
+                    current = classReader.superName
+                }
+            }
+            tree.add("java/lang/Object")
+            return tree
+        }
     }
 }
