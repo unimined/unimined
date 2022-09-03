@@ -258,11 +258,20 @@ abstract class MappingsProvider(
             project.logger.debug("ids: from $fromId to $toId fallbackTo $fallbackToId fallbackFrom $fallbackSrcId")
 
             for (classDef in mappingTree.classes) {
-                val fromClassName = classDef.getName(fromId) ?: classDef.getName(fallbackSrcId)
-                val toClassName = classDef.getName(toId) ?: classDef.getName(fallbackToId)
+                var fromClassName = classDef.getName(fromId) ?: classDef.getName(fallbackSrcId)
+                var toClassName = classDef.getName(toId) ?: classDef.getName(fallbackToId)
 
-                if (fromClassName == null || toClassName == null) {
-                    project.logger.warn("No class name for $classDef")
+                if (fromClassName == null) {
+                    project.logger.warn("From class name not found for ${classDef}")
+                    fromClassName = toClassName
+                }
+                if (toClassName == null) {
+                    project.logger.warn("To class name not found for ${classDef}")
+                    toClassName = fromClassName
+                }
+
+                if (fromClassName == null) {
+                    project.logger.error("Class name not found for ${classDef}")
                 }
 
                 project.logger.debug("fromClassName: $fromClassName toClassName: $toClassName")
