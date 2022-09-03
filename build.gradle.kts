@@ -89,11 +89,15 @@ tasks.withType<KotlinCompile> {
 publishing {
     repositories {
         maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/wagyourtail/unimined")
+            name = "WagYourMaven"
+            if (project.hasProperty("version_snapshot")) {
+                url = URI.create("https://maven.wagyourtail.xyz/snapshots/")
+            } else {
+                url = URI.create("https://maven.wagyourtail.xyz/releases/")
+            }
             credentials {
-                username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
-                password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+                username = project.findProperty("mvn.user") as String? ?: System.getenv("USERNAME")
+                password = project.findProperty("mvn.key") as String? ?: System.getenv("TOKEN")
             }
         }
     }
