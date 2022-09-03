@@ -143,6 +143,7 @@ abstract class MinecraftProvider(
 
         main.compileClasspath += mcLibraries
         main.runtimeClasspath += mcLibraries
+        main.output.resourcesDir = main.output.classesDirs.singleFile
 
         client?.let {
             it.compileClasspath += this.client + main.compileClasspath + main.output
