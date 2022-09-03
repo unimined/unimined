@@ -33,19 +33,29 @@ abstract class RemapJarTask : Jar() {
     @get:Input
     abstract val targetNamespace: Property<String>
 
-    @ApiStatus.Internal
-    var minecraftTarget: String = EnvType.COMBINED.name
+    @get:Input
+    abstract val minecraftTarget: Property<String?>
+
+    @get:Input
+    @get:ApiStatus.Internal
+    abstract val envType: Property<EnvType>
 
     init {
         sourceNamespace.convention(minecraftProvider.targetNamespace)
         fallbackFromNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
         fallbackToNamespace.convention(minecraftProvider.mcRemapper.fallbackFrom)
         targetNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
+        envType.convention(EnvType.COMBINED)
     }
 
     @TaskAction
     fun run() {
-        val envType = EnvType.valueOf(minecraftTarget)
+        val env = minecraftTarget.get() ?: if (minecraftProvider.disableCombined.get()) {
+            envType.get().name
+        } else {
+           EnvType.COMBINED.name
+        }
+        val envType = EnvType.valueOf(env)
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(uniminedExtension.mappingsProvider.getMappingProvider(envType, sourceNamespace.get(), fallbackFromNamespace.get(), fallbackToNamespace.get(), targetNamespace.get()))
             .skipLocalVariableMapping(true)
