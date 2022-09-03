@@ -1,0 +1,24 @@
+name: Build Snapshot
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '17'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Publish
+        run: ./gradlew publish -Pversion_snapshot -Pgpr.user=${{ github.actor }} -Pgpr.key=${{ github.token }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.fname.outputs.result }}
+          path: ./build/libs/*
