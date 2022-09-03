@@ -415,7 +415,7 @@ object ModLoaderPatches {
                     // with
                     // name.matches(".*mod_.*\\.class")
                     if (insn is MethodInsnNode && insn.name == "startsWith" && insn.owner == "java/lang/String") {
-                        newInstructions.add(LdcInsnNode(".*mod_.*\\.class"))
+                        newInstructions.add(LdcInsnNode("(?:.*[/\\\\]|^)mod_.*\\.class"))
                         newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "matches", "(Ljava/lang/String;)Z", false))
                         continue
                     }
@@ -439,6 +439,10 @@ object ModLoaderPatches {
             if (insn is MethodInsnNode && insn.name == "loadClass" && insn.owner == "java/lang/ClassLoader") {
                 // String.replace('/', '.')
                 addModNewInstructions.add(LdcInsnNode("/"))
+                addModNewInstructions.add(LdcInsnNode("."))
+                addModNewInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "replace", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/String;", false))
+                // String.replace('\\', '.')
+                addModNewInstructions.add(LdcInsnNode("\\"))
                 addModNewInstructions.add(LdcInsnNode("."))
                 addModNewInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "replace", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/String;", false))
             }

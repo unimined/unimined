@@ -6,6 +6,7 @@ import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MappingTreeView.ClassMappingView
 import net.fabricmc.tinyremapper.*
 import net.fabricmc.tinyremapper.OutputConsumerPath.ResourceRemapper
+import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -73,10 +74,14 @@ class ModRemapper(
     fun internalModRemapperConfiguration(envType: EnvType): Configuration = when (envType) {
         EnvType.COMBINED -> internalCombinedModRemapperConfiguration
         EnvType.CLIENT -> project.configurations.maybeCreate("internalModRemapperClient").apply {
-            extendsFrom(internalCombinedModRemapperConfiguration)
+            try {
+                extendsFrom(internalCombinedModRemapperConfiguration)
+            } catch (ignored: InvalidUserDataException) {}
         }
         EnvType.SERVER -> project.configurations.maybeCreate("internalModRemapperServer").apply {
-            extendsFrom(internalCombinedModRemapperConfiguration)
+            try {
+                extendsFrom(internalCombinedModRemapperConfiguration)
+            } catch (ignored: InvalidUserDataException) {}
         }
     }
 
@@ -94,6 +99,7 @@ class ModRemapper(
         }
     }
 
+    private val seen = mutableSetOf<EnvType>()
 
     fun remap(envType: EnvType) {
         val configs = when (envType) {
@@ -101,6 +107,8 @@ class ModRemapper(
             EnvType.CLIENT -> clientConfig
             EnvType.SERVER -> serverConfig
         }
+        if (seen.contains(envType)) return
+        seen.add(envType)
         val count = configs.configurations.sumOf {
             preTransform(configs.envType, it)
         }
