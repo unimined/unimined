@@ -7,6 +7,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
@@ -34,7 +35,8 @@ abstract class RemapJarTask : Jar() {
     abstract val targetNamespace: Property<String>
 
     @get:Input
-    abstract val minecraftTarget: Property<String?>
+    @get:Optional
+    abstract val minecraftTarget: Property<String>
 
     @get:Input
     @get:ApiStatus.Internal
@@ -46,11 +48,12 @@ abstract class RemapJarTask : Jar() {
         fallbackToNamespace.convention(minecraftProvider.mcRemapper.fallbackFrom)
         targetNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
         envType.convention(EnvType.COMBINED)
+        minecraftTarget.finalizeValueOnRead()
     }
 
     @TaskAction
     fun run() {
-        val env = minecraftTarget.get() ?: if (minecraftProvider.disableCombined.get()) {
+        val env = if (minecraftTarget.isPresent) minecraftTarget.get() else if (minecraftProvider.disableCombined.get()) {
             envType.get().name
         } else {
            EnvType.COMBINED.name
