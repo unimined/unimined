@@ -46,7 +46,7 @@ class UniminedPlugin : Plugin<Project> {
             }
             it.doFirst { _ ->
                 if (ext.minecraftProvider.disableCombined.get()) {
-                    it.minecraftTarget.set(EnvType.CLIENT.name)
+                    it.minecraftTarget = EnvType.CLIENT.name
                 }
             }
         }
@@ -63,7 +63,7 @@ class UniminedPlugin : Plugin<Project> {
                 it.archiveClassifier.set("server")
                 it.doFirst { _ ->
                     if (ext.minecraftProvider.disableCombined.get()) {
-                        it.minecraftTarget.set(EnvType.SERVER.name)
+                        it.minecraftTarget = EnvType.SERVER.name
                     }
                 }
             }
