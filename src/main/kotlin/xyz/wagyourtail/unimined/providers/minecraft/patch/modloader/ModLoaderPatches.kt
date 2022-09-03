@@ -92,6 +92,7 @@ object ModLoaderPatches {
                         for (i in hold) {
                             newInstructions.add(i)
                         }
+                        continue
                     }
                 }
 
