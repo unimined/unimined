@@ -76,7 +76,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         // resolve dyn libs
         ZipReader.readInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", forge, false) {
-            getDynLibs(it)
+            resolveDynLibs(getDynLibs(it))
         }
 
         // apply ats
@@ -242,14 +242,24 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             val mc = URI.create("jar:${target.toUri()}")
             try {
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
-                    out.getPath("argo").apply {
-                        if (exists()) {
-                            deleteRecursively()
+                    val dynPath = out.getPath("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
+
+                    val dyn = if (dynPath.exists()) dynPath.inputStream().use { it ->
+                        getDynLibs(it)
+                    } else setOf()
+
+                    if (dyn.any { it.contains("argo") }) {
+                        out.getPath("argo").apply {
+                            if (exists()) {
+                                deleteRecursively()
+                            }
                         }
                     }
-                    out.getPath("org/bouncycastle").apply {
-                        if (exists()) {
-                            deleteRecursively()
+                    if (dyn.any { it.contains("bcprov") }) {
+                        out.getPath("org/bouncycastle").apply {
+                            if (exists()) {
+                                deleteRecursively()
+                            }
                         }
                     }
                 }
@@ -262,7 +272,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return baseMinecraft
     }
 
-    private fun getDynLibs(stream: InputStream) {
+    private fun getDynLibs(stream: InputStream): Set<String> {
         project.logger.warn("Getting dynamic libraries from FML")
         val classReader = ClassReader(stream)
 
@@ -293,7 +303,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 }
             }
         }
-        resolveDynLibs(outSet)
+        return outSet
     }
 }
 
