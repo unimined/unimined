@@ -106,7 +106,7 @@ object ModLoaderPatchClasspath {
             while (iterator.hasNext()) {
                 val insn = iterator.next()
 
-                if (insn is TypeInsnNode && insn.desc == "java/io/File") {
+                if (insn is TypeInsnNode && insn.desc == "java/io/File" && insn.opcode == Opcodes.NEW) {
                     val hold = mutableListOf<AbstractInsnNode>(insn)
                     var next: AbstractInsnNode = insn
                     while (next !is VarInsnNode && iterator.hasNext()) {
@@ -114,6 +114,7 @@ object ModLoaderPatchClasspath {
                         hold.add(next)
                         if (next is MethodInsnNode && next.name == "getProtectionDomain") {
                             slice = true
+                            break
                         }
                     }
                     if (!slice) {
@@ -122,12 +123,9 @@ object ModLoaderPatchClasspath {
                         }
                     }
                 }
-                if (insn is LdcInsnNode && insn.cst == "Done.") {
-                    slice = false
-                }
 
                 // detect 'NEW java/io/File'
-                if (slice && insn is TypeInsnNode && insn.desc == "java/io/File" && insn.opcode == Opcodes.NEW) {
+                if (slice) {
                     val startLbl = LabelNode()
                     val endLbl = LabelNode()
 
@@ -136,9 +134,12 @@ object ModLoaderPatchClasspath {
                     // find where it's stored
                     var storeInsn = iterator.next()
                     while (storeInsn !is VarInsnNode || storeInsn.opcode != Opcodes.ASTORE) {
+//                        // get name of opcode
+//                        val opcodeName = Opcodes::class.java.fields.first { it.get(null) == storeInsn.opcode }.name
+//                        System.err.println("INSN: ${opcodeName}")
                         storeInsn = iterator.next()
                     }
-                    val baseLVIndex = storeInsn.`var` + 1
+                    val baseLVIndex = 2 + 1
                     method.localVariables.add(LocalVariableNode("path", "[Ljava/lang/String;", null, startLbl, endLbl, baseLVIndex))
 
                     if (classNode.methods.any { it.name == "readFromModFolder" }) {
@@ -207,19 +208,33 @@ object ModLoaderPatchClasspath {
                     newInstructions.add(JumpInsnNode(Opcodes.GOTO, loopStart))
                     newInstructions.add(loopEnd)
                     // skip the original instructions
+                    var readFromClassPath = false
+                    var readFromModsDir = !classNode.methods.any { it.name == "readFromModFolder" }
                     while (iterator.hasNext()) {
                         val insn = iterator.next()
-                        if (insn is MethodInsnNode && insn.name == "readFromClassPath" && insn.owner == "ModLoader" && insn.desc == "(Ljava/io/File;)V" && insn.opcode == Opcodes.INVOKESTATIC) {
-                            break
+                        if (insn is MethodInsnNode && insn.owner == "ModLoader" && insn.desc == "(Ljava/io/File;)V" && insn.opcode == Opcodes.INVOKESTATIC) {
+                            if (insn.name == "readFromClassPath") {
+                                readFromClassPath = true
+                            } else if (insn.name == "readFromModFolder") {
+                                readFromModsDir = true
+                            }
+                            if (readFromClassPath && readFromModsDir) {
+                                slice = false
+                                break
+                            }
                         }
                     }
-
                     newInstructions.add(endLbl)
+                    slice = false
                 } else {
                     newInstructions.add(insn)
                 }
             }
             method.instructions = newInstructions
+//            classNode.methods.remove(method)
+//            val newMethod = MethodNode(method.access, method.name, method.desc, method.signature, method.exceptions.toTypedArray())
+//            newMethod.instructions = newInstructions
+//            classNode.methods.add(newMethod)
         }
 
     fun olderURIFix(classNode: ClassNode) {
