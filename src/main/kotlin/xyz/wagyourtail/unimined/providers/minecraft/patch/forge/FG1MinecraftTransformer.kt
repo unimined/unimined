@@ -10,6 +10,7 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.LdcInsnNode
+import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.TypeInsnNode
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.deleteRecursively
@@ -159,7 +160,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 )
             )
         }
-        if (wanted.contains("argo-small.jar")) {
+        if (wanted.contains("argo-small-3.2.jar")) {
             FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/argo-small-3.2.jar").use { it1 ->
                 val bytes = it1!!.readBytes()
                 path.resolve("argo-small-3.2.jar")
@@ -292,6 +293,9 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             if (arrayFlag) {
                 if (insn is LdcInsnNode) {
                     outSet.add(insn.cst as String)
+                }
+                if (insn is MethodInsnNode && insn.opcode == Opcodes.INVOKESTATIC && insn.name == "debfuscationDataName") {
+                    outSet.add("deobfuscation_data_${provider.minecraftDownloader.version}.zip")
                 }
             }
             if (insn is FieldInsnNode && insn.opcode == Opcodes.PUTSTATIC) {
