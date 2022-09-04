@@ -69,7 +69,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             FG2TaskApplyBinPatches(project).doTask(baseMinecraft.toFile(), binaryPatchFile.toFile(), patchedMC.toFile(), if (envType == EnvType.SERVER) "server" else "client")
         }
 
-        val accessModder = AccessTransformerMinecraftTransformer(project, provider).apply {
+        val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
             parent.accessTransformer?.let { addAccessTransformer(it) }
             ZipReader.readInputStreamFor("fml_at.cfg", forgeJar.toPath(), false) {
                 addAccessTransformer(it)
