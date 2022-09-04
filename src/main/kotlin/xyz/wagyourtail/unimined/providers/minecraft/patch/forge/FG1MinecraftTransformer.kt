@@ -52,27 +52,29 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun transform(envType: EnvType, baseMinecraft: Path): Path {
-        val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType)
-        accessModder.atTransformers.add(accessModder::transformLegacyTransformer)
-        accessModder.atTransformers.add {
-            accessModder.remapTransformer(
-                envType,
-                it,
-                "named", "searge", "official", "official"
-            )
-        }
-
-        parent.accessTransformer?.let { accessModder.addAccessTransformer(it) }
-
         // resolve forge
         val forge = jarModConfiguration(envType).resolve().firstOrNull()?.toPath() ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath() ?: throw IllegalStateException("No forge jar found for $envType!")
 
-        // resolve ats from froge
-        ZipReader.readInputStreamFor("fml_at.cfg", forge, false) {
-            accessModder.addAccessTransformer(it)
-        }
-        ZipReader.readInputStreamFor("forge_at.cfg", forge, false) {
-            accessModder.addAccessTransformer(it)
+
+        val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
+            atTransformers.add(::transformLegacyTransformer)
+            atTransformers.add {
+                remapTransformer(
+                    envType,
+                    it,
+                    "named", "searge", "official", "official"
+                )
+            }
+
+            // resolve ats from froge
+            ZipReader.readInputStreamFor("fml_at.cfg", forge, false) {
+                addAccessTransformer(it)
+            }
+            ZipReader.readInputStreamFor("forge_at.cfg", forge, false) {
+                addAccessTransformer(it)
+            }
+
+            parent.accessTransformer?.let { addAccessTransformer(it) }
         }
 
         // resolve dyn libs

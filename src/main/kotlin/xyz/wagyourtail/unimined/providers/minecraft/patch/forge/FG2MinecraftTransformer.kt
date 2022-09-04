@@ -70,13 +70,24 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
 
         val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
-            parent.accessTransformer?.let { addAccessTransformer(it) }
+            atTransformers.add(::transformLegacyTransformer)
+            atTransformers.add {
+                remapTransformer(
+                    envType,
+                    it,
+                    "named", "searge", "official", "official"
+                )
+            }
+
             ZipReader.readInputStreamFor("fml_at.cfg", forgeJar.toPath(), false) {
                 addAccessTransformer(it)
             }
+
             ZipReader.readInputStreamFor("forge_at.cfg", forgeJar.toPath(), false) {
                 addAccessTransformer(it)
             }
+
+            parent.accessTransformer?.let { addAccessTransformer(it) }
         }
 
         val atOutOfficial = if (atMappings != "official") {
