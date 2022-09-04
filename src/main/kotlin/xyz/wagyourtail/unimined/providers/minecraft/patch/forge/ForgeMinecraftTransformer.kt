@@ -123,15 +123,15 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
                 project.logger.info("Files $files")
                 forgeTransformer = when(vers) {
                     ForgeVersion.FG1 -> {
-                        project.logger.info("Selected FG1")
+                        project.logger.warn("Selected FG1")
                         FG1MinecraftTransformer(project, this)
                     }
                     ForgeVersion.FG2 -> {
-                        project.logger.info("Selected FG2")
+                        project.logger.warn("Selected FG2")
                         FG2MinecraftTransformer(project, this)
                     }
                     ForgeVersion.FG3 -> {
-                        project.logger.info("Selected FG3")
+                        project.logger.warn("Selected FG3")
                         FG3MinecraftTransformer(project, this)
                     }
                 }
@@ -156,6 +156,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         OLD_FORGE_AT("forge_at.cfg"),
         BINPATCHES_PACK("binpatches.pack.lzma"),
         JAR_PATCHES("net/minecraft/client/Minecraft.class"),
+        VERSION_JSON("version.json"),
         ;
         companion object {
             val ffMap = mutableMapOf<String, ForgeFiles>()
@@ -177,13 +178,15 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
             ),
             setOf(
                 ForgeFiles.FORGE_AT,
-                ForgeFiles.BINPATCHES_PACK
+                ForgeFiles.BINPATCHES_PACK,
+                ForgeFiles.VERSION_JSON,
             )
         ),
         FG2(
             setOf(
                 ForgeFiles.OLD_FORGE_AT,
-                ForgeFiles.BINPATCHES_PACK
+                ForgeFiles.BINPATCHES_PACK,
+                ForgeFiles.VERSION_JSON
             ),
             setOf(
                 ForgeFiles.JAR_PATCHES,
@@ -195,9 +198,9 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
                 ForgeFiles.FORGE_AT,
             ),
             setOf(
-                ForgeFiles.BINPATCHES_PACK,
                 ForgeFiles.JAR_PATCHES,
-                ForgeFiles.OLD_FORGE_AT
+                ForgeFiles.OLD_FORGE_AT,
+                ForgeFiles.VERSION_JSON
             )
         ),
     }

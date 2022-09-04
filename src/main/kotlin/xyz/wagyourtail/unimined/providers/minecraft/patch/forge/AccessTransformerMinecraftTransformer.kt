@@ -20,7 +20,7 @@ import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
-class AccessTransformerMinecraftTransformer(project: Project, provider: MinecraftProvider) :
+class AccessTransformerMinecraftTransformer(project: Project, provider: MinecraftProvider, val envType: EnvType) :
         AbstractMinecraftTransformer(project, provider) {
     companion object {
         val atDeps: MutableMap<Project, Dependency> = mutableMapOf()
@@ -28,6 +28,7 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
 
     val logger = LoggerFactory.getLogger(AccessTransformerMinecraftTransformer::class.java)
 
+    val atTransformers = mutableListOf<(String) -> String>()
     private val transformers = mutableListOf<String>()
 
     private val atDep = atDeps.computeIfAbsent(project) {
@@ -50,22 +51,21 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
         transformers.add(file.readText())
     }
 
-    private val ats = mutableMapOf<EnvType, Path>()
-    fun atFile(envType: EnvType): Path {
-        if (ats.containsKey(envType)) return ats[envType]!!
-        ats[envType] = provider.parent.getLocalCache().resolve("accessTransformers${envType.name.capitalized()}.cfg")
-        ats[envType]!!.writeText(
-            remapTransformer(
-                envType,
-                transformLegacyTransformer(transformers.joinToString("\n")),
-                "named", "searge", "official", "official"
-            ),
+    private val ats by lazy {
+        val ats = provider.parent.getLocalCache().resolve("accessTransformers${envType.classifier?.capitalized()}.cfg")
+        var text = transformers.joinToString("\n")
+        for (transformer in atTransformers) {
+            text = transformer(text)
+        }
+        ats.writeText(
+            text,
             options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         )
-        return ats[envType]!!
+        ats
     }
 
     override fun transform(envType: EnvType, baseMinecraft: Path): Path {
+        if (envType != this.envType) throw IllegalStateException("Cannot transform $envType with $this because it is for ${this.envType}")
         if (transformers.isEmpty()) {
             return baseMinecraft
         }
@@ -77,7 +77,7 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
         val retVal = runJarInSubprocess(
             atjar.toPath(),
             "-inJar", baseMinecraft.toString(),
-            "-atFile", atFile(envType).toString(),
+            "-atFile", ats.toString(),
             "-outJar", outFile.toString(),
         )
         if (retVal != 0) {
@@ -88,7 +88,7 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
 
     fun getOutputJarLocation(envType: EnvType, baseMinecraft: Path): Path {
         return provider.parent.getLocalCache()
-            .resolve("${baseMinecraft.fileName}-at-${atFile(envType).getSha1().substring(0..8)}.jar")
+            .resolve("${baseMinecraft.fileName}-at-${ats.getSha1().substring(0..8)}.jar")
     }
 
     fun transformLegacyTransformer(file: String): String {

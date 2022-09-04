@@ -26,14 +26,6 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     val forge = jarModConfiguration(EnvType.COMBINED)
     private val atMappings = "official"
 
-    init {
-        project.repositories.maven {
-            it.url = URI("https://maven.minecraftforge.net/")
-            it.metadataSources {
-                it.artifact()
-            }
-        }
-    }
     override fun afterEvaluate() {
         // get and add forge-src to mappings
         val forgeDep = forge.dependencies.last()

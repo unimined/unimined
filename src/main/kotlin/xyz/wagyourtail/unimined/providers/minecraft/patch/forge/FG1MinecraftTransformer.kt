@@ -31,15 +31,6 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     val afterForgeJarModder = JarModMinecraftTransformer(project, provider)
     var resolvedForgeDeps = false
 
-    init {
-        project.repositories.maven {
-            it.url = URI("https://maven.minecraftforge.net/")
-            it.metadataSources {
-                it.artifact()
-            }
-        }
-    }
-
     override fun afterEvaluate() {
         // get and add forge-src to mappings
         val forge = jarModConfiguration(EnvType.COMBINED).dependencies.last()
@@ -61,7 +52,16 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun transform(envType: EnvType, baseMinecraft: Path): Path {
-        val accessModder = AccessTransformerMinecraftTransformer(project, provider)
+        val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType)
+        accessModder.atTransformers.add(accessModder::transformLegacyTransformer)
+        accessModder.atTransformers.add {
+            accessModder.remapTransformer(
+                envType,
+                it,
+                "named", "searge", "official", "official"
+            )
+        }
+
         parent.accessTransformer?.let { accessModder.addAccessTransformer(it) }
 
         // resolve forge
