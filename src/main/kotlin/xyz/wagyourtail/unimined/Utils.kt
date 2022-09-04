@@ -11,7 +11,7 @@ import kotlin.io.path.exists
 import kotlin.io.path.fileSize
 import kotlin.io.path.inputStream
 
-inline fun <T> consumerApply(crossinline action: T.() -> Unit): (T) -> Unit {
+inline fun <T, U> consumerApply(crossinline action: T.() -> U): (T) -> U {
     return { action(it) }
 }
 

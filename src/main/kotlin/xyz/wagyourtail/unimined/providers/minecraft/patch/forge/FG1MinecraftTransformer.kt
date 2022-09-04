@@ -13,9 +13,11 @@ import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.TypeInsnNode
 import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.consumerApply
 import xyz.wagyourtail.unimined.deleteRecursively
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
+import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import java.io.InputStream
 import java.net.URI
@@ -51,41 +53,44 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         super.afterEvaluate()
     }
 
-    override fun transform(envType: EnvType, baseMinecraft: Path): Path {
-        // resolve forge
-        val forge = jarModConfiguration(envType).resolve().firstOrNull()?.toPath() ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath() ?: throw IllegalStateException("No forge jar found for $envType!")
+    override fun transform(minecraft: MinecraftJar): MinecraftJar {
+        val atsOut = minecraft.let(consumerApply {
+            // resolve forge
+            val forge = jarModConfiguration(envType).resolve().firstOrNull()?.toPath() ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath() ?: throw IllegalStateException("No forge jar found for $envType!")
 
 
-        val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
-            atTransformers.add(::transformLegacyTransformer)
-            atTransformers.add {
-                remapTransformer(
-                    envType,
-                    it,
-                    "named", "searge", "official", "official"
-                )
+            val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
+                atTransformers.add(::transformLegacyTransformer)
+                atTransformers.add {
+                    remapTransformer(
+                        envType,
+                        it,
+                        "named", "searge", "official", "official"
+                    )
+                }
+
+                // resolve ats from froge
+                ZipReader.readInputStreamFor("fml_at.cfg", forge, false) {
+                    addAccessTransformer(it)
+                }
+                ZipReader.readInputStreamFor("forge_at.cfg", forge, false) {
+                    addAccessTransformer(it)
+                }
+
+                parent.accessTransformer?.let { addAccessTransformer(it) }
             }
 
-            // resolve ats from froge
-            ZipReader.readInputStreamFor("fml_at.cfg", forge, false) {
-                addAccessTransformer(it)
-            }
-            ZipReader.readInputStreamFor("forge_at.cfg", forge, false) {
-                addAccessTransformer(it)
+            // resolve dyn libs
+            ZipReader.readInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", forge, false) {
+                resolveDynLibs(getDynLibs(it))
             }
 
-            parent.accessTransformer?.let { addAccessTransformer(it) }
-        }
+            // apply ats
+            accessModder.transform(this)
+        })
 
-        // resolve dyn libs
-        ZipReader.readInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", forge, false) {
-            resolveDynLibs(getDynLibs(it))
-        }
-
-        // apply ats
-        val atsOut = accessModder.transform(envType, baseMinecraft)
         // apply jarMod
-        return afterForgeJarModder.transform(envType, super.transform(envType, atsOut))
+        return afterForgeJarModder.transform(super.transform(atsOut))
     }
 
     private val forgeDeps: Configuration = project.configurations.maybeCreate(Constants.FORGE_DEPS)

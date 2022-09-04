@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import java.io.InputStreamReader
 import java.net.URI
 import java.nio.file.Path
@@ -139,9 +140,9 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
 
     }
 
-    override fun transform(envType: EnvType, baseMinecraft: Path): Path {
+    override fun transform(minecraft: MinecraftJar): MinecraftJar {
         //TODO AW
-        return baseMinecraft
+        return minecraft
     }
 
     private fun getIntermediaryClassPath(envType: EnvType): String {

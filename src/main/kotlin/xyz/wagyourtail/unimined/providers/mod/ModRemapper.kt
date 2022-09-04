@@ -55,7 +55,6 @@ class ModRemapper(
     val mcRemapper by lazy { modProvider.parent.minecraftProvider.mcRemapper }
     val mappings by lazy { modProvider.parent.mappingsProvider }
     var fromMappings: String by LazyMutable { mcRemapper.fallbackTarget }
-    var fallbackFrom: String by LazyMutable { mcRemapper.fallbackFrom }
     var fallbackTo: String by LazyMutable { mcRemapper.fallbackTarget }
     var tinyRemapperConf: (TinyRemapper.Builder) -> Unit = {}
 
@@ -113,7 +112,7 @@ class ModRemapper(
             preTransform(configs.envType, it)
         }
         if (count == 0) return
-        val tr = TinyRemapper.newRemapper().withMappings(mappings.getMappingProvider(configs.envType, fromMappings, fallbackFrom, fallbackTo, mcRemapper.provider.targetNamespace.get()))
+        val tr = TinyRemapper.newRemapper().withMappings(mappings.getMappingProvider(configs.envType, fromMappings, "official", fallbackTo, mcRemapper.provider.targetNamespace.get()))
             .renameInvalidLocals(true)
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())

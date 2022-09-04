@@ -45,7 +45,7 @@ abstract class RemapJarTask : Jar() {
     init {
         sourceNamespace.convention(minecraftProvider.targetNamespace)
         fallbackFromNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
-        fallbackToNamespace.convention(minecraftProvider.mcRemapper.fallbackFrom)
+        fallbackToNamespace.convention("official")
         targetNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
         envType.convention(EnvType.COMBINED)
         minecraftTarget.finalizeValueOnRead()

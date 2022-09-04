@@ -15,6 +15,7 @@ import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.version.parseAllLibraries
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.mod.LazyMutable
 import java.io.File
@@ -55,7 +56,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         // detect if userdev3 or userdev
         //   read if forgeDep has binpatches file
         val forgeUni = forge.getFile(forgeDep)
-        val userdevClassifier = ZipReader.readInputStreamFor("binpatches.pack.lzma", forgeUni.toPath(), false) {
+        val userdevClassifier = ZipReader.readInputStreamFor<String?>("binpatches.pack.lzma", forgeUni.toPath(), false) {
             "userdev3"
         } ?: "userdev"
 
@@ -70,7 +71,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return files(dep).first { it.extension == extension }
     }
 
-    override fun transform(envType: EnvType, baseMinecraft: Path): Path {
+    override fun transform(minecraft: MinecraftJar): MinecraftJar {
         TODO()
     }
 

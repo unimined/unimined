@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.getSha1
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.runJarInSubprocess
 import java.io.File
 import java.io.InputStream
@@ -52,7 +53,7 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
     }
 
     private val ats by lazy {
-        val ats = provider.parent.getLocalCache().resolve("accessTransformers${envType.classifier?.capitalized()}.cfg")
+        val ats = provider.parent.getLocalCache().resolve("accessTransformers${envType.classifier?.capitalized() ?: ""}.cfg")
         var text = transformers.joinToString("\n")
         for (transformer in atTransformers) {
             text = transformer(text)
@@ -64,34 +65,36 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
         ats
     }
 
-    override fun transform(envType: EnvType, baseMinecraft: Path): Path {
+    override fun transform(minecraft: MinecraftJar): MinecraftJar {
+        val envType = minecraft.envType
         if (envType != this.envType) throw IllegalStateException("Cannot transform $envType with $this because it is for ${this.envType}")
         if (transformers.isEmpty()) {
-            return baseMinecraft
+            return minecraft
         }
         val atjar = dynamicTransformerDependencies.files(atDep).first { it.extension == "jar" }
-        val outFile = getOutputJarLocation(envType, baseMinecraft)
+        val outFile = getOutputJarLocation(minecraft.jarPath)
         if (outFile.exists()) {
-            return outFile
+            return MinecraftJar(minecraft, outFile)
         }
         val retVal = runJarInSubprocess(
             atjar.toPath(),
-            "-inJar", baseMinecraft.toString(),
+            "-inJar", minecraft.jarPath.toString(),
             "-atFile", ats.toString(),
             "-outJar", outFile.toString(),
         )
         if (retVal != 0) {
             throw RuntimeException("AccessTransformer failed with exit code $retVal")
         }
-        return outFile
+        return MinecraftJar(minecraft, outFile)
     }
 
-    fun getOutputJarLocation(envType: EnvType, baseMinecraft: Path): Path {
+    fun getOutputJarLocation(baseMinecraft: Path): Path {
         return provider.parent.getLocalCache()
             .resolve("${baseMinecraft.fileName}-at-${ats.getSha1().substring(0..8)}.jar")
     }
 
     fun transformLegacyTransformer(file: String): String {
+        @Suppress("NAME_SHADOWING")
         var file = file
         // transform methods
         val legacyMethod = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.$]+)\\.([\\w*<>]+)(\\(.+)\$", RegexOption.MULTILINE)
@@ -159,6 +162,8 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
 //        remapper.readClassPathAsync(mc)
 //        project.logger.warn("Remapping mods using $mc")
 //        remapper.readClassPathAsync(*provider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
+
+        @Suppress("NAME_SHADOWING")
         var atFile = atFile
         val methodMatcher = Regex(
             "^(\\w+(?:[\\-+]f)?)\\s([\\w.$]+)\\s([\\w*<>]+)(\\(.+?)(\\s*#.+?)?\$",

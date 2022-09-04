@@ -5,11 +5,9 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.TaskContainer
-import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.SemVerUtils
-import xyz.wagyourtail.unimined.deleteRecursively
-import xyz.wagyourtail.unimined.maybeCreate
+import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
+import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg2.FG2TaskApplyBinPatches
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import java.io.File
@@ -24,8 +22,6 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 ) {
 
     val forge = jarModConfiguration(EnvType.COMBINED)
-    private val atMappings = "official"
-
     override fun afterEvaluate() {
         // get and add forge-src to mappings
         val forgeDep = forge.dependencies.last()
@@ -53,53 +49,48 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return files(dep).first { it.extension == extension }
     }
 
-    override fun transform(envType: EnvType, baseMinecraft: Path): Path {
-        val forgeUniversal = forge.dependencies.last()
-        val forgeJar = forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+    override fun transform(minecraft: MinecraftJar): MinecraftJar {
+        val atOut = minecraft.let(consumerApply {
+            val forgeUniversal = forge.dependencies.last()
+            val forgeJar = forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
-        val outFolder = baseMinecraft.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}").maybeCreate()
+            val outFolder = jarPath.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}").maybeCreate()
 
-        // apply binary patches
-        val binaryPatchFile = ZipReader.readInputStreamFor("binpatches.pack.lzma", forgeJar.toPath()) {
-            outFolder.resolve("binpatches.pack.lzma").apply { writeBytes(it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) }
-        }
-        val patchedMC = outFolder.resolve("${baseMinecraft.nameWithoutExtension}-${forgeUniversal.name}-${forgeUniversal.version}.${baseMinecraft.extension}")
-        if (!patchedMC.exists() || project.gradle.startParameter.isRefreshDependencies) {
-            patchedMC.deleteIfExists()
-            FG2TaskApplyBinPatches(project).doTask(baseMinecraft.toFile(), binaryPatchFile.toFile(), patchedMC.toFile(), if (envType == EnvType.SERVER) "server" else "client")
-        }
-
-        val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
-            atTransformers.add(::transformLegacyTransformer)
-            atTransformers.add {
-                remapTransformer(
-                    envType,
-                    it,
-                    "named", "searge", "official", "official"
-                )
+            // apply binary patches
+            val binaryPatchFile = ZipReader.readInputStreamFor("binpatches.pack.lzma", forgeJar.toPath()) {
+                outFolder.resolve("binpatches.pack.lzma").apply { writeBytes(it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) }
+            }
+            val patchedMC = outFolder.resolve("${jarPath.nameWithoutExtension}-${forgeUniversal.name}-${forgeUniversal.version}.${jarPath.extension}")
+            if (!patchedMC.exists() || project.gradle.startParameter.isRefreshDependencies) {
+                patchedMC.deleteIfExists()
+                FG2TaskApplyBinPatches(project).doTask(jarPath.toFile(), binaryPatchFile.toFile(), patchedMC.toFile(), if (envType == EnvType.SERVER) "server" else "client")
             }
 
-            ZipReader.readInputStreamFor("fml_at.cfg", forgeJar.toPath(), false) {
-                addAccessTransformer(it)
+            val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
+                atTransformers.add(::transformLegacyTransformer)
+                atTransformers.add {
+                    remapTransformer(
+                        envType,
+                        it,
+                        "named", "searge", "official", "official"
+                    )
+                }
+
+                ZipReader.readInputStreamFor("fml_at.cfg", forgeJar.toPath(), false) {
+                    addAccessTransformer(it)
+                }
+
+                ZipReader.readInputStreamFor("forge_at.cfg", forgeJar.toPath(), false) {
+                    addAccessTransformer(it)
+                }
+
+                parent.accessTransformer?.let { addAccessTransformer(it) }
             }
 
-            ZipReader.readInputStreamFor("forge_at.cfg", forgeJar.toPath(), false) {
-                addAccessTransformer(it)
-            }
+            accessModder.transform(MinecraftJar(this, patchedMC))
+        })
 
-            parent.accessTransformer?.let { addAccessTransformer(it) }
-        }
-
-        val atOutOfficial = if (atMappings != "official") {
-            val patchedMCSrg = provider.mcRemapper.provide(envType, patchedMC, "searge", "official", true)
-            val atsOut = accessModder.transform(envType, patchedMCSrg)
-            provider.mcRemapper.provide(envType, atsOut, "official", "searge", true)
-        } else {
-            accessModder.transform(envType, patchedMC)
-        }
-
-        //TODO remap forge separately
-        return super.transform(envType, atOutOfficial)
+        return super.transform(atOut)
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {

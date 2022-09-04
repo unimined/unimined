@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.providers.mappings.MappingExportTypes
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.version.parseAllLibraries
 import java.io.File
@@ -147,8 +148,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         return forgeTransformer
     }
 
-    override fun transform(envType: EnvType, baseMinecraft: Path): Path {
-        return forgeTransformer.transform(envType, baseMinecraft)
+    override fun transform(minecraft: MinecraftJar): MinecraftJar {
+        return forgeTransformer.transform(minecraft)
     }
 
     enum class ForgeFiles(val path: String) {

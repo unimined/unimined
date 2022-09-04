@@ -18,7 +18,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     internal val dynamicTransformerDependencies: Configuration = project.configurations.maybeCreate(Constants.DYNAMIC_TRANSFORMER_DEPENDENCIES)
 
     @ApiStatus.Internal
-    abstract fun transform(envType: EnvType, baseMinecraft: Path): Path
+    abstract fun transform(minecraft: MinecraftJar): MinecraftJar
 
     private fun applyRunConfigs(tasks: TaskContainer) {
         project.logger.warn("client: ${provider.client}, server: ${provider.server}")

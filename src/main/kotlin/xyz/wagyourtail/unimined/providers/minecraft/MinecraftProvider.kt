@@ -23,6 +23,7 @@ import xyz.wagyourtail.unimined.UniminedExtension
 import xyz.wagyourtail.unimined.consumerApply
 import xyz.wagyourtail.unimined.idea.isIdeaSync
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.providers.minecraft.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.fabric.FabricMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
@@ -195,7 +196,8 @@ abstract class MinecraftProvider(
 //            if (envType == EnvType.COMBINED)
 //                getMinecraftWithMapping(EnvType.CLIENT, namespace) //TODO: fix to actually merge
 //            else
-                minecraftTransformer.afterRemap(envType, namespace, mcRemapper.provide(envType, minecraftTransformer.transform(envType, minecraftDownloader.getMinecraft(envType)), namespace))
+                val mc = MinecraftJar(minecraftDownloader.getMinecraft(envType), envType, "official", "official")
+                minecraftTransformer.afterRemap(envType, namespace, mcRemapper.provide(minecraftTransformer.transform(mc), namespace))
         }
     }
 

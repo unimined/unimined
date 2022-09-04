@@ -7,8 +7,8 @@ import java.nio.file.Path
 
 class NoTransformMinecraftTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(project, provider) {
 
-    override fun transform(envType: EnvType, baseMinecraft: Path): Path {
-        return baseMinecraft
+    override fun transform(minecraft: MinecraftJar): MinecraftJar {
+        return minecraft
     }
 
 }
