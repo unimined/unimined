@@ -57,8 +57,6 @@ class MinecraftRemapper(
                 )
                 .renameInvalidLocals(true)
                 .inferNameFromSameLvIndex(true)
-                .propagateBridges(TinyRemapper.LinkedMethodPropagation.ENABLED)
-                .propagateRecordComponents(TinyRemapper.LinkedMethodPropagation.ENABLED)
                 .threads(Runtime.getRuntime().availableProcessors())
                 .checkPackageAccess(true)
                 .fixPackageAccess(true)
