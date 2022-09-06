@@ -1,6 +1,9 @@
 package xyz.wagyourtail.unimined
 
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.slf4j.LoggerFactory
+import java.io.File
 import java.io.IOException
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
@@ -17,9 +20,14 @@ inline fun <T, U> consumerApply(crossinline action: T.() -> U): (T) -> U {
 
 fun Path.maybeCreate(): Path {
     if (!this.exists()) {
-        this.toFile().mkdirs()
+        Files.createDirectories(this)
     }
     return this
+}
+
+fun Configuration.getFile(dep: Dependency, extension: Regex = Regex("jar")): File {
+    resolve()
+    return files(dep).first { it.extension.matches(extension) }
 }
 
 object OSUtils {

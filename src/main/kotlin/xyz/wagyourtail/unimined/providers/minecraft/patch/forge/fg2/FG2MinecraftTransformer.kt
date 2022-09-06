@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.providers.minecraft.patch.forge
+package xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg2
 
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
@@ -8,7 +8,8 @@ import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg2.FG2TaskApplyBinPatches
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import java.io.File
 import java.net.URI
@@ -21,21 +22,23 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     Constants.FORGE_PROVIDER
 ) {
 
-    val forge = jarModConfiguration(EnvType.COMBINED)
     override fun afterEvaluate() {
         // get and add forge-src to mappings
-        val forgeDep = forge.dependencies.last()
+        val forgeDep = parent.forge.dependencies.last()
 
         val forgeSrc = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:src@zip"
         provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).dependencies.apply {
-            if (isEmpty()) {
+            val empty = isEmpty()
+            if (!SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7.10")) {
+                add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraftDownloader.version}:srg@zip"))
+            }
+            if (empty) {
                 if (SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7")) {
                     add(project.dependencies.create(forgeSrc))
                 } else if (SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7.10")) {
                     throw UnsupportedOperationException("Forge 1.7-1.7.9 don't have automatic mappings support. please supply the mcp mappings or whatever manually")
                 } else {
                     if (parent.mcpVersion == null || parent.mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
-                    add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraftDownloader.version}:srg@zip"))
                     add(project.dependencies.create("de.oceanlabs.mcp:mcp_${parent.mcpChannel}:${parent.mcpVersion}@zip"))
                 }
             }
@@ -51,8 +54,8 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         val atOut = minecraft.let(consumerApply {
-            val forgeUniversal = forge.dependencies.last()
-            val forgeJar = forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+            val forgeUniversal = parent.forge.dependencies.last()
+            val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
             val outFolder = jarPath.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}").maybeCreate()
 

@@ -42,5 +42,8 @@ object Constants {
 
     @ApiStatus.Internal
     const val FORGE_USERDEV = "forgeUserdev"
+
+    @ApiStatus.Internal
+    const val FORGE_INSTALLER = "forgeInstaller"
 }
 

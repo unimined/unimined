@@ -43,19 +43,23 @@ abstract class MappingsProvider(
     private val mappingExports = mutableListOf<MappingExport>()
 
     fun addExport(envType: String, export: (MappingExport) -> Unit) {
-        addExport(EnvType.valueOf(envType), export)
+        addExport(EnvType.valueOf(envType), false, export)
     }
 
     @ApiStatus.Internal
-    fun addExport(envType: EnvType, export: (MappingExport) -> Unit) {
+    fun addExport(envType: EnvType, now: Boolean = false, export: (MappingExport) -> Unit) {
         val me = MappingExport(envType)
         export(me)
         if (me.location != null && me.type != null) {
+            mappingExports.add(me)
             if (mappingTrees.contains(envType)) {
                 project.logger.warn("Mappings for $envType already exist, exporting ${me.location} directly.")
                 me.export(mappingTrees[envType]!!)
+            } else {
+                if (now) {
+                    getMappingTree(envType)
+                }
             }
-            mappingExports.add(me)
         }
     }
 

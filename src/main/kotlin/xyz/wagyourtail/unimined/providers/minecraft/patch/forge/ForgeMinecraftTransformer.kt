@@ -1,19 +1,20 @@
 package xyz.wagyourtail.unimined.providers.minecraft.patch.forge
 
-import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.SemVerUtils
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.mappings.MappingExportTypes
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg1.FG1MinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg2.FG2MinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.version.parseAllLibraries
 import java.io.File
@@ -148,6 +149,10 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         return forgeTransformer
     }
 
+    override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, output: Path): MinecraftJar {
+        return forgeTransformer.merge(clientjar, serverjar, output)
+    }
+
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         return forgeTransformer.transform(minecraft)
     }
@@ -196,11 +201,9 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         ),
         FG3(
             setOf(
-                ForgeFiles.FORGE_AT,
             ),
             setOf(
                 ForgeFiles.JAR_PATCHES,
-                ForgeFiles.OLD_FORGE_AT,
                 ForgeFiles.VERSION_JSON
             )
         ),

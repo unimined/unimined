@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.exists
+import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
@@ -90,7 +91,7 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
 
     fun getOutputJarLocation(baseMinecraft: Path): Path {
         return provider.parent.getLocalCache()
-            .resolve("${baseMinecraft.fileName}-at-${ats.getSha1().substring(0..8)}.jar")
+            .resolve("${baseMinecraft.nameWithoutExtension}-at-${ats.getSha1().substring(0..8)}.jar")
     }
 
     fun transformLegacyTransformer(file: String): String {

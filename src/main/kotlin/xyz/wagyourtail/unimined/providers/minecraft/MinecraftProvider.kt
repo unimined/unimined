@@ -71,7 +71,8 @@ abstract class MinecraftProvider(
     abstract val disableCombined: Property<Boolean>
     abstract val alphaServerVersionOverride: Property<String?>
 
-    private var minecraftTransformer: AbstractMinecraftTransformer = NoTransformMinecraftTransformer(project, this)
+    @ApiStatus.Internal
+    var minecraftTransformer: AbstractMinecraftTransformer = NoTransformMinecraftTransformer(project, this)
 
     init {
         overrideMainClassClient.convention(null as String?).finalizeValueOnRead()
@@ -190,13 +191,16 @@ abstract class MinecraftProvider(
 
     @ApiStatus.Internal
     fun getMinecraftWithMapping(envType: EnvType, namespace: String): Path {
+        project.logger.warn("Getting minecraft with mapping $envType:$namespace")
         return minecraftMapped.computeIfAbsent(envType) {
             mutableMapOf()
         }.computeIfAbsent(namespace) {
-//            if (envType == EnvType.COMBINED)
-//                getMinecraftWithMapping(EnvType.CLIENT, namespace) //TODO: fix to actually merge
-//            else
-                val mc = MinecraftJar(minecraftDownloader.getMinecraft(envType), envType, "official", "official")
+                val mc = if (envType == EnvType.COMBINED) {
+                    val client = MinecraftJar(minecraftDownloader.getMinecraft(EnvType.CLIENT), EnvType.CLIENT, "official", "official")
+                    val server = MinecraftJar(minecraftDownloader.getMinecraft(EnvType.SERVER), EnvType.SERVER, "official", "official")
+                    minecraftTransformer.merge(client, server, minecraftDownloader.combinedJarDownloadPath(minecraftDownloader.version))
+                }
+                else MinecraftJar(minecraftDownloader.getMinecraft(envType), envType, "official", "official")
                 minecraftTransformer.afterRemap(envType, namespace, mcRemapper.provide(minecraftTransformer.transform(mc), namespace))
         }
     }

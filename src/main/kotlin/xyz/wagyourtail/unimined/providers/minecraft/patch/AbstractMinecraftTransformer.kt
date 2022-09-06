@@ -18,6 +18,12 @@ abstract class AbstractMinecraftTransformer protected constructor(
     internal val dynamicTransformerDependencies: Configuration = project.configurations.maybeCreate(Constants.DYNAMIC_TRANSFORMER_DEPENDENCIES)
 
     @ApiStatus.Internal
+    open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, output: Path) : MinecraftJar {
+        //TODO: do this for real
+        return clientjar
+    }
+
+    @ApiStatus.Internal
     abstract fun transform(minecraft: MinecraftJar): MinecraftJar
 
     private fun applyRunConfigs(tasks: TaskContainer) {

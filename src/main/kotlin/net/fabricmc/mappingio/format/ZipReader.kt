@@ -4,6 +4,9 @@ import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.net.URI
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.util.zip.ZipInputStream
 import kotlin.io.path.inputStream
@@ -297,6 +300,8 @@ object ZipReader {
         @Suppress("UNCHECKED_CAST")
         return null as T
     }
+
+    fun openZipFileSystem(path: Path, args: Map<String, *> = mapOf<String, Any>()): FileSystem = FileSystems.newFileSystem(URI.create("jar:${path.toUri()}"),args, null)
 
     enum class MappingType(val pattern: Regex) {
         TINY(Regex("""(.+[/\\]|^)mappings.tiny$""")),
