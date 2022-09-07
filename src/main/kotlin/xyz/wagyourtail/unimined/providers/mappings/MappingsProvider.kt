@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.providers.mappings
 
 import net.fabricmc.mappingio.MappingReader
+import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
 import net.fabricmc.mappingio.format.*
 import net.fabricmc.mappingio.tree.MappingTreeView
@@ -162,17 +163,16 @@ abstract class MappingsProvider(
             }
         } else {
             for (mapping in mappingsFiles(envType)) {
+                project.logger.warn("mapping ns's already read: ${mappingTree.srcNamespace}, ${mappingTree.dstNamespaces?.joinToString(", ")}")
+                project.logger.warn("Reading mappings from $mapping")
                 if (mapping.extension == "zip" || mapping.extension == "jar") {
                     val contents = ZipReader.readContents(mapping.toPath())
-                    project.logger.info("Detected mapping type: ${ZipReader.getZipTypeFromContentList(contents)}")
+                    project.logger.warn("Detected mapping type: ${ZipReader.getZipTypeFromContentList(contents)}")
                     ZipReader.readMappings(envType, mapping.toPath(), contents, mappingTree)
                 } else if (mapping.name == "client_mappings.txt" || mapping.name == "server_mappings.txt") {
+                    project.logger.warn("Detected proguard mappings")
                     InputStreamReader(mapping.inputStream()).use {
-                        val temp = MemoryMappingTree()
-                        MappingReader.read(it, temp)
-                        temp.srcNamespace = "named"
-                        temp.dstNamespaces = listOf(mappingTree.srcNamespace)
-                        temp.accept(MappingSourceNsSwitch(mappingTree, mappingTree.srcNamespace))
+                        ProGuardReader.read(it, "named", "official", MappingSourceNsSwitch(mappingTree, mappingTree.srcNamespace))
                     }
                 } else {
                     throw IllegalStateException("Unknown mapping file type ${mapping.name}")

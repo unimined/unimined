@@ -280,7 +280,7 @@ abstract class MinecraftProvider(
     }
 
     @ApiStatus.Internal
-    fun provideRunClientTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit) {
+    fun provideRunClientTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit = { }) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
         val nativeDir = clientWorkingDirectory.get().resolve("natives")
@@ -352,7 +352,8 @@ abstract class MinecraftProvider(
             ),
             (minecraftDownloader.metadata.getJVMArgs(clientWorkingDirectory.get().resolve("libraries").toPath(), nativeDir.toPath()) + betacraftArgs).toMutableList(),
             clientWorkingDirectory.get(),
-            mutableMapOf()
+            mutableMapOf(),
+            assetsDir ?: clientWorkingDirectory.get().resolve("assets").toPath()
         )
 
         overrides(runConfig)
@@ -383,7 +384,8 @@ abstract class MinecraftProvider(
             mutableListOf("nogui"),
             mutableListOf(),
             project.projectDir.resolve("run").resolve("server"),
-            mutableMapOf()
+            mutableMapOf(),
+            project.projectDir.resolve("run").resolve("server").toPath()
         )
 
         overrides(runConfig)

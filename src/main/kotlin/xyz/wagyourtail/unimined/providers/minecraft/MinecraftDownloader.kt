@@ -7,9 +7,11 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.Constants.METADATA_URL
-import xyz.wagyourtail.unimined.SemVerUtils
 import xyz.wagyourtail.unimined.maybeCreate
-import xyz.wagyourtail.unimined.providers.minecraft.version.*
+import xyz.wagyourtail.unimined.providers.minecraft.version.Download
+import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
+import xyz.wagyourtail.unimined.providers.minecraft.version.VersionData
+import xyz.wagyourtail.unimined.providers.minecraft.version.parseVersionData
 import xyz.wagyourtail.unimined.testSha1
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -171,9 +173,6 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
     fun mcVersionCompare(vers1: String, vers2: String): Int {
         if (vers1 == vers2) return 0
-//        if (SemVerUtils.isSemVer(vers1) && SemVerUtils.isSemVer(vers2)) {
-//            return SemVerUtils.SemVer.create(vers1).compareTo(SemVerUtils.SemVer.create(vers2))
-//        }
         for (i in launcherMeta) {
             if (i.asJsonObject["id"].asString == vers1) {
                 return 1

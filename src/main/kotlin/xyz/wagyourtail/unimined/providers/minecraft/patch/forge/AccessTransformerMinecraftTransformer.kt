@@ -134,12 +134,12 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
         val srcId = mappings.getNamespaceId(sourceNamespace)
 
         if (srcId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw RuntimeException("Invalid source namespace $sourceNamespace")
+            throw RuntimeException("Invalid source namespace $sourceNamespace, valid namespaces are: ${mappings.srcNamespace}, ${mappings.dstNamespaces.joinToString(", ")}")
         }
 
         val targetId = mappings.getNamespaceId(targetNamespace)
         if (targetId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw RuntimeException("Invalid target namespace $targetNamespace")
+            throw RuntimeException("Invalid target namespace $targetNamespace, valid namespaces are: ${mappings.srcNamespace}, ${mappings.dstNamespaces.joinToString(", ")}")
         }
 
         val fallbackSrcId = mappings.getNamespaceId(fallbackSrc).let {

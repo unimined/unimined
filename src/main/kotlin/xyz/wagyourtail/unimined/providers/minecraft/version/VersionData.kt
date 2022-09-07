@@ -142,28 +142,47 @@ data class VersionData(
     }
 
     fun getGameArgs(
-        username: String?,
+        username: String,
         gameDir: Path,
         assets: Path,
     ): MutableList<String> {
         val args = getArgsRecursive()
-        return args.mapNotNull { e: String ->
-            if (e == "--uuid" || e == "\${auth_uuid}") null
-            else e.replace("\${auth_player_name}", username!!)
-                .replace("\${version_name}", id)
-                .replace("\${game_directory}", gameDir.toAbsolutePath().toString())
-                .replace("\${assets_root}", assets.toString())
-                .replace("\${game_assets}", gameDir.resolve("resources").toString())
-                .replace("\${assets_index_name}", assetIndex?.id ?: "")
-                .replace("\${assets_index}", assetIndex?.id ?: "")
-                .replace("\${auth_access_token}", "0")
-                .replace("\${clientid}", "0")
-                .replace("\${user_type}", "msa")
-                .replace("\${version_type}", type!!)
-                .replace("\${user_properties}", "")
-        }.toMutableList()
+        return applyGameArgs(
+            args,
+            username,
+            gameDir,
+            assets,
+            assetIndex?.id ?: "",
+            id,
+            type!!
+        )
     }
+}
 
+fun applyGameArgs(
+    args: List<String>,
+    username: String,
+    gameDir: Path,
+    assets: Path,
+    assetIndex: String,
+    id: String,
+    type: String
+): MutableList<String> {
+    return args.mapNotNull { e: String ->
+        if (e == "--uuid" || e == "\${auth_uuid}") null
+        else e.replace("\${auth_player_name}", username)
+            .replace("\${version_name}", id)
+            .replace("\${game_directory}", gameDir.toAbsolutePath().toString())
+            .replace("\${assets_root}", assets.toString())
+            .replace("\${game_assets}", gameDir.resolve("resources").toString())
+            .replace("\${assets_index_name}", assetIndex)
+            .replace("\${assets_index}", assetIndex)
+            .replace("\${auth_access_token}", "0")
+            .replace("\${clientid}", "0")
+            .replace("\${user_type}", "msa")
+            .replace("\${version_type}", type)
+            .replace("\${user_properties}", "")
+    }.toMutableList()
 }
 
 // 2010-07-08T22:00:00+00:00

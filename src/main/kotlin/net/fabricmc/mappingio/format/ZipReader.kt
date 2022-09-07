@@ -1,5 +1,6 @@
 package net.fabricmc.mappingio.format
 
+import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.InputStream
@@ -225,12 +226,15 @@ object ZipReader {
 
                         MappingType.TSRG -> {
                             readInputStreamFor(entry, zip) {
+                                val temp = MemoryMappingTree()
                                 TsrgReader.read(
                                     InputStreamReader(it),
-                                    notchNamespaceName,
-                                    seargeNamespaceName,
-                                    mappingTree
+                                    temp
                                 )
+                                temp.accept(MappingNsRenamer(mappingTree, mapOf(
+                                    temp.srcNamespace to notchNamespaceName,
+                                    temp.dstNamespaces[0] to seargeNamespaceName
+                                )))
                             }
                         }
 

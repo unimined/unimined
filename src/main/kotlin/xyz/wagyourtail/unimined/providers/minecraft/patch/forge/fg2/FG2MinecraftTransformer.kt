@@ -29,10 +29,10 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         val forgeSrc = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:src@zip"
         provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).dependencies.apply {
             val empty = isEmpty()
-            if (!SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7.10")) {
-                add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraftDownloader.version}:srg@zip"))
-            }
             if (empty) {
+                if (!SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7.10")) {
+                    add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraftDownloader.version}:srg@zip"))
+                }
                 if (SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7")) {
                     add(project.dependencies.create(forgeSrc))
                 } else if (SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7.10")) {
@@ -41,6 +41,13 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     if (parent.mcpVersion == null || parent.mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
                     add(project.dependencies.create("de.oceanlabs.mcp:mcp_${parent.mcpChannel}:${parent.mcpVersion}@zip"))
                 }
+            } else {
+                val deps = this.toList()
+                clear()
+                if (!SemVerUtils.matches(provider.minecraftDownloader.version, "<1.7.10")) {
+                    add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraftDownloader.version}:srg@zip"))
+                }
+                addAll(deps)
             }
         }
 

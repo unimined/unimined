@@ -9,6 +9,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
+import xyz.wagyourtail.unimined.providers.minecraft.RunConfig
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
@@ -16,6 +17,7 @@ import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg3.mcpconfig.Mc
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
+import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URI
@@ -65,6 +67,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             if (empty) {
                 if (parent.mcpVersion == null || parent.mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
                 add(project.dependencies.create("de.oceanlabs.mcp:mcp_${parent.mcpChannel}:${parent.mcpVersion}@zip"))
+            } else {
+                val deps = this.filter { it != mcpConfig }
+                clear()
+                add(mcpConfig)
+                addAll(deps)
             }
         }
 
@@ -77,6 +84,30 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 )
             )
         }
+
+        // get forge userdev jar
+        val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
+        if (userdevCfg.has("inject")) {
+            project.logger.warn("injecting forge userdev into minecraft jar")
+            this.addTransform { outputJar ->
+                ZipReader.openZipFileSystem(forgeUd.toPath()).use { inputJar ->
+                    val inject = inputJar.getPath("inject")
+                    if (Files.exists(inject)) {
+                        project.logger.warn("injecting forge userdev into minecraft jar")
+                        Files.walk(inject).forEach { path ->
+                            project.logger.warn("testing $path")
+                            if (!Files.isDirectory(path)) {
+                                val target = outputJar.getPath("/${inject.relativize(path)}")
+                                project.logger.warn("injecting $path into minecraft jar")
+                                Files.createDirectories(target.parent)
+                                Files.copy(path, target, StandardCopyOption.REPLACE_EXISTING)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         super.afterEvaluate()
     }
 
@@ -225,10 +256,19 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return super.transform(atMcJar)
     }
 
-    private fun getArgValue(arg: String): String {
+    private fun getArgValue(config: RunConfig, arg: String): String {
         if (arg.startsWith("{")) {
             return when (arg) {
-                "{modules}" -> TODO()
+                "{minecraft_classpath_file}" -> {
+                    TODO()
+                }
+                "{modules}" -> {
+                    val libs = mapOf(*provider.mcLibraries.dependencies.map { it.group + ":" + it.name + ":" + it.version to it }.toTypedArray())
+                    userdevCfg.get("modules").asJsonArray.joinToString(File.pathSeparator) {
+                        val dep = libs[it.asString] ?: throw IllegalStateException("Module ${it.asString} not found in mc libraries")
+                        provider.mcLibraries.getFile(dep).toString()
+                    }
+                }
                 "{assets_root}" -> {
                     val assetsDir = provider.minecraftDownloader.metadata.assetIndex?.let {
                         provider.assetsDownloader.downloadAssets(project, it)
@@ -236,8 +276,16 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     (assetsDir ?: provider.clientWorkingDirectory.get().resolve("assets").toPath()).toString()
                 }
                 "{asset_index}" -> provider.minecraftDownloader.metadata.assetIndex?.id ?: ""
-                "{source_roots}" -> TODO()
-                "{mcp_mappings}" -> TODO()
+                "{source_roots}" -> {
+                    val outputs = listOf(config.classpath.output.singleFile.toString())
+                    outputs.joinToString(File.pathSeparator) { "mod%%$it" }
+                }
+                "{mcp_mappings}" -> "unimined.stub"
+                "{natives}" -> {
+                    val nativesDir = provider.clientWorkingDirectory.get().resolve("natives").toPath()
+                    nativesDir.maybeCreate()
+                    nativesDir.toString()
+                }
                 else -> throw IllegalArgumentException("Unknown arg $arg")
             }
         } else {
@@ -262,7 +310,16 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 val args = get("args")?.asJsonArray?.map { it.asString } ?: listOf()
                 val jvmArgs = get("jvmArgs")?.asJsonArray?.map { it.asString } ?: listOf()
                 val env = get("env")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString } ?: mapOf()
-
+                val props = get("props")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString } ?: mapOf()
+                provider.provideRunClientTask(tasks) { run ->
+                    run.mainClass = mainClass
+                    run.args.clear()
+                    run.args += args.map { getArgValue(run, it) }
+                    run.jvmArgs += jvmArgs.map { getArgValue(run, it) }
+                    run.jvmArgs += props.map { "-D${it.key}=${it.value}" }
+                    run.env += mapOf("FORGE_SPEC" to userdevCfg.get("spec").asNumber.toString())
+                    run.env += env.map { it.key to getArgValue(run, it.value) }
+                }
             }
         }
     }
