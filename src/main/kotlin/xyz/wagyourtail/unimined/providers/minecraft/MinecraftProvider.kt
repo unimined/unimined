@@ -50,7 +50,9 @@ abstract class MinecraftProvider(
     val combined: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_COMBINED_PROVIDER)
     val client: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_CLIENT_PROVIDER)
     val server: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_SERVER_PROVIDER)
-    val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER)
+    val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER).apply {
+        setTransitive(true)
+    }
 
     val minecraftDownloader: MinecraftDownloader = MinecraftDownloader(project, this)
     val assetsDownloader: AssetsDownloader = AssetsDownloader(project, this)

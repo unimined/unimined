@@ -5,6 +5,7 @@ import net.fabricmc.mappingio.format.ZipReader
 import net.minecraftforge.binarypatcher.ConsoleTool
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.*
@@ -21,6 +22,7 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URI
+import java.nio.charset.StandardCharsets
 import java.nio.file.*
 import kotlin.io.path.*
 
@@ -33,6 +35,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     @ApiStatus.Internal
     val forgeUd = project.configurations.maybeCreate(Constants.FORGE_USERDEV)
 
+    @ApiStatus.Internal
+    val clientExtra = project.configurations.maybeCreate(Constants.FORGE_CLIENT_EXTRA)
+
+    @ApiStatus.Internal
     val forgeInstaller = project.configurations.maybeCreate(Constants.FORGE_INSTALLER)
 
     lateinit var mcpConfig: Dependency
@@ -77,12 +83,12 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         for (element in userdevCfg.get("libraries")?.asJsonArray ?: listOf()) {
             if (element.asString.contains("legacydev")) continue
-            provider.mcLibraries.dependencies.add(
-                project.dependencies.create(
-                    element.asString.replace(".+", "")
-
-                )
-            )
+            val dep = element.asString.split(":")
+            if (dep[1] == "gson" && dep[2] == "2.8.0") {
+                provider.mcLibraries.dependencies.add(project.dependencies.create("${dep[0]}:${dep[1]}:2.8.9"))
+            } else {
+                provider.mcLibraries.dependencies.add(project.dependencies.create(element.asString.replace(".+", "")))
+            }
         }
 
         // get forge userdev jar
@@ -139,25 +145,56 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         Files.copy(output, outputPath, StandardCopyOption.REPLACE_EXISTING)
     }
 
-
+    override fun sourceSets(sourceSets: SourceSetContainer) {
+        sourceSets.getByName("main").apply {
+            compileClasspath += clientExtra
+            runtimeClasspath += clientExtra
+        }
+        sourceSets.findByName("client")?.apply {
+            compileClasspath += clientExtra
+            runtimeClasspath += clientExtra
+        }
+        sourceSets.findByName("server")?.apply {
+            compileClasspath += clientExtra
+            runtimeClasspath += clientExtra
+        }
+    }
 
     override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, output: Path): MinecraftJar {
         project.logger.warn("Merging client and server jars...")
-        val patched = if (userdevCfg["notchObf"]?.asBoolean == true) {
-            executeMcp("merge", output, EnvType.COMBINED)
-            MinecraftJar(clientjar, output, EnvType.COMBINED)
+        unstripResources(clientjar, serverjar, output)
+        return if (userdevCfg["notchObf"]?.asBoolean == true) {
+            if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+                MinecraftJar(clientjar, output, EnvType.COMBINED)
+            } else {
+                executeMcp("merge", output, EnvType.COMBINED)
+                MinecraftJar(clientjar, output, EnvType.COMBINED)
+            }
         } else {
-            executeMcp("rename", output, EnvType.COMBINED)
-            MinecraftJar(clientjar, output, EnvType.COMBINED, "searge")
+            if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+                MinecraftJar(clientjar, output, EnvType.COMBINED, "searge")
+            } else {
+                executeMcp("rename", output, EnvType.COMBINED)
+                MinecraftJar(clientjar, output, EnvType.COMBINED, "searge")
+            }
+
         }
-        // unstrip resources
-        return unstripResources(clientjar, serverjar, patched)
     }
 
-    private fun unstripResources(baseMinecraftClient: MinecraftJar, baseMinecraftServer: MinecraftJar, patchedMinecraft: MinecraftJar): MinecraftJar {
-        val unstripped = patchedMinecraft.jarPath.parent.resolve("${patchedMinecraft.jarPath.nameWithoutExtension}-unstripped.jar")
-        patchedMinecraft.jarPath.copyTo(unstripped, StandardCopyOption.REPLACE_EXISTING)
-        ZipReader.openZipFileSystem(unstripped, mapOf("mutable" to true)).use { unstripped ->
+    private fun unstripResources(baseMinecraftClient: MinecraftJar, baseMinecraftServer: MinecraftJar, patchedMinecraft: Path) {
+//        val unstripped = patchedMinecraft.jarPath.parent.resolve("${patchedMinecraft.jarPath.nameWithoutExtension}-unstripped.jar")
+//        patchedMinecraft.jarPath.copyTo(unstripped, StandardCopyOption.REPLACE_EXISTING)
+        val clientExtra = patchedMinecraft.parent.maybeCreate().resolve("${baseMinecraftClient.jarPath.nameWithoutExtension}-client-extra.jar")
+
+        if (clientExtra.exists()) {
+            if (project.gradle.startParameter.isRefreshDependencies) {
+                clientExtra.deleteExisting()
+            } else {
+                return
+            }
+        }
+
+        ZipReader.openZipFileSystem(clientExtra, mapOf("mutable" to true, "create" to true)).use { unstripped ->
             ZipReader.openZipFileSystem(baseMinecraftClient.jarPath).use { base ->
                 unstrip(base, unstripped)
             }
@@ -165,11 +202,17 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 unstrip(base, unstripped)
             }
         }
-        return MinecraftJar(patchedMinecraft, unstripped)
+        this.clientExtra.dependencies.add(
+            project.dependencies.create(
+                project.files(clientExtra.toString())
+            )
+        )
     }
 
     private fun unstrip(inp: FileSystem, out: FileSystem) {
         for (path in Files.walk(inp.getPath("/"))) {
+            // skip meta-inf
+            if (path.nameCount > 0 && path.getName(0).toString().equals("META-INF", ignoreCase = true)) continue
 //            project.logger.warn("Checking $path")
             if (!path.isDirectory() && path.extension != "class") {
 //                project.logger.warn("Copying $path")
@@ -256,11 +299,13 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return super.transform(atMcJar)
     }
 
+    val legacyClasspath = provider.parent.getLocalCache().maybeCreate().resolve("legacy_classpath.txt")
+
     private fun getArgValue(config: RunConfig, arg: String): String {
         if (arg.startsWith("{")) {
             return when (arg) {
                 "{minecraft_classpath_file}" -> {
-                    TODO()
+                    legacyClasspath.toString()
                 }
                 "{modules}" -> {
                     val libs = mapOf(*provider.mcLibraries.dependencies.map { it.group + ":" + it.name + ":" + it.version to it }.toTypedArray())
@@ -293,7 +338,19 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
+    fun createLegactClasspath() {
+//        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+//        val source = sourceSets.findByName("client") ?: sourceSets.getByName("main")
+
+        legacyClasspath.writeText(
+            (provider.mcLibraries.files + provider.combined.files + provider.client.files + clientExtra.files).joinToString("\n") { it.toString() },
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
+        )
+    }
+
     override fun applyClientRunConfig(tasks: TaskContainer) {
+        createLegactClasspath()
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
             val mainClass = get("main").asString
 
@@ -316,7 +373,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     run.args.clear()
                     run.args += args.map { getArgValue(run, it) }
                     run.jvmArgs += jvmArgs.map { getArgValue(run, it) }
-                    run.jvmArgs += props.map { "-D${it.key}=${it.value}" }
+                    run.jvmArgs += props.map { "-D${it.key}=${getArgValue(run, it.value)}" }
                     run.env += mapOf("FORGE_SPEC" to userdevCfg.get("spec").asNumber.toString())
                     run.env += env.map { it.key to getArgValue(run, it.value) }
                 }
