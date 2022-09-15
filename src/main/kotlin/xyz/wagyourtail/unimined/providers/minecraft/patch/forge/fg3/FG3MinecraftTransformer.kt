@@ -186,6 +186,12 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 //        patchedMinecraft.jarPath.copyTo(unstripped, StandardCopyOption.REPLACE_EXISTING)
         val clientExtra = patchedMinecraft.parent.maybeCreate().resolve("${baseMinecraftClient.jarPath.nameWithoutExtension}-client-extra.jar")
 
+        this.clientExtra.dependencies.add(
+            project.dependencies.create(
+                project.files(clientExtra.toString())
+            )
+        )
+
         if (clientExtra.exists()) {
             if (project.gradle.startParameter.isRefreshDependencies) {
                 clientExtra.deleteExisting()
@@ -198,15 +204,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             ZipReader.openZipFileSystem(baseMinecraftClient.jarPath).use { base ->
                 unstrip(base, unstripped)
             }
-            ZipReader.openZipFileSystem(baseMinecraftServer.jarPath).use { base ->
-                unstrip(base, unstripped)
-            }
         }
-        this.clientExtra.dependencies.add(
-            project.dependencies.create(
-                project.files(clientExtra.toString())
-            )
-        )
     }
 
     private fun unstrip(inp: FileSystem, out: FileSystem) {
