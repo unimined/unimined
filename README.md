@@ -10,9 +10,9 @@ unified minecraft modding environment.
 
 ## TODO
 * Refactor, refactor, refactor
-* FG3+ support (>1.12.2)
+~~* FG3+ support (>1.12.2)~~
 * test user AT support
-* fix fg3 versions of 1.12.2
+~~* fix fg3 versions of 1.12.2~~
 * fabric aw support
 * combined jar support
 * figure out how to get forge to recognise resources as part of the dev mod
@@ -21,6 +21,9 @@ unified minecraft modding environment.
   * figure out how to determine the correctness of remap output
   * aka automate the verification that versions work
     * list of versions to verify
+      * 1.19.2
+      * 1.17.1
+      * 1.16.5
       * 1.12.2
       * 1.7.10
       * 1.6.4
@@ -28,9 +31,11 @@ unified minecraft modding environment.
       * 1.2.5
       * 1.7.3
       * b1.3_01
+      * a1.1.2_01
   * maybe by hash check?
 * figure out what versions need `-Djava.util.Arrays.useLegacyMergeSort=true` to not randomly crash, this should really be part of the legacy mc version.json, or at least betacraft's, but it's not
-* make myself a maven to host this on
+~~* make myself a maven to host this on~~
+* fix forge mappings on 1.17+
 
 ## Example Usage
 ```groovy

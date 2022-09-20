@@ -184,7 +184,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     private fun unstripResources(baseMinecraftClient: MinecraftJar, baseMinecraftServer: MinecraftJar, patchedMinecraft: Path) {
 //        val unstripped = patchedMinecraft.jarPath.parent.resolve("${patchedMinecraft.jarPath.nameWithoutExtension}-unstripped.jar")
 //        patchedMinecraft.jarPath.copyTo(unstripped, StandardCopyOption.REPLACE_EXISTING)
-        val clientExtra = patchedMinecraft.parent.maybeCreate().resolve("${baseMinecraftClient.jarPath.nameWithoutExtension}-client-extra.jar")
+        val clientExtra = patchedMinecraft.parent.maybeCreate().resolve("client-extra-${provider.minecraftDownloader.version}.jar")
 
         this.clientExtra.dependencies.add(
             project.dependencies.create(
@@ -242,7 +242,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 outFolder.resolve("binpatches.pack.lzma").apply { writeBytes(it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) }
             }
 
-            val patchedMC = outFolder.resolve("${jarPath.nameWithoutExtension}-${forgeUniversal.name}-${forgeUniversal.version}.${jarPath.extension}")
+            val patchedMC = outFolder.resolve("${jarPath.nameWithoutExtension.replace("minecraft", "forge")}-${forgeUniversal.name}-${forgeUniversal.version}.${jarPath.extension}")
             if (!patchedMC.exists() || project.gradle.startParameter.isRefreshDependencies) {
                 patchedMC.deleteIfExists()
                 val args = (userdevCfg["binpatcher"].asJsonObject["args"].asJsonArray.map {
