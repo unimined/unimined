@@ -15,7 +15,7 @@ unified minecraft modding environment.
 ~~* fix fg3 versions of 1.12.2~~
 * fabric aw support
 * combined jar support
-* figure out how to get forge to recognise resources as part of the dev mod
+~~* figure out how to get forge to recognise resources as part of the dev mod~~
 * split fg2+ out of the mc jar
 * figure out how to do automated testing
   * figure out how to determine the correctness of remap output
@@ -38,7 +38,7 @@ unified minecraft modding environment.
   * maybe by hash check?
 * figure out what versions need `-Djava.util.Arrays.useLegacyMergeSort=true` to not randomly crash, this should really be part of the legacy mc version.json, or at least betacraft's, but it's not
 ~~* make myself a maven to host this on~~
-* fix forge mappings on 1.17+
+~~* fix forge mappings on 1.17+~~
 
 ## Example Usage
 ```groovy
@@ -64,7 +64,7 @@ minecraft {
     // current available options are: forge, jarMod, fabric
     // if you don't include this, it will default to no mod loader transforms
     forge {
-        // required for 1.7+
+        // required for 1.7+ if you want to use mcp mappings
         it.mcpVersion = '39-1.12'
         it.mcpChannel = 'stable'
         
@@ -99,8 +99,6 @@ sourceSets {
 dependencies {
     minecraft 'net.minecraft:minecraft:1.12.2'
     
-    // this version is actually broken btw, on the post initial release roadmap to fix
-    // if you need up to forge 1.12.2, use the latest FG2 version (2847 iirc)
     forge 'net.minecraftforge:forge:1.12.2-14.23.5.2860'
     
     // mappings "mappinggroup:mappingname:version"
@@ -150,7 +148,8 @@ sourceSets {
 
 dependencies {
     minecraft 'net.minecraft:minecraft:b1.3_01'
-
+    
+    // you'll have to provide them locally unless I decide to throw these on my maven
     jarMod 'local_mod:ModLoader:B1.3_01v5@zip'
     mappings 'local_mod:mcp:29a@zip'
 
