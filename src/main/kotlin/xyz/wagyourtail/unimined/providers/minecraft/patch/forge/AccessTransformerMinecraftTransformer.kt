@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.exists
+import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
@@ -90,7 +91,7 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
 
     fun getOutputJarLocation(baseMinecraft: Path): Path {
         return provider.parent.getLocalCache()
-            .resolve("${baseMinecraft.fileName}-at-${ats.getSha1().substring(0..8)}.jar")
+            .resolve("${baseMinecraft.nameWithoutExtension}-at-${ats.getSha1().substring(0..8)}.jar")
     }
 
     fun transformLegacyTransformer(file: String): String {
@@ -133,12 +134,12 @@ class AccessTransformerMinecraftTransformer(project: Project, provider: Minecraf
         val srcId = mappings.getNamespaceId(sourceNamespace)
 
         if (srcId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw RuntimeException("Invalid source namespace $sourceNamespace")
+            throw RuntimeException("Invalid source namespace $sourceNamespace, valid namespaces are: ${mappings.srcNamespace}, ${mappings.dstNamespaces.joinToString(", ")}")
         }
 
         val targetId = mappings.getNamespaceId(targetNamespace)
         if (targetId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw RuntimeException("Invalid target namespace $targetNamespace")
+            throw RuntimeException("Invalid target namespace $targetNamespace, valid namespaces are: ${mappings.srcNamespace}, ${mappings.dstNamespaces.joinToString(", ")}")
         }
 
         val fallbackSrcId = mappings.getNamespaceId(fallbackSrc).let {

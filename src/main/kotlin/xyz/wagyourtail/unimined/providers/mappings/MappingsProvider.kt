@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.providers.mappings
 
 import net.fabricmc.mappingio.MappingReader
+import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
 import net.fabricmc.mappingio.format.*
 import net.fabricmc.mappingio.tree.MappingTreeView
@@ -40,22 +41,39 @@ abstract class MappingsProvider(
         }
     }
 
+    private fun getOfficialMappings(): MemoryMappingTree {
+        val off = project.configurations.maybeCreate(Constants.OFFICIAL_MAPPINGS_INTERNAL)
+        off.dependencies.add(
+            project.dependencies.create(
+                "net.minecraft:minecraft:${parent.minecraftProvider.minecraftDownloader.version}:client-mappings"
+            )
+        )
+        val file = off.resolve().first { it.extension ==  "txt" }
+        val tree = MemoryMappingTree()
+        file.inputStream().use { ProGuardReader.read(it.reader(), "mojmap", "official", MappingSourceNsSwitch(tree, "official")) }
+        return tree
+    }
+
     private val mappingExports = mutableListOf<MappingExport>()
 
     fun addExport(envType: String, export: (MappingExport) -> Unit) {
-        addExport(EnvType.valueOf(envType), export)
+        addExport(EnvType.valueOf(envType), false, export)
     }
 
     @ApiStatus.Internal
-    fun addExport(envType: EnvType, export: (MappingExport) -> Unit) {
+    fun addExport(envType: EnvType, now: Boolean = false, export: (MappingExport) -> Unit) {
         val me = MappingExport(envType)
         export(me)
         if (me.location != null && me.type != null) {
+            mappingExports.add(me)
             if (mappingTrees.contains(envType)) {
                 project.logger.warn("Mappings for $envType already exist, exporting ${me.location} directly.")
                 me.export(mappingTrees[envType]!!)
+            } else {
+                if (now) {
+                    getMappingTree(envType)
+                }
             }
-            mappingExports.add(me)
         }
     }
 
@@ -125,10 +143,12 @@ abstract class MappingsProvider(
 
     private fun writeToCache(file: Path, mappingTree: MappingTreeView) {
         file.parent.maybeCreate()
+        val filtered = MemoryMappingTree()
+        mappingTree.accept(MappingDstNsFilter(filtered, listOf("intermediary", "searge", "named").filter { mappingTree.dstNamespaces.contains(it) }))
         ZipOutputStream(file.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use {
             it.putNextEntry(ZipEntry("mappings/mappings.tiny"))
             OutputStreamWriter(it).let { writer ->
-                mappingTree.accept(Tiny2Writer2(writer, false))
+                filtered.accept(Tiny2Writer2(writer, false))
                 writer.flush()
             }
             it.closeEntry()
@@ -158,17 +178,16 @@ abstract class MappingsProvider(
             }
         } else {
             for (mapping in mappingsFiles(envType)) {
+                project.logger.warn("mapping ns's already read: ${mappingTree.srcNamespace}, ${mappingTree.dstNamespaces?.joinToString(", ")}")
+                project.logger.warn("Reading mappings from $mapping")
                 if (mapping.extension == "zip" || mapping.extension == "jar") {
                     val contents = ZipReader.readContents(mapping.toPath())
-                    project.logger.info("Detected mapping type: ${ZipReader.getZipTypeFromContentList(contents)}")
+                    project.logger.warn("Detected mapping type: ${ZipReader.getZipTypeFromContentList(contents)}")
                     ZipReader.readMappings(envType, mapping.toPath(), contents, mappingTree)
                 } else if (mapping.name == "client_mappings.txt" || mapping.name == "server_mappings.txt") {
+                    project.logger.warn("Detected proguard mappings")
                     InputStreamReader(mapping.inputStream()).use {
-                        val temp = MemoryMappingTree()
-                        MappingReader.read(it, temp)
-                        temp.srcNamespace = "named"
-                        temp.dstNamespaces = listOf(mappingTree.srcNamespace)
-                        temp.accept(MappingSourceNsSwitch(mappingTree, mappingTree.srcNamespace))
+                        ProGuardReader.read(it, "named", "official", MappingSourceNsSwitch(mappingTree, mappingTree.srcNamespace))
                     }
                 } else {
                     throw IllegalStateException("Unknown mapping file type ${mapping.name}")
@@ -176,6 +195,13 @@ abstract class MappingsProvider(
             }
             if (hasStub) {
                 getStub(envType).visit(mappingTree)
+            }
+            if (mappingTree.dstNamespaces.contains("srg")) {
+                project.logger.warn("Detected TSRG2 mappings (1.17+) - converting to have the right class names for runtime forge")
+                // read mojmap (possible again, TODO: detect if already there on named)
+                val mojmap = getOfficialMappings()
+                mojmap.accept(mappingTree)
+                SeargeFromTsrg2.apply("srg", "mojmap", "searge", mappingTree)
             }
             writeToCache(file, mappingTree)
         }

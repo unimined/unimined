@@ -7,9 +7,11 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.Constants.METADATA_URL
-import xyz.wagyourtail.unimined.SemVerUtils
 import xyz.wagyourtail.unimined.maybeCreate
-import xyz.wagyourtail.unimined.providers.minecraft.version.*
+import xyz.wagyourtail.unimined.providers.minecraft.version.Download
+import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
+import xyz.wagyourtail.unimined.providers.minecraft.version.VersionData
+import xyz.wagyourtail.unimined.providers.minecraft.version.parseVersionData
 import xyz.wagyourtail.unimined.testSha1
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -29,6 +31,23 @@ import kotlin.properties.Delegates
 @Suppress("MemberVisibilityCanBePrivate")
 class MinecraftDownloader(val project: Project, private val parent: MinecraftProvider) {
 
+    companion object {
+        fun download(download: Download, path: Path) {
+
+            if (testSha1(download.size, download.sha1, path)) {
+                return
+            }
+
+            download.url?.toURL()?.openStream()?.use {
+                Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
+            }
+
+            if (!testSha1(download.size, download.sha1, path)) {
+                throw Exception("Failed to download " + download.url)
+            }
+        }
+    }
+
     var client by Delegates.notNull<Boolean>()
     var server by Delegates.notNull<Boolean>()
 
@@ -43,22 +62,44 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
             parent.disableCombined.set(true)
         }
 
+        project.logger.warn("Disable combined: ${parent.disableCombined.get()}")
+
         client = !parent.disableCombined.get() || sourceSets.findByName("client") != null
         server = !parent.disableCombined.get() || sourceSets.findByName("server") != null
 
         if (client) {
-            parent.client.dependencies.add(
-                project.dependencies.create(
-                    "net.minecraft:minecraft:${version}:client"
+            if (parent.disableCombined.get()) {
+                project.logger.warn("selecting split-jar client for sourceset client")
+                parent.client.dependencies.add(
+                    project.dependencies.create(
+                        "net.minecraft:minecraft:${version}:client"
+                    )
                 )
-            )
+            } else {
+                project.logger.warn("selecting combined-jar for sourceset client")
+                parent.client.dependencies.add(
+                    project.dependencies.create(
+                        "net.minecraft:minecraft:${version}"
+                    )
+                )
+            }
         }
         if (server) {
-            parent.server.dependencies.add(
-                project.dependencies.create(
-                    "net.minecraft:minecraft:${version}:server"
+            if (parent.disableCombined.get()) {
+                project.logger.warn("selecting split-jar server for sourceset server")
+                parent.server.dependencies.add(
+                    project.dependencies.create(
+                        "net.minecraft:minecraft:${version}:server"
+                    )
                 )
-            )
+            } else {
+                project.logger.warn("selecting combined-jar for sourceset server")
+                parent.server.dependencies.add(
+                    project.dependencies.create(
+                        "net.minecraft:minecraft:${version}"
+                    )
+                )
+            }
         }
 
         if (parent.disableCombined.get()) {
@@ -132,9 +173,6 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
     fun mcVersionCompare(vers1: String, vers2: String): Int {
         if (vers1 == vers2) return 0
-//        if (SemVerUtils.isSemVer(vers1) && SemVerUtils.isSemVer(vers2)) {
-//            return SemVerUtils.SemVer.create(vers1).compareTo(SemVerUtils.SemVer.create(vers2))
-//        }
         for (i in launcherMeta) {
             if (i.asJsonObject["id"].asString == vers1) {
                 return 1
@@ -242,11 +280,6 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
     }
 
-    private val minecraftCombined: Path by lazy {
-        //TODO: actually combine the two
-        minecraftClient
-    }
-
     private val clientMappings: Path by lazy {
         val mappings = metadata.downloads.get("client_mappings") ?: throw IllegalStateException("No client mappings found for version $version")
         val mappingsPath = clientMappingsDownloadPath(version)
@@ -264,7 +297,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         return when (envType) {
             EnvType.CLIENT -> minecraftClient
             EnvType.SERVER -> minecraftServer
-            EnvType.COMBINED -> minecraftCombined
+            EnvType.COMBINED -> throw IllegalStateException("This should be handled at mcprovider by calling transformer merge")
         }
     }
 
@@ -286,21 +319,6 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
             EnvType.CLIENT -> clientMappings
             EnvType.SERVER -> serverMappings
             EnvType.COMBINED -> clientMappings
-        }
-    }
-
-    private fun download(download: Download, path: Path) {
-
-        if (testSha1(download.size, download.sha1, path)) {
-            return
-        }
-
-        download.url?.toURL()?.openStream()?.use {
-            Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
-        }
-
-        if (!testSha1(download.size, download.sha1, path)) {
-            throw Exception("Failed to download " + download.url)
         }
     }
 

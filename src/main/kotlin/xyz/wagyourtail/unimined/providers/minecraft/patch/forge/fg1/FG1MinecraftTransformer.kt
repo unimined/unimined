@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.providers.minecraft.patch.forge
+package xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg1
 
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
@@ -7,17 +7,15 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.tree.ClassNode
-import org.objectweb.asm.tree.FieldInsnNode
-import org.objectweb.asm.tree.LdcInsnNode
-import org.objectweb.asm.tree.MethodInsnNode
-import org.objectweb.asm.tree.TypeInsnNode
+import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.consumerApply
 import xyz.wagyourtail.unimined.deleteRecursively
 import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import java.io.InputStream
 import java.net.URI
@@ -56,7 +54,9 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         val atsOut = minecraft.let(consumerApply {
             // resolve forge
-            val forge = jarModConfiguration(envType).resolve().firstOrNull()?.toPath() ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath() ?: throw IllegalStateException("No forge jar found for $envType!")
+            val forge = jarModConfiguration(envType).resolve().firstOrNull()?.toPath()
+                ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath()
+                ?: throw IllegalStateException("No forge jar found for $envType!")
 
 
             val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
@@ -317,4 +317,3 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return outSet
     }
 }
-

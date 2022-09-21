@@ -9,6 +9,7 @@ import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.XMLBuilder
 import java.io.File
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 import kotlin.io.path.relativeTo
 
 data class RunConfig(
@@ -21,6 +22,7 @@ data class RunConfig(
     val jvmArgs: MutableList<String>,
     val workingDir: File,
     val env: MutableMap<String, String>,
+    val assetsDir: Path
 ) {
 
     fun createIdeaRunConfig(javaVersion: JavaVersion) {

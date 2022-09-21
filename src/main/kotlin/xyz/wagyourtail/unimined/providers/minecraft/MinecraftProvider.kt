@@ -50,7 +50,9 @@ abstract class MinecraftProvider(
     val combined: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_COMBINED_PROVIDER)
     val client: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_CLIENT_PROVIDER)
     val server: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_SERVER_PROVIDER)
-    val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER)
+    val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER).apply {
+        setTransitive(true)
+    }
 
     val minecraftDownloader: MinecraftDownloader = MinecraftDownloader(project, this)
     val assetsDownloader: AssetsDownloader = AssetsDownloader(project, this)
@@ -71,7 +73,8 @@ abstract class MinecraftProvider(
     abstract val disableCombined: Property<Boolean>
     abstract val alphaServerVersionOverride: Property<String?>
 
-    private var minecraftTransformer: AbstractMinecraftTransformer = NoTransformMinecraftTransformer(project, this)
+    @ApiStatus.Internal
+    var minecraftTransformer: AbstractMinecraftTransformer = NoTransformMinecraftTransformer(project, this)
 
     init {
         overrideMainClassClient.convention(null as String?).finalizeValueOnRead()
@@ -190,13 +193,16 @@ abstract class MinecraftProvider(
 
     @ApiStatus.Internal
     fun getMinecraftWithMapping(envType: EnvType, namespace: String): Path {
+        project.logger.warn("Getting minecraft with mapping $envType:$namespace")
         return minecraftMapped.computeIfAbsent(envType) {
             mutableMapOf()
         }.computeIfAbsent(namespace) {
-//            if (envType == EnvType.COMBINED)
-//                getMinecraftWithMapping(EnvType.CLIENT, namespace) //TODO: fix to actually merge
-//            else
-                val mc = MinecraftJar(minecraftDownloader.getMinecraft(envType), envType, "official", "official")
+                val mc = if (envType == EnvType.COMBINED) {
+                    val client = MinecraftJar(minecraftDownloader.getMinecraft(EnvType.CLIENT), EnvType.CLIENT, "official", "official")
+                    val server = MinecraftJar(minecraftDownloader.getMinecraft(EnvType.SERVER), EnvType.SERVER, "official", "official")
+                    minecraftTransformer.merge(client, server, minecraftDownloader.combinedJarDownloadPath(minecraftDownloader.version))
+                }
+                else MinecraftJar(minecraftDownloader.getMinecraft(envType), envType, "official", "official")
                 minecraftTransformer.afterRemap(envType, namespace, mcRemapper.provide(minecraftTransformer.transform(mc), namespace))
         }
     }
@@ -276,7 +282,7 @@ abstract class MinecraftProvider(
     }
 
     @ApiStatus.Internal
-    fun provideRunClientTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit) {
+    fun provideRunClientTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit = { }) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
         val nativeDir = clientWorkingDirectory.get().resolve("natives")
@@ -348,7 +354,8 @@ abstract class MinecraftProvider(
             ),
             (minecraftDownloader.metadata.getJVMArgs(clientWorkingDirectory.get().resolve("libraries").toPath(), nativeDir.toPath()) + betacraftArgs).toMutableList(),
             clientWorkingDirectory.get(),
-            mutableMapOf()
+            mutableMapOf(),
+            assetsDir ?: clientWorkingDirectory.get().resolve("assets").toPath()
         )
 
         overrides(runConfig)
@@ -379,7 +386,8 @@ abstract class MinecraftProvider(
             mutableListOf("nogui"),
             mutableListOf(),
             project.projectDir.resolve("run").resolve("server"),
-            mutableMapOf()
+            mutableMapOf(),
+            project.projectDir.resolve("run").resolve("server").toPath()
         )
 
         overrides(runConfig)

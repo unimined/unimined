@@ -82,6 +82,9 @@ open class JarModMinecraftTransformer(
             val mc = URI.create("jar:${target.toUri()}")
             try {
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
+                    if (out.getPath("META-INF").exists()) {
+                        out.getPath("META-INF").deleteRecursively()
+                    }
                     for (file in jarmod) {
                         ZipInputStream(file.inputStream()).use {
                             var entry = it.nextEntry
@@ -101,9 +104,6 @@ open class JarModMinecraftTransformer(
                                 }
                                 entry = it.nextEntry
                             }
-                        }
-                        if (out.getPath("META-INF").exists()) {
-                            out.getPath("META-INF").deleteRecursively()
                         }
                     }
                     transform.forEach { it(out) }
