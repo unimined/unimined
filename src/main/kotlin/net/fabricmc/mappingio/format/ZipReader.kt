@@ -233,7 +233,7 @@ object ZipReader {
                                 )
                                 temp.accept(MappingNsRenamer(mappingTree, mapOf(
                                     temp.srcNamespace to notchNamespaceName,
-                                    temp.dstNamespaces[0] to seargeNamespaceName
+//                                    temp.dstNamespaces[0] to seargeNamespaceName
                                 )))
                             }
                         }

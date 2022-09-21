@@ -47,5 +47,8 @@ object Constants {
 
     @ApiStatus.Internal
     const val FORGE_INSTALLER = "forgeInstaller"
+
+    @ApiStatus.Internal
+    const val OFFICIAL_MAPPINGS_INTERNAL = "officialMappingsHiddenDontTouch"
 }
 

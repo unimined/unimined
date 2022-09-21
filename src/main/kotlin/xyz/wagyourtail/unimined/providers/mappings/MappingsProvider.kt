@@ -41,6 +41,19 @@ abstract class MappingsProvider(
         }
     }
 
+    private fun getOfficialMappings(): MemoryMappingTree {
+        val off = project.configurations.maybeCreate(Constants.OFFICIAL_MAPPINGS_INTERNAL)
+        off.dependencies.add(
+            project.dependencies.create(
+                "net.minecraft:minecraft:${parent.minecraftProvider.minecraftDownloader.version}:client-mappings"
+            )
+        )
+        val file = off.resolve().first { it.extension ==  "txt" }
+        val tree = MemoryMappingTree()
+        file.inputStream().use { ProGuardReader.read(it.reader(), "mojmap", "official", MappingSourceNsSwitch(tree, "official")) }
+        return tree
+    }
+
     private val mappingExports = mutableListOf<MappingExport>()
 
     fun addExport(envType: String, export: (MappingExport) -> Unit) {
@@ -130,10 +143,12 @@ abstract class MappingsProvider(
 
     private fun writeToCache(file: Path, mappingTree: MappingTreeView) {
         file.parent.maybeCreate()
+        val filtered = MemoryMappingTree()
+        mappingTree.accept(MappingDstNsFilter(filtered, listOf("intermediary", "searge", "named").filter { mappingTree.dstNamespaces.contains(it) }))
         ZipOutputStream(file.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use {
             it.putNextEntry(ZipEntry("mappings/mappings.tiny"))
             OutputStreamWriter(it).let { writer ->
-                mappingTree.accept(Tiny2Writer2(writer, false))
+                filtered.accept(Tiny2Writer2(writer, false))
                 writer.flush()
             }
             it.closeEntry()
@@ -180,6 +195,13 @@ abstract class MappingsProvider(
             }
             if (hasStub) {
                 getStub(envType).visit(mappingTree)
+            }
+            if (mappingTree.dstNamespaces.contains("srg")) {
+                project.logger.warn("Detected TSRG2 mappings (1.17+) - converting to have the right class names for runtime forge")
+                // read mojmap (possible again, TODO: detect if already there on named)
+                val mojmap = getOfficialMappings()
+                mojmap.accept(mappingTree)
+                SeargeFromTsrg2.apply("srg", "mojmap", "searge", mappingTree)
             }
             writeToCache(file, mappingTree)
         }
