@@ -320,8 +320,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 }
                 "{asset_index}" -> provider.minecraftDownloader.metadata.assetIndex?.id ?: ""
                 "{source_roots}" -> {
-                    val outputs = listOf(config.classpath.output.singleFile.toString())
-                    outputs.joinToString(File.pathSeparator) { "mod%%$it" }
+                    config.classpath.output.files.joinToString(File.pathSeparator) { "mod%%$it" }
                 }
                 "{mcp_mappings}" -> "unimined.stub"
                 "{natives}" -> {
