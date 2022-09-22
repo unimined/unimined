@@ -229,6 +229,8 @@ object ZipReader {
                                 val temp = MemoryMappingTree()
                                 TsrgReader.read(
                                     InputStreamReader(it),
+                                    "official",
+                                    "searge",
                                     temp
                                 )
                                 temp.accept(MappingNsRenamer(mappingTree, mapOf(
