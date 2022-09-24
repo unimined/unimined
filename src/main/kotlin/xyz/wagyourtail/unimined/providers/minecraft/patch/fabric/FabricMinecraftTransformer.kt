@@ -12,7 +12,6 @@ import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTrans
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import java.io.InputStreamReader
 import java.net.URI
-import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.writeText
@@ -157,14 +156,14 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
 
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
-        provider.provideRunClientTask(tasks) { task ->
+        provider.provideVanillaRunClientTask(tasks) { task ->
             clientMainClass?.let { task.mainClass = it }
             task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.CLIENT)}\"")
         }
     }
 
     override fun applyServerRunConfig(tasks: TaskContainer) {
-        provider.provideRunServerTask(tasks) { task ->
+        provider.provideVanillaRunServerTask(tasks) { task ->
             serverMainClass?.let { task.mainClass = it }
             task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.SERVER)}\"")
         }

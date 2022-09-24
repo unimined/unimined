@@ -51,7 +51,7 @@ abstract class MinecraftProvider(
     val client: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_CLIENT_PROVIDER)
     val server: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_SERVER_PROVIDER)
     val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER).apply {
-        setTransitive(true)
+        isTransitive = true
     }
 
     val minecraftDownloader: MinecraftDownloader = MinecraftDownloader(project, this)
@@ -282,7 +282,7 @@ abstract class MinecraftProvider(
     }
 
     @ApiStatus.Internal
-    fun provideRunClientTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit = { }) {
+    fun provideVanillaRunClientTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit = { }) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
         val nativeDir = clientWorkingDirectory.get().resolve("natives")
@@ -373,7 +373,7 @@ abstract class MinecraftProvider(
     }
 
     @ApiStatus.Internal
-    fun provideRunServerTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit) {
+    fun provideVanillaRunServerTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
         @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")

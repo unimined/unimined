@@ -117,7 +117,7 @@ open class JarModMinecraftTransformer(
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
-        provider.provideRunClientTask(tasks) {
+        provider.provideVanillaRunClientTask(tasks) {
             if (clientMainClass != null) {
                 it.mainClass = clientMainClass as String
             }
@@ -125,7 +125,7 @@ open class JarModMinecraftTransformer(
     }
 
     override fun applyServerRunConfig(tasks: TaskContainer) {
-        provider.provideRunServerTask(tasks) {
+        provider.provideVanillaRunServerTask(tasks) {
             if (serverMainClass != null) {
                 it.mainClass = serverMainClass as String
             }

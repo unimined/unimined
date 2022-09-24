@@ -104,7 +104,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
-        provider.provideRunClientTask(tasks) {
+        provider.provideVanillaRunClientTask(tasks) {
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
             it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMcpMappings}"
             it.args += "--tweakClass ${parent.tweakClass ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"

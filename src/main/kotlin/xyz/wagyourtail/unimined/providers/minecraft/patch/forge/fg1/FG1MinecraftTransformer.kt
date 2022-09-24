@@ -233,7 +233,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
-        provider.provideRunClientTask(tasks) {
+        provider.provideVanillaRunClientTask(tasks) {
             it.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${it.workingDir.absolutePath}\"")
         }
     }
