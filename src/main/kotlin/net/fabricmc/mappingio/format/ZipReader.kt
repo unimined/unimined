@@ -8,9 +8,12 @@ import java.io.InputStreamReader
 import java.net.URI
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import kotlin.io.path.inputStream
+import kotlin.io.path.outputStream
 
 object ZipReader {
 
@@ -307,7 +310,14 @@ object ZipReader {
         return null as T
     }
 
-    fun openZipFileSystem(path: Path, args: Map<String, *> = mapOf<String, Any>()): FileSystem = FileSystems.newFileSystem(URI.create("jar:${path.toUri()}"),args, null)
+    fun openZipFileSystem(path: Path, args: Map<String, *> = mapOf<String, Any>()): FileSystem {
+        if (!Files.exists(path) && args["create"] == true) {
+            ZipOutputStream(path.outputStream()).use { stream ->
+                stream.closeEntry()
+            }
+        }
+        return FileSystems.newFileSystem(URI.create("jar:${path.toUri()}"), args, null)
+    }
 
     enum class MappingType(val pattern: Regex) {
         TINY(Regex("""(.+[/\\]|^)mappings.tiny$""")),
