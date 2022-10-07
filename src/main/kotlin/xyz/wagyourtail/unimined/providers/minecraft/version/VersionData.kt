@@ -181,7 +181,7 @@ fun applyGameArgs(
             .replace("\${clientid}", "0")
             .replace("\${user_type}", "msa")
             .replace("\${version_type}", type)
-            .replace("\${user_properties}", "")
+            .replace("\${user_properties}", "{}")
     }.toMutableList()
 }
 
