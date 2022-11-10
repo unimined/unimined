@@ -147,7 +147,7 @@ abstract class MinecraftProvider(
 
         main.compileClasspath += mcLibraries
         main.runtimeClasspath += mcLibraries
-        main.output.resourcesDir = main.output.classesDirs.singleFile
+        main.runtimeClasspath += project.files(main.output.resourcesDir)
 
         client?.let {
             it.compileClasspath += this.client + main.compileClasspath + main.output
@@ -345,6 +345,7 @@ abstract class MinecraftProvider(
             project,
             "runClient",
             "Minecraft Client",
+            sourceSets.getByName("main"),
             sourceSets.findByName("client") ?: sourceSets.getByName("main"),
             overrideMainClassClient.getOrElse(minecraftDownloader.metadata.mainClass)!!,
             minecraftDownloader.metadata.getGameArgs(
@@ -381,6 +382,7 @@ abstract class MinecraftProvider(
             project,
             "runServer",
             "Minecraft Server",
+            sourceSets.getByName("main"),
             sourceSets.findByName("server") ?: sourceSets.getByName("main"),
             overrideMainClassServer.getOrElse(minecraftDownloader.metadata.mainClass)!!, // TODO: get from meta-inf, this is wrong
             mutableListOf("nogui"),

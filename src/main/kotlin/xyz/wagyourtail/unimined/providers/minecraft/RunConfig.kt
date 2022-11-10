@@ -16,7 +16,8 @@ data class RunConfig(
     val project: Project,
     val taskName: String,
     var description: String,
-    val classpath: SourceSet,
+    val commonClasspath: SourceSet,
+    val launchClasspath: SourceSet,
     var mainClass: String,
     val args: MutableList<String>,
     val jvmArgs: MutableList<String>,
@@ -39,7 +40,7 @@ data class RunConfig(
                         }.toTypedArray()
                     ),
                     XMLBuilder("option").addStringOption("name", "MAIN_CLASS_NAME").addStringOption("value", mainClass),
-                    XMLBuilder("module").addStringOption("name", "${project.name}.${classpath.name}"),
+                    XMLBuilder("module").addStringOption("name", "${project.name}.${launchClasspath.name}"),
                     XMLBuilder("option").addStringOption("name", "WORKING_DIRECTORY").addStringOption("value", "\$PROJECT_DIR\$/${workingDir.toPath().relativeTo(project.rootProject.projectDir.toPath())}"),
                     XMLBuilder("option").addStringOption("name", "VM_PARAMETERS").addStringOption("value", jvmArgs.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it }),
                     XMLBuilder("option").addStringOption("name", "PROGRAM_PARAMETERS").addStringOption("value", args.joinToString(" ")),
@@ -61,7 +62,7 @@ data class RunConfig(
             it.environment.putAll(env)
             workingDir.mkdirs()
 
-            it.classpath = classpath.runtimeClasspath
+            it.classpath = launchClasspath.runtimeClasspath
 
             it.args = args
             it.jvmArgs = jvmArgs
