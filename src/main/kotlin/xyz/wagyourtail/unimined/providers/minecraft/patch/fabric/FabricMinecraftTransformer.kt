@@ -1,6 +1,9 @@
 package xyz.wagyourtail.unimined.providers.minecraft.patch.fabric
 
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
@@ -12,6 +15,9 @@ import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTrans
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import java.io.InputStreamReader
 import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.writeText
@@ -22,6 +28,8 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
 ) {
     val fabric: Configuration = project.configurations.maybeCreate(Constants.FABRIC_PROVIDER)
     val fabricJson: Configuration = project.configurations.maybeCreate(Constants.FABRIC_JSON)
+
+    val include: Configuration = project.configurations.maybeCreate(Constants.INCLUDE_PROVIDER)
 
     var clientMainClass: String? = null
     var serverMainClass: String? = null
@@ -166,6 +174,68 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         provider.provideVanillaRunServerTask(tasks) { task ->
             serverMainClass?.let { task.mainClass = it }
             task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.SERVER)}\"")
+        }
+    }
+
+    override fun afterRemapJarTask(output: Path) {
+        ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
+            val mod = fs.getPath("fabric.mod.json")
+            if (!Files.exists(mod)) {
+                throw IllegalStateException("fabric.mod.json not found in jar")
+            }
+            val json = JsonParser.parseReader(InputStreamReader(Files.newInputStream(mod))).asJsonObject
+            var jars = json.get("jars")?.asJsonArray
+            if (jars == null) {
+                jars = JsonArray()
+                json.add("jars", jars)
+            }
+            Files.createDirectories(fs.getPath("META-INF/jars/"))
+            val includeCache = provider.parent.getLocalCache().resolve("includeCache")
+            Files.createDirectories(includeCache)
+            for (dep in include.dependencies) {
+                val path = fs.getPath("META-INF/jars/${dep.name}-${dep.version}.jar")
+                val cachePath = includeCache.resolve("${dep.name}-${dep.version}.jar")
+                if (!Files.exists(cachePath)) {
+                    Files.copy(
+                        include.files(dep).first { it.extension == "jar" }.toPath(),
+                        includeCache.resolve("${dep.name}-${dep.version}.jar"),
+                        StandardCopyOption.REPLACE_EXISTING
+                    )
+
+                    ZipReader.openZipFileSystem(cachePath, mapOf("mutable" to true)).use { innerfs ->
+                        val innermod = innerfs.getPath("fabric.mod.json")
+                        if (!Files.exists(innermod)) {
+                            val innerjson = JsonObject()
+                            innerjson.addProperty("schemaVersion", 1)
+                            var artifactString = ""
+                            if (dep.group != null) {
+                                artifactString += dep.group!!.replace(".", "_") + "_"
+                            }
+                            artifactString += dep.name
+
+                            innerjson.addProperty("id", artifactString)
+                            innerjson.addProperty("version", dep.version)
+                            innerjson.addProperty("name", dep.name)
+                            val custom = JsonObject()
+                            custom.addProperty("fabric-loom:generated", true)
+                            innerjson.add("custom", custom)
+                            Files.write(
+                                innermod,
+                                innerjson.toString().toByteArray(),
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.TRUNCATE_EXISTING
+                            )
+                        }
+                    }
+                }
+
+                Files.copy(cachePath, path, StandardCopyOption.REPLACE_EXISTING)
+
+                jars.add(JsonObject().apply {
+                    addProperty("file", "META-INF/jars/${dep.name}-${dep.version}.jar")
+                })
+                Files.write(mod, json.toString().toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
+            }
         }
     }
 }

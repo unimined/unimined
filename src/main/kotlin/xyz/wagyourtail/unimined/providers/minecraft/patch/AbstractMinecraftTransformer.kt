@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.providers.minecraft.patch
 
+import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
@@ -56,5 +57,10 @@ abstract class AbstractMinecraftTransformer protected constructor(
     @ApiStatus.Internal
     open fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
         return baseMinecraft
+    }
+
+    @ApiStatus.Internal
+    open fun afterRemapJarTask(output: Path) {
+        // do nothing
     }
 }

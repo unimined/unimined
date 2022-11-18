@@ -14,6 +14,8 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.UniminedExtension
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 abstract class RemapJarTask : Jar() {
     private val minecraftProvider = project.extensions.getByType(MinecraftProvider::class.java)
@@ -29,9 +31,6 @@ abstract class RemapJarTask : Jar() {
     abstract val fallbackFromNamespace: Property<String>
 
     @get:Input
-    abstract val fallbackToNamespace: Property<String>
-
-    @get:Input
     abstract val targetNamespace: Property<String>
 
     @get:Input
@@ -45,7 +44,6 @@ abstract class RemapJarTask : Jar() {
     init {
         sourceNamespace.convention(minecraftProvider.targetNamespace)
         fallbackFromNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
-        fallbackToNamespace.convention("official")
         targetNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
         envType.convention(EnvType.COMBINED)
         minecraftTarget.finalizeValueOnRead()
@@ -53,6 +51,10 @@ abstract class RemapJarTask : Jar() {
 
     @TaskAction
     fun run() {
+        if (targetNamespace.get() == sourceNamespace.get()) {
+            Files.copy(inputFile.get().asFile.toPath(), outputs.files.files.first().toPath(), StandardCopyOption.REPLACE_EXISTING)
+            return
+        }
         val env = if (minecraftTarget.isPresent) minecraftTarget.get() else if (minecraftProvider.disableCombined.get()) {
             envType.get().name
         } else {
@@ -60,8 +62,9 @@ abstract class RemapJarTask : Jar() {
         }
         val envType = EnvType.valueOf(env)
         val remapperB = TinyRemapper.newRemapper()
-            .withMappings(uniminedExtension.mappingsProvider.getMappingProvider(envType, sourceNamespace.get(), fallbackFromNamespace.get(), fallbackToNamespace.get(), targetNamespace.get()))
+            .withMappings(uniminedExtension.mappingsProvider.getMappingProvider(envType, sourceNamespace.get(), fallbackFromNamespace.get(), targetNamespace.get(), targetNamespace.get()))
             .skipLocalVariableMapping(true)
+            .ignoreConflicts(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .extension(MixinExtension())
         minecraftProvider.mcRemapper.tinyRemapperConf(remapperB)
@@ -83,6 +86,7 @@ abstract class RemapJarTask : Jar() {
         }
         remapper.finish()
 
+        minecraftProvider.minecraftTransformer.afterRemapJarTask(outputs.files.files.first().toPath())
     }
 
 
