@@ -24,6 +24,8 @@ object Constants {
 
     const val FORGE_PROVIDER = "forge"
 
+    const val INCLUDE_PROVIDER = "include"
+
     val ASSET_BASE_URL: URI = URI.create("https://resources.download.minecraft.net/")
 
     val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
