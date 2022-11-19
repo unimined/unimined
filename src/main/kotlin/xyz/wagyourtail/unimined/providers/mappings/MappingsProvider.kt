@@ -187,7 +187,7 @@ abstract class MappingsProvider(
                 } else if (mapping.name == "client_mappings.txt" || mapping.name == "server_mappings.txt") {
                     project.logger.warn("Detected proguard mappings")
                     InputStreamReader(mapping.inputStream()).use {
-                        ProGuardReader.read(it, "named", "official", mappingTree)
+                        ProGuardReader.read(it, "named", "official", MappingSourceNsSwitch(mappingTree, "official"))
                     }
                 } else {
                     throw IllegalStateException("Unknown mapping file type ${mapping.name}")
