@@ -14,6 +14,7 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.UniminedExtension
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
@@ -81,6 +82,8 @@ abstract class RemapJarTask : Jar() {
         OutputConsumerPath.Builder(outputs.files.files.first().toPath()).build().use {
             it.addNonClassFiles(
                 inputFile.get().asFile.toPath(),
+                remapper,
+                listOf(AccessWidenerMinecraftTransformer.awRemapper(sourceNamespace.get(), targetNamespace.get()))
             )
             remapper.apply(it)
         }
