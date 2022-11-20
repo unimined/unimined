@@ -3,24 +3,32 @@ package xyz.wagyourtail.unimined.providers.minecraft.patch.fabric
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import net.fabricmc.accesswidener.AccessWidener
+import net.fabricmc.accesswidener.AccessWidenerClassVisitor
+import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Opcodes
 import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.getSha1
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
+import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.writeText
+import kotlin.io.path.*
 
 class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(
     project,
@@ -31,6 +39,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
 
     val include: Configuration = project.configurations.maybeCreate(Constants.INCLUDE_PROVIDER)
 
+    var accessWidener: File? = null
     var clientMainClass: String? = null
     var serverMainClass: String? = null
 
@@ -38,6 +47,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         project.repositories.maven {
             it.url = URI.create("https://maven.fabricmc.net")
         }
+        FabricApiExtension.apply(project)
     }
 
     override fun afterEvaluate() {
@@ -147,9 +157,43 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
 
     }
 
-    override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        //TODO AW
-        return minecraft
+    override fun transform(minecraft: MinecraftJar): MinecraftJar = minecraft
+
+    override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path = if (accessWidener != null) {
+            val output = getOutputJarLocation(baseMinecraft)
+            if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+                output
+            } else {
+                val aw = AccessWidener()
+                AccessWidenerReader(aw).read(BufferedReader(accessWidener!!.reader()))
+                if (aw.namespace == namespace) {
+                    Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
+                    ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
+                        for (target in aw.targets) {
+                            val targetClass = target.replace(".", "/") + ".class"
+                            val targetPath = fs.getPath(targetClass)
+                            val reader = ClassReader(targetPath.inputStream())
+                            val writer = ClassWriter(0)
+                            val visitor = AccessWidenerClassVisitor.createClassVisitor(Opcodes.ASM9, writer, aw)
+                            reader.accept(visitor, 0)
+                            Files.write(
+                                targetPath,
+                                writer.toByteArray(),
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.TRUNCATE_EXISTING
+                            )
+                        }
+                    }
+                    output
+                } else {
+                    baseMinecraft
+                }
+            }
+        } else baseMinecraft
+
+    fun getOutputJarLocation(baseMinecraft: Path): Path {
+        return provider.parent.getLocalCache()
+            .resolve("${baseMinecraft.nameWithoutExtension}-aw-${accessWidener!!.toPath().getSha1()}.jar")
     }
 
     private fun getIntermediaryClassPath(envType: EnvType): String {

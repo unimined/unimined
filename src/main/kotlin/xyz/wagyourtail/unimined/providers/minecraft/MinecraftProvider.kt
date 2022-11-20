@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.providers.minecraft
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import net.minecraftforge.artifactural.api.artifact.Artifact
 import net.minecraftforge.artifactural.api.artifact.ArtifactIdentifier
 import net.minecraftforge.artifactural.api.artifact.ArtifactType
@@ -116,6 +118,14 @@ abstract class MinecraftProvider(
         action(minecraftTransformer as FabricMinecraftTransformer)
     }
 
+    fun fabric(@DelegatesTo(value = FabricMinecraftTransformer::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+        fabric {
+            action.delegate = it
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     fun jarMod() {
         jarMod {}
     }
@@ -128,6 +138,14 @@ abstract class MinecraftProvider(
         action(minecraftTransformer as JarModMinecraftTransformer)
     }
 
+    fun jarMod(@DelegatesTo(value = JarModMinecraftTransformer::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+        jarMod {
+            action.delegate = it
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     fun forge() {
         forge {}
     }
@@ -138,6 +156,14 @@ abstract class MinecraftProvider(
         }
         minecraftTransformer = ForgeMinecraftTransformer(project, this)
         action(minecraftTransformer as ForgeMinecraftTransformer)
+    }
+
+    fun forge(@DelegatesTo(value = ForgeMinecraftTransformer::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+        forge {
+            action.delegate = it
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
     }
 
     private fun sourceSets(sourceSets: SourceSetContainer) {

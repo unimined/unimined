@@ -32,6 +32,7 @@ dependencies {
     testImplementation(kotlin("test"))
     // guava
     implementation("com.google.guava:guava:31.1-jre")
+
     // gson
     implementation("com.google.code.gson:gson:2.9.0")
 
@@ -52,6 +53,9 @@ dependencies {
 
     // pack200 provided by apache commons-compress
     implementation("org.apache.commons:commons-compress:1.21")
+
+    // aw
+    implementation("net.fabricmc:access-widener:2.1.0")
 }
 
 tasks.jar {
