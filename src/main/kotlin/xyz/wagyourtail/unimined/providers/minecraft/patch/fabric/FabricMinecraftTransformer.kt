@@ -164,30 +164,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 output
             } else {
-                val aw = AccessWidener()
-                AccessWidenerReader(aw).read(BufferedReader(accessWidener!!.reader()))
-                if (aw.namespace == namespace) {
-                    Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
-                    ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
-                        for (target in aw.targets) {
-                            val targetClass = target.replace(".", "/") + ".class"
-                            val targetPath = fs.getPath(targetClass)
-                            val reader = ClassReader(targetPath.inputStream())
-                            val writer = ClassWriter(0)
-                            val visitor = AccessWidenerClassVisitor.createClassVisitor(Opcodes.ASM9, writer, aw)
-                            reader.accept(visitor, 0)
-                            Files.write(
-                                targetPath,
-                                writer.toByteArray(),
-                                StandardOpenOption.CREATE,
-                                StandardOpenOption.TRUNCATE_EXISTING
-                            )
-                        }
-                    }
-                    output
-                } else {
-                    baseMinecraft
-                }
+                AccessWidenerMinecraftTransformer.transform(accessWidener!!.toPath(), namespace, baseMinecraft, output, false)
             }
         } else baseMinecraft
 
