@@ -172,7 +172,7 @@ class ModRemapper(
                         it.addNonClassFiles(
                             artifact.file.toPath(),
                             tinyRemapper,
-                            listOf(AccessWidenerMinecraftTransformer.awRemapper(mcRemapper.provider.targetNamespace.get(), fromMappings), innerJarStripper) + NonClassCopyMode.FIX_META_INF.remappers
+                            listOf(AccessWidenerMinecraftTransformer.awRemapper(fromMappings, mcRemapper.provider.targetNamespace.get()), innerJarStripper) + NonClassCopyMode.FIX_META_INF.remappers
                         )
                         tinyRemapper.apply(it, outputMap[artifact.file])
                     }
