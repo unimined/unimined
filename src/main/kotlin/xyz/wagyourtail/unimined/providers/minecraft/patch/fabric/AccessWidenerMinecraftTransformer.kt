@@ -25,6 +25,7 @@ import java.nio.file.StandardOpenOption
 import kotlin.io.path.extension
 import kotlin.io.path.inputStream
 import kotlin.io.path.readText
+import kotlin.io.path.reader
 
 object AccessWidenerMinecraftTransformer {
 
@@ -51,7 +52,7 @@ object AccessWidenerMinecraftTransformer {
 
     fun transform(accessWidener: Path, namespace: String, baseMinecraft: Path, output: Path, throwIfNSWrong: Boolean): Path {
         val aw = AccessWidener()
-        AccessWidenerReader(aw).read(BufferedReader(accessWidener!!.reader()))
+        AccessWidenerReader(aw).read(BufferedReader(accessWidener.reader()))
         if (aw.namespace == namespace) {
             Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
             ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
