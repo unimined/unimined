@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined
 
 
 fun main(args: Array<String>) {
-    System.out.println(SemVerUtils.matches("11.1", "^10\\."))
+    println(SemVerUtils.matches("11.1", "^10\\."))
 }
 
 @Suppress("UNUSED")
@@ -99,7 +99,8 @@ object SemVerUtils {
 
         companion object {
             fun create(version: String): SemVer {
-                val matcher = semverPattern.find(version) ?: throw IllegalArgumentException("Invalid semver string: $version")
+                val matcher = semverPattern.find(version)
+                    ?: throw IllegalArgumentException("Invalid semver string: $version")
                 val major: Int = matcher.groups[1]?.value?.toInt()!!
                 val minor = if (matcher.groups[3]?.value == null) 0 else matcher.groups[3]?.value?.toInt()!!
                 val patch = if (matcher.groups[5]?.value == null) 0 else matcher.groups[5]?.value?.toInt()!!
@@ -129,7 +130,8 @@ object SemVerUtils {
         }
     }
 
-    data class PrefixedRange(val prefix: String, val major: String?, val minor: String?, val patch: String?) : SemVerMatcher {
+    data class PrefixedRange(val prefix: String, val major: String?, val minor: String?, val patch: String?) :
+            SemVerMatcher {
 
         override fun matches(version: SemVer): Boolean {
             if (prefix == "*" && major == null && minor == null && patch == null) {
@@ -231,7 +233,8 @@ object SemVerUtils {
 
 
             fun parse(range: String): PrefixedRange {
-                val m = prefixedRangePattern.find(range) ?: throw IllegalArgumentException("Invalid version range: $range")
+                val m = prefixedRangePattern.find(range)
+                    ?: throw IllegalArgumentException("Invalid version range: $range")
                 val prefix: String = m.groups[1]?.value!!
                 val major: String? = m.groups[2]?.value
                 val minor: String? = m.groups[4]?.value
@@ -264,7 +267,7 @@ object SemVerUtils {
         companion object {
             var andRangePattern = Regex("\\S*[^-] [^-]\\S*")
             fun parse(range: String): AndRange {
-                if(!andRangePattern.matches(range)) {
+                if (!andRangePattern.matches(range)) {
                     throw IllegalArgumentException("Invalid range $range")
                 }
                 val parts = range.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
@@ -285,7 +288,7 @@ object SemVerUtils {
         companion object {
             var orRangePattern = Regex("\\S*[^-]\\|\\|[^-]\\S*")
             fun parse(range: String): OrRange {
-                if(!orRangePattern.matches(range)) {
+                if (!orRangePattern.matches(range)) {
                     throw IllegalArgumentException("Invalid range $range")
                 }
                 val parts = range.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()

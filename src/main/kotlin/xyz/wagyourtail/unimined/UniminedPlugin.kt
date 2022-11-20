@@ -6,7 +6,6 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
-import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.remap.RemapJarTask
 
 @Suppress("UNUSED")
@@ -14,12 +13,16 @@ class UniminedPlugin : Plugin<Project> {
     lateinit var ext: UniminedExtension
 
     override fun apply(project: Project) {
-        project.apply(mapOf(
-            "plugin" to "java"
-        ))
-        project.apply(mapOf(
-            "plugin" to "idea"
-        ))
+        project.apply(
+            mapOf(
+                "plugin" to "java"
+            )
+        )
+        project.apply(
+            mapOf(
+                "plugin" to "idea"
+            )
+        )
 
         ext = project.extensions.create("unimined", UniminedExtension::class.java, project)
         remapJarTask(project, project.tasks)

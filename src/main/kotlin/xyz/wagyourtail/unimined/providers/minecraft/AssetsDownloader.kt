@@ -4,7 +4,6 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.Constants.ASSET_BASE_URL
-import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.version.AssetIndex
 import xyz.wagyourtail.unimined.testSha1
 import java.io.InputStreamReader
@@ -12,6 +11,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import kotlin.io.path.createDirectories
 import kotlin.io.path.inputStream
 
 class AssetsDownloader(val project: Project, private val parent: MinecraftProvider) {
@@ -21,7 +21,7 @@ class AssetsDownloader(val project: Project, private val parent: MinecraftProvid
         val dir = parent.parent.getGlobalCache().resolve("assets")
         val index = dir.resolve("indexes").resolve("${assets.id}.json")
 
-        index.parent.maybeCreate()
+        index.parent.createDirectories()
 
         updateIndex(assets, index)
 
@@ -61,7 +61,7 @@ class AssetsDownloader(val project: Project, private val parent: MinecraftProvid
                     if (!testSha1(size, hash, assetPath)) {
                         val assetUrl = URI.create("$ASSET_BASE_URL${hash.substring(0, 2)}/$hash")
                         project.logger.info("Downloading $key : $assetUrl")
-                        assetPath.parent.maybeCreate()
+                        assetPath.parent.createDirectories()
                         assetUrl.toURL().openStream().use {
                             Files.copy(it, assetPath, StandardCopyOption.REPLACE_EXISTING)
                         }
@@ -71,9 +71,13 @@ class AssetsDownloader(val project: Project, private val parent: MinecraftProvid
                     }
 
                     if (copyToResources) {
-                        val resourcePath = project.projectDir.resolve("run").resolve("client").resolve("resources").resolve(key)
+                        val resourcePath = project.projectDir.resolve("run")
+                            .resolve("client")
+                            .resolve("resources")
+                            .resolve(key)
                         resourcePath.parentFile.mkdirs()
-                        assetPath.inputStream().use { Files.copy(it, resourcePath.toPath(), StandardCopyOption.REPLACE_EXISTING) }
+                        assetPath.inputStream()
+                            .use { Files.copy(it, resourcePath.toPath(), StandardCopyOption.REPLACE_EXISTING) }
                     }
                 }
             }

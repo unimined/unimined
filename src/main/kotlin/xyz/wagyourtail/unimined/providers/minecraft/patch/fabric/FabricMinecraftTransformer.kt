@@ -3,17 +3,11 @@ package xyz.wagyourtail.unimined.providers.minecraft.patch.fabric
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import net.fabricmc.accesswidener.AccessWidener
-import net.fabricmc.accesswidener.AccessWidenerClassVisitor
-import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.Opcodes
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.getSha1
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
@@ -21,7 +15,6 @@ import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.remap.RemapJarTask
-import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
@@ -29,7 +22,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.*
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.exists
+import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.writeText
 
 class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(
     project,
@@ -85,7 +81,11 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
             )
         }
 
-        val json = InputStreamReader(fabricJson.files(fabricJson.dependencies.last()).last().inputStream()).use { reader ->
+        val json = InputStreamReader(
+            fabricJson.files(fabricJson.dependencies.last())
+                .last()
+                .inputStream()
+        ).use { reader ->
             JsonParser.parseReader(reader).asJsonObject
         }
 
@@ -160,12 +160,19 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar = minecraft
 
-    override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path = if (accessWidener != null) {
+    override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path =
+        if (accessWidener != null) {
             val output = getOutputJarLocation(baseMinecraft)
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 output
             } else {
-                AccessWidenerMinecraftTransformer.transform(accessWidener!!.toPath(), namespace, baseMinecraft, output, false)
+                AccessWidenerMinecraftTransformer.transform(
+                    accessWidener!!.toPath(),
+                    namespace,
+                    baseMinecraft,
+                    output,
+                    false
+                )
             }
         } else baseMinecraft
 
@@ -177,8 +184,8 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     private fun getIntermediaryClassPath(envType: EnvType): String {
         val remapClasspath = provider.parent.getLocalCache().resolve("remapClasspath.txt")
         val s = provider.mcLibraries.files.joinToString(":") + ":" +
-            provider.parent.modProvider.modRemapper.internalModRemapperConfiguration(envType).files.joinToString(":") + ":" +
-            provider.getMinecraftWithMapping(envType, "intermediary")
+                provider.parent.modProvider.modRemapper.internalModRemapperConfiguration(envType).files.joinToString(":") + ":" +
+                provider.getMinecraftWithMapping(envType, "intermediary")
 
         remapClasspath.writeText(s, options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
         return remapClasspath.absolutePathString()
@@ -188,14 +195,20 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     override fun applyClientRunConfig(tasks: TaskContainer) {
         provider.provideVanillaRunClientTask(tasks) { task ->
             clientMainClass?.let { task.mainClass = it }
-            task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.CLIENT)}\"")
+            task.jvmArgs += listOf(
+                "-Dfabric.development=true",
+                "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.CLIENT)}\""
+            )
         }
     }
 
     override fun applyServerRunConfig(tasks: TaskContainer) {
         provider.provideVanillaRunServerTask(tasks) { task ->
             serverMainClass?.let { task.mainClass = it }
-            task.jvmArgs += listOf("-Dfabric.development=true", "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.SERVER)}\"")
+            task.jvmArgs += listOf(
+                "-Dfabric.development=true",
+                "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.SERVER)}\""
+            )
         }
     }
 

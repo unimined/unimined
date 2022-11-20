@@ -18,13 +18,6 @@ inline fun <T, U> consumerApply(crossinline action: T.() -> U): (T) -> U {
     return { action(it) }
 }
 
-fun Path.maybeCreate(): Path {
-    if (!this.exists()) {
-        Files.createDirectories(this)
-    }
-    return this
-}
-
 fun Configuration.getFile(dep: Dependency, extension: Regex = Regex("jar")): File {
     resolve()
     return files(dep).first { it.extension.matches(extension) }
@@ -90,6 +83,7 @@ fun Path.getSha1(): String {
     return hash
 }
 
+
 fun runJarInSubprocess(
     jar: Path,
     vararg args: String,
@@ -98,7 +92,7 @@ fun runJarInSubprocess(
     env: Map<String, String> = mapOf(),
     wait: Boolean = true,
     jvmArgs: List<String> = listOf()
-) : Int? {
+): Int? {
     val javaHome = System.getProperty("java.home")
     val javaBin = Paths.get(javaHome, "bin", if (OSUtils.oSId == "windows") "java.exe" else "java")
     if (!javaBin.exists()) {
@@ -119,7 +113,8 @@ fun runJarInSubprocess(
     processBuilder.redirectOutput()
     processBuilder.redirectError()
 //    processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT)
-    LoggerFactory.getLogger(UniminedExtension::class.java).warn("Running: ${processBuilder.command().joinToString(" ")}")
+    LoggerFactory.getLogger(UniminedExtension::class.java)
+        .warn("Running: ${processBuilder.command().joinToString(" ")}")
     val process = processBuilder.start()
     if (wait) {
         process.waitFor()

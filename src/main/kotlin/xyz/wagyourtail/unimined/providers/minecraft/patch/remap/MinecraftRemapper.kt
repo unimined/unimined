@@ -6,11 +6,9 @@ import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.consumerApply
-import xyz.wagyourtail.unimined.maybeCreate
-import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.AccessTransformerMinecraftTransformer2
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.AccessTransformerMinecraftTransformer
 import java.nio.file.Path
 import kotlin.io.path.*
 
@@ -28,7 +26,7 @@ class MinecraftRemapper(
     fun provide(minecraft: MinecraftJar, remapTo: String, skipMappingId: Boolean = false): Path {
         return minecraft.let(consumerApply {
             val parent = if (mappings.hasStubs(envType)) {
-                provider.parent.getLocalCache().resolve("minecraft").maybeCreate()
+                provider.parent.getLocalCache().resolve("minecraft").createDirectories()
             } else {
                 jarPath.parent
             }
@@ -70,8 +68,9 @@ class MinecraftRemapper(
             try {
                 remapper.readInputs(jarPath)
                 OutputConsumerPath.Builder(target).build().use {
-                    it.addNonClassFiles(jarPath, remapper,
-                        listOf(AccessTransformerMinecraftTransformer2.atRemapper()) + NonClassCopyMode.FIX_META_INF.remappers
+                    it.addNonClassFiles(
+                        jarPath, remapper,
+                        listOf(AccessTransformerMinecraftTransformer.atRemapper()) + NonClassCopyMode.FIX_META_INF.remappers
                     )
                     remapper.apply(it)
                 }

@@ -3,7 +3,12 @@ package xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg3.mcpconfig
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 
-data class McpConfigFunction(val version: String, val args: List<ConfigValue>, val jvmArgs: List<ConfigValue>, val repo: String) {
+data class McpConfigFunction(
+    val version: String,
+    val args: List<ConfigValue>,
+    val jvmArgs: List<ConfigValue>,
+    val repo: String
+) {
     companion object {
         private const val VERSION_KEY = "version"
         private const val ARGS_KEY = "args"

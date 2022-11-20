@@ -7,7 +7,6 @@ import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.getSha1
-import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.mappings.MappingExportTypes
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
@@ -23,6 +22,7 @@ import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.nameWithoutExtension
 
@@ -42,8 +42,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
     var tweakClass: String? = null
 
     @get:ApiStatus.Internal
-    val srgToMCPAsSRG by lazy {
-        provider.parent.getLocalCache().resolve("mappings").maybeCreate().resolve("srg2mcp.srg").apply {
+    val srgToMCPAsSRG: Path by lazy {
+        provider.parent.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.srg").apply {
             provider.parent.mappingsProvider.addExport(EnvType.COMBINED) {
                 it.location = toFile()
                 it.type = MappingExportTypes.SRG
@@ -54,8 +54,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
     }
 
     @get:ApiStatus.Internal
-    val srgToMCPAsMCP by lazy {
-        provider.parent.getLocalCache().resolve("mappings").maybeCreate().resolve("srg2mcp.jar").apply {
+    val srgToMCPAsMCP: Path by lazy {
+        provider.parent.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.jar").apply {
             provider.parent.mappingsProvider.addExport(EnvType.COMBINED, true) {
                 it.location = toFile()
                 it.type = MappingExportTypes.MCP
@@ -140,15 +140,17 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         for (vers in ForgeVersion.values()) {
             if (files.containsAll(vers.accept) && files.none { it in vers.deny }) {
                 project.logger.info("Files $files")
-                forgeTransformer = when(vers) {
+                forgeTransformer = when (vers) {
                     ForgeVersion.FG1 -> {
                         project.logger.warn("Selected FG1")
                         FG1MinecraftTransformer(project, this)
                     }
+
                     ForgeVersion.FG2 -> {
                         project.logger.warn("Selected FG2")
                         FG2MinecraftTransformer(project, this)
                     }
+
                     ForgeVersion.FG3 -> {
                         project.logger.warn("Selected FG3")
                         FG3MinecraftTransformer(project, this)
@@ -181,8 +183,10 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         JAR_PATCHES("net/minecraft/client/Minecraft.class"),
         VERSION_JSON("version.json"),
         ;
+
         companion object {
             val ffMap = mutableMapOf<String, ForgeFiles>()
+
             init {
                 for (entry in ForgeFiles.values()) {
                     ffMap[entry.path] = entry
@@ -237,7 +241,11 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 output
             } else {
-                AccessTransformerMinecraftTransformer2.transform(ats + listOf(accessTransformer!!.toPath()), baseMinecraft, output)
+                AccessTransformerMinecraftTransformer.transform(
+                    ats + listOf(accessTransformer!!.toPath()),
+                    baseMinecraft,
+                    output
+                )
             }
         } else {
             val output = provider.parent.getLocalCache()
@@ -245,7 +253,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 output
             } else {
-                AccessTransformerMinecraftTransformer2.transform(ats, baseMinecraft, output)
+                AccessTransformerMinecraftTransformer.transform(ats, baseMinecraft, output)
             }
         }
     }

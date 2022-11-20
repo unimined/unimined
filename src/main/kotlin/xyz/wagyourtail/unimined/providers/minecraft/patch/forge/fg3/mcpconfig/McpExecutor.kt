@@ -10,8 +10,6 @@ import org.gradle.api.logging.Logger
 import org.gradle.process.JavaExecSpec
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.getFile
-import xyz.wagyourtail.unimined.maybeCreate
-import xyz.wagyourtail.unimined.providers.mappings.MappingExportTypes
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
@@ -21,11 +19,8 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
+import java.nio.file.*
+import kotlin.io.path.createDirectories
 import kotlin.io.path.writeBytes
 
 data class McpExecutor(
@@ -70,7 +65,7 @@ data class McpExecutor(
     @Throws(IOException::class)
     private fun createStepCache(step: String): Path {
         val stepCache = getStepCache(step)
-        stepCache.maybeCreate()
+        stepCache.createDirectories()
         return stepCache
     }
 
@@ -98,7 +93,8 @@ data class McpExecutor(
         val mappings = minecraftProvider.parent.mappingsProvider.getMappings(EnvType.COMBINED)
         val transformer = ((minecraftProvider.minecraftTransformer as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
         val mcpConfig = mappings.getFile(transformer.mcpConfig, Regex("zip"))
-        val target = getStepCache(step.name).maybeCreate().resolve(transformer.mcpConfigData.mappingsPath.split("/").last())
+        val target = getStepCache(step.name).createDirectories()
+            .resolve(transformer.mcpConfigData.mappingsPath.split("/").last())
         ZipReader.readInputStreamFor(transformer.mcpConfigData.mappingsPath, mcpConfig.toPath()) {
             target.writeBytes(it.readBytes(), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
         }
@@ -186,7 +182,8 @@ data class McpExecutor(
             val mappings = minecraftProvider.parent.mappingsProvider.getMappings(EnvType.COMBINED)
             val transformer = ((minecraftProvider.minecraftTransformer as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
             val mcpConfig = mappings.getFile(transformer.mcpConfig, Regex("zip"))
-            val target = getStepCache(step.name).maybeCreate().resolve(transformer.mcpConfigData.mappingsPath.split("/").last())
+            val target = getStepCache(step.name).createDirectories()
+                .resolve(transformer.mcpConfigData.mappingsPath.split("/").last())
             ZipReader.readInputStreamFor(transformer.mcpConfigData.mappingsPath, mcpConfig.toPath()) {
                 target.writeBytes(it.readBytes(), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
             }

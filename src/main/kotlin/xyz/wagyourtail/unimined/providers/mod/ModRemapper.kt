@@ -11,13 +11,13 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.LazyMutable
-import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.name
 
@@ -37,24 +37,30 @@ class ModRemapper(
     private val serverConfig = Configs(project, EnvType.SERVER, this)
 
 
-    private val internalCombinedModRemapperConfiguration: Configuration = project.configurations.maybeCreate("internalModRemapper").apply {
-        exclude(mapOf(
-            "group" to "net.fabricmc",
-            "module" to "fabric-loader"
-        ))
-    }
+    private val internalCombinedModRemapperConfiguration: Configuration = project.configurations.maybeCreate("internalModRemapper")
+        .apply {
+            exclude(
+                mapOf(
+                    "group" to "net.fabricmc",
+                    "module" to "fabric-loader"
+                )
+            )
+        }
 
     fun internalModRemapperConfiguration(envType: EnvType): Configuration = when (envType) {
         EnvType.COMBINED -> internalCombinedModRemapperConfiguration
         EnvType.CLIENT -> project.configurations.maybeCreate("internalModRemapperClient").apply {
             try {
                 extendsFrom(internalCombinedModRemapperConfiguration)
-            } catch (ignored: InvalidUserDataException) {}
+            } catch (ignored: InvalidUserDataException) {
+            }
         }
+
         EnvType.SERVER -> project.configurations.maybeCreate("internalModRemapperServer").apply {
             try {
                 extendsFrom(internalCombinedModRemapperConfiguration)
-            } catch (ignored: InvalidUserDataException) {}
+            } catch (ignored: InvalidUserDataException) {
+            }
         }
     }
 
@@ -86,7 +92,16 @@ class ModRemapper(
             preTransform(configs.envType, it)
         }
         if (count == 0) return
-        val tr = TinyRemapper.newRemapper().withMappings(mappings.getMappingProvider(configs.envType, fromMappings, "official", fallbackTo, mcRemapper.provider.targetNamespace.get()))
+        val tr = TinyRemapper.newRemapper()
+            .withMappings(
+                mappings.getMappingProvider(
+                    configs.envType,
+                    fromMappings,
+                    "official",
+                    fallbackTo,
+                    mcRemapper.provider.targetNamespace.get()
+                )
+            )
             .renameInvalidLocals(true)
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())
@@ -138,7 +153,7 @@ class ModRemapper(
     }
 
     private fun modTransformFolder(): Path {
-        return mcRemapper.provider.parent.getLocalCache().resolve("modTransform").maybeCreate()
+        return mcRemapper.provider.parent.getLocalCache().resolve("modTransform").createDirectories()
 
     }
 
@@ -172,7 +187,12 @@ class ModRemapper(
                         it.addNonClassFiles(
                             artifact.file.toPath(),
                             tinyRemapper,
-                            listOf(AccessWidenerMinecraftTransformer.awRemapper(fromMappings, mcRemapper.provider.targetNamespace.get()), innerJarStripper) + NonClassCopyMode.FIX_META_INF.remappers
+                            listOf(
+                                AccessWidenerMinecraftTransformer.awRemapper(
+                                    fromMappings,
+                                    mcRemapper.provider.targetNamespace.get()
+                                ), innerJarStripper
+                            ) + NonClassCopyMode.FIX_META_INF.remappers
                         )
                         tinyRemapper.apply(it, outputMap[artifact.file])
                     }
@@ -184,7 +204,7 @@ class ModRemapper(
         return outputs
     }
 
-    private val innerJarStripper : ResourceRemapper = object : ResourceRemapper {
+    private val innerJarStripper: ResourceRemapper = object : ResourceRemapper {
         override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
             return relativePath.name.contains(".mod.json")
         }
@@ -196,12 +216,22 @@ class ModRemapper(
             remapper: TinyRemapper
         ) {
             val output = destinationDirectory.resolve(relativePath)
-            output.parent.maybeCreate()
+            output.parent.createDirectories()
             BufferedReader(InputStreamReader(input)).use { reader ->
                 val json = JsonParser.parseReader(reader)
                 json.asJsonObject.remove("jars")
                 json.asJsonObject.remove("quilt_loader")
-                BufferedWriter(OutputStreamWriter(BufferedOutputStream(Files.newOutputStream(output, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)))).use { writer ->
+                BufferedWriter(
+                    OutputStreamWriter(
+                        BufferedOutputStream(
+                            Files.newOutputStream(
+                                output,
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.TRUNCATE_EXISTING
+                            )
+                        )
+                    )
+                ).use { writer ->
                     GsonBuilder().setPrettyPrinting().create().toJson(json, writer)
                 }
             }
@@ -211,7 +241,7 @@ class ModRemapper(
     @Suppress("MemberVisibilityCanBePrivate")
     data class Configs(val project: Project, val envType: EnvType, val parent: ModRemapper) {
         val configurations = mutableSetOf<Configuration>()
-        private val envTypeName  = envType.classifier?.capitalized() ?: ""
+        private val envTypeName = envType.classifier?.capitalized() ?: ""
 
         private fun registerConfiguration(configuration: Configuration): Configuration {
             configurations += configuration
@@ -222,48 +252,58 @@ class ModRemapper(
             project.configurations.maybeCreate("modCompileOnly$envTypeName")
                 .apply {
                     extendsFrom(project.configurations.getByName("compileOnly"))
-                    exclude(mapOf(
-                        "group" to "net.fabricmc",
-                        "module" to "fabric-loader"
-                    ))
+                    exclude(
+                        mapOf(
+                            "group" to "net.fabricmc",
+                            "module" to "fabric-loader"
+                        )
+                    )
                 })
 
         val modRuntimeOnly: Configuration = registerConfiguration(
             project.configurations.maybeCreate("modRuntimeOnly$envTypeName")
                 .apply {
                     extendsFrom(project.configurations.getByName("runtimeOnly"))
-                    exclude(mapOf(
-                        "group" to "net.fabricmc",
-                        "module" to "fabric-loader"
-                    ))
+                    exclude(
+                        mapOf(
+                            "group" to "net.fabricmc",
+                            "module" to "fabric-loader"
+                        )
+                    )
                 })
 
         val localRuntime: Configuration = project.configurations.maybeCreate("localRuntime$envTypeName").apply {
             extendsFrom(project.configurations.getByName("runtimeOnly"))
-            exclude(mapOf(
-                "group" to "net.fabricmc",
-                "module" to "fabric-loader"
-            ))
+            exclude(
+                mapOf(
+                    "group" to "net.fabricmc",
+                    "module" to "fabric-loader"
+                )
+            )
         }
 
         val modLocalRuntime: Configuration = registerConfiguration(
             project.configurations.maybeCreate("modLocalRuntime" + envTypeName)
                 .apply {
                     extendsFrom(project.configurations.getByName("localRuntime"))
-                    exclude(mapOf(
-                        "group" to "net.fabricmc",
-                        "module" to "fabric-loader"
-                    ))
+                    exclude(
+                        mapOf(
+                            "group" to "net.fabricmc",
+                            "module" to "fabric-loader"
+                        )
+                    )
                 })
 
         val modImplementation: Configuration = registerConfiguration(
             project.configurations.maybeCreate("modImplementation" + envTypeName)
                 .apply {
                     extendsFrom(project.configurations.getByName("implementation"))
-                    exclude(mapOf(
-                        "group" to "net.fabricmc",
-                        "module" to "fabric-loader"
-                    ))
+                    exclude(
+                        mapOf(
+                            "group" to "net.fabricmc",
+                            "module" to "fabric-loader"
+                        )
+                    )
                 })
 
 
@@ -279,12 +319,14 @@ class ModRemapper(
                         runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
                 }
+
                 EnvType.CLIENT -> {
                     sourceSets.findByName("client")?.apply {
                         compileClasspath += modCompileOnly + modImplementation
                         runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
                 }
+
                 EnvType.COMBINED -> {
                     sourceSets.findByName("main")?.apply {
                         compileClasspath += modCompileOnly + modImplementation

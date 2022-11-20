@@ -12,7 +12,6 @@ import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.UniminedExtension
-import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.File
 import java.io.InputStreamReader
@@ -24,6 +23,7 @@ import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
@@ -45,9 +45,10 @@ abstract class MappingsProvider(
                 "net.minecraft:minecraft:${parent.minecraftProvider.minecraftDownloader.version}:client-mappings"
             )
         )
-        val file = off.resolve().first { it.extension ==  "txt" }
+        val file = off.resolve().first { it.extension == "txt" }
         val tree = MemoryMappingTree()
-        file.inputStream().use { ProGuardReader.read(it.reader(), "mojmap", "official", MappingSourceNsSwitch(tree, "official")) }
+        file.inputStream()
+            .use { ProGuardReader.read(it.reader(), "mojmap", "official", MappingSourceNsSwitch(tree, "official")) }
         return tree
     }
 
@@ -139,9 +140,13 @@ abstract class MappingsProvider(
     }
 
     private fun writeToCache(file: Path, mappingTree: MappingTreeView) {
-        file.parent.maybeCreate()
+        file.parent.createDirectories()
         val filtered = MemoryMappingTree()
-        mappingTree.accept(MappingDstNsFilter(filtered, listOf("intermediary", "searge", "named").filter { mappingTree.dstNamespaces.contains(it) }))
+        mappingTree.accept(
+            MappingDstNsFilter(
+                filtered,
+                listOf("intermediary", "searge", "named").filter { mappingTree.dstNamespaces.contains(it) })
+        )
         ZipOutputStream(file.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use {
             it.putNextEntry(ZipEntry("mappings/mappings.tiny"))
             OutputStreamWriter(it).let { writer ->
@@ -175,7 +180,13 @@ abstract class MappingsProvider(
             }
         } else {
             for (mapping in mappingsFiles(envType)) {
-                project.logger.warn("mapping ns's already read: ${mappingTree.srcNamespace}, ${mappingTree.dstNamespaces?.joinToString(", ")}")
+                project.logger.warn(
+                    "mapping ns's already read: ${mappingTree.srcNamespace}, ${
+                        mappingTree.dstNamespaces?.joinToString(
+                            ", "
+                        )
+                    }"
+                )
                 project.logger.warn("Reading mappings from $mapping")
                 if (mapping.extension == "zip" || mapping.extension == "jar") {
                     val contents = ZipReader.readContents(mapping.toPath())
@@ -363,16 +374,20 @@ abstract class MappingsProvider(
             location!!.toPath()
                 .outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
                 .use { os ->
-                    val visitor =  when (type) {
+                    val visitor = when (type) {
                         MappingExportTypes.MCP -> MCPWriter(os, envType.ordinal)
-                        MappingExportTypes.TINY_V2 -> Tiny2Writer2(OutputStreamWriter(os, StandardCharsets.UTF_8), false)
+                        MappingExportTypes.TINY_V2 -> Tiny2Writer2(
+                            OutputStreamWriter(os, StandardCharsets.UTF_8),
+                            false
+                        )
+
                         MappingExportTypes.SRG -> SrgWriter(OutputStreamWriter(os, StandardCharsets.UTF_8))
                         else -> throw RuntimeException("Unknown export type $type")
                     }
                     mappingTree.accept(
                         MappingSourceNsSwitch(
-                            MappingDstNsFilter(visitor
-                               , targetNamespace ?: mappingTree.dstNamespaces
+                            MappingDstNsFilter(
+                                visitor, targetNamespace ?: mappingTree.dstNamespaces
                             ), sourceNamespace ?: mappingTree.srcNamespace
                         )
                     )

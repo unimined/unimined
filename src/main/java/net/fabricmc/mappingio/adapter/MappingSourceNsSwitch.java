@@ -16,19 +16,13 @@
 
 package net.fabricmc.mappingio.adapter;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import net.fabricmc.mappingio.MappedElementKind;
 import net.fabricmc.mappingio.MappingFlag;
 import net.fabricmc.mappingio.MappingUtil;
 import net.fabricmc.mappingio.MappingVisitor;
+
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Adapter switching the source namespace with one of the destination namespaces.
@@ -43,276 +37,317 @@ import net.fabricmc.mappingio.MappingVisitor;
  * changed by setting {@code dropMissingNewSrcName} to true in the constructor.
  */
 public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
-	public MappingSourceNsSwitch(MappingVisitor next, String newSourceNs) {
-		this(next, newSourceNs, false);
-	}
+    private final String newSourceNsName;
+    private final boolean dropMissingNewSrcName;
+    private final Map<String, String> classMap = new HashMap<>();
+    private int newSourceNs;
+    private String oldSourceNsName;
+    private boolean classMapReady;
+    private boolean passThrough;
+    private boolean relayHeaderOrMetadata;
+    private String srcName;
+    private String srcDesc;
+    private int argIdx, lvIndex, startOpIdx;
+    private String[] dstNames;
+    private String[] dstDescs;
 
-	/**
-	 * Create a new MappingSourceNsSwitch instance.
-	 *
-	 * @param next MappingVisitor to pass the output to
-	 * @param newSourceNs namespace to use for the new source name
-	 * @param dropMissingNewSrcName whether to drop elements without a name in newSourceNs, will use original srcName otherwise
-	 */
-	public MappingSourceNsSwitch(MappingVisitor next, String newSourceNs, boolean dropMissingNewSrcName) {
-		super(next);
+    public MappingSourceNsSwitch(MappingVisitor next, String newSourceNs) {
+        this(next, newSourceNs, false);
+    }
 
-		this.newSourceNsName = newSourceNs;
-		this.dropMissingNewSrcName = dropMissingNewSrcName;
-	}
+    /**
+     * Create a new MappingSourceNsSwitch instance.
+     *
+     * @param next MappingVisitor to pass the output to
+     * @param newSourceNs namespace to use for the new source name
+     * @param dropMissingNewSrcName whether to drop elements without a name in newSourceNs, will use original
+     *     srcName otherwise
+     */
+    public MappingSourceNsSwitch(MappingVisitor next, String newSourceNs, boolean dropMissingNewSrcName) {
+        super(next);
 
-	@Override
-	public Set<MappingFlag> getFlags() {
+        this.newSourceNsName = newSourceNs;
+        this.dropMissingNewSrcName = dropMissingNewSrcName;
+    }
+
+    @Override
+    public Set<MappingFlag> getFlags() {
+        if (passThrough) {
+            return next.getFlags();
+        } else {
+            Set<MappingFlag> ret = EnumSet.noneOf(MappingFlag.class);
+            ret.addAll(next.getFlags());
+            ret.add(MappingFlag.NEEDS_MULTIPLE_PASSES);
+            ret.add(MappingFlag.NEEDS_UNIQUENESS);
+
+            return ret;
+        }
+    }
+
+    @Override
+    public void reset() {
+        classMapReady = false;
+        passThrough = false;
+        classMap.clear();
+
+        next.reset();
+    }
+
+    @Override
+    public boolean visitHeader() throws IOException {
+		if (!classMapReady) {
+			return true;
+		}
+
+        return next.visitHeader();
+    }
+
+    @Override
+    public void visitNamespaces(String srcNamespace, List<String> dstNamespaces) throws IOException {
+        if (!classMapReady) {
+            if (srcNamespace.equals(newSourceNsName)) {
+                classMapReady = true;
+                passThrough = true;
+                relayHeaderOrMetadata = next.visitHeader();
+
+				if (relayHeaderOrMetadata) {
+					next.visitNamespaces(srcNamespace, dstNamespaces);
+				}
+            } else {
+                newSourceNs = dstNamespaces.indexOf(newSourceNsName);
+				if (newSourceNs < 0) {
+					throw new RuntimeException(
+						"invalid new source ns " + newSourceNsName + ": not in " + dstNamespaces + " or " +
+							srcNamespace);
+				}
+
+                oldSourceNsName = srcNamespace;
+
+                int count = dstNamespaces.size();
+                dstNames = new String[count];
+            }
+        } else {
+            relayHeaderOrMetadata = true; // if next.visitHeader didn't return true in visitHeader, visitNamespaces wouldn't have been called
+
+            List<String> newDstNamespaces = new ArrayList<>(dstNamespaces);
+            newDstNamespaces.set(newSourceNs, oldSourceNsName);
+            next.visitNamespaces(newSourceNsName, newDstNamespaces);
+
+            Set<MappingFlag> flags = next.getFlags();
+
+            if (flags.contains(MappingFlag.NEEDS_DST_FIELD_DESC) || flags.contains(MappingFlag.NEEDS_DST_METHOD_DESC)) {
+                dstDescs = new String[dstNamespaces.size()];
+            } else {
+                dstDescs = null;
+            }
+        }
+    }
+
+    @Override
+    public void visitMetadata(String key, String value) throws IOException {
+		if (classMapReady && relayHeaderOrMetadata) {
+			next.visitMetadata(key, value);
+		}
+    }
+
+    @Override
+    public boolean visitContent() throws IOException {
+		if (!classMapReady) {
+			return true;
+		}
+
+        relayHeaderOrMetadata = true; // for in-content metadata
+
+        return next.visitContent();
+    }
+
+    @Override
+    public boolean visitClass(String srcName) throws IOException {
 		if (passThrough) {
-			return next.getFlags();
-		} else {
-			Set<MappingFlag> ret = EnumSet.noneOf(MappingFlag.class);
-			ret.addAll(next.getFlags());
-			ret.add(MappingFlag.NEEDS_MULTIPLE_PASSES);
-			ret.add(MappingFlag.NEEDS_UNIQUENESS);
-
-			return ret;
+			return next.visitClass(srcName);
 		}
-	}
 
-	@Override
-	public void reset() {
-		classMapReady = false;
-		passThrough = false;
-		classMap.clear();
+        this.srcName = srcName;
 
-		next.reset();
-	}
+        return true;
+    }
 
-	@Override
-	public boolean visitHeader() throws IOException {
-		if (!classMapReady) return true;
-
-		return next.visitHeader();
-	}
-
-	@Override
-	public void visitNamespaces(String srcNamespace, List<String> dstNamespaces) throws IOException {
-		if (!classMapReady) {
-			if (srcNamespace.equals(newSourceNsName)) {
-				classMapReady = true;
-				passThrough = true;
-				relayHeaderOrMetadata = next.visitHeader();
-
-				if (relayHeaderOrMetadata) next.visitNamespaces(srcNamespace, dstNamespaces);
-			} else {
-				newSourceNs = dstNamespaces.indexOf(newSourceNsName);
-				if (newSourceNs < 0) throw new RuntimeException("invalid new source ns "+newSourceNsName+": not in "+dstNamespaces+" or "+srcNamespace);
-
-				oldSourceNsName = srcNamespace;
-
-				int count = dstNamespaces.size();
-				dstNames = new String[count];
-			}
-		} else {
-			relayHeaderOrMetadata = true; // if next.visitHeader didn't return true in visitHeader, visitNamespaces wouldn't have been called
-
-			List<String> newDstNamespaces = new ArrayList<>(dstNamespaces);
-			newDstNamespaces.set(newSourceNs, oldSourceNsName);
-			next.visitNamespaces(newSourceNsName, newDstNamespaces);
-
-			Set<MappingFlag> flags = next.getFlags();
-
-			if (flags.contains(MappingFlag.NEEDS_DST_FIELD_DESC) || flags.contains(MappingFlag.NEEDS_DST_METHOD_DESC)) {
-				dstDescs = new String[dstNamespaces.size()];
-			} else {
-				dstDescs = null;
-			}
+    @Override
+    public boolean visitField(String srcName, String srcDesc) throws IOException {
+        assert classMapReady;
+		if (passThrough) {
+			return next.visitField(srcName, srcDesc);
 		}
-	}
 
-	@Override
-	public void visitMetadata(String key, String value) throws IOException {
-		if (classMapReady && relayHeaderOrMetadata) next.visitMetadata(key, value);
-	}
+        this.srcName = srcName;
+        this.srcDesc = srcDesc;
 
-	@Override
-	public boolean visitContent() throws IOException {
-		if (!classMapReady) return true;
+        return true;
+    }
 
-		relayHeaderOrMetadata = true; // for in-content metadata
+    @Override
+    public boolean visitMethod(String srcName, String srcDesc) throws IOException {
+        assert classMapReady;
+		if (passThrough) {
+			return next.visitMethod(srcName, srcDesc);
+		}
 
-		return next.visitContent();
-	}
+        this.srcName = srcName;
+        this.srcDesc = srcDesc;
 
-	@Override
-	public boolean visitClass(String srcName) throws IOException {
-		if (passThrough) return next.visitClass(srcName);
+        return true;
+    }
 
-		this.srcName = srcName;
+    @Override
+    public boolean visitMethodArg(int argPosition, int lvIndex, String srcName) throws IOException {
+        assert classMapReady;
+		if (passThrough) {
+			return next.visitMethodArg(argPosition, lvIndex, srcName);
+		}
 
-		return true;
-	}
+        this.srcName = srcName;
+        this.argIdx = argPosition;
+        this.lvIndex = lvIndex;
 
-	@Override
-	public boolean visitField(String srcName, String srcDesc) throws IOException {
-		assert classMapReady;
-		if (passThrough) return next.visitField(srcName, srcDesc);
+        return true;
+    }
 
-		this.srcName = srcName;
-		this.srcDesc = srcDesc;
+    @Override
+    public boolean visitMethodVar(int lvtRowIndex, int lvIndex, int startOpIdx, String srcName) throws IOException {
+        assert classMapReady;
+		if (passThrough) {
+			return next.visitMethodVar(lvtRowIndex, lvIndex, startOpIdx, srcName);
+		}
 
-		return true;
-	}
+        this.srcName = srcName;
+        this.argIdx = lvtRowIndex;
+        this.lvIndex = lvIndex;
+        this.startOpIdx = startOpIdx;
 
-	@Override
-	public boolean visitMethod(String srcName, String srcDesc) throws IOException {
-		assert classMapReady;
-		if (passThrough) return next.visitMethod(srcName, srcDesc);
+        return true;
+    }
 
-		this.srcName = srcName;
-		this.srcDesc = srcDesc;
+    @Override
+    public boolean visitEnd() throws IOException {
+        if (!classMapReady) {
+            classMapReady = true;
+            return false;
+        }
 
-		return true;
-	}
+        return next.visitEnd();
+    }
 
-	@Override
-	public boolean visitMethodArg(int argPosition, int lvIndex, String srcName) throws IOException {
-		assert classMapReady;
-		if (passThrough) return next.visitMethodArg(argPosition, lvIndex, srcName);
+    @Override
+    public void visitDstName(MappedElementKind targetKind, int namespace, String name) throws IOException {
+        if (!classMapReady) {
+			if (namespace == newSourceNs) {
+				classMap.put(srcName, name);
+			}
+            return;
+        }
 
-		this.srcName = srcName;
-		this.argIdx = argPosition;
-		this.lvIndex = lvIndex;
+        if (passThrough) {
+            next.visitDstName(targetKind, namespace, name);
+            return;
+        }
 
-		return true;
-	}
+		if (namespace >= dstNames.length) {
+			throw new IllegalArgumentException("out of bounds namespace");
+		}
 
-	@Override
-	public boolean visitMethodVar(int lvtRowIndex, int lvIndex, int startOpIdx, String srcName) throws IOException {
-		assert classMapReady;
-		if (passThrough) return next.visitMethodVar(lvtRowIndex, lvIndex, startOpIdx, srcName);
+        dstNames[namespace] = name;
+    }
 
-		this.srcName = srcName;
-		this.argIdx = lvtRowIndex;
-		this.lvIndex = lvIndex;
-		this.startOpIdx = startOpIdx;
+    @Override
+    public void visitDstDesc(MappedElementKind targetKind, int namespace, String desc) throws IOException {
+        if (passThrough) {
+            next.visitDstDesc(targetKind, namespace, desc);
+        } else if (classMapReady && dstDescs != null) {
+            dstDescs[namespace] = desc;
+        }
+    }
 
-		return true;
-	}
-
-	@Override
-	public boolean visitEnd() throws IOException {
+    @Override
+    public boolean visitElementContent(MappedElementKind targetKind) throws IOException {
 		if (!classMapReady) {
-			classMapReady = true;
 			return false;
 		}
-
-		return next.visitEnd();
-	}
-
-	@Override
-	public void visitDstName(MappedElementKind targetKind, int namespace, String name) throws IOException {
-		if (!classMapReady) {
-			if (namespace == newSourceNs) classMap.put(srcName, name);
-			return;
-		}
-
 		if (passThrough) {
-			next.visitDstName(targetKind, namespace, name);
-			return;
+			return next.visitElementContent(targetKind);
 		}
 
-		if (namespace >= dstNames.length) throw new IllegalArgumentException("out of bounds namespace");
+        String dstName = dstNames[newSourceNs];
 
-		dstNames[namespace] = name;
-	}
-
-	@Override
-	public void visitDstDesc(MappedElementKind targetKind, int namespace, String desc) throws IOException {
-		if (passThrough) {
-			next.visitDstDesc(targetKind, namespace, desc);
-		} else if (classMapReady && dstDescs != null) {
-			dstDescs[namespace] = desc;
-		}
-	}
-
-	@Override
-	public boolean visitElementContent(MappedElementKind targetKind) throws IOException {
-		if (!classMapReady) return false;
-		if (passThrough) return next.visitElementContent(targetKind);
-
-		String dstName = dstNames[newSourceNs];
-
-		if (dstName == null
-				&& targetKind != MappedElementKind.METHOD_ARG && targetKind != MappedElementKind.METHOD_VAR) { // src name is optional for arg/var, leave as null
-			if (dropMissingNewSrcName) {
-				Arrays.fill(dstNames, null);
-				if (dstDescs != null) Arrays.fill(dstDescs, null);
-				return false;
-			} else {
-				dstName = srcName;
-			}
-		}
-
-		boolean relay;
-
-		switch (targetKind) {
-		case CLASS:
-			relay = next.visitClass(dstName);
-			break;
-		case FIELD:
-			relay = next.visitField(dstName, srcDesc != null ? MappingUtil.mapDesc(srcDesc, classMap) : null);
-			break;
-		case METHOD:
-			relay = next.visitMethod(dstName, srcDesc != null ? MappingUtil.mapDesc(srcDesc, classMap) : null);
-			break;
-		case METHOD_ARG:
-			relay = next.visitMethodArg(argIdx, lvIndex, dstName);
-			break;
-		case METHOD_VAR:
-			relay = next.visitMethodVar(argIdx, lvIndex, startOpIdx, dstName);
-			break;
-		default:
-			throw new IllegalStateException();
-		}
-
-		if (relay) {
-			boolean sendDesc = dstDescs != null && srcDesc != null && (targetKind == MappedElementKind.FIELD || targetKind == MappedElementKind.METHOD);
-
-			for (int i = 0; i < dstNames.length; i++) {
-				if (i == newSourceNs) {
-					next.visitDstName(targetKind, i, srcName);
-					if (sendDesc) next.visitDstDesc(targetKind, i, srcDesc);
-				} else {
-					String name = dstNames[i];
-					if (name != null) next.visitDstName(targetKind, i, name);
-
-					if (sendDesc) {
-						String desc = dstDescs[i];
-						if (desc != null) next.visitDstDesc(targetKind, i, desc);
-					}
+        if (dstName == null
+            && targetKind != MappedElementKind.METHOD_ARG &&
+            targetKind != MappedElementKind.METHOD_VAR) { // src name is optional for arg/var, leave as null
+            if (dropMissingNewSrcName) {
+                Arrays.fill(dstNames, null);
+				if (dstDescs != null) {
+					Arrays.fill(dstDescs, null);
 				}
-			}
+                return false;
+            } else {
+                dstName = srcName;
+            }
+        }
 
-			relay = next.visitElementContent(targetKind);
+        boolean relay;
+
+        switch (targetKind) {
+            case CLASS:
+                relay = next.visitClass(dstName);
+                break;
+            case FIELD:
+                relay = next.visitField(dstName, srcDesc != null ? MappingUtil.mapDesc(srcDesc, classMap) : null);
+                break;
+            case METHOD:
+                relay = next.visitMethod(dstName, srcDesc != null ? MappingUtil.mapDesc(srcDesc, classMap) : null);
+                break;
+            case METHOD_ARG:
+                relay = next.visitMethodArg(argIdx, lvIndex, dstName);
+                break;
+            case METHOD_VAR:
+                relay = next.visitMethodVar(argIdx, lvIndex, startOpIdx, dstName);
+                break;
+            default:
+                throw new IllegalStateException();
+        }
+
+        if (relay) {
+            boolean sendDesc = dstDescs != null && srcDesc != null &&
+                (targetKind == MappedElementKind.FIELD || targetKind == MappedElementKind.METHOD);
+
+            for (int i = 0; i < dstNames.length; i++) {
+                if (i == newSourceNs) {
+                    next.visitDstName(targetKind, i, srcName);
+					if (sendDesc) {
+						next.visitDstDesc(targetKind, i, srcDesc);
+					}
+                } else {
+                    String name = dstNames[i];
+					if (name != null) {
+						next.visitDstName(targetKind, i, name);
+					}
+
+                    if (sendDesc) {
+                        String desc = dstDescs[i];
+						if (desc != null) {
+							next.visitDstDesc(targetKind, i, desc);
+						}
+                    }
+                }
+            }
+
+            relay = next.visitElementContent(targetKind);
+        }
+
+        Arrays.fill(dstNames, null);
+		if (dstDescs != null) {
+			Arrays.fill(dstDescs, null);
 		}
 
-		Arrays.fill(dstNames, null);
-		if (dstDescs != null) Arrays.fill(dstDescs, null);
+        return relay;
+    }
 
-		return relay;
-	}
-
-	private final String newSourceNsName;
-	private final boolean dropMissingNewSrcName;
-
-	private int newSourceNs;
-	private String oldSourceNsName;
-
-	private final Map<String, String> classMap = new HashMap<>();
-	private boolean classMapReady;
-	private boolean passThrough;
-	private boolean relayHeaderOrMetadata;
-
-	private String srcName;
-	private String srcDesc;
-	private int argIdx, lvIndex, startOpIdx;
-	private String[] dstNames;
-	private String[] dstDescs;
 }

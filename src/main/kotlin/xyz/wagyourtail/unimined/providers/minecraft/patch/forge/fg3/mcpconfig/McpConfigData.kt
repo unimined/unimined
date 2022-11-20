@@ -4,7 +4,12 @@ import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
 import com.google.gson.JsonObject
 
-data class McpConfigData(val mappingsPath: String, val official: Boolean, val steps: Map<String, List<McpConfigStep>>, val functions: Map<String, McpConfigFunction>) {
+data class McpConfigData(
+    val mappingsPath: String,
+    val official: Boolean,
+    val steps: Map<String, List<McpConfigStep>>,
+    val functions: Map<String, McpConfigFunction>
+) {
     companion object {
         fun fromJson(json: JsonObject): McpConfigData {
             val mappingsPath = json.getAsJsonObject("data")["mappings"].asString

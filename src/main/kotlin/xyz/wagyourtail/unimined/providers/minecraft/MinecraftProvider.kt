@@ -118,7 +118,12 @@ abstract class MinecraftProvider(
         action(minecraftTransformer as FabricMinecraftTransformer)
     }
 
-    fun fabric(@DelegatesTo(value = FabricMinecraftTransformer::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+    fun fabric(
+        @DelegatesTo(
+            value = FabricMinecraftTransformer::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
         fabric {
             action.delegate = it
             action.resolveStrategy = Closure.DELEGATE_FIRST
@@ -138,7 +143,12 @@ abstract class MinecraftProvider(
         action(minecraftTransformer as JarModMinecraftTransformer)
     }
 
-    fun jarMod(@DelegatesTo(value = JarModMinecraftTransformer::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+    fun jarMod(
+        @DelegatesTo(
+            value = JarModMinecraftTransformer::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
         jarMod {
             action.delegate = it
             action.resolveStrategy = Closure.DELEGATE_FIRST
@@ -158,7 +168,12 @@ abstract class MinecraftProvider(
         action(minecraftTransformer as ForgeMinecraftTransformer)
     }
 
-    fun forge(@DelegatesTo(value = ForgeMinecraftTransformer::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+    fun forge(
+        @DelegatesTo(
+            value = ForgeMinecraftTransformer::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
         forge {
             action.delegate = it
             action.resolveStrategy = Closure.DELEGATE_FIRST
@@ -223,13 +238,30 @@ abstract class MinecraftProvider(
         return minecraftMapped.computeIfAbsent(envType) {
             mutableMapOf()
         }.computeIfAbsent(namespace) {
-                val mc = if (envType == EnvType.COMBINED) {
-                    val client = MinecraftJar(minecraftDownloader.getMinecraft(EnvType.CLIENT), EnvType.CLIENT, "official", "official")
-                    val server = MinecraftJar(minecraftDownloader.getMinecraft(EnvType.SERVER), EnvType.SERVER, "official", "official")
-                    minecraftTransformer.merge(client, server, minecraftDownloader.combinedJarDownloadPath(minecraftDownloader.version))
-                }
-                else MinecraftJar(minecraftDownloader.getMinecraft(envType), envType, "official", "official")
-                minecraftTransformer.afterRemap(envType, namespace, mcRemapper.provide(minecraftTransformer.transform(mc), namespace))
+            val mc = if (envType == EnvType.COMBINED) {
+                val client = MinecraftJar(
+                    minecraftDownloader.getMinecraft(EnvType.CLIENT),
+                    EnvType.CLIENT,
+                    "official",
+                    "official"
+                )
+                val server = MinecraftJar(
+                    minecraftDownloader.getMinecraft(EnvType.SERVER),
+                    EnvType.SERVER,
+                    "official",
+                    "official"
+                )
+                minecraftTransformer.merge(
+                    client,
+                    server,
+                    minecraftDownloader.combinedJarDownloadPath(minecraftDownloader.version)
+                )
+            } else MinecraftJar(minecraftDownloader.getMinecraft(envType), envType, "official", "official")
+            minecraftTransformer.afterRemap(
+                envType,
+                namespace,
+                mcRemapper.provide(minecraftTransformer.transform(mc), namespace)
+            )
         }
     }
 
@@ -334,7 +366,8 @@ abstract class MinecraftProvider(
                 minecraftDownloader.extract(dep, extract, nativeDir.toPath())
             }
         }
-        val infoFile = minecraftDownloader.mcVersionFolder(minecraftDownloader.version).resolve("${minecraftDownloader.version}.info")
+        val infoFile = minecraftDownloader.mcVersionFolder(minecraftDownloader.version)
+            .resolve("${minecraftDownloader.version}.info")
         if (!infoFile.exists()) {
             if (!project.gradle.startParameter.isOffline) {
                 //test if betacraft has our version on file
@@ -379,7 +412,10 @@ abstract class MinecraftProvider(
                 clientWorkingDirectory.get().toPath(),
                 assetsDir ?: clientWorkingDirectory.get().resolve("assets").toPath()
             ),
-            (minecraftDownloader.metadata.getJVMArgs(clientWorkingDirectory.get().resolve("libraries").toPath(), nativeDir.toPath()) + betacraftArgs).toMutableList(),
+            (minecraftDownloader.metadata.getJVMArgs(
+                clientWorkingDirectory.get().resolve("libraries").toPath(),
+                nativeDir.toPath()
+            ) + betacraftArgs).toMutableList(),
             clientWorkingDirectory.get(),
             mutableMapOf(),
             assetsDir ?: clientWorkingDirectory.get().resolve("assets").toPath()

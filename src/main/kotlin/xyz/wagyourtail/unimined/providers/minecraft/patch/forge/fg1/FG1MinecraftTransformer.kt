@@ -9,12 +9,9 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.consumerApply
 import xyz.wagyourtail.unimined.deleteRecursively
-import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import java.io.InputStream
@@ -44,8 +41,8 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         val forgeSrc = "${forge.group}:${forge.name}:${forge.version}:src@zip"
         provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).dependencies.apply {
-           if (isEmpty())
-               add(project.dependencies.create(forgeSrc))
+            if (isEmpty())
+                add(project.dependencies.create(forgeSrc))
         }
 
         super.afterEvaluate()
@@ -101,7 +98,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 )
             ),
             Pair(
-                Pair("bcprov-jdk15on-1.47.jar",  "bcprov-jdk15on-147.jar"), project.dependencies.create(
+                Pair("bcprov-jdk15on-1.47.jar", "bcprov-jdk15on-147.jar"), project.dependencies.create(
                     "org.bouncycastle:bcprov-jdk15on:1.47"
                 )
             ),
@@ -113,7 +110,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
 
         // copy in
-        val path = provider.clientWorkingDirectory.get().resolve("lib").toPath().maybeCreate()
+        val path = provider.clientWorkingDirectory.get().resolve("lib").toPath().createDirectories()
 
         if (wanted.contains("asm-all-4.0.jar")) {
             FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/asm-all-4.0.jar").use { it1 ->
@@ -215,7 +212,9 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
         val out = fixForge(envType, namespace, baseMinecraft)
         return ZipReader.openZipFileSystem(out).use { fs ->
-            parent.applyATs(out, listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
+            parent.applyATs(
+                out,
+                listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
         }
     }
 

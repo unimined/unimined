@@ -1,332 +1,153 @@
 package xyz.wagyourtail.unimined.providers.minecraft.patch.forge
 
-import net.fabricmc.mappingio.tree.MappingTreeView
-import org.gradle.api.Project
-import org.gradle.api.artifacts.Dependency
-import org.gradle.configurationcache.extensions.capitalized
-import org.slf4j.LoggerFactory
-import xyz.wagyourtail.unimined.getSha1
-import xyz.wagyourtail.unimined.providers.minecraft.EnvType
-import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.runJarInSubprocess
-import java.io.File
+import net.fabricmc.tinyremapper.OutputConsumerPath
+import net.fabricmc.tinyremapper.TinyRemapper
+import net.minecraftforge.accesstransformer.TransformerProcessor
+import org.objectweb.asm.commons.Remapper
+import java.io.BufferedReader
+import java.io.BufferedWriter
 import java.io.InputStream
-import java.lang.IllegalStateException
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.exists
-import kotlin.io.path.nameWithoutExtension
-import kotlin.io.path.readText
-import kotlin.io.path.writeText
+import kotlin.io.path.name
 
-class AccessTransformerMinecraftTransformer(project: Project, provider: MinecraftProvider, val envType: EnvType) :
-        AbstractMinecraftTransformer(project, provider) {
-    companion object {
-        val atDeps: MutableMap<Project, Dependency> = mutableMapOf()
-    }
+object AccessTransformerMinecraftTransformer {
 
-    val logger = LoggerFactory.getLogger(AccessTransformerMinecraftTransformer::class.java)
-
-    val atTransformers = mutableListOf<(String) -> String>()
-    private val transformers = mutableListOf<String>()
-
-    private val atDep = atDeps.computeIfAbsent(project) {
-        val dep = project.dependencies.create(
-            "net.minecraftforge:accesstransformers:8.0.7:fatjar"
-        )
-        dynamicTransformerDependencies.dependencies.add(dep)
-        dep
-    }
-
-    fun addAccessTransformer(stream: InputStream) {
-        transformers.add(stream.readBytes().toString(StandardCharsets.UTF_8))
-    }
-
-    fun addAccessTransformer(path: Path) {
-        transformers.add(path.readText())
-    }
-
-    fun addAccessTransformer(file: File) {
-        transformers.add(file.readText())
-    }
-
-    private val ats by lazy {
-        val ats = provider.parent.getLocalCache().resolve("accessTransformers${envType.classifier?.capitalized() ?: ""}.cfg")
-        var text = transformers.joinToString("\n")
-        for (transformer in atTransformers) {
-            text = transformer(text)
-        }
-        ats.writeText(
-            text,
-            options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-        )
-        ats
-    }
-
-    override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        val envType = minecraft.envType
-        if (envType != this.envType) throw IllegalStateException("Cannot transform $envType with $this because it is for ${this.envType}")
-        if (transformers.isEmpty()) {
-            return minecraft
-        }
-        val atjar = dynamicTransformerDependencies.files(atDep).first { it.extension == "jar" }
-        val outFile = getOutputJarLocation(minecraft.jarPath)
-        if (outFile.exists()) {
-            return MinecraftJar(minecraft, outFile)
-        }
-        val retVal = runJarInSubprocess(
-            atjar.toPath(),
-            "-inJar", minecraft.jarPath.toString(),
-            "-atFile", ats.toString(),
-            "-outJar", outFile.toString(),
-        )
-        if (retVal != 0) {
-            throw RuntimeException("AccessTransformer failed with exit code $retVal")
-        }
-        return MinecraftJar(minecraft, outFile)
-    }
-
-    fun getOutputJarLocation(baseMinecraft: Path): Path {
-        return provider.parent.getLocalCache()
-            .resolve("${baseMinecraft.nameWithoutExtension}-at-${ats.getSha1().substring(0..8)}.jar")
-    }
-
-    fun transformLegacyTransformer(file: String): String {
-        @Suppress("NAME_SHADOWING")
-        var file = file
-        // transform methods
-        val legacyMethod = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.$]+)\\.([\\w*<>]+)(\\(.+)\$", RegexOption.MULTILINE)
-        file = file.replace(legacyMethod) {
-            "${it.groupValues[1]} ${it.groupValues[2]} ${it.groupValues[3]}${it.groupValues[4]}"
-        }
-
-        val missingReturnOnInit = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.\$]+) ([\\w*<>]+)(\\(.+?\\))\\s*?(#.+?)?\$", RegexOption.MULTILINE)
-
-        file = file.replace(missingReturnOnInit) {
-            if (!it.groupValues[3].contains("<")) {
-                throw IllegalStateException("Missing return type in access transformer: ${it.value}")
-            }
-            "${it.groupValues[1]} ${it.groupValues[2]} ${it.groupValues[3]}${it.groupValues[4]}V${it.groupValues[5]}"
-        }
-
-
-        // transform fields
-        val legacyField = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.$]+)\\.([\\w*<>]+)\\s*?(#.+?)?\$", RegexOption.MULTILINE)
-        file = file.replace(legacyField) {
-            "${it.groupValues[1]} ${it.groupValues[2]} ${it.groupValues[3]} ${it.groupValues[4]}"
-        }
-        return file
-    }
-
-    fun remapTransformer(
-        envType: EnvType,
-        atFile: String,
-        sourceNamespace: String,
-        fallbackSrc: String,
-        targetNamespace: String,
-        fallbackTarget: String
-    ): String {
-        val mappings = provider.parent.mappingsProvider.getMappingTree(envType)
-
-        val srcId = mappings.getNamespaceId(sourceNamespace)
-
-        if (srcId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw RuntimeException("Invalid source namespace $sourceNamespace, valid namespaces are: ${mappings.srcNamespace}, ${mappings.dstNamespaces.joinToString(", ")}")
-        }
-
-        val targetId = mappings.getNamespaceId(targetNamespace)
-        if (targetId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw RuntimeException("Invalid target namespace $targetNamespace, valid namespaces are: ${mappings.srcNamespace}, ${mappings.dstNamespaces.joinToString(", ")}")
-        }
-
-        val fallbackSrcId = mappings.getNamespaceId(fallbackSrc).let {
-            if (it == MappingTreeView.NULL_NAMESPACE_ID) {
-                project.logger.warn("Invalid fallback source namespace $fallbackSrc")
-                srcId
-            } else {
-                it
-            }
-        }
-
-        val fallbackTargetId = mappings.getNamespaceId(fallbackTarget).let {
-            if (it == MappingTreeView.NULL_NAMESPACE_ID) {
-                project.logger.warn("Invalid fallback target namespace $fallbackTarget")
-                targetId
-            } else {
-                it
-            }
-        }
-
-//        remapper.readClassPathAsync(mc)
-//        project.logger.warn("Remapping mods using $mc")
-//        remapper.readClassPathAsync(*provider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
-
-        @Suppress("NAME_SHADOWING")
-        var atFile = atFile
-        val methodMatcher = Regex(
-            "^(\\w+(?:[\\-+]f)?)\\s([\\w.$]+)\\s([\\w*<>]+)(\\(.+?)(\\s*#.+?)?\$",
-            RegexOption.MULTILINE
-        )
-        atFile = atFile.replace(methodMatcher) {
-            val src = it.groupValues[2].replace(".", "/")
-            val name = it.groupValues[3]
-            val desc = it.groupValues[4].replace(".", "/")
-
-            val srcClass = mappings.getClass(src, srcId) ?: mappings.getClass(src, fallbackSrcId)
-            val targetClassName = if (srcClass == null) {
-                logger.error("Could not find class $src in namespace $sourceNamespace or $fallbackSrc")
-                logger.warn(it.value)
-                src
-            } else {
-                val remappedSrcClass: String? = srcClass.getName(targetId) ?: srcClass.getName(fallbackTargetId)
-                if (remappedSrcClass == null) {
-                    logger.error("Could not find class $src in namespace $targetNamespace or $fallbackTarget")
-                    logger.warn(it.value)
-                    src
-                } else {
-                    remappedSrcClass
-                }
+    fun atRemapper(remapToLegacy: Boolean = false): OutputConsumerPath.ResourceRemapper =
+        object : OutputConsumerPath.ResourceRemapper {
+            override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
+                return relativePath.name == "accesstransformer.cfg" ||
+                        relativePath.name == "fml_at.cfg" ||
+                        relativePath.name == "forge_at.cfg"
             }
 
-            val targetMethod = srcClass?.getMethod(name, desc, srcId) ?: srcClass?.getMethod(name, desc, fallbackSrcId)
-
-            val targetMethodName = if (name == "*" || name.contains(Regex("[<>]"))) {
-                name
-            } else {
-                if (targetMethod == null) {
-                    logger.error("Could not find method $name$desc in class $src in namespace $sourceNamespace or $fallbackSrc")
-                    logger.warn(it.value)
-                    name
-                } else {
-                    val remappedTargetMethod: String? = targetMethod.getName(targetId) ?: targetMethod.getName(
-                        fallbackTargetId
-                    )
-                    if (remappedTargetMethod == null) {
-                        logger.error("Could not find method $name$desc in class $src in namespace $targetNamespace or $fallbackTarget")
-                        logger.warn(it.value)
-                        name
-                    } else {
-                        remappedTargetMethod
+            override fun transform(
+                destinationDirectory: Path,
+                relativePath: Path,
+                input: InputStream,
+                remapper: TinyRemapper
+            ) {
+                val output = destinationDirectory.resolve(relativePath)
+                BufferedReader(input.reader()).use { reader ->
+                    Files.newBufferedWriter(
+                        output,
+                        StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING
+                    ).use { writer ->
+                        var line = reader.readLine()
+                        while (line != null) {
+                            line = transformLegacyTransformer(line)
+                            line = remapModernTransformer(line, remapper.environment.remapper)
+                            if (remapToLegacy) {
+                                TODO()
+                            }
+                            writer.write("$line\n")
+                            line = reader.readLine()
+                        }
                     }
                 }
             }
 
-            val targetMethodDesc = if (desc == "()") {
-                "()"
-            } else if (name.contains(Regex("[<>]"))) {
-                mappings.mapDesc(desc, srcId, targetId)
-            } else {
-                if (targetMethod == null) {
-                    logger.error("Could not find method desc $name$desc in class $src in namespace $sourceNamespace or $fallbackSrc")
-                    logger.warn(it.value)
-                    desc
-                } else {
-                    val remappedTargetMethodDesc: String? = targetMethod.getDesc(targetId)
-                        ?: targetMethod.getDesc(fallbackTargetId)
-                    if (remappedTargetMethodDesc == null) {
-                        logger.error("Could not find method desc $name$desc in class $src in namespace $targetNamespace or $fallbackTarget")
-                        logger.warn(it.value)
-                        desc
-                    } else {
-                        remappedTargetMethodDesc
-                    }
-                }
-            }
-
-            "${it.groupValues[1]} ${
-                targetClassName.replace(
-                    "/",
-                    "."
-                )
-            } $targetMethodName$targetMethodDesc${it.groupValues[5]}"
         }
 
-        val fieldMatcher = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.$]+)\\s([\\w*<>]+)(\\s*#.+?)?\$", RegexOption.MULTILINE)
+    private val legacyMethod = Regex(
+        "^(\\w+(?:[\\-+]f)?)\\s+([\\w.$]+)\\.([\\w*<>]+)(\\(.+?)\\s*?(#.+?)?\$",
+        RegexOption.MULTILINE
+    )
+    private val legacyField = Regex(
+        "^(\\w+(?:[\\-+]f)?)\\s+([\\w.$]+)\\.([\\w*<>]+)\\s*?(#.+?)?\$",
+        RegexOption.MULTILINE
+    )
 
-        atFile = atFile.replace(fieldMatcher) {
-            val src = it.groupValues[2].replace(".", "/")
-            val name = it.groupValues[3]
+    private val modernClass = Regex("^(\\w+(?:[\\-+]f)?)\\s+([\\w.$]+)\\s*?(#.+?)?\$", RegexOption.MULTILINE)
+    private val modernMethod = Regex(
+        "^(\\w+(?:[\\-+]f)?)\\s+([\\w.\$]+)\\s+([\\w*<>]+)(\\(.+?)\\s*?(#.+?)?\$",
+        RegexOption.MULTILINE
+    )
+    private val modernField = Regex(
+        "^(\\w+(?:[\\-+]f)?)\\s+([\\w.\$]+)\\s+([\\w*<>]+)\\s*?(#.+?)?\$",
+        RegexOption.MULTILINE
+    )
 
-            val srcClass = mappings.getClass(src, srcId) ?: mappings.getClass(src, fallbackSrcId)
-
-            if (srcClass == null) {
-                val fixedSrcClass = mappings.getClass("$src/$name", srcId) ?: mappings.getClass("$src/$name", fallbackSrcId) ?: mappings.getClass("$src/$name", targetId) ?: mappings.getClass("$src/$name", fallbackTargetId)
-                if (fixedSrcClass != null) {
-                    logger.info("legacy transform incorrectly transformed a class aw to a field $src/$name changing back")
-                    return@replace "${it.groupValues[1]} ${src.replace("/", ".")}.$name${it.groupValues[4]}"
-                }
-            }
-
-            val targetClassName = if (srcClass == null) {
-                logger.error("Could not find class $src in namespace $sourceNamespace or $fallbackSrc")
-                logger.warn(it.value)
-                src
-            } else {
-                val remappedSrcClass: String? = srcClass.getName(targetId) ?: srcClass.getName(fallbackTargetId)
-                if (remappedSrcClass == null) {
-                    logger.error("Could not find class $src in namespace $targetNamespace or $fallbackTarget")
-                    logger.warn(it.value)
-                    src
-                } else {
-                    remappedSrcClass
-                }
-            }
-
-            val targetFieldName = if (name == "*" || name.contains(Regex("[<>]"))) {
-                name
-            } else {
-                val targetField = srcClass?.getField(name, null, srcId) ?: srcClass?.getField(name, null, fallbackSrcId)
-
-                if (targetField == null) {
-                    logger.error("Could not find field $name in class $src in namespace $sourceNamespace or $fallbackSrc")
-                    logger.warn(it.value)
-                    name
-                } else {
-                    val remappedTargetField: String? = targetField.getName(targetId) ?: targetField.getName(
-                        fallbackTargetId
-                    )
-                    if (remappedTargetField == null) {
-                        logger.error("Could not find field $name in class $src in namespace $targetNamespace or $fallbackTarget")
-                        logger.warn(it.value)
-                        name
-                    } else {
-                        remappedTargetField
-                    }
-                }
-            }
-
-            "${it.groupValues[1]} ${targetClassName.replace("/", ".")} $targetFieldName${it.groupValues[4]}"
+    private fun transformFromLegacyTransformer(reader: BufferedReader, writer: BufferedWriter) {
+        var line = reader.readLine()
+        while (line != null) {
+            writer.write("${transformLegacyTransformer(line)}\n")
+            line = reader.readLine()
         }
-
-        val classMatcher = Regex("^(\\w+(?:[\\-+]f)?)\\s([\\w.$]+)(\\s*#.+?)?\$", RegexOption.MULTILINE)
-
-        atFile = atFile.replace(classMatcher) {
-            val src = it.groupValues[2].replace(".", "/")
-
-            val srcClass = mappings.getClass(src, srcId) ?: mappings.getClass(src, fallbackSrcId)
-
-            val targetClassName = if (srcClass == null) {
-                logger.error("Could not find class $src in namespace $sourceNamespace or $fallbackSrc")
-                logger.warn(it.value)
-                src
-            } else {
-                val remappedSrcClass: String? = srcClass.getName(targetId) ?: srcClass.getName(fallbackTargetId)
-                if (remappedSrcClass == null) {
-                    logger.error("Could not find class $src in namespace $targetNamespace or $fallbackTarget")
-                    logger.warn(it.value)
-                    src
-                } else {
-                    remappedSrcClass
-                }
-            }
-
-            "${it.groupValues[1]} ${targetClassName.replace("/", ".")}${it.groupValues[3]}"
-        }
-
-        return atFile
     }
 
+    private fun transformLegacyTransformer(line: String): String {
+        val methodMatch = legacyMethod.matchEntire(line)
+        if (methodMatch != null) {
+            val (access, owner, name, desc, comment) = methodMatch.destructured
+            return if (desc.endsWith(")")) {
+                if (!name.contains("<")) {
+                    throw IllegalStateException("Missing return type in access transformer: $line")
+                }
+                "$access $owner $name${desc}V $comment"
+            } else {
+                "$access $owner $name${desc} $comment"
+            }
+        }
+        val fieldMatch = legacyField.matchEntire(line)
+        if (fieldMatch != null) {
+            val (access, owner, name, comment) = fieldMatch.destructured
+            return "$access $owner $name $comment"
+        }
+        return line
+    }
+
+    private fun remapModernTransformer(reader: BufferedReader, writer: BufferedWriter, remapper: Remapper) {
+        var line = reader.readLine()
+        while (line != null) {
+            writer.write("${remapModernTransformer(line, remapper)}\n")
+            line = reader.readLine()
+        }
+    }
+
+    private fun remapModernTransformer(line: String, remapper: Remapper): String {
+        val classMatch = modernClass.matchEntire(line)
+        if (classMatch != null) {
+            val (access, owner, comment) = classMatch.destructured
+            return "$access ${remapper.map(owner.replace(".", "/")).replace("/", ".")} $comment"
+        }
+        val methodMatch = modernMethod.matchEntire(line)
+        if (methodMatch != null) {
+            val (access, owner, name, desc, comment) = methodMatch.destructured
+            return "$access ${
+                remapper.map(owner.replace(".", "/"))
+                    .replace("/", ".")
+            } ${remapper.mapMethodName(owner.replace(".", "/"), name, desc)}${remapper.mapMethodDesc(desc)} $comment"
+        }
+        val fieldMatch = modernField.matchEntire(line)
+        if (fieldMatch != null) {
+            val (access, owner, name, comment) = fieldMatch.destructured
+            return "$access ${
+                remapper.map(owner.replace(".", "/"))
+                    .replace("/", ".")
+            } ${remapper.mapFieldName(owner.replace(".", "/"), name, null)} $comment"
+        }
+        println("Failed to match: $line")
+        return line
+    }
+
+    fun transform(accessTransformers: List<Path>, baseMinecraft: Path, output: Path): Path {
+        if (accessTransformers.isEmpty()) {
+            return baseMinecraft
+        }
+        val transfomerProcessor = TransformerProcessor::class.java
+        val processJar = transfomerProcessor.getDeclaredMethod(
+            "processJar",
+            Path::class.java,
+            Path::class.java,
+            List::class.java
+        )
+        processJar.isAccessible = true
+        processJar(null, baseMinecraft, output, accessTransformers)
+        return output
+    }
 }

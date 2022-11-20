@@ -9,11 +9,23 @@ import java.io.Reader
 @Suppress("UNUSED", "UNUSED_PARAMETER", "UNUSED_VARIABLE")
 object OlderMCPReader {
 
-    fun readMethod(envType: EnvType, reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+    fun readMethod(
+        envType: EnvType,
+        reader: Reader,
+        sourceNamespace: String,
+        targetNamespace: String,
+        visitor: MemoryMappingTree
+    ) {
         readMethod(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
     }
 
-    private fun readMethod(envType: EnvType, reader: ColumnFileReader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+    private fun readMethod(
+        envType: EnvType,
+        reader: ColumnFileReader,
+        sourceNamespace: String,
+        targetNamespace: String,
+        visitor: MemoryMappingTree
+    ) {
         reader.nextLine(0)
         reader.nextLine(0)
         reader.nextLine(0)
@@ -115,15 +127,32 @@ object OlderMCPReader {
 //        visitor.accept(parentVisitor)
     }
 
-    internal fun readParam(reader: ColumnFileReader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+    internal fun readParam(
+        reader: ColumnFileReader,
+        sourceNamespace: String,
+        targetNamespace: String,
+        visitor: MemoryMappingTree
+    ) {
         throw UnsupportedOperationException("Older MCPReader does not support reading param mappings")
     }
 
-    fun readField(envType: EnvType, reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+    fun readField(
+        envType: EnvType,
+        reader: Reader,
+        sourceNamespace: String,
+        targetNamespace: String,
+        visitor: MemoryMappingTree
+    ) {
         readField(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
     }
 
-    private fun readField(envType: EnvType, reader: ColumnFileReader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+    private fun readField(
+        envType: EnvType,
+        reader: ColumnFileReader,
+        sourceNamespace: String,
+        targetNamespace: String,
+        visitor: MemoryMappingTree
+    ) {
         reader.nextLine(0)
         reader.nextLine(0)
 
@@ -164,6 +193,7 @@ object OlderMCPReader {
         }
 
         val parentVisitor = visitor
+
         @Suppress("NAME_SHADOWING")
         val visitor = MemoryMappingTree()
 

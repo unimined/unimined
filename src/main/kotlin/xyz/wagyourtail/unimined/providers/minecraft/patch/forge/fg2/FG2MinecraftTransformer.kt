@@ -5,7 +5,10 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.TaskContainer
-import xyz.wagyourtail.unimined.*
+import xyz.wagyourtail.unimined.Constants
+import xyz.wagyourtail.unimined.SemVerUtils
+import xyz.wagyourtail.unimined.consumerApply
+import xyz.wagyourtail.unimined.deleteRecursively
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
@@ -63,16 +66,29 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             val forgeUniversal = parent.forge.dependencies.last()
             val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
-            val outFolder = jarPath.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}").maybeCreate()
+            val outFolder = jarPath.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
+                .createDirectories()
 
             // apply binary patches
             val binaryPatchFile = ZipReader.readInputStreamFor("binpatches.pack.lzma", forgeJar.toPath()) {
-                outFolder.resolve("binpatches.pack.lzma").apply { writeBytes(it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) }
+                outFolder.resolve("binpatches.pack.lzma")
+                    .apply {
+                        writeBytes(
+                            it.readBytes(),
+                            StandardOpenOption.CREATE,
+                            StandardOpenOption.TRUNCATE_EXISTING
+                        )
+                    }
             }
             val patchedMC = outFolder.resolve("${jarPath.nameWithoutExtension}-${forgeUniversal.name}-${forgeUniversal.version}.${jarPath.extension}")
             if (!patchedMC.exists() || project.gradle.startParameter.isRefreshDependencies) {
                 patchedMC.deleteIfExists()
-                FG2TaskApplyBinPatches(project).doTask(jarPath.toFile(), binaryPatchFile.toFile(), patchedMC.toFile(), if (envType == EnvType.SERVER) "server" else "client")
+                FG2TaskApplyBinPatches(project).doTask(
+                    jarPath.toFile(),
+                    binaryPatchFile.toFile(),
+                    patchedMC.toFile(),
+                    if (envType == EnvType.SERVER) "server" else "client"
+                )
             }
             MinecraftJar(this, patchedMC)
         })
@@ -91,7 +107,9 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
         val out = fixForge(envType, namespace, baseMinecraft)
         return ZipReader.openZipFileSystem(out).use { fs ->
-            parent.applyATs(out, listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
+            parent.applyATs(
+                out,
+                listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
         }
     }
 
@@ -131,7 +149,8 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     out.getPath("binpatches.pack.lzma").deleteIfExists()
 
                     //TODO: FIXME, hack. remove forge trying to transform class names for fg2 dev launch
-                    out.getPath("net/minecraftforge/fml/common/asm/transformers/DeobfuscationTransformer.class").deleteIfExists()
+                    out.getPath("net/minecraftforge/fml/common/asm/transformers/DeobfuscationTransformer.class")
+                        .deleteIfExists()
                 }
             } catch (e: Throwable) {
                 target.deleteExisting()

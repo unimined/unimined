@@ -16,6 +16,10 @@
 
 package net.fabricmc.mappingio.format;
 
+import net.fabricmc.mappingio.MappedElementKind;
+import net.fabricmc.mappingio.MappingFlag;
+import net.fabricmc.mappingio.MappingWriter;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
@@ -23,189 +27,197 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-import net.fabricmc.mappingio.MappedElementKind;
-import net.fabricmc.mappingio.MappingFlag;
-import net.fabricmc.mappingio.MappingWriter;
-
 public final class Tiny2Writer2 implements MappingWriter {
-	public Tiny2Writer2(Writer writer, boolean escapeNames) {
-		this.writer = writer;
-		this.escapeNames = escapeNames;
-	}
+    private static final Set<MappingFlag> flags = EnumSet.of(
+        MappingFlag.NEEDS_HEADER_METADATA,
+        MappingFlag.NEEDS_UNIQUENESS,
+        MappingFlag.NEEDS_SRC_METHOD_DESC
+    );
+    private final Writer writer;
+    private boolean escapeNames;
+    private boolean wroteEscapedNamesProperty;
+    private String[] dstNames;
 
-	@Override
-	public void close() throws IOException {
-		writer.close();
-	}
+    public Tiny2Writer2(Writer writer, boolean escapeNames) {
+        this.writer = writer;
+        this.escapeNames = escapeNames;
+    }
 
-	@Override
-	public Set<MappingFlag> getFlags() {
-		return flags;
-	}
+    @Override
+    public void close() throws IOException {
+        writer.close();
+    }
 
-	@Override
-	public void visitNamespaces(String srcNamespace, List<String> dstNamespaces) throws IOException {
-		dstNames = new String[dstNamespaces.size()];
+    @Override
+    public Set<MappingFlag> getFlags() {
+        return flags;
+    }
 
-		write("tiny\t2\t0\t");
-		write(srcNamespace);
+    @Override
+    public void visitNamespaces(String srcNamespace, List<String> dstNamespaces) throws IOException {
+        dstNames = new String[dstNamespaces.size()];
 
-		for (String dstNamespace : dstNamespaces) {
-			writeTab();
-			write(dstNamespace);
-		}
+        write("tiny\t2\t0\t");
+        write(srcNamespace);
 
-		writeLn();
-	}
+        for (String dstNamespace : dstNamespaces) {
+            writeTab();
+            write(dstNamespace);
+        }
 
-	@Override
-	public void visitMetadata(String key, String value) throws IOException {
-		if (key.equals(Tiny2Util.escapedNamesProperty)) {
-			escapeNames = true;
-			wroteEscapedNamesProperty = true;
-		}
+        writeLn();
+    }
 
-		writeTab();
-		write(key);
+    @Override
+    public void visitMetadata(String key, String value) throws IOException {
+        if (key.equals(Tiny2Util.escapedNamesProperty)) {
+            escapeNames = true;
+            wroteEscapedNamesProperty = true;
+        }
 
-		if (value != null) {
-			writeTab();
-			write(value);
-		}
+        writeTab();
+        write(key);
 
-		writeLn();
-	}
+        if (value != null) {
+            writeTab();
+            write(value);
+        }
 
-	@Override
-	public boolean visitContent() throws IOException {
-		if (escapeNames && !wroteEscapedNamesProperty) {
-			write("\t");
-			write(Tiny2Util.escapedNamesProperty);
-			writeLn();
-		}
+        writeLn();
+    }
 
-		return true;
-	}
+    @Override
+    public boolean visitContent() throws IOException {
+        if (escapeNames && !wroteEscapedNamesProperty) {
+            write("\t");
+            write(Tiny2Util.escapedNamesProperty);
+            writeLn();
+        }
 
-	@Override
-	public boolean visitClass(String srcName) throws IOException {
-		write("c\t");
-		writeName(srcName);
+        return true;
+    }
 
-		return true;
-	}
+    @Override
+    public boolean visitClass(String srcName) throws IOException {
+        write("c\t");
+        writeName(srcName);
 
-	@Override
-	public boolean visitField(String srcName, String srcDesc) throws IOException {
-		write("\tf\t");
-		if (srcDesc != null) {
-			writeName(srcDesc);
-		}
-		writeTab();
-		writeName(srcName);
+        return true;
+    }
 
-		return true;
-	}
+    @Override
+    public boolean visitField(String srcName, String srcDesc) throws IOException {
+        write("\tf\t");
+        if (srcDesc != null) {
+            writeName(srcDesc);
+        }
+        writeTab();
+        writeName(srcName);
 
-	@Override
-	public boolean visitMethod(String srcName, String srcDesc) throws IOException {
-		write("\tm\t");
-		writeName(srcDesc);
-		writeTab();
-		writeName(srcName);
+        return true;
+    }
 
-		return true;
-	}
+    @Override
+    public boolean visitMethod(String srcName, String srcDesc) throws IOException {
+        write("\tm\t");
+        writeName(srcDesc);
+        writeTab();
+        writeName(srcName);
 
-	@Override
-	public boolean visitMethodArg(int argPosition, int lvIndex, String srcName) throws IOException {
-		write("\t\tp\t");
-		write(lvIndex);
-		writeTab();
-		if (srcName != null) writeName(srcName);
+        return true;
+    }
 
-		return true;
-	}
+    @Override
+    public boolean visitMethodArg(int argPosition, int lvIndex, String srcName) throws IOException {
+        write("\t\tp\t");
+        write(lvIndex);
+        writeTab();
+        if (srcName != null) {
+            writeName(srcName);
+        }
 
-	@Override
-	public boolean visitMethodVar(int lvtRowIndex, int lvIndex, int startOpIdx, String srcName) throws IOException {
-		write("\t\tv\t");
-		write(lvIndex);
-		writeTab();
-		write(startOpIdx);
-		writeTab();
-		if (lvtRowIndex >= 0) write(lvtRowIndex);
-		writeTab();
-		if (srcName != null) writeName(srcName);
+        return true;
+    }
 
-		return true;
-	}
+    @Override
+    public boolean visitMethodVar(int lvtRowIndex, int lvIndex, int startOpIdx, String srcName) throws IOException {
+        write("\t\tv\t");
+        write(lvIndex);
+        writeTab();
+        write(startOpIdx);
+        writeTab();
+        if (lvtRowIndex >= 0) {
+            write(lvtRowIndex);
+        }
+        writeTab();
+        if (srcName != null) {
+            writeName(srcName);
+        }
 
-	@Override
-	public void visitDstName(MappedElementKind targetKind, int namespace, String name) {
-		dstNames[namespace] = name;
-	}
+        return true;
+    }
 
-	@Override
-	public boolean visitElementContent(MappedElementKind targetKind) throws IOException {
-		for (String dstName : dstNames) {
-			writeTab();
-			if (dstName != null) writeName(dstName);
-		}
+    @Override
+    public void visitDstName(MappedElementKind targetKind, int namespace, String name) {
+        dstNames[namespace] = name;
+    }
 
-		writeLn();
+    @Override
+    public boolean visitElementContent(MappedElementKind targetKind) throws IOException {
+        for (String dstName : dstNames) {
+            writeTab();
+            if (dstName != null) {
+                writeName(dstName);
+            }
+        }
 
-		Arrays.fill(dstNames, null);
+        writeLn();
 
-		return true;
-	}
+        Arrays.fill(dstNames, null);
 
-	@Override
-	public void visitComment(MappedElementKind targetKind, String comment) throws IOException {
-		writeTabs(targetKind.level);
-		write("\tc\t");
-		writeEscaped(comment);
-		writeLn();
-	}
+        return true;
+    }
 
-	private void write(String str) throws IOException {
-		writer.write(str);
-	}
+    @Override
+    public void visitComment(MappedElementKind targetKind, String comment) throws IOException {
+        writeTabs(targetKind.level);
+        write("\tc\t");
+        writeEscaped(comment);
+        writeLn();
+    }
 
-	private void write(int i) throws IOException {
-		write(Integer.toString(i));
-	}
+    private void writeTabs(int count) throws IOException {
+        for (int i = 0; i < count; i++) {
+            writer.write('\t');
+        }
+    }
 
-	private void writeEscaped(String str) throws IOException {
-		Tiny2Util.writeEscaped(str, writer);
-	}
+    private void write(int i) throws IOException {
+        write(Integer.toString(i));
+    }
 
-	private void writeName(String str) throws IOException {
-		if (escapeNames) {
-			writeEscaped(str);
-		} else {
-			write(str);
-		}
-	}
+    private void writeName(String str) throws IOException {
+        if (escapeNames) {
+            writeEscaped(str);
+        } else {
+            write(str);
+        }
+    }
 
-	private void writeLn() throws IOException {
-		writer.write('\n');
-	}
+    private void writeEscaped(String str) throws IOException {
+        Tiny2Util.writeEscaped(str, writer);
+    }
 
-	private void writeTab() throws IOException {
-		writer.write('\t');
-	}
+    private void write(String str) throws IOException {
+        writer.write(str);
+    }
 
-	private void writeTabs(int count) throws IOException {
-		for (int i = 0; i < count; i++) {
-			writer.write('\t');
-		}
-	}
+    private void writeLn() throws IOException {
+        writer.write('\n');
+    }
 
-	private static final Set<MappingFlag> flags = EnumSet.of(MappingFlag.NEEDS_HEADER_METADATA, MappingFlag.NEEDS_UNIQUENESS, MappingFlag.NEEDS_SRC_METHOD_DESC);
+    private void writeTab() throws IOException {
+        writer.write('\t');
+    }
 
-	private final Writer writer;
-	private boolean escapeNames;
-	private boolean wroteEscapedNamesProperty;
-	private String[] dstNames;
 }

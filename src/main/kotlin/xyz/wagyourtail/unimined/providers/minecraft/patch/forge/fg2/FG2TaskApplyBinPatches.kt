@@ -49,63 +49,63 @@ class FG2TaskApplyBinPatches(private val project: Project) {
         ZipFile(input).use { `in` ->
             ZipInputStream(FileInputStream(input)).use { classesIn ->
                 ZipOutputStream(BufferedOutputStream(FileOutputStream(output))).use { out ->
-                        // DO PATCHES
-                        log("Patching Class:")
-                        for (e in Collections.list(`in`.entries())) {
-                            if (e.name.contains("META-INF")) {
-                                continue
-                            }
-                            if (e.isDirectory) {
-                                out.putNextEntry(e)
-                            } else {
-                                val n = ZipEntry(e.name)
-                                n.time = e.time
-                                out.putNextEntry(n)
-                                var data = ByteStreams.toByteArray(
-                                    `in`.getInputStream(
-                                        e
-                                    )
+                    // DO PATCHES
+                    log("Patching Class:")
+                    for (e in Collections.list(`in`.entries())) {
+                        if (e.name.contains("META-INF")) {
+                            continue
+                        }
+                        if (e.isDirectory) {
+                            out.putNextEntry(e)
+                        } else {
+                            val n = ZipEntry(e.name)
+                            n.time = e.time
+                            out.putNextEntry(n)
+                            var data = ByteStreams.toByteArray(
+                                `in`.getInputStream(
+                                    e
                                 )
-                                val patch = this.patches[e.name.replace('\\', '/')]
-                                if (patch != null) {
-                                    log(
-                                        "\t%s (%s) (input size %d)",
-                                        patch.targetClassName,
-                                        patch.sourceClassName,
-                                        data.size
-                                    )
-                                    val inputChecksum = adlerHash(data)
-                                    if (patch.inputChecksum != inputChecksum) {
-                                        throw RuntimeException(
-                                            String.format(
-                                                "There is a binary discrepancy between the expected input class %s (%s) and the actual class. Checksum on disk is %x, in patch %x. Things are probably about to go very wrong. Did you put something into the jar file?",
-                                                patch.targetClassName,
-                                                patch.sourceClassName,
-                                                inputChecksum,
-                                                patch.inputChecksum
-                                            )
+                            )
+                            val patch = this.patches[e.name.replace('\\', '/')]
+                            if (patch != null) {
+                                log(
+                                    "\t%s (%s) (input size %d)",
+                                    patch.targetClassName,
+                                    patch.sourceClassName,
+                                    data.size
+                                )
+                                val inputChecksum = adlerHash(data)
+                                if (patch.inputChecksum != inputChecksum) {
+                                    throw RuntimeException(
+                                        String.format(
+                                            "There is a binary discrepancy between the expected input class %s (%s) and the actual class. Checksum on disk is %x, in patch %x. Things are probably about to go very wrong. Did you put something into the jar file?",
+                                            patch.targetClassName,
+                                            patch.sourceClassName,
+                                            inputChecksum,
+                                            patch.inputChecksum
                                         )
-                                    }
-                                    synchronized(patcher) { data = patcher.patch(data, patch.patch) }
+                                    )
                                 }
-                                out.write(data)
+                                synchronized(patcher) { data = patcher.patch(data, patch.patch) }
                             }
-
-                            // add the names to the hashset
-                            entries.add(e.name)
+                            out.write(data)
                         }
 
-                        // COPY DATA
-                        lateinit var entry: ZipEntry
-                        while (classesIn.nextEntry?.apply { entry = this } != null) {
-                            if (entries.contains(entry.name)) {
-                                continue
-                            }
-                            out.putNextEntry(entry)
-                            out.write(ByteStreams.toByteArray(classesIn))
-                            entries.add(entry.name)
-                        }
+                        // add the names to the hashset
+                        entries.add(e.name)
                     }
+
+                    // COPY DATA
+                    lateinit var entry: ZipEntry
+                    while (classesIn.nextEntry?.apply { entry = this } != null) {
+                        if (entries.contains(entry.name)) {
+                            continue
+                        }
+                        out.putNextEntry(entry)
+                        out.write(ByteStreams.toByteArray(classesIn))
+                        entries.add(entry.name)
+                    }
+                }
             }
         }
     }

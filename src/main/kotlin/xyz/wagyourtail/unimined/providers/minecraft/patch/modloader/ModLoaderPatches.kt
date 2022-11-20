@@ -7,7 +7,6 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import java.nio.file.FileSystem
 import java.nio.file.StandardOpenOption
-import java.util.stream.Stream
 import kotlin.io.path.exists
 import kotlin.io.path.readBytes
 import kotlin.io.path.writeBytes
@@ -37,177 +36,210 @@ object ModLoaderPatches {
 
     private fun newerURIFix(classNode: ClassNode) {
         val method = classNode.methods.first { it.name == "init" && it.desc == "()V" }
-            // find the lines
-            //     L92
-            //    LINENUMBER 809 L92
-            //    NEW java/io/File
-            //    DUP
-            //    LDC LModLoader;.class
-            //    INVOKEVIRTUAL java/lang/Class.getProtectionDomain ()Ljava/security/ProtectionDomain;
-            //    INVOKEVIRTUAL java/security/ProtectionDomain.getCodeSource ()Ljava/security/CodeSource;
-            //    INVOKEVIRTUAL java/security/CodeSource.getLocation ()Ljava/net/URL;
-            //    INVOKEVIRTUAL java/net/URL.toURI ()Ljava/net/URI;
-            //    INVOKESPECIAL java/io/File.<init> (Ljava/net/URI;)V
-            //    ASTORE 2
-            //   L93
-            //    LINENUMBER 810 L93
-            //    GETSTATIC ModLoader.modDir : Ljava/io/File;
-            //    INVOKEVIRTUAL java/io/File.mkdirs ()Z
-            //    POP
-            //   L94
-            //    LINENUMBER 811 L94
-            //    GETSTATIC ModLoader.modDir : Ljava/io/File;
-            //    INVOKESTATIC ModLoader.readFromModFolder (Ljava/io/File;)V
-            //   L95
-            //    LINENUMBER 812 L95
-            //    ALOAD 2
-            //    INVOKESTATIC ModLoader.readFromClassPath (Ljava/io/File;)V
-            // and replace them with
-            //     this.modDir.mkdirs();
-            //     readFromModFolder(this.modDir);
-            //     for (String path : System.getProperty("java.class.path").split(File.pathSeparator)) {
-            //         readFromClassPath(new File(path));
-            //     }
+        // find the lines
+        //     L92
+        //    LINENUMBER 809 L92
+        //    NEW java/io/File
+        //    DUP
+        //    LDC LModLoader;.class
+        //    INVOKEVIRTUAL java/lang/Class.getProtectionDomain ()Ljava/security/ProtectionDomain;
+        //    INVOKEVIRTUAL java/security/ProtectionDomain.getCodeSource ()Ljava/security/CodeSource;
+        //    INVOKEVIRTUAL java/security/CodeSource.getLocation ()Ljava/net/URL;
+        //    INVOKEVIRTUAL java/net/URL.toURI ()Ljava/net/URI;
+        //    INVOKESPECIAL java/io/File.<init> (Ljava/net/URI;)V
+        //    ASTORE 2
+        //   L93
+        //    LINENUMBER 810 L93
+        //    GETSTATIC ModLoader.modDir : Ljava/io/File;
+        //    INVOKEVIRTUAL java/io/File.mkdirs ()Z
+        //    POP
+        //   L94
+        //    LINENUMBER 811 L94
+        //    GETSTATIC ModLoader.modDir : Ljava/io/File;
+        //    INVOKESTATIC ModLoader.readFromModFolder (Ljava/io/File;)V
+        //   L95
+        //    LINENUMBER 812 L95
+        //    ALOAD 2
+        //    INVOKESTATIC ModLoader.readFromClassPath (Ljava/io/File;)V
+        // and replace them with
+        //     this.modDir.mkdirs();
+        //     readFromModFolder(this.modDir);
+        //     for (String path : System.getProperty("java.class.path").split(File.pathSeparator)) {
+        //         readFromClassPath(new File(path));
+        //     }
 
-            val instructions = method.instructions
-            val newInstructions = InsnList()
-            val iterator = instructions.iterator()
-            var slice = false
+        val instructions = method.instructions
+        val newInstructions = InsnList()
+        val iterator = instructions.iterator()
+        var slice = false
 
-            while (iterator.hasNext()) {
-                val insn = iterator.next()
+        while (iterator.hasNext()) {
+            val insn = iterator.next()
 
-                if (insn is TypeInsnNode && insn.desc == "java/io/File" && insn.opcode == Opcodes.NEW) {
-                    val hold = mutableListOf<AbstractInsnNode>(insn)
-                    var next: AbstractInsnNode = insn
-                    while (next !is VarInsnNode && iterator.hasNext()) {
-                        next = iterator.next()
-                        hold.add(next)
-                        if (next is MethodInsnNode && next.name == "getProtectionDomain") {
-                            slice = true
-                            break
-                        }
-                    }
-                    if (!slice) {
-                        for (i in hold) {
-                            newInstructions.add(i)
-                        }
-                        continue
+            if (insn is TypeInsnNode && insn.desc == "java/io/File" && insn.opcode == Opcodes.NEW) {
+                val hold = mutableListOf<AbstractInsnNode>(insn)
+                var next: AbstractInsnNode = insn
+                while (next !is VarInsnNode && iterator.hasNext()) {
+                    next = iterator.next()
+                    hold.add(next)
+                    if (next is MethodInsnNode && next.name == "getProtectionDomain") {
+                        slice = true
+                        break
                     }
                 }
+                if (!slice) {
+                    for (i in hold) {
+                        newInstructions.add(i)
+                    }
+                    continue
+                }
+            }
 
-                // detect 'NEW java/io/File'
-                if (slice) {
-                    val startLbl = LabelNode()
-                    val endLbl = LabelNode()
+            // detect 'NEW java/io/File'
+            if (slice) {
+                val startLbl = LabelNode()
+                val endLbl = LabelNode()
 
-                    newInstructions.add(startLbl)
+                newInstructions.add(startLbl)
 
-                    // find where it's stored
-                    var storeInsn = iterator.next()
-                    while (storeInsn !is VarInsnNode || storeInsn.opcode != Opcodes.ASTORE) {
+                // find where it's stored
+                var storeInsn = iterator.next()
+                while (storeInsn !is VarInsnNode || storeInsn.opcode != Opcodes.ASTORE) {
 //                        // get name of opcode
 //                        val opcodeName = Opcodes::class.java.fields.first { it.get(null) == storeInsn.opcode }.name
 //                        System.err.println("INSN: ${opcodeName}")
-                        storeInsn = iterator.next()
-                    }
-                    val baseLVIndex = 2 + 1
-                    method.localVariables.add(LocalVariableNode("path", "[Ljava/lang/String;", null, startLbl, endLbl, baseLVIndex))
+                    storeInsn = iterator.next()
+                }
+                val baseLVIndex = 2 + 1
+                method.localVariables.add(
+                    LocalVariableNode(
+                        "path",
+                        "[Ljava/lang/String;",
+                        null,
+                        startLbl,
+                        endLbl,
+                        baseLVIndex
+                    )
+                )
 
-                    if (classNode.methods.any { it.name == "readFromModFolder" }) {
-                        // ModLoader.modDir.mkdirs();
-                        newInstructions.add(FieldInsnNode(Opcodes.GETSTATIC, "ModLoader", "modDir", "Ljava/io/File;"))
-                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/File", "mkdirs", "()Z", false))
-                        newInstructions.add(InsnNode(Opcodes.POP))
-                        // readFromModFolder(ModLoader.modDir);
-                        newInstructions.add(FieldInsnNode(Opcodes.GETSTATIC, "ModLoader", "modDir", "Ljava/io/File;"))
-                        newInstructions.add(MethodInsnNode(Opcodes.INVOKESTATIC, "ModLoader", "readFromModFolder", "(Ljava/io/File;)V", false))
-                    }
-                    // var paths = System.getProperty("java.class.path")
-                    newInstructions.add(LdcInsnNode("java.class.path"))
+                if (classNode.methods.any { it.name == "readFromModFolder" }) {
+                    // ModLoader.modDir.mkdirs();
+                    newInstructions.add(FieldInsnNode(Opcodes.GETSTATIC, "ModLoader", "modDir", "Ljava/io/File;"))
+                    newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/File", "mkdirs", "()Z", false))
+                    newInstructions.add(InsnNode(Opcodes.POP))
+                    // readFromModFolder(ModLoader.modDir);
+                    newInstructions.add(FieldInsnNode(Opcodes.GETSTATIC, "ModLoader", "modDir", "Ljava/io/File;"))
                     newInstructions.add(
                         MethodInsnNode(
                             Opcodes.INVOKESTATIC,
-                            "java/lang/System",
-                            "getProperty",
-                            "(Ljava/lang/String;)Ljava/lang/String;",
+                            "ModLoader",
+                            "readFromModFolder",
+                            "(Ljava/io/File;)V",
                             false
                         )
                     )
-                    // paths = paths.split(File.pathSeparator)
-                    newInstructions.add(
-                        FieldInsnNode(
-                            Opcodes.GETSTATIC, "java/io/File", "pathSeparator", "Ljava/lang/String;"
-                        )
+                }
+                // var paths = System.getProperty("java.class.path")
+                newInstructions.add(LdcInsnNode("java.class.path"))
+                newInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKESTATIC,
+                        "java/lang/System",
+                        "getProperty",
+                        "(Ljava/lang/String;)Ljava/lang/String;",
+                        false
                     )
-                    newInstructions.add(
-                        MethodInsnNode(
-                            Opcodes.INVOKEVIRTUAL,
-                            "java/lang/String",
-                            "split",
-                            "(Ljava/lang/String;)[Ljava/lang/String;",
-                            false
-                        )
+                )
+                // paths = paths.split(File.pathSeparator)
+                newInstructions.add(
+                    FieldInsnNode(
+                        Opcodes.GETSTATIC, "java/io/File", "pathSeparator", "Ljava/lang/String;"
                     )
-                    newInstructions.add(VarInsnNode(Opcodes.ASTORE, baseLVIndex))
-                    // for (String path : paths)) {
-                    //     readFromClassPath(new File(path));
-                    // }
-                    newInstructions.add(VarInsnNode(Opcodes.ALOAD, baseLVIndex))
-                    newInstructions.add(InsnNode(Opcodes.ARRAYLENGTH))
-                    newInstructions.add(VarInsnNode(Opcodes.ISTORE, baseLVIndex + 1))
-                    newInstructions.add(InsnNode(Opcodes.ICONST_0))
-                    newInstructions.add(VarInsnNode(Opcodes.ISTORE, baseLVIndex + 2))
-                    val loopStart = LabelNode()
-                    newInstructions.add(loopStart)
-                    newInstructions.add(VarInsnNode(Opcodes.ILOAD, baseLVIndex + 2))
-                    newInstructions.add(VarInsnNode(Opcodes.ILOAD, baseLVIndex + 1))
-                    val loopEnd = LabelNode()
-                    newInstructions.add(JumpInsnNode(Opcodes.IF_ICMPGE, loopEnd))
-                    newInstructions.add(TypeInsnNode(Opcodes.NEW, "java/io/File"))
-                    newInstructions.add(InsnNode(Opcodes.DUP))
-                    newInstructions.add(VarInsnNode(Opcodes.ALOAD, baseLVIndex))
-                    newInstructions.add(VarInsnNode(Opcodes.ILOAD, baseLVIndex + 2))
-                    newInstructions.add(InsnNode(Opcodes.AALOAD))
-                    newInstructions.add(MethodInsnNode(Opcodes.INVOKESPECIAL, "java/io/File", "<init>", "(Ljava/lang/String;)V", false))
-                    newInstructions.add(VarInsnNode(Opcodes.ASTORE, baseLVIndex + 3))
-                    newInstructions.add(VarInsnNode(Opcodes.ALOAD, baseLVIndex + 3))
-                    newInstructions.add(MethodInsnNode(Opcodes.INVOKESTATIC, "ModLoader", "readFromClassPath", "(Ljava/io/File;)V", false))
-                    newInstructions.add(VarInsnNode(Opcodes.ILOAD, baseLVIndex + 2))
-                    newInstructions.add(InsnNode(Opcodes.ICONST_1))
-                    newInstructions.add(InsnNode(Opcodes.IADD))
-                    newInstructions.add(VarInsnNode(Opcodes.ISTORE, baseLVIndex + 2))
-                    newInstructions.add(JumpInsnNode(Opcodes.GOTO, loopStart))
-                    newInstructions.add(loopEnd)
-                    // skip the original instructions
-                    var readFromClassPath = false
-                    var readFromModsDir = !classNode.methods.any { it.name == "readFromModFolder" }
-                    while (iterator.hasNext()) {
-                        val insn = iterator.next()
-                        if (insn is MethodInsnNode && insn.owner == "ModLoader" && insn.desc == "(Ljava/io/File;)V" && insn.opcode == Opcodes.INVOKESTATIC) {
-                            if (insn.name == "readFromClassPath") {
-                                readFromClassPath = true
-                            } else if (insn.name == "readFromModFolder") {
-                                readFromModsDir = true
-                            }
-                            if (readFromClassPath && readFromModsDir) {
-                                slice = false
-                                break
-                            }
+                )
+                newInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKEVIRTUAL,
+                        "java/lang/String",
+                        "split",
+                        "(Ljava/lang/String;)[Ljava/lang/String;",
+                        false
+                    )
+                )
+                newInstructions.add(VarInsnNode(Opcodes.ASTORE, baseLVIndex))
+                // for (String path : paths)) {
+                //     readFromClassPath(new File(path));
+                // }
+                newInstructions.add(VarInsnNode(Opcodes.ALOAD, baseLVIndex))
+                newInstructions.add(InsnNode(Opcodes.ARRAYLENGTH))
+                newInstructions.add(VarInsnNode(Opcodes.ISTORE, baseLVIndex + 1))
+                newInstructions.add(InsnNode(Opcodes.ICONST_0))
+                newInstructions.add(VarInsnNode(Opcodes.ISTORE, baseLVIndex + 2))
+                val loopStart = LabelNode()
+                newInstructions.add(loopStart)
+                newInstructions.add(VarInsnNode(Opcodes.ILOAD, baseLVIndex + 2))
+                newInstructions.add(VarInsnNode(Opcodes.ILOAD, baseLVIndex + 1))
+                val loopEnd = LabelNode()
+                newInstructions.add(JumpInsnNode(Opcodes.IF_ICMPGE, loopEnd))
+                newInstructions.add(TypeInsnNode(Opcodes.NEW, "java/io/File"))
+                newInstructions.add(InsnNode(Opcodes.DUP))
+                newInstructions.add(VarInsnNode(Opcodes.ALOAD, baseLVIndex))
+                newInstructions.add(VarInsnNode(Opcodes.ILOAD, baseLVIndex + 2))
+                newInstructions.add(InsnNode(Opcodes.AALOAD))
+                newInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKESPECIAL,
+                        "java/io/File",
+                        "<init>",
+                        "(Ljava/lang/String;)V",
+                        false
+                    )
+                )
+                newInstructions.add(VarInsnNode(Opcodes.ASTORE, baseLVIndex + 3))
+                newInstructions.add(VarInsnNode(Opcodes.ALOAD, baseLVIndex + 3))
+                newInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKESTATIC,
+                        "ModLoader",
+                        "readFromClassPath",
+                        "(Ljava/io/File;)V",
+                        false
+                    )
+                )
+                newInstructions.add(VarInsnNode(Opcodes.ILOAD, baseLVIndex + 2))
+                newInstructions.add(InsnNode(Opcodes.ICONST_1))
+                newInstructions.add(InsnNode(Opcodes.IADD))
+                newInstructions.add(VarInsnNode(Opcodes.ISTORE, baseLVIndex + 2))
+                newInstructions.add(JumpInsnNode(Opcodes.GOTO, loopStart))
+                newInstructions.add(loopEnd)
+                // skip the original instructions
+                var readFromClassPath = false
+                var readFromModsDir = !classNode.methods.any { it.name == "readFromModFolder" }
+                while (iterator.hasNext()) {
+                    val insn = iterator.next()
+                    if (insn is MethodInsnNode && insn.owner == "ModLoader" && insn.desc == "(Ljava/io/File;)V" && insn.opcode == Opcodes.INVOKESTATIC) {
+                        if (insn.name == "readFromClassPath") {
+                            readFromClassPath = true
+                        } else if (insn.name == "readFromModFolder") {
+                            readFromModsDir = true
+                        }
+                        if (readFromClassPath && readFromModsDir) {
+                            slice = false
+                            break
                         }
                     }
-                    newInstructions.add(endLbl)
-                    slice = false
-                } else {
-                    newInstructions.add(insn)
                 }
+                newInstructions.add(endLbl)
+                slice = false
+            } else {
+                newInstructions.add(insn)
             }
-            method.instructions = newInstructions
+        }
+        method.instructions = newInstructions
 //            classNode.methods.remove(method)
 //            val newMethod = MethodNode(method.access, method.name, method.desc, method.signature, method.exceptions.toTypedArray())
 //            newMethod.instructions = newInstructions
 //            classNode.methods.add(newMethod)
-        }
+    }
 
     private fun olderURIFix(classNode: ClassNode) {
         val method = classNode.methods.first { it.name == "<clinit>" }
@@ -261,9 +293,21 @@ object ModLoaderPatches {
         classNode.methods.add(newClinit)
         newClinit.visitCode()
         newClinit.visitLdcInsn("java.class.path")
-        newClinit.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "getProperty", "(Ljava/lang/String;)Ljava/lang/String;", false)
+        newClinit.visitMethodInsn(
+            Opcodes.INVOKESTATIC,
+            "java/lang/System",
+            "getProperty",
+            "(Ljava/lang/String;)Ljava/lang/String;",
+            false
+        )
         newClinit.visitFieldInsn(Opcodes.GETSTATIC, "java/io/File", "pathSeparator", "Ljava/lang/String;")
-        newClinit.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "split", "(Ljava/lang/String;)[Ljava/lang/String;", false)
+        newClinit.visitMethodInsn(
+            Opcodes.INVOKEVIRTUAL,
+            "java/lang/String",
+            "split",
+            "(Ljava/lang/String;)[Ljava/lang/String;",
+            false
+        )
         newClinit.visitVarInsn(Opcodes.ASTORE, 0)
         newClinit.visitInsn(Opcodes.ICONST_0)
         newClinit.visitVarInsn(Opcodes.ISTORE, 1)
@@ -333,18 +377,58 @@ object ModLoaderPatches {
             }
             if (slice) {
                 // File.toPath()
-                newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/File", "toPath", "()Ljava/nio/file/Path;", false))
+                newInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKEVIRTUAL,
+                        "java/io/File",
+                        "toPath",
+                        "()Ljava/nio/file/Path;",
+                        false
+                    )
+                )
                 // new FileVisitOption[]
                 newInstructions.add(InsnNode(Opcodes.ICONST_0))
                 newInstructions.add(TypeInsnNode(Opcodes.ANEWARRAY, "java/nio/file/FileVisitOption"))
                 // Files.walk()
-                newInstructions.add(MethodInsnNode(Opcodes.INVOKESTATIC, "java/nio/file/Files", "walk", "(Ljava/nio/file/Path;[Ljava/nio/file/FileVisitOption;)Ljava/util/stream/Stream;", false))
+                newInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKESTATIC,
+                        "java/nio/file/Files",
+                        "walk",
+                        "(Ljava/nio/file/Path;[Ljava/nio/file/FileVisitOption;)Ljava/util/stream/Stream;",
+                        false
+                    )
+                )
                 // Collectors.toList()
-                newInstructions.add(MethodInsnNode(Opcodes.INVOKESTATIC, "java/util/stream/Collectors", "toList", "()Ljava/util/stream/Collector;", false))
+                newInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKESTATIC,
+                        "java/util/stream/Collectors",
+                        "toList",
+                        "()Ljava/util/stream/Collector;",
+                        false
+                    )
+                )
                 // Stream.collect()
-                newInstructions.add(MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "collect", "(Ljava/util/stream/Collector;)Ljava/lang/Object;", true))
+                newInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKEINTERFACE,
+                        "java/util/stream/Stream",
+                        "collect",
+                        "(Ljava/util/stream/Collector;)Ljava/lang/Object;",
+                        true
+                    )
+                )
                 // List.toArray()
-                newInstructions.add(MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/util/List", "toArray", "()[Ljava/lang/Object;", true))
+                newInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKEINTERFACE,
+                        "java/util/List",
+                        "toArray",
+                        "()[Ljava/lang/Object;",
+                        true
+                    )
+                )
                 // (Object[]) List.toArray()
                 val aStore = iterator.next()
                 if (aStore !is VarInsnNode || aStore.opcode != Opcodes.ASTORE) {
@@ -373,7 +457,15 @@ object ModLoaderPatches {
                 newInstructions.add(VarInsnNode(Opcodes.ALOAD, aStore.`var` + 1))
                 newInstructions.add(VarInsnNode(Opcodes.ILOAD, aStore.`var` + 2))
                 newInstructions.add(InsnNode(Opcodes.AALOAD))
-                newInstructions.add(MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/nio/file/Path", "toFile", "()Ljava/io/File;", true))
+                newInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKEINTERFACE,
+                        "java/nio/file/Path",
+                        "toFile",
+                        "()Ljava/io/File;",
+                        true
+                    )
+                )
                 newInstructions.add(InsnNode(Opcodes.AASTORE))
                 newInstructions.add(VarInsnNode(Opcodes.ILOAD, aStore.`var` + 2))
                 newInstructions.add(InsnNode(Opcodes.ICONST_1))
@@ -390,14 +482,46 @@ object ModLoaderPatches {
                     // with
                     // String name = files[i].toPath().relativize(arg0.toPath()).toString());
                     if (insn is MethodInsnNode && insn.name == "getName" && insn.owner == "java/io/File") {
-                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/File", "toPath", "()Ljava/nio/file/Path;", false))
+                        newInstructions.add(
+                            MethodInsnNode(
+                                Opcodes.INVOKEVIRTUAL,
+                                "java/io/File",
+                                "toPath",
+                                "()Ljava/nio/file/Path;",
+                                false
+                            )
+                        )
                         newInstructions.add(VarInsnNode(Opcodes.ALOAD, 0))
-                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/File", "toPath", "()Ljava/nio/file/Path;", false))
+                        newInstructions.add(
+                            MethodInsnNode(
+                                Opcodes.INVOKEVIRTUAL,
+                                "java/io/File",
+                                "toPath",
+                                "()Ljava/nio/file/Path;",
+                                false
+                            )
+                        )
                         // dup2 and pop
                         newInstructions.add(InsnNode(Opcodes.DUP2))
                         newInstructions.add(InsnNode(Opcodes.POP))
-                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/nio/file/Path", "relativize", "(Ljava/nio/file/Path;)Ljava/nio/file/Path;", true))
-                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/nio/file/Path", "toString", "()Ljava/lang/String;", true))
+                        newInstructions.add(
+                            MethodInsnNode(
+                                Opcodes.INVOKEINTERFACE,
+                                "java/nio/file/Path",
+                                "relativize",
+                                "(Ljava/nio/file/Path;)Ljava/nio/file/Path;",
+                                true
+                            )
+                        )
+                        newInstructions.add(
+                            MethodInsnNode(
+                                Opcodes.INVOKEINTERFACE,
+                                "java/nio/file/Path",
+                                "toString",
+                                "()Ljava/lang/String;",
+                                true
+                            )
+                        )
                         val aStore2 = iterator.next()
                         if (aStore2 !is VarInsnNode || aStore2.opcode != Opcodes.ASTORE) {
                             throw IllegalStateException("Expected astore")
@@ -416,7 +540,15 @@ object ModLoaderPatches {
                     // name.matches(".*mod_.*\\.class")
                     if (insn is MethodInsnNode && insn.name == "startsWith" && insn.owner == "java/lang/String") {
                         newInstructions.add(LdcInsnNode("(?:.*[/\\\\]|^)mod_.*\\.class"))
-                        newInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "matches", "(Ljava/lang/String;)Z", false))
+                        newInstructions.add(
+                            MethodInsnNode(
+                                Opcodes.INVOKEVIRTUAL,
+                                "java/lang/String",
+                                "matches",
+                                "(Ljava/lang/String;)Z",
+                                false
+                            )
+                        )
                         continue
                     }
                 }
@@ -428,7 +560,8 @@ object ModLoaderPatches {
         method.instructions = newInstructions
 
         // find addMod
-        val addMod = classNode.methods.firstOrNull { it.name == "addMod" } ?: throw IllegalStateException("addMod not found")
+        val addMod = classNode.methods.firstOrNull { it.name == "addMod" }
+            ?: throw IllegalStateException("addMod not found")
         val addModInstructions = addMod.instructions
         val addModIterator = addModInstructions.iterator()
         val addModNewInstructions = InsnList()
@@ -440,11 +573,27 @@ object ModLoaderPatches {
                 // String.replace('/', '.')
                 addModNewInstructions.add(LdcInsnNode("/"))
                 addModNewInstructions.add(LdcInsnNode("."))
-                addModNewInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "replace", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/String;", false))
+                addModNewInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKEVIRTUAL,
+                        "java/lang/String",
+                        "replace",
+                        "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/String;",
+                        false
+                    )
+                )
                 // String.replace('\\', '.')
                 addModNewInstructions.add(LdcInsnNode("\\"))
                 addModNewInstructions.add(LdcInsnNode("."))
-                addModNewInstructions.add(MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/String", "replace", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/String;", false))
+                addModNewInstructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKEVIRTUAL,
+                        "java/lang/String",
+                        "replace",
+                        "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/String;",
+                        false
+                    )
+                )
             }
 
             addModNewInstructions.add(insn)

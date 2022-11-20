@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.providers.minecraft.patch
 
-import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
@@ -20,7 +19,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     internal val dynamicTransformerDependencies: Configuration = project.configurations.maybeCreate(Constants.DYNAMIC_TRANSFORMER_DEPENDENCIES)
 
     @ApiStatus.Internal
-    open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, output: Path) : MinecraftJar {
+    open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, output: Path): MinecraftJar {
         //TODO: do this for real
         return clientjar
     }
@@ -39,11 +38,11 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     protected open fun applyClientRunConfig(tasks: TaskContainer) {
-        provider.provideVanillaRunClientTask(tasks) {  }
+        provider.provideVanillaRunClientTask(tasks) { }
     }
 
     protected open fun applyServerRunConfig(tasks: TaskContainer) {
-        provider.provideVanillaRunServerTask(tasks) {  }
+        provider.provideVanillaRunServerTask(tasks) { }
     }
 
     @ApiStatus.Internal
@@ -53,7 +52,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     @ApiStatus.Internal
-    open fun sourceSets(sourceSets: SourceSetContainer) {}
+    open fun sourceSets(sourceSets: SourceSetContainer) {
+    }
 
     @ApiStatus.Internal
     open fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {

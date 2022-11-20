@@ -15,6 +15,7 @@ import xyz.wagyourtail.unimined.UniminedExtension
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.AccessTransformerMinecraftTransformer
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
@@ -42,6 +43,10 @@ abstract class RemapJarTask : Jar() {
     abstract val minecraftTarget: Property<String>
 
     @get:Input
+    @get:Optional
+    abstract val remapATToLegacy: Property<Boolean>
+
+    @get:Input
     @get:ApiStatus.Internal
     abstract val envType: Property<EnvType>
 
@@ -52,6 +57,7 @@ abstract class RemapJarTask : Jar() {
         // was a hack to fix forge mappings missing a class in 1.14.4 causing failure with mojmap...
         fallbackTargetNamespace.convention("official")
         targetNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
+        remapATToLegacy.convention(false)
         envType.convention(EnvType.COMBINED)
         minecraftTarget.finalizeValueOnRead()
     }
@@ -59,29 +65,48 @@ abstract class RemapJarTask : Jar() {
     @TaskAction
     fun run() {
         if (targetNamespace.get() == sourceNamespace.get()) {
-            Files.copy(inputFile.get().asFile.toPath(), outputs.files.files.first().toPath(), StandardCopyOption.REPLACE_EXISTING)
+            Files.copy(
+                inputFile.get().asFile.toPath(),
+                outputs.files.files.first().toPath(),
+                StandardCopyOption.REPLACE_EXISTING
+            )
             return
         }
         val env = if (minecraftTarget.isPresent) minecraftTarget.get() else if (minecraftProvider.disableCombined.get()) {
             envType.get().name
         } else {
-           EnvType.COMBINED.name
+            EnvType.COMBINED.name
         }
         val envType = EnvType.valueOf(env)
         val remapperB = TinyRemapper.newRemapper()
-            .withMappings(uniminedExtension.mappingsProvider.getMappingProvider(envType, sourceNamespace.get(), fallbackFromNamespace.get(), fallbackTargetNamespace.get(), targetNamespace.get()))
+            .withMappings(
+                uniminedExtension.mappingsProvider.getMappingProvider(
+                    envType,
+                    sourceNamespace.get(),
+                    fallbackFromNamespace.get(),
+                    fallbackTargetNamespace.get(),
+                    targetNamespace.get()
+                )
+            )
             .skipLocalVariableMapping(true)
             .ignoreConflicts(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .extension(MixinExtension())
         minecraftProvider.mcRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
-        val mc = minecraftProvider.mcRemapper.provider.getMinecraftWithMapping(envType, minecraftProvider.targetNamespace.get())
+        val mc = minecraftProvider.mcRemapper.provider.getMinecraftWithMapping(
+            envType,
+            minecraftProvider.targetNamespace.get()
+        )
         project.logger.warn("Remapping output ${inputFile.get()} using $mc")
         project.logger.warn("Environment: $envType")
         project.logger.warn("Remap from: ${sourceNamespace.get()} to: ${targetNamespace.get()}")
         remapper.readClassPathAsync(mc)
-        remapper.readClassPathAsync(*minecraftProvider.mcRemapper.provider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
+        remapper.readClassPathAsync(
+            *minecraftProvider.mcRemapper.provider.mcLibraries.resolve()
+                .map { it.toPath() }
+                .toTypedArray()
+        )
 
         remapper.readInputsAsync(inputFile.get().asFile.toPath())
 
@@ -89,7 +114,10 @@ abstract class RemapJarTask : Jar() {
             it.addNonClassFiles(
                 inputFile.get().asFile.toPath(),
                 remapper,
-                listOf(AccessWidenerMinecraftTransformer.awRemapper(sourceNamespace.get(), targetNamespace.get()))
+                listOf(
+                    AccessWidenerMinecraftTransformer.awRemapper(sourceNamespace.get(), targetNamespace.get()),
+                    AccessTransformerMinecraftTransformer.atRemapper(remapATToLegacy.get())
+                )
             )
             remapper.apply(it)
         }

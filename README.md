@@ -3,44 +3,48 @@
 unified minecraft modding environment.
 
 ## TODO for initial release
+
 * ~~remap fg2+ era at's back to notch (fixing mc 1.7+)~~
 * ~~remap user at's to notch~~
 * ~~auto disable combined on <=1.2.5~~
 * ~~figure out, why modloader not launching in dev due to classpath path instead of jar path~~
 
 ## TODO
+
 * Refactor, refactor, refactor
-~~* FG3+ support (>1.12.2)~~
+  ~~* FG3+ support (>1.12.2)~~
 * test user AT support
-~~* fix fg3 versions of 1.12.2~~
+  ~~* fix fg3 versions of 1.12.2~~
 * fabric aw support
 * combined jar support
-~~* figure out how to get forge to recognise resources as part of the dev mod~~
+  ~~* figure out how to get forge to recognise resources as part of the dev mod~~
 * split fg2+ out of the mc jar
 * figure out how to do automated testing
-  * figure out how to determine the correctness of remap output
-  * aka automate the verification that versions work
-    * list of versions to verify
-      * 1.19.2
-      * 1.17.1
-      * 1.16.5
-      * 1.13.2
-      * 1.12.2
-      * 1.8.9
-      * 1.7.10
-      * 1.6.4
-      * 1.5.2
-      * 1.3.2
-      * 1.2.5
-      * 1.7.3
-      * b1.3_01
-      * a1.1.2_01
-  * maybe by hash check?
-* figure out what versions need `-Djava.util.Arrays.useLegacyMergeSort=true` to not randomly crash, this should really be part of the legacy mc version.json, or at least betacraft's, but it's not
-~~* make myself a maven to host this on~~
-~~* fix forge mappings on 1.17+~~
+    * figure out how to determine the correctness of remap output
+    * aka automate the verification that versions work
+        * list of versions to verify
+            * 1.19.2
+            * 1.17.1
+            * 1.16.5
+            * 1.13.2
+            * 1.12.2
+            * 1.8.9
+            * 1.7.10
+            * 1.6.4
+            * 1.5.2
+            * 1.3.2
+            * 1.2.5
+            * 1.7.3
+            * b1.3_01
+            * a1.1.2_01
+    * maybe by hash check?
+* figure out what versions need `-Djava.util.Arrays.useLegacyMergeSort=true` to not randomly crash, this should really
+  be part of the legacy mc version.json, or at least betacraft's, but it's not
+  ~~* make myself a maven to host this on~~
+  ~~* fix forge mappings on 1.17+~~
 
 ## Example Usage
+
 ```groovy
 plugins {
     id 'java'
@@ -106,6 +110,7 @@ dependencies {
 ```
 
 ## B1.3_01 example
+
 ```groovy
 plugins {
     id 'java'

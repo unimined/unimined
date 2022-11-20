@@ -63,9 +63,11 @@ dependencies {
 
 tasks.jar {
     manifest {
-        attributes.putAll(mapOf(
-            "Implementation-Version" to project.version
-        ))
+        attributes.putAll(
+            mapOf(
+                "Implementation-Version" to project.version
+            )
+        )
     }
 }
 

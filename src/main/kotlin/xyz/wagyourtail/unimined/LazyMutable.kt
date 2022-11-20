@@ -8,6 +8,7 @@ class LazyMutable<T>(val initializer: () -> T) : ReadWriteProperty<Any?, T> {
 
     @Suppress("ClassName")
     private object UNINITIALIZED_VALUE
+
     private var prop: Any? = UNINITIALIZED_VALUE
 
     @Suppress("UNCHECKED_CAST")
