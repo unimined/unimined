@@ -1,7 +1,5 @@
 package xyz.wagyourtail.unimined.providers.mappings
 
-import net.fabricmc.mappingio.MappingReader
-import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
 import net.fabricmc.mappingio.format.*
 import net.fabricmc.mappingio.tree.MappingTreeView
@@ -29,7 +27,6 @@ import java.util.zip.ZipOutputStream
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
-import kotlin.io.path.writer
 
 abstract class MappingsProvider(
     val project: Project, val parent: UniminedExtension
@@ -364,25 +361,28 @@ abstract class MappingsProvider(
         fun export(mappingTree: MappingTreeView) {
             project.logger.warn("Exporting mappings for $envType to $location")
             location!!.toPath()
-                .writer(StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-                .use { writer ->
+                .outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                .use { os ->
+                    val visitor =  when (type) {
+                        MappingExportTypes.MCP -> MCPWriter(os, envType.ordinal)
+                        MappingExportTypes.TINY_V2 -> Tiny2Writer2(OutputStreamWriter(os, StandardCharsets.UTF_8), false)
+                        MappingExportTypes.SRG -> SrgWriter(OutputStreamWriter(os, StandardCharsets.UTF_8))
+                        else -> throw RuntimeException("Unknown export type $type")
+                    }
                     mappingTree.accept(
                         MappingSourceNsSwitch(
-                            MappingDstNsFilter(
-                                if (type == MappingExportTypes.TINY_V2) {
-                                    Tiny2Writer2(writer, false)
-                                } else {
-                                    SrgWriter(writer)
-                                }, targetNamespace ?: mappingTree.dstNamespaces
+                            MappingDstNsFilter(visitor
+                               , targetNamespace ?: mappingTree.dstNamespaces
                             ), sourceNamespace ?: mappingTree.srcNamespace
                         )
                     )
-                    writer.flush()
+                    os.flush()
+                    visitor.close()
                 }
         }
     }
 }
 
 enum class MappingExportTypes {
-    TINY_V2, SRG
+    TINY_V2, SRG, MCP
 }

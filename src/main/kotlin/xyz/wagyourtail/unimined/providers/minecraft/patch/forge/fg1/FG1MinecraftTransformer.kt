@@ -52,45 +52,19 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        val atsOut = minecraft.let(consumerApply {
-            // resolve forge
-            val forge = jarModConfiguration(envType).resolve().firstOrNull()?.toPath()
-                ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath()
-                ?: throw IllegalStateException("No forge jar found for $envType!")
+        // resolve forge
+        val forge = jarModConfiguration(minecraft.envType).resolve().firstOrNull()?.toPath()
+            ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath()
+            ?: throw IllegalStateException("No forge jar found for ${minecraft.envType}!")
 
 
-            val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
-                atTransformers.add(::transformLegacyTransformer)
-                atTransformers.add {
-                    remapTransformer(
-                        envType,
-                        it,
-                        "named", "searge", "official", "official"
-                    )
-                }
-
-                // resolve ats from froge
-                ZipReader.readInputStreamFor("fml_at.cfg", forge, false) {
-                    addAccessTransformer(it)
-                }
-                ZipReader.readInputStreamFor("forge_at.cfg", forge, false) {
-                    addAccessTransformer(it)
-                }
-
-                parent.accessTransformer?.let { addAccessTransformer(it) }
-            }
-
-            // resolve dyn libs
-            ZipReader.readInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", forge, false) {
-                resolveDynLibs(getDynLibs(it))
-            }
-
-            // apply ats
-            accessModder.transform(this)
-        })
+        // resolve dyn libs
+        ZipReader.readInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", forge, false) {
+            resolveDynLibs(getDynLibs(it))
+        }
 
         // apply jarMod
-        return afterForgeJarModder.transform(super.transform(atsOut))
+        return afterForgeJarModder.transform(super.transform(minecraft))
     }
 
     private val forgeDeps: Configuration = project.configurations.maybeCreate(Constants.FORGE_DEPS)
@@ -239,6 +213,13 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
+        val out = fixForge(envType, namespace, baseMinecraft)
+        return ZipReader.openZipFileSystem(out).use { fs ->
+            parent.applyATs(out, listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
+        }
+    }
+
+    fun fixForge(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
         if (namespace == "named") {
             val target = baseMinecraft.parent.resolve("${baseMinecraft.nameWithoutExtension}-stripped.${baseMinecraft.extension}")
 

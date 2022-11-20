@@ -48,6 +48,8 @@ abstract class RemapJarTask : Jar() {
     init {
         sourceNamespace.convention(minecraftProvider.targetNamespace)
         fallbackFromNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
+        // TODO: fix, this doesn't work properly on fabric where some things get renamed to notch when they should inherit from parent class
+        // was a hack to fix forge mappings missing a class in 1.14.4 causing failure with mojmap...
         fallbackTargetNamespace.convention("official")
         targetNamespace.convention(minecraftProvider.mcRemapper.fallbackTarget)
         envType.convention(EnvType.COMBINED)
@@ -93,7 +95,7 @@ abstract class RemapJarTask : Jar() {
         }
         remapper.finish()
 
-        minecraftProvider.minecraftTransformer.afterRemapJarTask(outputs.files.files.first().toPath())
+        minecraftProvider.minecraftTransformer.afterRemapJarTask(this, outputs.files.files.first().toPath())
     }
 
 

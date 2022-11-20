@@ -20,6 +20,7 @@ import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.remap.RemapJarTask
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -198,7 +199,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         }
     }
 
-    override fun afterRemapJarTask(output: Path) {
+    override fun afterRemapJarTask(task: RemapJarTask, output: Path) {
         insertIncludes(output)
     }
 

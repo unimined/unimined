@@ -12,7 +12,6 @@ import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.RunConfig
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg3.mcpconfig.McpConfigData
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
@@ -111,6 +110,16 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                         }
                     }
                 }
+            }
+        }
+
+        userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
+            val mainClass = get("main").asString
+            if (!mainClass.startsWith("net.minecraftforge.legacydev")) {
+                project.logger.warn("inserting mcp mappings")
+                provider.mcLibraries.dependencies.add(
+                    project.dependencies.create(project.files(parent.srgToMCPAsMCP))
+                )
             }
         }
 
@@ -223,7 +232,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         project.logger.warn("transforming minecraft jar $minecraft for FG3")
-        val atMcJar = minecraft.let(consumerApply {
+        val patchedMC = minecraft.let(consumerApply {
             val forgeUniversal = parent.forge.dependencies.last()
             val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
 
@@ -261,40 +270,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     throw e
                 }
             }
-            //   apply at's
-            val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
-                if (userdevCfg["notchObf"]?.asBoolean == true) {
-                    atTransformers.add {
-                        remapTransformer(
-                            envType,
-                            it,
-                            "named", "searge", "official", "official"
-                        )
-                    }
-                } else {
-                    atTransformers.add {
-                        remapTransformer(
-                            envType,
-                            it,
-                            "named", "named", "searge", "searge"
-                        )
-                    }
-                }
-
-                for (at in userdevCfg["ats"].asJsonArray) {
-                    ZipReader.readInputStreamFor(at.asString, forgeUd.toPath()) {
-                        addAccessTransformer(it)
-                    }
-                }
-
-                parent.accessTransformer?.let { addAccessTransformer(it) }
-            }
-
-            accessModder.transform(MinecraftJar(this, patchedMC))
+            MinecraftJar(this, patchedMC)
         })
 
         //   shade in forge jar
-        return super.transform(atMcJar)
+        return super.transform(patchedMC)
     }
 
     val legacyClasspath = provider.parent.getLocalCache().maybeCreate().resolve("legacy_classpath.txt")
@@ -335,7 +315,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    fun createLegactClasspath() {
+    fun createLegacyClasspath() {
 //        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 //        val source = sourceSets.findByName("client") ?: sourceSets.getByName("main")
 
@@ -347,7 +327,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
-        createLegactClasspath()
+        createLegacyClasspath()
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
             val mainClass = get("main").asString
 
@@ -357,7 +337,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 provider.provideVanillaRunClientTask(tasks) {
                     it.mainClass = "net.minecraft.launchwrapper.Launch"
                     it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
-                    it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMcpMappings}"
+                    it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
                     it.args += "--tweakClass ${parent.tweakClass ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
                 }
             } else {
@@ -379,6 +359,13 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
+        val out = fixForge(envType, namespace, baseMinecraft)
+        ZipReader.openZipFileSystem(out).use { fs ->
+            return parent.applyATs(out, listOf(fs.getPath("fml_at.cfg"), fs.getPath("forge_at.cfg"), fs.getPath("META-INF/accesstransformer.cfg")).filter { Files.exists(it) })
+        }
+    }
+
+    fun fixForge(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
         if (namespace == "named") {
             val target = baseMinecraft.parent.resolve("${baseMinecraft.nameWithoutExtension}-stripped.${baseMinecraft.extension}")
 
@@ -403,6 +390,4 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
         return baseMinecraft
     }
-
-
 }

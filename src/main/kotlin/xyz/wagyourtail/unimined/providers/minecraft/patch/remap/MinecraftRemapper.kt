@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.maybeCreate
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.AccessTransformerMinecraftTransformer2
 import java.nio.file.Path
 import kotlin.io.path.*
 
@@ -67,9 +68,11 @@ class MinecraftRemapper(
             project.logger.warn("Remapping ${jarPath.name} to $target")
 
             try {
+                remapper.readInputs(jarPath)
                 OutputConsumerPath.Builder(target).build().use {
-                    it.addNonClassFiles(jarPath, NonClassCopyMode.FIX_META_INF, null)
-                    remapper.readInputs(jarPath)
+                    it.addNonClassFiles(jarPath, remapper,
+                        listOf(AccessTransformerMinecraftTransformer2.atRemapper()) + NonClassCopyMode.FIX_META_INF.remappers
+                    )
                     remapper.apply(it)
                 }
             } catch (e: RuntimeException) {

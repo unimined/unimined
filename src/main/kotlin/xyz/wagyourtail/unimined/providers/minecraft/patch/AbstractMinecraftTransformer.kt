@@ -9,6 +9,7 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.remap.RemapJarTask
 import java.nio.file.Path
 
 abstract class AbstractMinecraftTransformer protected constructor(
@@ -60,7 +61,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     @ApiStatus.Internal
-    open fun afterRemapJarTask(output: Path) {
+    open fun afterRemapJarTask(task: RemapJarTask, output: Path) {
         // do nothing
     }
 }

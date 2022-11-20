@@ -8,7 +8,6 @@ import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.minecraft.patch.jarmod.JarModMinecraftTransformer
 import java.io.File
@@ -60,7 +59,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        val atOut = minecraft.let(consumerApply {
+        val patchedMC = minecraft.let(consumerApply {
             val forgeUniversal = parent.forge.dependencies.last()
             val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
@@ -75,43 +74,28 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 patchedMC.deleteIfExists()
                 FG2TaskApplyBinPatches(project).doTask(jarPath.toFile(), binaryPatchFile.toFile(), patchedMC.toFile(), if (envType == EnvType.SERVER) "server" else "client")
             }
-
-            val accessModder = AccessTransformerMinecraftTransformer(project, provider, envType).apply {
-                atTransformers.add(::transformLegacyTransformer)
-                atTransformers.add {
-                    remapTransformer(
-                        envType,
-                        it,
-                        "named", "searge", "official", "official"
-                    )
-                }
-
-                ZipReader.readInputStreamFor("fml_at.cfg", forgeJar.toPath(), false) {
-                    addAccessTransformer(it)
-                }
-
-                ZipReader.readInputStreamFor("forge_at.cfg", forgeJar.toPath(), false) {
-                    addAccessTransformer(it)
-                }
-
-                parent.accessTransformer?.let { addAccessTransformer(it) }
-            }
-
-            accessModder.transform(MinecraftJar(this, patchedMC))
+            MinecraftJar(this, patchedMC)
         })
 
-        return super.transform(atOut)
+        return super.transform(patchedMC)
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
         provider.provideVanillaRunClientTask(tasks) {
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
-            it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMcpMappings}"
+            it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
             it.args += "--tweakClass ${parent.tweakClass ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
         }
     }
 
     override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
+        val out = fixForge(envType, namespace, baseMinecraft)
+        return ZipReader.openZipFileSystem(out).use { fs ->
+            parent.applyATs(out, listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
+        }
+    }
+
+    fun fixForge(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
         if (namespace == "named") {
             val target = baseMinecraft.parent.resolve("${baseMinecraft.nameWithoutExtension}-stripped.${baseMinecraft.extension}")
 

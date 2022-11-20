@@ -56,6 +56,9 @@ dependencies {
 
     // aw
     implementation("net.fabricmc:access-widener:2.1.0")
+
+    // at
+    implementation("net.minecraftforge:accesstransformers:8.0.7")
 }
 
 tasks.jar {
