@@ -199,6 +199,10 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     }
 
     override fun afterRemapJarTask(output: Path) {
+        insertIncludes(output)
+    }
+
+    private fun insertIncludes(output: Path) {
         ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
             val mod = fs.getPath("fabric.mod.json")
             if (!Files.exists(mod)) {

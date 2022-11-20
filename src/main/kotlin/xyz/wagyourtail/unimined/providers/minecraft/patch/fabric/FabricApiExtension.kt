@@ -20,11 +20,19 @@ open class FabricApiExtension(project: Project) {
             val elements = doc.getElementsByTagName("dependency")
             for (i in 0 until elements.length) {
                 val element = elements.item(i)
+                var correct = false
+                var version: String? = null
                 for (j in 0 until element.childNodes.length) {
                     val child = element.childNodes.item(j)
                     if (child.nodeName == "artifactId" && child.textContent == name) {
-                        return element.childNodes.item(1).textContent
+                        correct = true
                     }
+                    if (child.nodeName == "version") {
+                        version = child.textContent
+                    }
+                }
+                if (correct) {
+                    return "net.fabricmc.fabric-api:$name:$version"
                 }
             }
         }
