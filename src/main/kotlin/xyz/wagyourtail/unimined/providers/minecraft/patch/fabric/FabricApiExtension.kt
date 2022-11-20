@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
+@Suppress("unused")
 open class FabricApiExtension(project: Project) {
     companion object {
         fun apply(target: Project) {
@@ -21,18 +22,18 @@ open class FabricApiExtension(project: Project) {
             for (i in 0 until elements.length) {
                 val element = elements.item(i)
                 var correct = false
-                var version: String? = null
+                var vers: String? = null
                 for (j in 0 until element.childNodes.length) {
                     val child = element.childNodes.item(j)
                     if (child.nodeName == "artifactId" && child.textContent == name) {
                         correct = true
                     }
                     if (child.nodeName == "version") {
-                        version = child.textContent
+                        vers = child.textContent
                     }
                 }
                 if (correct) {
-                    return "net.fabricmc.fabric-api:$name:$version"
+                    return "net.fabricmc.fabric-api:$name:$vers"
                 }
             }
         }
