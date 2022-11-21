@@ -50,7 +50,9 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
 
     fun aw2at(input: String, output: String) = aw2at(File(input), File(output))
 
-    fun aw2at(input: File, output: File = project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first().resolve("META-INF/accesstransformer.cfg")): File {
+    fun aw2at(input: File) = aw2at(input, project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first().resolve("META-INF/accesstransformer.cfg"))
+
+    fun aw2at(input: File, output: File): File {
         return AccessTransformerMinecraftTransformer.aw2at(input.toPath(), output.toPath()).toFile()
     }
 
