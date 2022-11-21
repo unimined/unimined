@@ -1,7 +1,10 @@
 package xyz.wagyourtail.unimined.providers.patch.forge
 
+import net.fabricmc.accesswidener.AccessWidener
+import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
+import net.minecraftforge.accesstransformer.AccessTransformer
 import net.minecraftforge.accesstransformer.TransformerProcessor
 import org.objectweb.asm.commons.Remapper
 import java.io.BufferedReader
@@ -11,6 +14,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import kotlin.io.path.bufferedReader
+import kotlin.io.path.bufferedWriter
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.name
 
 object AccessTransformerMinecraftTransformer {
@@ -29,6 +35,7 @@ object AccessTransformerMinecraftTransformer {
                 input: InputStream,
                 remapper: TinyRemapper
             ) {
+                println("Transforming $relativePath")
                 val output = destinationDirectory.resolve(relativePath)
                 BufferedReader(input.reader()).use { reader ->
                     Files.newBufferedWriter(
@@ -144,6 +151,7 @@ object AccessTransformerMinecraftTransformer {
         if (accessTransformers.isEmpty()) {
             return baseMinecraft
         }
+        output.deleteIfExists()
         val transfomerProcessor = TransformerProcessor::class.java
         val processJar = transfomerProcessor.getDeclaredMethod(
             "processJar",
@@ -156,11 +164,10 @@ object AccessTransformerMinecraftTransformer {
         return output
     }
 
-    fun aw2at(aw: Path, output: Path) {
-        val reader = Files.newBufferedReader(aw, StandardCharsets.UTF_8)
-        val writer = Files.newBufferedWriter(output, StandardCharsets.UTF_8)
-
-        reader.close()
-        writer.close()
+    fun aw2at(aw: Path, output: Path): Path {
+        AccessTransformerWriter(output.bufferedWriter(StandardCharsets.UTF_8, 1024, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use {
+            AccessWidenerReader(it).read(aw.bufferedReader())
+        }
+        return output
     }
 }

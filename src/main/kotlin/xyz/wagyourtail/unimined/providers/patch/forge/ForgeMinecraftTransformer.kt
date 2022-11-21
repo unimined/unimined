@@ -4,6 +4,7 @@ import com.google.gson.JsonParser
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
@@ -44,6 +45,14 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
 
     @ApiStatus.Internal
     var tweakClass: String? = null
+
+    fun aw2at(input: String): File = aw2at(File(input))
+
+    fun aw2at(input: String, output: String) = aw2at(File(input), File(output))
+
+    fun aw2at(input: File, output: File = project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first().resolve("META-INF/accesstransformer.cfg")): File {
+        return AccessTransformerMinecraftTransformer.aw2at(input.toPath(), output.toPath()).toFile()
+    }
 
     @get:ApiStatus.Internal
     val srgToMCPAsSRG: Path by lazy {
@@ -246,7 +255,6 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 output
             } else {
-                output.deleteIfExists()
                 AccessTransformerMinecraftTransformer.transform(
                     ats + listOf(accessTransformer!!.toPath()),
                     baseMinecraft,
