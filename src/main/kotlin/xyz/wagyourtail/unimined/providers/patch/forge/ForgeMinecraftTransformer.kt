@@ -24,6 +24,7 @@ import java.io.InputStreamReader
 import java.net.URI
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.io.path.nameWithoutExtension
 
@@ -245,6 +246,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 output
             } else {
+                output.deleteIfExists()
                 AccessTransformerMinecraftTransformer.transform(
                     ats + listOf(accessTransformer!!.toPath()),
                     baseMinecraft,
