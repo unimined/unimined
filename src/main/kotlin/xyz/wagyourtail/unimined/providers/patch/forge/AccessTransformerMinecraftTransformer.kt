@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.providers.patch.forge
 
 import net.fabricmc.accesswidener.AccessWidener
 import net.fabricmc.accesswidener.AccessWidenerReader
+import net.fabricmc.tinyremapper.ClassInstance
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import net.minecraftforge.accesstransformer.AccessTransformer
@@ -47,7 +48,7 @@ object AccessTransformerMinecraftTransformer {
                         var line = reader.readLine()
                         while (line != null) {
                             line = transformLegacyTransformer(line)
-                            line = remapModernTransformer(line, remapper.environment.remapper)
+                            line = remapModernTransformer(line, remapper)
                             if (remapToLegacy) {
                                 TODO()
                             }
@@ -108,7 +109,7 @@ object AccessTransformerMinecraftTransformer {
         return line
     }
 
-    private fun remapModernTransformer(reader: BufferedReader, writer: BufferedWriter, remapper: Remapper) {
+    private fun remapModernTransformer(reader: BufferedReader, writer: BufferedWriter, remapper: TinyRemapper) {
         var line = reader.readLine()
         while (line != null) {
             writer.write("${remapModernTransformer(line, remapper)}\n")
@@ -116,7 +117,8 @@ object AccessTransformerMinecraftTransformer {
         }
     }
 
-    private fun remapModernTransformer(line: String, remapper: Remapper): String {
+    private fun remapModernTransformer(line: String, tremapper: TinyRemapper): String {
+        val remapper = tremapper.environment.remapper
         val classMatch = modernClass.matchEntire(line)
         if (classMatch != null) {
             val (access, owner, comment) = classMatch.destructured

@@ -63,7 +63,7 @@ class MinecraftRemapper(
             tinyRemapperConf(remapperB)
             val remapper = remapperB.build()
 
-            project.logger.warn("Remapping ${jarPath.name} to $target")
+            project.logger.warn("Remapping ${jarPath.name} to $target\nfrom $mappingNamespace to $remapTo")
 
             try {
                 remapper.readInputs(jarPath)

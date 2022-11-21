@@ -296,7 +296,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     throw e
                 }
             }
-            MinecraftJar(this, patchedMC)
+            if (userdevCfg["notchObf"]?.asBoolean == true) {
+                MinecraftJar(this, provider.mcRemapper.provide(MinecraftJar(this, patchedMC), "searge", true), envType, "searge")
+            } else {
+                MinecraftJar(this, patchedMC)
+            }
         })
 
         //   shade in forge jar

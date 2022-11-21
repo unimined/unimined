@@ -10,6 +10,10 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
     private val writer = ZipOutputStream(writer)
     private val fields = StringBuilder().append("searge,name,side,desc")
     private val methods = StringBuilder().append("searge,name,side,desc")
+    private var lastField: String? = null
+    private var lastFieldDst: Boolean = false
+    private var lastMethod: String? = null
+    private var lastMethodDst: Boolean = false
 
     override fun visitNamespaces(srcNamespace: String, dstNamespaces: MutableList<String>) {
         if (dstNamespaces.size != 1) throw UnsupportedOperationException("MCP only supports one destination namespace")
@@ -20,12 +24,14 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
     }
 
     override fun visitField(srcName: String, srcDesc: String?): Boolean {
-        fields.append("\n").append(srcName).append(",")
+        lastField = "\n$srcName,"
+        lastFieldDst = false
         return true
     }
 
     override fun visitMethod(srcName: String, srcDesc: String?): Boolean {
-        methods.append("\n").append(srcName).append(",")
+        lastMethod = "\n$srcName,"
+        lastMethodDst = false
         return true
     }
 
@@ -39,16 +45,30 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
 
     override fun visitDstName(targetKind: MappedElementKind, namespace: Int, name: String) {
         when (targetKind) {
-            MappedElementKind.FIELD -> fields.append(name).append(",").append(side)
-            MappedElementKind.METHOD -> methods.append(name).append(",").append(side)
+            MappedElementKind.FIELD -> {
+                lastField += "$name,$side,"
+                lastFieldDst = true
+                fields.append(lastField)
+            }
+            MappedElementKind.METHOD -> {
+                lastMethod += "$name,$side,"
+                lastMethodDst = true
+                methods.append(lastMethod)
+            }
             else -> {}
         }
     }
 
     override fun visitComment(targetKind: MappedElementKind, comment: String) {
         when (targetKind) {
-            MappedElementKind.FIELD -> fields.append(",\"").append(comment).append("\"")
-            MappedElementKind.METHOD -> methods.append(",\"").append(comment).append("\"")
+            MappedElementKind.FIELD -> {
+                if (lastFieldDst)
+                    fields.append(",\"").append(comment).append("\"")
+            }
+            MappedElementKind.METHOD -> {
+                if (lastMethodDst)
+                    methods.append(",\"").append(comment).append("\"")
+            }
             else -> {}
         }
     }
