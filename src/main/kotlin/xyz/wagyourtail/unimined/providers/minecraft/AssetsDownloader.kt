@@ -4,8 +4,9 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.Constants.ASSET_BASE_URL
-import xyz.wagyourtail.unimined.providers.minecraft.version.AssetIndex
-import xyz.wagyourtail.unimined.testSha1
+import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.version.AssetIndex
+import xyz.wagyourtail.unimined.util.testSha1
 import java.io.InputStreamReader
 import java.net.URI
 import java.nio.file.Files
@@ -17,8 +18,7 @@ import kotlin.io.path.inputStream
 class AssetsDownloader(val project: Project, private val parent: MinecraftProvider) {
 
     fun downloadAssets(project: Project, assets: AssetIndex): Path {
-
-        val dir = parent.parent.getGlobalCache().resolve("assets")
+        val dir = assetsDir()
         val index = dir.resolve("indexes").resolve("${assets.id}.json")
 
         index.parent.createDirectories()
@@ -31,6 +31,10 @@ class AssetsDownloader(val project: Project, private val parent: MinecraftProvid
 
         resolveAssets(project, assetsJson, dir)
         return dir
+    }
+
+    fun assetsDir(): Path {
+        return parent.parent.getGlobalCache().resolve("assets")
     }
 
     private fun updateIndex(assets: AssetIndex, index: Path) {

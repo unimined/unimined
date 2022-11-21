@@ -7,10 +7,9 @@ import groovy.lang.DelegatesTo
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.format.Tiny2Writer
+import xyz.wagyourtail.unimined.util.toHex
 import java.io.StringWriter
 import java.security.MessageDigest
-
-fun ByteArray.toHex() = joinToString(separator = "") { byte -> "%02x".format(byte) }
 
 class MemoryMapping {
     private val classes = mutableListOf<ClassMapping>()

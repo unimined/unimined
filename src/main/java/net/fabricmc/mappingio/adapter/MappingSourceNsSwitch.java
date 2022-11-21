@@ -95,9 +95,9 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
 
     @Override
     public boolean visitHeader() throws IOException {
-		if (!classMapReady) {
-			return true;
-		}
+        if (!classMapReady) {
+            return true;
+        }
 
         return next.visitHeader();
     }
@@ -110,16 +110,16 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
                 passThrough = true;
                 relayHeaderOrMetadata = next.visitHeader();
 
-				if (relayHeaderOrMetadata) {
-					next.visitNamespaces(srcNamespace, dstNamespaces);
-				}
+                if (relayHeaderOrMetadata) {
+                    next.visitNamespaces(srcNamespace, dstNamespaces);
+                }
             } else {
                 newSourceNs = dstNamespaces.indexOf(newSourceNsName);
-				if (newSourceNs < 0) {
-					throw new RuntimeException(
-						"invalid new source ns " + newSourceNsName + ": not in " + dstNamespaces + " or " +
-							srcNamespace);
-				}
+                if (newSourceNs < 0) {
+                    throw new RuntimeException(
+                        "invalid new source ns " + newSourceNsName + ": not in " + dstNamespaces + " or " +
+                            srcNamespace);
+                }
 
                 oldSourceNsName = srcNamespace;
 
@@ -145,16 +145,16 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
 
     @Override
     public void visitMetadata(String key, String value) throws IOException {
-		if (classMapReady && relayHeaderOrMetadata) {
-			next.visitMetadata(key, value);
-		}
+        if (classMapReady && relayHeaderOrMetadata) {
+            next.visitMetadata(key, value);
+        }
     }
 
     @Override
     public boolean visitContent() throws IOException {
-		if (!classMapReady) {
-			return true;
-		}
+        if (!classMapReady) {
+            return true;
+        }
 
         relayHeaderOrMetadata = true; // for in-content metadata
 
@@ -163,9 +163,9 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
 
     @Override
     public boolean visitClass(String srcName) throws IOException {
-		if (passThrough) {
-			return next.visitClass(srcName);
-		}
+        if (passThrough) {
+            return next.visitClass(srcName);
+        }
 
         this.srcName = srcName;
 
@@ -175,9 +175,9 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
     @Override
     public boolean visitField(String srcName, String srcDesc) throws IOException {
         assert classMapReady;
-		if (passThrough) {
-			return next.visitField(srcName, srcDesc);
-		}
+        if (passThrough) {
+            return next.visitField(srcName, srcDesc);
+        }
 
         this.srcName = srcName;
         this.srcDesc = srcDesc;
@@ -188,9 +188,9 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
     @Override
     public boolean visitMethod(String srcName, String srcDesc) throws IOException {
         assert classMapReady;
-		if (passThrough) {
-			return next.visitMethod(srcName, srcDesc);
-		}
+        if (passThrough) {
+            return next.visitMethod(srcName, srcDesc);
+        }
 
         this.srcName = srcName;
         this.srcDesc = srcDesc;
@@ -201,9 +201,9 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
     @Override
     public boolean visitMethodArg(int argPosition, int lvIndex, String srcName) throws IOException {
         assert classMapReady;
-		if (passThrough) {
-			return next.visitMethodArg(argPosition, lvIndex, srcName);
-		}
+        if (passThrough) {
+            return next.visitMethodArg(argPosition, lvIndex, srcName);
+        }
 
         this.srcName = srcName;
         this.argIdx = argPosition;
@@ -215,9 +215,9 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
     @Override
     public boolean visitMethodVar(int lvtRowIndex, int lvIndex, int startOpIdx, String srcName) throws IOException {
         assert classMapReady;
-		if (passThrough) {
-			return next.visitMethodVar(lvtRowIndex, lvIndex, startOpIdx, srcName);
-		}
+        if (passThrough) {
+            return next.visitMethodVar(lvtRowIndex, lvIndex, startOpIdx, srcName);
+        }
 
         this.srcName = srcName;
         this.argIdx = lvtRowIndex;
@@ -240,9 +240,9 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
     @Override
     public void visitDstName(MappedElementKind targetKind, int namespace, String name) throws IOException {
         if (!classMapReady) {
-			if (namespace == newSourceNs) {
-				classMap.put(srcName, name);
-			}
+            if (namespace == newSourceNs) {
+                classMap.put(srcName, name);
+            }
             return;
         }
 
@@ -251,9 +251,9 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
             return;
         }
 
-		if (namespace >= dstNames.length) {
-			throw new IllegalArgumentException("out of bounds namespace");
-		}
+        if (namespace >= dstNames.length) {
+            throw new IllegalArgumentException("out of bounds namespace");
+        }
 
         dstNames[namespace] = name;
     }
@@ -269,12 +269,12 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
 
     @Override
     public boolean visitElementContent(MappedElementKind targetKind) throws IOException {
-		if (!classMapReady) {
-			return false;
-		}
-		if (passThrough) {
-			return next.visitElementContent(targetKind);
-		}
+        if (!classMapReady) {
+            return false;
+        }
+        if (passThrough) {
+            return next.visitElementContent(targetKind);
+        }
 
         String dstName = dstNames[newSourceNs];
 
@@ -283,9 +283,9 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
             targetKind != MappedElementKind.METHOD_VAR) { // src name is optional for arg/var, leave as null
             if (dropMissingNewSrcName) {
                 Arrays.fill(dstNames, null);
-				if (dstDescs != null) {
-					Arrays.fill(dstDescs, null);
-				}
+                if (dstDescs != null) {
+                    Arrays.fill(dstDescs, null);
+                }
                 return false;
             } else {
                 dstName = srcName;
@@ -321,20 +321,20 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
             for (int i = 0; i < dstNames.length; i++) {
                 if (i == newSourceNs) {
                     next.visitDstName(targetKind, i, srcName);
-					if (sendDesc) {
-						next.visitDstDesc(targetKind, i, srcDesc);
-					}
+                    if (sendDesc) {
+                        next.visitDstDesc(targetKind, i, srcDesc);
+                    }
                 } else {
                     String name = dstNames[i];
-					if (name != null) {
-						next.visitDstName(targetKind, i, name);
-					}
+                    if (name != null) {
+                        next.visitDstName(targetKind, i, name);
+                    }
 
                     if (sendDesc) {
                         String desc = dstDescs[i];
-						if (desc != null) {
-							next.visitDstDesc(targetKind, i, desc);
-						}
+                        if (desc != null) {
+                            next.visitDstDesc(targetKind, i, desc);
+                        }
                     }
                 }
             }
@@ -343,9 +343,9 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
         }
 
         Arrays.fill(dstNames, null);
-		if (dstDescs != null) {
-			Arrays.fill(dstDescs, null);
-		}
+        if (dstDescs != null) {
+            Arrays.fill(dstDescs, null);
+        }
 
         return relay;
     }

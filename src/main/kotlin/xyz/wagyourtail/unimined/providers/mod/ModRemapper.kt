@@ -10,9 +10,9 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
-import xyz.wagyourtail.unimined.LazyMutable
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
-import xyz.wagyourtail.unimined.providers.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.providers.patch.fabric.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path

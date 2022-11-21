@@ -7,11 +7,12 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.Constants.METADATA_URL
-import xyz.wagyourtail.unimined.providers.minecraft.version.Download
-import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
-import xyz.wagyourtail.unimined.providers.minecraft.version.VersionData
-import xyz.wagyourtail.unimined.providers.minecraft.version.parseVersionData
-import xyz.wagyourtail.unimined.testSha1
+import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.version.Download
+import xyz.wagyourtail.unimined.providers.version.Extract
+import xyz.wagyourtail.unimined.providers.version.VersionData
+import xyz.wagyourtail.unimined.providers.version.parseVersionData
+import xyz.wagyourtail.unimined.util.testSha1
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStreamReader
@@ -298,7 +299,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     private val clientMappings: Path by lazy {
-        val mappings = metadata.downloads.get("client_mappings")
+        val mappings = metadata.downloads["client_mappings"]
             ?: throw IllegalStateException("No client mappings found for version $version")
         val mappingsPath = clientMappingsDownloadPath(version)
 
@@ -320,7 +321,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     private val serverMappings: Path by lazy {
-        val mappings = metadata.downloads.get("server_mappings")
+        val mappings = metadata.downloads["server_mappings"]
             ?: throw IllegalStateException("No server mappings found for version $version")
         val mappingsPath = serverMappingsDownloadPath(version)
 
