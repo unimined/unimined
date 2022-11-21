@@ -49,18 +49,24 @@ class AccessTransformerWriter(private val output: BufferedWriter) : AccessWidene
 
     enum class AccessType(val str: String) {
         PUBLIC("public"),
-        UNFINAL("-f"),
         PROTECTED("protected"),
+        UNFINAL("-f"),
     }
 
     override fun close() {
         classes.forEach { (name, access) ->
+            if (access == setOf(AccessType.UNFINAL)) access.add(AccessType.PUBLIC)
+            if (access.containsAll(setOf(AccessType.PUBLIC, AccessType.PROTECTED))) access.remove(AccessType.PROTECTED)
             output.write(access.sortedBy { it.ordinal }.joinToString("") { it.str } + " $name\n")
         }
         fields.forEach { (desc, access) ->
+            if (access == setOf(AccessType.UNFINAL)) access.add(AccessType.PUBLIC)
+            if (access.containsAll(setOf(AccessType.PUBLIC, AccessType.PROTECTED))) access.remove(AccessType.PROTECTED)
             output.write(access.sortedBy { it.ordinal }.joinToString("") { it.str } + " $desc\n")
         }
         methods.forEach { (desc, access) ->
+            if (access == setOf(AccessType.UNFINAL)) access.add(AccessType.PUBLIC)
+            if (access.containsAll(setOf(AccessType.PUBLIC, AccessType.PROTECTED))) access.remove(AccessType.PROTECTED)
             output.write(access.sortedBy { it.ordinal }.joinToString("") { it.str } + " $desc\n")
         }
         output.close()
