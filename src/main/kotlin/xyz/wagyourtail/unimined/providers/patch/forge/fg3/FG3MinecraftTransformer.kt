@@ -331,7 +331,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
                 "{asset_index}" -> provider.minecraftDownloader.metadata.assetIndex?.id ?: ""
                 "{source_roots}" -> {
-                    (listOf(config.commonClasspath.output.resourcesDir) + config.commonClasspath.output.files).joinToString(
+                    (listOf(config.commonClasspath.output.resourcesDir) + config.commonClasspath.output.classesDirs + parent.includeSubprojectSourceSets.flatMap { listOf(it.output.resourcesDir) + it.output.classesDirs }).joinToString(
                         File.pathSeparator
                     ) { "mod%%$it" }
                 }

@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.providers.patch.forge
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
+import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
@@ -37,6 +38,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
     var accessTransformer: File? = null
     var mcpVersion: String? = null
     var mcpChannel: String? = null
+
+    var includeSubprojectSourceSets = mutableSetOf<SourceSet>()
 
     @ApiStatus.Internal
     var tweakClass: String? = null
