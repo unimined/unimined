@@ -113,23 +113,26 @@ object AccessTransformerMinecraftTransformer {
         val classMatch = modernClass.matchEntire(line)
         if (classMatch != null) {
             val (access, owner, comment) = classMatch.destructured
-            return "$access ${remapper.map(owner.replace(".", "/")).replace("/", ".")} $comment"
+            val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
+            return "$access $remappedOwner $comment"
         }
         val methodMatch = modernMethod.matchEntire(line)
         if (methodMatch != null) {
             val (access, owner, name, desc, comment) = methodMatch.destructured
-            return "$access ${
-                remapper.map(owner.replace(".", "/"))
-                    .replace("/", ".")
-            } ${remapper.mapMethodName(owner.replace(".", "/"), name, desc)}${remapper.mapMethodDesc(desc)} $comment"
+            val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
+            if (name.contains(Regex("[*<>]"))) {
+                return "$access $remappedOwner $name$desc $comment"
+            }
+            val remappedName = remapper.mapMethodName(remappedOwner, name, desc)
+            val remappedDesc = remapper.mapMethodDesc(desc)
+            return "$access $remappedOwner $remappedName$remappedDesc $comment"
         }
         val fieldMatch = modernField.matchEntire(line)
         if (fieldMatch != null) {
             val (access, owner, name, comment) = fieldMatch.destructured
-            return "$access ${
-                remapper.map(owner.replace(".", "/"))
-                    .replace("/", ".")
-            } ${remapper.mapFieldName(owner.replace(".", "/"), name, null)} $comment"
+            val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
+            val remappedName = remapper.mapFieldName(remappedOwner, name, null)
+            return "$access $remappedOwner $remappedName $comment"
         }
         println("Failed to match: $line")
         return line

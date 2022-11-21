@@ -350,12 +350,12 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    fun createLegacyClasspath() {
+    private fun createLegacyClasspath() {
 //        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 //        val source = sourceSets.findByName("client") ?: sourceSets.getByName("main")
 
         legacyClasspath.writeText(
-            (provider.mcLibraries.files + provider.combined.files + provider.client.files + clientExtra.files).joinToString(
+            (provider.mcLibraries.resolve() + provider.combined.resolve() + provider.client.resolve() + clientExtra.resolve()).joinToString(
                 "\n"
             ) { it.toString() },
             StandardCharsets.UTF_8,
