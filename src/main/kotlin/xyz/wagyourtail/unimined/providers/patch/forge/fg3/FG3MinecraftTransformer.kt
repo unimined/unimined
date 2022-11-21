@@ -243,67 +243,65 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         project.logger.warn("transforming minecraft jar $minecraft for FG3")
-        return minecraft.let(consumerApply {
-            val forgeUniversal = parent.forge.dependencies.last()
-            val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
+        val forgeUniversal = parent.forge.dependencies.last()
+        val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
 
-            // get forge jar
-            val forge = parent.forge.getFile(forgeUniversal)
+        // get forge jar
+        val forge = parent.forge.getFile(forgeUniversal)
 
-            val outFolder = minecraft.jarPath.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
-                .createDirectories()
+        val outFolder = minecraft.jarPath.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
+            .createDirectories()
 
-            // if userdev cfg says notch
-            if (userdevCfg["notchObf"]?.asBoolean == true && envType != EnvType.COMBINED) {
-                throw IllegalStateException("Forge userdev3 (legacy fg3, aka 1.12.2) is not supported for non-combined environments.")
-            }
+        // if userdev cfg says notch
+        if (userdevCfg["notchObf"]?.asBoolean == true && minecraft.envType != EnvType.COMBINED) {
+            throw IllegalStateException("Forge userdev3 (legacy fg3, aka 1.12.2) is not supported for non-combined environments.")
+        }
 
-            //   apply binpatches
-            val binPatchFile = ZipReader.readInputStreamFor(userdevCfg["binpatches"].asString, forgeUd.toPath()) {
-                outFolder.resolve("binpatches.pack.lzma")
-                    .apply {
-                        writeBytes(
-                            it.readBytes(),
-                            StandardOpenOption.CREATE,
-                            StandardOpenOption.TRUNCATE_EXISTING
-                        )
-                    }
-            }
-
-            val patchedMC = outFolder.resolve(
-                "${
-                    jarPath.nameWithoutExtension.replace(
-                        "minecraft",
-                        "forge"
+        //   apply binpatches
+        val binPatchFile = ZipReader.readInputStreamFor(userdevCfg["binpatches"].asString, forgeUd.toPath()) {
+            outFolder.resolve("binpatches.pack.lzma")
+                .apply {
+                    writeBytes(
+                        it.readBytes(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING
                     )
-                }-${forgeUniversal.name}-${forgeUniversal.version}.${jarPath.extension}"
-            )
-            if (!patchedMC.exists() || project.gradle.startParameter.isRefreshDependencies) {
-                patchedMC.deleteIfExists()
-                val args = (userdevCfg["binpatcher"].asJsonObject["args"].asJsonArray.map {
-                    when (it.asString) {
-                        "{clean}" -> jarPath.toString()
-                        "{patch}" -> binPatchFile.toString()
-                        "{output}" -> patchedMC.toString()
-                        else -> it.asString
-                    }
-                } + listOf("--data", "--unpatched")).toTypedArray()
-                try {
-                    ConsoleTool.main(args)
-                } catch (e: Throwable) {
-                    e.printStackTrace()
-                    patchedMC.deleteIfExists()
-                    throw e
                 }
+        }
+
+        val patchedMC = outFolder.resolve(
+            "${
+                minecraft.jarPath.nameWithoutExtension.replace(
+                    "minecraft",
+                    "forge"
+                )
+            }-${forgeUniversal.name}-${forgeUniversal.version}.${minecraft.jarPath.extension}"
+        )
+        if (!patchedMC.exists() || project.gradle.startParameter.isRefreshDependencies) {
+            patchedMC.deleteIfExists()
+            val args = (userdevCfg["binpatcher"].asJsonObject["args"].asJsonArray.map {
+                when (it.asString) {
+                    "{clean}" -> minecraft.jarPath.toString()
+                    "{patch}" -> binPatchFile.toString()
+                    "{output}" -> patchedMC.toString()
+                    else -> it.asString
+                }
+            } + listOf("--data", "--unpatched")).toTypedArray()
+            try {
+                ConsoleTool.main(args)
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                patchedMC.deleteIfExists()
+                throw e
             }
-            //   shade in forge jar
-            val shadedForge = super.transform(MinecraftJar(this, patchedMC))
-            if (userdevCfg["notchObf"]?.asBoolean == true) {
-                MinecraftJar(shadedForge, provider.mcRemapper.provide(MinecraftJar(this, patchedMC), "searge", true), envType, "searge")
-            } else {
-                shadedForge
-            }
-        })
+        }
+        //   shade in forge jar
+        val shadedForge = super.transform(MinecraftJar(minecraft, patchedMC))
+        return if (userdevCfg["notchObf"]?.asBoolean == true) {
+            MinecraftJar(shadedForge, provider.mcRemapper.provide(shadedForge, "searge", true), shadedForge.envType, "searge")
+        } else {
+            shadedForge
+        }
     }
 
     val legacyClasspath = provider.parent.getLocalCache().createDirectories().resolve("legacy_classpath.txt")
