@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.providers.version.Download
 import xyz.wagyourtail.unimined.providers.version.Extract
 import xyz.wagyourtail.unimined.providers.version.VersionData
 import xyz.wagyourtail.unimined.providers.version.parseVersionData
+import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.testSha1
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -53,11 +54,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
     private val sourceSets: SourceSetContainer = project.extensions.getByType(SourceSetContainer::class.java)
 
-    init {
-        parent.parent.events.register(::afterEvaluate)
-    }
-
-    private fun afterEvaluate() {
+    fun afterEvaluate() {
         // if <=1.2.5 disable combined automagically
         if (mcVersionCompare(version, "1.3") < 0) {
             parent.disableCombined.set(true)
@@ -124,7 +121,8 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
     }
 
-    val dependency: Dependency by lazy {
+
+    var dependency: Dependency by LazyMutable {
         val dependencies = parent.combined.dependencies
 
         if (dependencies.isEmpty()) {
@@ -136,6 +134,10 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
 
         val dependency = dependencies.first()
+
+        if (dependency.group != Constants.MINECRAFT_GROUP) {
+            throw IllegalStateException("Invalid dependency group for Minecraft, expected ${Constants.MINECRAFT_GROUP} but got ${dependency.group}")
+        }
 
         if (dependency.name != "minecraft") {
             throw IllegalArgumentException("Dependency $dependency is not a Minecraft dependency")

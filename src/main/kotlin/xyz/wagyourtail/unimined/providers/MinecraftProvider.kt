@@ -58,17 +58,22 @@ abstract class MinecraftProvider(
         isTransitive = true
     }
 
+    @ApiStatus.Internal
     val runConfigs = mutableListOf<RunConfig>()
 
+    @ApiStatus.Internal
     val minecraftDownloader: MinecraftDownloader = MinecraftDownloader(project, this)
+
+    @ApiStatus.Internal
     val assetsDownloader: AssetsDownloader = AssetsDownloader(
         project,
         this
     )
 
+    @ApiStatus.Internal
     private val repo: Repository = SimpleRepository.of(
         ArtifactProviderBuilder.begin(ArtifactIdentifier::class.java)
-            .filter(ArtifactIdentifier.groupEquals(Constants.MINECRAFT_GROUP))
+            .filter(ArtifactIdentifier.groupEquals(Constants.MINECRAFT_GROUP).or(ArtifactIdentifier.groupEquals(Constants.MINECRAFT_FORGE_GROUP)))
             .provide(this)
     )
 
@@ -108,6 +113,19 @@ abstract class MinecraftProvider(
     }
 
     private fun afterEvaluate() {
+        if (minecraftTransformer is ForgeMinecraftTransformer) {
+            println("Switching to net.minecraftforge")
+            val dep = minecraftDownloader.dependency
+            combined.dependencies.clear()
+            val newDep = project.dependencies.create(
+                "net.minecraftforge:${dep.name}:${dep.version}"
+            )
+            combined.dependencies.add(newDep)
+            minecraftDownloader.dependency = newDep
+        } else {
+            println("not forge")
+        }
+        minecraftDownloader.afterEvaluate()
         addMcLibraries()
         minecraftTransformer.afterEvaluate()
     }
