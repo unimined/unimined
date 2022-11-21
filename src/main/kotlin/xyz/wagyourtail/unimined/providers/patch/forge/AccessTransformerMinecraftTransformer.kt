@@ -120,8 +120,10 @@ object AccessTransformerMinecraftTransformer {
         if (methodMatch != null) {
             val (access, owner, name, desc, comment) = methodMatch.destructured
             val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
-            if (name.contains(Regex("[*<>]"))) {
-                return "$access $remappedOwner $name$desc $comment"
+            if (name == "*") {
+                if (desc == "()") {
+                    return "$access $remappedOwner $name$desc $comment"
+                }
             }
             val remappedName = remapper.mapMethodName(remappedOwner, name, desc)
             val remappedDesc = remapper.mapMethodDesc(desc)
