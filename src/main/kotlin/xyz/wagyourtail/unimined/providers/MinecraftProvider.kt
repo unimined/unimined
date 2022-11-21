@@ -73,7 +73,10 @@ abstract class MinecraftProvider(
     @ApiStatus.Internal
     private val repo: Repository = SimpleRepository.of(
         ArtifactProviderBuilder.begin(ArtifactIdentifier::class.java)
-            .filter(ArtifactIdentifier.groupEquals(Constants.MINECRAFT_GROUP).or(ArtifactIdentifier.groupEquals(Constants.MINECRAFT_FORGE_GROUP)))
+            .filter(
+                ArtifactIdentifier.groupEquals(Constants.MINECRAFT_GROUP)
+                .or(ArtifactIdentifier.groupEquals(Constants.MINECRAFT_FORGE_GROUP))
+            )
             .provide(this)
     )
 
@@ -299,6 +302,16 @@ abstract class MinecraftProvider(
         }
     }
 
+    fun checkGroup(info: ArtifactIdentifier) {
+        if (info.group == Constants.MINECRAFT_FORGE_GROUP && minecraftTransformer !is ForgeMinecraftTransformer) {
+            throw IllegalStateException("Minecraft transformer is not forge")
+        }
+
+        if (info.group == Constants.MINECRAFT_GROUP && minecraftTransformer is ForgeMinecraftTransformer) {
+            throw IllegalStateException("Minecraft transformer is forge")
+        }
+    }
+
     @ApiStatus.Internal
     override fun getArtifact(info: ArtifactIdentifier): Artifact {
 
@@ -309,12 +322,14 @@ abstract class MinecraftProvider(
         if (info.name != "minecraft") {
             return Artifact.none()
         }
+
         try {
             return if (info.extension != "jar") {
                 Artifact.none()
             } else {
                 when (info.classifier) {
                     "client" -> {
+                        checkGroup(info)
                         val mc = getMinecraftWithMapping(EnvType.CLIENT, targetNamespace.get())
                         project.logger.info("providing client minecraft jar at $mc")
                         StreamableArtifact.ofFile(
@@ -325,6 +340,7 @@ abstract class MinecraftProvider(
                     }
 
                     "server" -> {
+                        checkGroup(info)
                         val mc = getMinecraftWithMapping(EnvType.SERVER, targetNamespace.get())
                         project.logger.info("providing server minecraft jar at $mc")
                         StreamableArtifact.ofFile(
@@ -347,6 +363,7 @@ abstract class MinecraftProvider(
                     )
 
                     null -> {
+                        checkGroup(info)
                         if (disableCombined.get()) {
                             Artifact.none()
                         } else {
