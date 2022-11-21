@@ -10,7 +10,6 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
     private val writer = ZipOutputStream(writer)
     private val fields = StringBuilder().append("searge,name,side,desc")
     private val methods = StringBuilder().append("searge,name,side,desc")
-    private val params = StringBuilder().append("searge,name,side")
 
     override fun visitNamespaces(srcNamespace: String, dstNamespaces: MutableList<String>) {
         if (dstNamespaces.size != 1) throw UnsupportedOperationException("MCP only supports one destination namespace")
@@ -20,20 +19,17 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
         return true
     }
 
-    override fun visitField(srcName: String, srcDesc: String): Boolean {
+    override fun visitField(srcName: String, srcDesc: String?): Boolean {
         fields.append("\n").append(srcName).append(",")
         return true
     }
 
-    override fun visitMethod(srcName: String?, srcDesc: String?): Boolean {
+    override fun visitMethod(srcName: String, srcDesc: String?): Boolean {
         methods.append("\n").append(srcName).append(",")
         return true
     }
 
-    override fun visitMethodArg(argPosition: Int, lvIndex: Int, srcName: String?): Boolean {
-        if (srcName != null) {
-            params.append("\n").append(srcName).append(",")
-        }
+    override fun visitMethodArg(argPosition: Int, lvIndex: Int, srcName: String): Boolean {
         return true
     }
 
@@ -45,7 +41,6 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
         when (targetKind) {
             MappedElementKind.FIELD -> fields.append(name).append(",").append(side)
             MappedElementKind.METHOD -> methods.append(name).append(",").append(side)
-            MappedElementKind.METHOD_ARG -> params.append(name).append(",").append(side)
             else -> {}
         }
     }
@@ -64,9 +59,6 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
         writer.closeEntry()
         writer.putNextEntry(ZipEntry("methods.csv"))
         writer.write(methods.toString().toByteArray())
-        writer.closeEntry()
-        writer.putNextEntry(ZipEntry("params.csv"))
-        writer.write(params.toString().toByteArray())
         writer.closeEntry()
         writer.close()
     }
