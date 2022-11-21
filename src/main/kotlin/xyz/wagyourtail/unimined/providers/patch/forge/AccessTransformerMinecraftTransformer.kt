@@ -132,7 +132,7 @@ object AccessTransformerMinecraftTransformer {
                     return "$access $remappedOwner $name$desc $comment"
                 }
             }
-            val remappedName = remapper.mapMethodName(remappedOwner, name, desc)
+            val remappedName = remapper.mapMethodName(owner.replace(".", "/"), name, desc)
             val remappedDesc = remapper.mapMethodDesc(desc)
             return "$access $remappedOwner $remappedName$remappedDesc $comment"
         }
@@ -140,7 +140,7 @@ object AccessTransformerMinecraftTransformer {
         if (fieldMatch != null) {
             val (access, owner, name, comment) = fieldMatch.destructured
             val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
-            val remappedName = remapper.mapFieldName(remappedOwner, name, null)
+            val remappedName = remapper.mapFieldName(owner.replace(".", "/"), name, null)
             return "$access $remappedOwner $remappedName $comment"
         }
         println("Failed to match: $line")
