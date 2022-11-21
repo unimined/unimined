@@ -243,7 +243,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         project.logger.warn("transforming minecraft jar $minecraft for FG3")
-        val patchedMC = minecraft.let(consumerApply {
+        return minecraft.let(consumerApply {
             val forgeUniversal = parent.forge.dependencies.last()
             val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
 
@@ -296,15 +296,14 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     throw e
                 }
             }
+            //   shade in forge jar
+            val shadedForge = super.transform(MinecraftJar(this, patchedMC))
             if (userdevCfg["notchObf"]?.asBoolean == true) {
-                MinecraftJar(this, provider.mcRemapper.provide(MinecraftJar(this, patchedMC), "searge", true), envType, "searge")
+                MinecraftJar(shadedForge, provider.mcRemapper.provide(MinecraftJar(this, patchedMC), "searge", true), envType, "searge")
             } else {
-                MinecraftJar(this, patchedMC)
+                shadedForge
             }
         })
-
-        //   shade in forge jar
-        return super.transform(patchedMC)
     }
 
     val legacyClasspath = provider.parent.getLocalCache().createDirectories().resolve("legacy_classpath.txt")
