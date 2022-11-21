@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.providers.patch.fabric
 
+import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -31,6 +32,10 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     project,
     provider
 ) {
+    companion object {
+        val GSON = GsonBuilder().setPrettyPrinting().create()
+    }
+
     val fabric: Configuration = project.configurations.maybeCreate(Constants.FABRIC_PROVIDER)
     val fabricJson: Configuration = project.configurations.maybeCreate(Constants.FABRIC_JSON)
 
@@ -274,7 +279,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
                 jars.add(JsonObject().apply {
                     addProperty("file", "META-INF/jars/${dep.name}-${dep.version}.jar")
                 })
-                Files.write(mod, json.toString().toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
+                Files.write(mod, GSON.toJson(json).toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
             }
         }
     }
@@ -297,7 +302,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
                 val awPath = fs.getPath(parent.relativize(aw).toString())
                 val json = JsonParser.parseReader(InputStreamReader(Files.newInputStream(mod))).asJsonObject
                 json.addProperty("accessWidener", awPath.toString())
-                Files.write(mod, json.toString().toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
+                Files.write(mod, GSON.toJson(json).toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
             }
         }
     }
