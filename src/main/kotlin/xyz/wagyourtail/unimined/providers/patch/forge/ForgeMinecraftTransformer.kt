@@ -237,6 +237,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
     fun applyATs(baseMinecraft: Path, ats: List<Path>): Path {
         project.logger.warn("Applying ATs $ats")
         return if (accessTransformer != null) {
+            project.logger.warn("Using user access transformer $accessTransformer")
             val output = getOutputJarLocation(baseMinecraft)
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 output
