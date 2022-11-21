@@ -288,7 +288,7 @@ abstract class MinecraftProvider(
             return Artifact.none()
         }
 
-        if (!info.classifier.endsWith("mappings")) {
+        if (!(info.classifier?.endsWith("mappings") ?: false)) {
             if (info.group == Constants.MINECRAFT_GROUP && minecraftTransformer is ForgeMinecraftTransformer) {
                 throw IllegalStateException("Minecraft transformer is set to forge, but trying to get minecraft artifact")
             }
