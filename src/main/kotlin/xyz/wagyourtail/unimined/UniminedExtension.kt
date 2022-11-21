@@ -40,8 +40,7 @@ abstract class UniminedExtension(val project: Project) {
             getLocalCache().resolve("fakeglobal").createDirectories()
         }
     }
-
     fun getLocalCache(): Path {
-        return project.buildDir.toPath().resolve("unimined").createDirectories()
+        return project.rootProject.buildDir.toPath().resolve("unimined").createDirectories()
     }
 }

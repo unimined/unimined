@@ -87,7 +87,6 @@ abstract class MinecraftProvider(
 
     init {
         overrideMainClassClient.convention(null as String?).finalizeValueOnRead()
-        overrideMainClassServer.convention(null as String?).finalizeValueOnRead()
         targetNamespace.convention("named").finalizeValueOnRead()
         clientWorkingDirectory.convention(project.projectDir.resolve("run").resolve("client")).finalizeValueOnRead()
         serverWorkingDirectory.convention(project.projectDir.resolve("run").resolve("server")).finalizeValueOnRead()

@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.providers
 
+import com.ibm.icu.impl.ICUDebug.javaVersion
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.JavaExec
@@ -27,17 +28,17 @@ data class RunConfig(
 ) {
 
     fun createIdeaRunConfig() {
-        val file = project.projectDir.resolve(".idea").resolve("runConfigurations").resolve("$taskName.xml")
+        val file = project.rootDir.resolve(".idea").resolve("runConfigurations").resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}$taskName.xml")
 
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
-            .addStringOption("name", description)
+            .addStringOption("name", "${project.path} $description")
             .addStringOption("type", "Application")
             .addStringOption("factoryName", "Application")
             .append(
-//                        XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH")
-//                            .addStringOption("value", javaVersion.toString()),
+                XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH")
+                    .addStringOption("value", javaVersion.major.toString()),
                 XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH_ENABLED")
-                    .addStringOption("value", "true"),
+                    .addStringOption("value", "false"),
                 XMLBuilder("envs").append(
                     *env.map { (key, value) ->
                         XMLBuilder("env").addStringOption("name", key).addStringOption("value", value)
@@ -45,7 +46,7 @@ data class RunConfig(
                 ),
                 XMLBuilder("option").addStringOption("name", "MAIN_CLASS_NAME")
                     .addStringOption("value", mainClass),
-                XMLBuilder("module").addStringOption("name", "${project.name}.${launchClasspath.name}"),
+                XMLBuilder("module").addStringOption("name", "${if (project != project.rootProject) "${project.rootProject.name}${project.path.replace(":", ".")}" else project.name}.${launchClasspath.name}"),
                 XMLBuilder("option").addStringOption("name", "WORKING_DIRECTORY")
                     .addStringOption(
                         "value",

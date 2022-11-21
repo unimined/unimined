@@ -248,7 +248,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
                 )
             }
         } else {
-            val output = provider.parent.getLocalCache()
+            val output = baseMinecraft.parent
                 .resolve("${baseMinecraft.nameWithoutExtension}-at.jar")
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 output
