@@ -73,14 +73,14 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 project.logger.warn("selecting split-jar client for sourceset client")
                 parent.client.dependencies.add(
                     project.dependencies.create(
-                        "net.minecraft:minecraft:${version}:client"
+                        "${dependency.group}:minecraft:${version}:client"
                     )
                 )
             } else {
                 project.logger.warn("selecting combined-jar for sourceset client")
                 parent.client.dependencies.add(
                     project.dependencies.create(
-                        "net.minecraft:minecraft:${version}"
+                        "${dependency.group}:minecraft:${version}"
                     )
                 )
             }
@@ -124,7 +124,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
     }
 
-    val version: String by lazy {
+    val dependency: Dependency by lazy {
         val dependencies = parent.combined.dependencies
 
         if (dependencies.isEmpty()) {
@@ -137,15 +137,14 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
         val dependency = dependencies.first()
 
-
-        if (dependency.group != Constants.MINECRAFT_GROUP) {
-            throw IllegalArgumentException("Dependency $dependency is not Minecraft")
-        }
-
         if (dependency.name != "minecraft") {
             throw IllegalArgumentException("Dependency $dependency is not a Minecraft dependency")
         }
 
+        dependency
+    }
+
+    val version: String by lazy {
         dependency.version!!
     }
 

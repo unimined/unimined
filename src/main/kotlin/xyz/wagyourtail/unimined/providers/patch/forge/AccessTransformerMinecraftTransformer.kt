@@ -155,4 +155,12 @@ object AccessTransformerMinecraftTransformer {
         processJar(null, baseMinecraft, output, accessTransformers)
         return output
     }
+
+    fun aw2at(aw: Path, output: Path) {
+        val reader = Files.newBufferedReader(aw, StandardCharsets.UTF_8)
+        val writer = Files.newBufferedWriter(output, StandardCharsets.UTF_8)
+
+        reader.close()
+        writer.close()
+    }
 }

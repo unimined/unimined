@@ -18,6 +18,8 @@ object Constants {
 
     const val MINECRAFT_GROUP = "net.minecraft"
 
+    const val MINECRAFT_FORGE_GROUP = "net.minecraftforge"
+
     const val JARMOD_PROVIDER = "jarMod"
 
     const val FABRIC_PROVIDER = "fabric"

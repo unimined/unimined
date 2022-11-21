@@ -284,8 +284,18 @@ abstract class MinecraftProvider(
     @ApiStatus.Internal
     override fun getArtifact(info: ArtifactIdentifier): Artifact {
 
-        if (info.group != Constants.MINECRAFT_GROUP) {
+        if (info.group != Constants.MINECRAFT_GROUP && info.group != Constants.MINECRAFT_FORGE_GROUP) {
             return Artifact.none()
+        }
+
+        if (!info.classifier.endsWith("mappings")) {
+            if (info.group == Constants.MINECRAFT_GROUP && minecraftTransformer is ForgeMinecraftTransformer) {
+                throw IllegalStateException("Minecraft transformer is set to forge, but trying to get minecraft artifact")
+            }
+
+            if (info.group == Constants.MINECRAFT_FORGE_GROUP && minecraftTransformer !is ForgeMinecraftTransformer) {
+                throw IllegalStateException("Minecraft transformer is not set to forge, but trying to get forge artifact")
+            }
         }
 
         if (info.name != "minecraft") {
