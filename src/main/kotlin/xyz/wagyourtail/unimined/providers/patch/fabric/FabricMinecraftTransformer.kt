@@ -214,6 +214,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
 
     override fun afterRemapJarTask(task: RemapJarTask, output: Path) {
         insertIncludes(output)
+        insertAW(output)
     }
 
     private fun insertIncludes(output: Path) {
@@ -273,6 +274,29 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
                 jars.add(JsonObject().apply {
                     addProperty("file", "META-INF/jars/${dep.name}-${dep.version}.jar")
                 })
+                Files.write(mod, json.toString().toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
+            }
+        }
+    }
+
+    private fun insertAW(output: Path) {
+        if (accessWidener != null) {
+            ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
+                val mod = fs.getPath("fabric.mod.json")
+                if (!Files.exists(mod)) {
+                    throw IllegalStateException("fabric.mod.json not found in jar")
+                }
+                val aw = accessWidener!!.toPath()
+                var parent = aw.parent
+                while (!fs.getPath(parent.relativize(aw).toString()).exists()) {
+                    parent = parent.parent
+                    if (parent.relativize(aw).toString() == aw.toString()) {
+                        throw IllegalStateException("Access widener not found in jar")
+                    }
+                }
+                val awPath = fs.getPath(parent.relativize(aw).toString())
+                val json = JsonParser.parseReader(InputStreamReader(Files.newInputStream(mod))).asJsonObject
+                json.addProperty("accessWidener", awPath.toString())
                 Files.write(mod, json.toString().toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
             }
         }
