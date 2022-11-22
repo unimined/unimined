@@ -134,8 +134,14 @@ object AccessTransformerMinecraftTransformer {
                     return "$access $remappedOwner $name$desc $comment"
                 }
             }
-            val remappedName = remapper.mapMethodName(owner.replace(".", "/"), name, desc)
-            val remappedDesc = remapper.mapMethodDesc(desc)
+            var fixedDesc = desc
+            if (name == "<init>" || name == "<clinit>") {
+                if (fixedDesc.endsWith(")")) {
+                    fixedDesc += "V"
+                }
+            }
+            val remappedName = remapper.mapMethodName(owner.replace(".", "/"), name, fixedDesc)
+            val remappedDesc = remapper.mapMethodDesc(fixedDesc)
             return "$access $remappedOwner $remappedName$remappedDesc $comment"
         }
         val fieldMatch = modernField.matchEntire(line)
