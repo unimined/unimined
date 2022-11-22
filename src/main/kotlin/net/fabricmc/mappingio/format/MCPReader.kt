@@ -11,7 +11,8 @@ import java.io.Reader
 internal fun ColumnFileReader.readCell(): String? {
     var source: String = nextCol() ?: return null
     if (source.startsWith("\"")) {
-        while (!source.endsWith("\"")) source += nextCol() ?: throw IllegalStateException("String not closed at line $lineNumber")
+        while (!source.endsWith("\"")) source += nextCol()
+            ?: throw IllegalStateException("String not closed at line $lineNumber")
         source = source.substring(1, source.length - 1)
     }
     return source
@@ -32,7 +33,13 @@ object MCPReader {
         readMethod(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
     }
 
-    fun readMethod(envType: EnvType, reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+    fun readMethod(
+        envType: EnvType,
+        reader: Reader,
+        sourceNamespace: String,
+        targetNamespace: String,
+        visitor: MemoryMappingTree
+    ) {
         readMethod(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
     }
 
@@ -59,6 +66,7 @@ object MCPReader {
         }
 
         val parentVisitor = visitor
+
         @Suppress("NAME_SHADOWING")
         val visitor = MemoryMappingTree()
 
@@ -119,7 +127,13 @@ object MCPReader {
         readField(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
     }
 
-    fun readField(envType: EnvType, reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+    fun readField(
+        envType: EnvType,
+        reader: Reader,
+        sourceNamespace: String,
+        targetNamespace: String,
+        visitor: MemoryMappingTree
+    ) {
         readField(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
     }
 
@@ -149,6 +163,7 @@ object MCPReader {
         }
 
         val parentVisitor = visitor
+
         @Suppress("NAME_SHADOWING")
         val visitor = MemoryMappingTree()
 
@@ -211,7 +226,13 @@ object MCPReader {
         readParam(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
     }
 
-    fun readParam(envType: EnvType, reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+    fun readParam(
+        envType: EnvType,
+        reader: Reader,
+        sourceNamespace: String,
+        targetNamespace: String,
+        visitor: MemoryMappingTree
+    ) {
         readParam(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
     }
 
@@ -287,7 +308,13 @@ object MCPReader {
         readPackages(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
     }
 
-    fun readPackages(envType: EnvType, reader: Reader, sourceNamespace: String, targetNamespace: String, visitor: MemoryMappingTree) {
+    fun readPackages(
+        envType: EnvType,
+        reader: Reader,
+        sourceNamespace: String,
+        targetNamespace: String,
+        visitor: MemoryMappingTree
+    ) {
         readPackages(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
     }
 

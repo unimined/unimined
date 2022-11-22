@@ -32,6 +32,7 @@ dependencies {
     testImplementation(kotlin("test"))
     // guava
     implementation("com.google.guava:guava:31.1-jre")
+
     // gson
     implementation("com.google.code.gson:gson:2.9.0")
 
@@ -52,13 +53,26 @@ dependencies {
 
     // pack200 provided by apache commons-compress
     implementation("org.apache.commons:commons-compress:1.21")
+
+    // aw
+    implementation("net.fabricmc:access-widener:2.1.0")
+
+    // at
+    implementation("net.minecraftforge:accesstransformers:8.0.7")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
+        isTransitive = false
+    }
+
 }
 
 tasks.jar {
     manifest {
-        attributes.putAll(mapOf(
-            "Implementation-Version" to project.version
-        ))
+        attributes.putAll(
+            mapOf(
+                "Implementation-Version" to project.version
+            )
+        )
     }
 }
 

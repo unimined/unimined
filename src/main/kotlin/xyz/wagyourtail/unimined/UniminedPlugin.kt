@@ -6,7 +6,6 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
-import xyz.wagyourtail.unimined.providers.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.remap.RemapJarTask
 
 @Suppress("UNUSED")
@@ -14,18 +13,23 @@ class UniminedPlugin : Plugin<Project> {
     lateinit var ext: UniminedExtension
 
     override fun apply(project: Project) {
-        project.apply(mapOf(
-            "plugin" to "java"
-        ))
-        project.apply(mapOf(
-            "plugin" to "idea"
-        ))
+        project.apply(
+            mapOf(
+                "plugin" to "java"
+            )
+        )
+        project.apply(
+            mapOf(
+                "plugin" to "idea"
+            )
+        )
 
         ext = project.extensions.create("unimined", UniminedExtension::class.java, project)
         remapJarTask(project, project.tasks)
+        genIntellijRunsTask(project, project.tasks)
     }
 
-    fun remapJarTask(project: Project, tasks: TaskContainer) {
+    private fun remapJarTask(project: Project, tasks: TaskContainer) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
         val jarTask = tasks.getByName("jar") as Jar
         val client = sourceSets.findByName("client")
@@ -62,5 +66,17 @@ class UniminedPlugin : Plugin<Project> {
             build.dependsOn(serverRemapJar)
         }
         build.dependsOn(remapJar)
+    }
+
+    private fun genIntellijRunsTask(project: Project, tasks: TaskContainer) {
+        val genIntellijRuns = tasks.register("genIntellijRuns") {
+            it.group = "unimined"
+            it.doLast {
+                for (config in ext.minecraftProvider.runConfigs) {
+                    config.createIdeaRunConfig()
+                }
+            }
+        }
+        tasks.findByName("idea")?.dependsOn(genIntellijRuns)
     }
 }

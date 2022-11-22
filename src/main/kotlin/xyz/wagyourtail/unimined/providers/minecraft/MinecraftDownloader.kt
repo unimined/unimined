@@ -7,12 +7,13 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.Constants.METADATA_URL
-import xyz.wagyourtail.unimined.maybeCreate
-import xyz.wagyourtail.unimined.providers.minecraft.version.Download
-import xyz.wagyourtail.unimined.providers.minecraft.version.Extract
-import xyz.wagyourtail.unimined.providers.minecraft.version.VersionData
-import xyz.wagyourtail.unimined.providers.minecraft.version.parseVersionData
-import xyz.wagyourtail.unimined.testSha1
+import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.version.Download
+import xyz.wagyourtail.unimined.providers.version.Extract
+import xyz.wagyourtail.unimined.providers.version.VersionData
+import xyz.wagyourtail.unimined.providers.version.parseVersionData
+import xyz.wagyourtail.unimined.util.LazyMutable
+import xyz.wagyourtail.unimined.util.testSha1
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStreamReader
@@ -52,11 +53,8 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     var server by Delegates.notNull<Boolean>()
 
     private val sourceSets: SourceSetContainer = project.extensions.getByType(SourceSetContainer::class.java)
-    init {
-        parent.parent.events.register(::afterEvaluate)
-    }
 
-    private fun afterEvaluate() {
+    fun afterEvaluate() {
         // if <=1.2.5 disable combined automagically
         if (mcVersionCompare(version, "1.3") < 0) {
             parent.disableCombined.set(true)
@@ -72,14 +70,14 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 project.logger.warn("selecting split-jar client for sourceset client")
                 parent.client.dependencies.add(
                     project.dependencies.create(
-                        "net.minecraft:minecraft:${version}:client"
+                        "${dependency.group}:minecraft:${version}:client"
                     )
                 )
             } else {
                 project.logger.warn("selecting combined-jar for sourceset client")
                 parent.client.dependencies.add(
                     project.dependencies.create(
-                        "net.minecraft:minecraft:${version}"
+                        "${dependency.group}:minecraft:${version}"
                     )
                 )
             }
@@ -123,7 +121,8 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
     }
 
-    val version: String by lazy {
+
+    var dependency: Dependency by LazyMutable {
         val dependencies = parent.combined.dependencies
 
         if (dependencies.isEmpty()) {
@@ -136,15 +135,18 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
         val dependency = dependencies.first()
 
-
         if (dependency.group != Constants.MINECRAFT_GROUP) {
-            throw IllegalArgumentException("Dependency $dependency is not Minecraft")
+            throw IllegalStateException("Invalid dependency group for Minecraft, expected ${Constants.MINECRAFT_GROUP} but got ${dependency.group}")
         }
 
         if (dependency.name != "minecraft") {
             throw IllegalArgumentException("Dependency $dependency is not a Minecraft dependency")
         }
 
+        dependency
+    }
+
+    val version: String by lazy {
         dependency.version!!
     }
 
@@ -196,7 +198,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         } else {
             val versionIndex = getVersionFromLauncherMeta(version)
             val downloadPath = versionJsonDownloadPath(version)
-            downloadPath.parent.maybeCreate()
+            downloadPath.parent.createDirectories()
 
             if (project.gradle.startParameter.isOffline) {
                 throw IllegalStateException("Cannot download version metadata while offline")
@@ -205,7 +207,10 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
             if (!downloadPath.exists() || !testSha1(-1, versionIndex.get("sha1").asString, downloadPath)) {
                 val url = versionIndex.get("url").asString
                 val urlConnection = URI.create(url).toURL().openConnection() as HttpURLConnection
-                urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+                urlConnection.setRequestProperty(
+                    "User-Agent",
+                    "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)"
+                )
                 urlConnection.requestMethod = "GET"
                 urlConnection.connect()
 
@@ -214,7 +219,12 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 }
 
                 urlConnection.inputStream.use {
-                    Files.write(downloadPath, it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                    Files.write(
+                        downloadPath,
+                        it.readBytes(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING
+                    )
                 }
 
             }
@@ -246,9 +256,10 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
             clientPath
         } else {
             val metadata = metadata
-            val clientJar = metadata.downloads["client"] ?: throw IllegalStateException("No client jar found for version $version")
+            val clientJar = metadata.downloads["client"]
+                ?: throw IllegalStateException("No client jar found for version $version")
 
-            clientPath.parent.maybeCreate()
+            clientPath.parent.createDirectories()
             download(clientJar, clientPath)
             clientPath
         }
@@ -266,11 +277,19 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
             if (serverJar == null) {
                 // attempt to get off betacraft
-                val uriPart = if (version.startsWith("b")) "beta/${parent.alphaServerVersionOverride.get() ?: version}" else if (version.startsWith("a")) "alpha/${parent.alphaServerVersionOverride.get() ?: version.replaceFirst("1", "0")}" else "release/$version/$version"
+                val uriPart = if (version.startsWith("b")) "beta/${parent.alphaServerVersionOverride.get() ?: version}" else if (version.startsWith(
+                        "a"
+                    )
+                ) "alpha/${
+                    parent.alphaServerVersionOverride.get() ?: version.replaceFirst(
+                        "1",
+                        "0"
+                    )
+                }" else "release/$version/$version"
                 serverJar = Download("", -1, URI.create("http://files.betacraft.uk/server-archive/$uriPart.jar"))
             }
 
-            serverPath.parent.maybeCreate()
+            serverPath.parent.createDirectories()
             try {
                 download(serverJar, serverPath)
             } catch (e: FileNotFoundException) {
@@ -281,13 +300,14 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     private val clientMappings: Path by lazy {
-        val mappings = metadata.downloads.get("client_mappings") ?: throw IllegalStateException("No client mappings found for version $version")
+        val mappings = metadata.downloads["client_mappings"]
+            ?: throw IllegalStateException("No client mappings found for version $version")
         val mappingsPath = clientMappingsDownloadPath(version)
 
         if (mappingsPath.exists() && !project.gradle.startParameter.isRefreshDependencies) {
             mappingsPath
         } else {
-            mappingsPath.parent.maybeCreate()
+            mappingsPath.parent.createDirectories()
             download(mappings, mappingsPath)
             mappingsPath
         }
@@ -302,13 +322,14 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     private val serverMappings: Path by lazy {
-        val mappings = metadata.downloads.get("server_mappings") ?: throw IllegalStateException("No server mappings found for version $version")
+        val mappings = metadata.downloads["server_mappings"]
+            ?: throw IllegalStateException("No server mappings found for version $version")
         val mappingsPath = serverMappingsDownloadPath(version)
 
         if (mappingsPath.exists() && !project.gradle.startParameter.isRefreshDependencies) {
             mappingsPath
         } else {
-            mappingsPath.parent.maybeCreate()
+            mappingsPath.parent.createDirectories()
             download(mappings, mappingsPath)
             mappingsPath
         }
@@ -358,7 +379,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
     fun serverJarDownloadPath(version: String): Path {
         val versionF = if (version.startsWith("a")) {
-             parent.alphaServerVersionOverride.get() ?: version.replaceFirst("1", "0")
+            parent.alphaServerVersionOverride.get() ?: version.replaceFirst("1", "0")
         } else version
         return mcVersionFolder(version).resolve("minecraft-$versionF-server.jar")
     }

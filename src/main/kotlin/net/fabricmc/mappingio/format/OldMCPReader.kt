@@ -95,7 +95,8 @@ object OldMCPReader {
                     lastClass = classNotch
                     visitLastClass = visitor.visitClass(classNotch)
 
-                    if (visitLastClass) {visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
+                    if (visitLastClass) {
+                        visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
                     }
                 }
                 if (visitLastClass) {
@@ -183,7 +184,8 @@ object OldMCPReader {
                     lastClass = classNotch
                     visitLastClass = visitor.visitClass(classNotch)
 
-                    if (visitLastClass) {visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
+                    if (visitLastClass) {
+                        visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
                     }
                 }
                 if (visitLastClass) {
@@ -261,7 +263,7 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-         visitor: MemoryMappingTree
+        visitor: MemoryMappingTree
     ) {
         readClasses(envType, ColumnFileReader(reader, ','), notchNamespace, seargeNamespace, targetNamespace, visitor)
     }

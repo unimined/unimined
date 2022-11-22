@@ -62,14 +62,17 @@ class SrgWriter(val writer: Writer) : MappingWriter {
                 clazzName = name
                 writer.write("CL: $clazz $name\n")
             }
+
             MappedElementKind.FIELD -> {
                 fieldName = name
                 val targetClassName = if (clazzName != null) clazzName else clazz
                 writer.write("FD: $clazz/$field $targetClassName/$name\n")
             }
+
             MappedElementKind.METHOD -> {
                 writer.write("MD: $clazz/$method $methodDesc $clazz/$name $methodDesc\n")
             }
+
             else -> {}
         }
     }

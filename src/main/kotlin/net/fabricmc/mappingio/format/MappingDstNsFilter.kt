@@ -8,7 +8,8 @@ class MappingDstNsFilter(next: MappingVisitor?, val namespaces: List<String>) : 
     private lateinit var nsMap: Map<Int, Int>
 
     override fun visitNamespaces(srcNamespace: String, dstNamespaces: MutableList<String>) {
-        nsMap = dstNamespaces.mapIndexedNotNull { index, s -> if (namespaces.contains(s)) index to namespaces.indexOf(s) else null }.toMap()
+        nsMap = dstNamespaces.mapIndexedNotNull { index, s -> if (namespaces.contains(s)) index to namespaces.indexOf(s) else null }
+            .toMap()
         super.visitNamespaces(srcNamespace, namespaces.filter { dstNamespaces.contains(it) })
     }
 

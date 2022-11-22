@@ -42,12 +42,19 @@ object ZipReader {
     }
 
     fun readMappings(
-        envType: EnvType, zip: Path, zipContents: List<String>, mappingTree: MemoryMappingTree,
-        notchNamespaceName: String = "official", seargeNamespaceName: String = "searge", mCPNamespaceName: String = "named"
+        envType: EnvType,
+        zip: Path,
+        zipContents: List<String>,
+        mappingTree: MemoryMappingTree,
+        notchNamespaceName: String = "official",
+        seargeNamespaceName: String = "searge",
+        mCPNamespaceName: String = "named"
     ) {
         val mcpConfigVersion = getZipTypeFromContentList(zipContents)
         System.out.println("Detected Zip Format: ${mcpConfigVersion.name} & envType: $envType")
-        for (entry in zipContents.mapNotNull { getTypeOf(it)?.let { t-> Pair(t, it) } }.sortedBy { it.first.ordinal }.map { it.second }) {
+        for (entry in zipContents.mapNotNull { getTypeOf(it)?.let { t -> Pair(t, it) } }
+            .sortedBy { it.first.ordinal }
+            .map { it.second }) {
             for (mappingType in MappingType.values()) {
                 if (entry.matches(mappingType.pattern)) {
                     if (mcpConfigVersion.ignore.contains(mappingType)) {
@@ -190,14 +197,14 @@ object ZipReader {
 
                         MappingType.SRG_MERGED -> {
 //                            if (envType == EnvType.COMBINED) {
-                                readInputStreamFor(entry, zip) {
-                                    SrgReader.read(
-                                        InputStreamReader(it),
-                                        notchNamespaceName,
-                                        seargeNamespaceName,
-                                        mappingTree
-                                    )
-                                }
+                            readInputStreamFor(entry, zip) {
+                                SrgReader.read(
+                                    InputStreamReader(it),
+                                    notchNamespaceName,
+                                    seargeNamespaceName,
+                                    mappingTree
+                                )
+                            }
 //                            }
                         }
 
@@ -236,10 +243,14 @@ object ZipReader {
                                     "searge",
                                     temp
                                 )
-                                temp.accept(MappingNsRenamer(mappingTree, mapOf(
-                                    temp.srcNamespace to notchNamespaceName,
+                                temp.accept(
+                                    MappingNsRenamer(
+                                        mappingTree, mapOf(
+                                            temp.srcNamespace to notchNamespaceName,
 //                                    temp.dstNamespaces[0] to seargeNamespaceName
-                                )))
+                                        )
+                                    )
+                                )
                             }
                         }
 
@@ -334,25 +345,61 @@ object ZipReader {
         MCP_PACKAGES(Regex("""(.+[/\\]|^)packages.csv$""")),
     }
 
-    enum class MCPConfigVersion(val contains: Set<MappingType>,
+    enum class MCPConfigVersion(
+        val contains: Set<MappingType>,
         val doesntContain: Set<MappingType> = setOf(),
         val ignore: Set<MappingType> = setOf()
     ) {
         TINY_JAR(
             setOf(MappingType.TINY),
-            setOf(MappingType.SRG_CLIENT, MappingType.SRG_SERVER, MappingType.SRG_MERGED, MappingType.TSRG, MappingType.RGS_CLIENT, MappingType.RGS_SERVER, MappingType.MCP_METHODS, MappingType.MCP_PARAMS, MappingType.MCP_FIELDS, MappingType.MCP_CLASSES)
+            setOf(
+                MappingType.SRG_CLIENT,
+                MappingType.SRG_SERVER,
+                MappingType.SRG_MERGED,
+                MappingType.TSRG,
+                MappingType.RGS_CLIENT,
+                MappingType.RGS_SERVER,
+                MappingType.MCP_METHODS,
+                MappingType.MCP_PARAMS,
+                MappingType.MCP_FIELDS,
+                MappingType.MCP_CLASSES
+            )
         ),
         NEW_MCPCONFIG(
             setOf(MappingType.TSRG),
-            setOf(MappingType.MCP_FIELDS, MappingType.MCP_METHODS, MappingType.MCP_PARAMS, MappingType.MCP_CLASSES, MappingType.RGS_SERVER, MappingType.RGS_CLIENT, MappingType.SRG_SERVER, MappingType.SRG_CLIENT, MappingType.SRG_MERGED)
+            setOf(
+                MappingType.MCP_FIELDS,
+                MappingType.MCP_METHODS,
+                MappingType.MCP_PARAMS,
+                MappingType.MCP_CLASSES,
+                MappingType.RGS_SERVER,
+                MappingType.RGS_CLIENT,
+                MappingType.SRG_SERVER,
+                MappingType.SRG_CLIENT,
+                MappingType.SRG_MERGED
+            )
         ),
         MCPCONFIG(
             setOf(MappingType.SRG_MERGED),
-            setOf(MappingType.MCP_FIELDS, MappingType.MCP_METHODS, MappingType.MCP_PARAMS, MappingType.MCP_CLASSES, MappingType.RGS_SERVER, MappingType.RGS_CLIENT)
+            setOf(
+                MappingType.MCP_FIELDS,
+                MappingType.MCP_METHODS,
+                MappingType.MCP_PARAMS,
+                MappingType.MCP_CLASSES,
+                MappingType.RGS_SERVER,
+                MappingType.RGS_CLIENT
+            )
         ),
         NEWFORGE_MCP(
             setOf(MappingType.MCP_METHODS, MappingType.MCP_PARAMS, MappingType.MCP_FIELDS),
-            setOf(MappingType.MCP_CLASSES, MappingType.RGS_SERVER, MappingType.RGS_CLIENT, MappingType.SRG_SERVER, MappingType.SRG_CLIENT, MappingType.SRG_MERGED)
+            setOf(
+                MappingType.MCP_CLASSES,
+                MappingType.RGS_SERVER,
+                MappingType.RGS_CLIENT,
+                MappingType.SRG_SERVER,
+                MappingType.SRG_CLIENT,
+                MappingType.SRG_MERGED
+            )
         ),
         MCP(
             setOf(MappingType.MCP_METHODS, MappingType.MCP_FIELDS),

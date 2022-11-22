@@ -7,10 +7,9 @@ import groovy.lang.DelegatesTo
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.format.Tiny2Writer
+import xyz.wagyourtail.unimined.util.toHex
 import java.io.StringWriter
 import java.security.MessageDigest
-
-fun ByteArray.toHex() = joinToString(separator = "") { byte -> "%02x".format(byte) }
 
 class MemoryMapping {
     private val classes = mutableListOf<ClassMapping>()
@@ -37,7 +36,10 @@ class MemoryMapping {
         action(MemoryMappingWithMappings(this, *mappings))
     }
 
-    fun withMappings(mappings: List<String>, @DelegatesTo(value = MemoryMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+    fun withMappings(
+        mappings: List<String>,
+        @DelegatesTo(value = MemoryMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ) {
         action.delegate = MemoryMappingWithMappings(this, *mappings.toTypedArray())
         action.resolveStrategy = Closure.DELEGATE_FIRST
         action.call()
@@ -116,7 +118,12 @@ class ClassMapping(srcName: String, vararg targets: Pair<String, String>) : Mapp
         methods.add(MethodMapping(srcName, srcDesc, *targets))
     }
 
-    fun m(srcName: String, srcDesc: String, vararg targets: Pair<String, String>, action: MethodMapping.() -> Unit = {}) {
+    fun m(
+        srcName: String,
+        srcDesc: String,
+        vararg targets: Pair<String, String>,
+        action: MethodMapping.() -> Unit = {}
+    ) {
         methods.add(MethodMapping(srcName, srcDesc, *targets).apply(action))
     }
 
@@ -133,7 +140,10 @@ class ClassMapping(srcName: String, vararg targets: Pair<String, String>) : Mapp
         action(ClassMappingWithMappings(this, *mappings))
     }
 
-    fun withMappings(mappings: List<String>, @DelegatesTo(value = ClassMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+    fun withMappings(
+        mappings: List<String>,
+        @DelegatesTo(value = ClassMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ) {
         action.delegate = ClassMappingWithMappings(this, *mappings.toTypedArray())
         action.resolveStrategy = Closure.DELEGATE_FIRST
         action.call()
@@ -183,8 +193,15 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, vararg val mappin
     }
 }
 
-class FieldMapping(srcName: String, val srcDesc: String, vararg targets: Pair<String, String>) : MappingMember(srcName, *targets) {
-    constructor(srcName: String, srcDesc: String, targets: Map<String, String>) : this(srcName, srcDesc, *targets.toList().toTypedArray())
+class FieldMapping(srcName: String, val srcDesc: String, vararg targets: Pair<String, String>) : MappingMember(
+    srcName,
+    *targets
+) {
+    constructor(srcName: String, srcDesc: String, targets: Map<String, String>) : this(
+        srcName,
+        srcDesc,
+        *targets.toList().toTypedArray()
+    )
 
     override fun visit(visitor: MappingVisitor, namespaces: Map<String, Int>) {
         if (visitor.visitField(srcName, srcDesc)) {
@@ -197,8 +214,15 @@ class FieldMapping(srcName: String, val srcDesc: String, vararg targets: Pair<St
 
 }
 
-class MethodMapping(srcName: String, val srcDesc: String, vararg targets: Pair<String, String>) : MappingMember(srcName, *targets) {
-    constructor(srcName: String, srcDesc: String, targets: Map<String, String>) : this(srcName, srcDesc, *targets.toList().toTypedArray())
+class MethodMapping(srcName: String, val srcDesc: String, vararg targets: Pair<String, String>) : MappingMember(
+    srcName,
+    *targets
+) {
+    constructor(srcName: String, srcDesc: String, targets: Map<String, String>) : this(
+        srcName,
+        srcDesc,
+        *targets.toList().toTypedArray()
+    )
 
     private val params = mutableMapOf<Int, MutableMap<String, String>>()
 
@@ -215,7 +239,10 @@ class MethodMapping(srcName: String, val srcDesc: String, vararg targets: Pair<S
         action(MethodMappingWithMappings(this, *mappings))
     }
 
-    fun withMappings(mappings: List<String>, @DelegatesTo(value = MethodMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+    fun withMappings(
+        mappings: List<String>,
+        @DelegatesTo(value = MethodMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ) {
         action.delegate = MethodMappingWithMappings(this, *mappings.toTypedArray())
         action.resolveStrategy = Closure.DELEGATE_FIRST
         action.call()
