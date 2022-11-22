@@ -47,6 +47,12 @@ data class RunConfig(
                 XMLBuilder("option").addStringOption("name", "MAIN_CLASS_NAME")
                     .addStringOption("value", mainClass),
                 XMLBuilder("module").addStringOption("name", "${if (project != project.rootProject) "${project.rootProject.name}${project.path.replace(":", ".")}" else project.name}.${launchClasspath.name}"),
+                XMLBuilder("option").addStringOption("name", "PROGRAM_PARAMETERS")
+                    .addStringOption("value", args.joinToString(" ")),
+                XMLBuilder("option").addStringOption("name", "VM_PARAMETERS")
+                    .addStringOption(
+                        "value",
+                        jvmArgs.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it }),
                 XMLBuilder("option").addStringOption("name", "WORKING_DIRECTORY")
                     .addStringOption(
                         "value",
@@ -55,30 +61,27 @@ data class RunConfig(
                                 .relativeTo(project.rootProject.projectDir.toPath())
                         }"
                     ),
-                XMLBuilder("option").addStringOption("name", "VM_PARAMETERS")
-                    .addStringOption(
-                        "value",
-                        jvmArgs.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it }),
-                XMLBuilder("option").addStringOption("name", "PROGRAM_PARAMETERS")
-                    .addStringOption("value", args.joinToString(" ")),
-                XMLBuilder("method").addStringOption("v", "2").append(
-                    XMLBuilder("option").addStringOption("name", "Make").addStringOption("enabled", "true")
-                )
+            )
+
+        val mv2 =XMLBuilder("method")
+            .addStringOption("v", "2")
+            .append(
+                XMLBuilder("option").addStringOption("name", "Make").addStringOption("enabled", "true")
             )
 
         if (!runFirst.isNullOrEmpty()) {
-            configuration.append(
-                XMLBuilder("method").addStringOption("v", "2").append(
-                    XMLBuilder("option").addStringOption("name", "Before launch:")
-                        .addStringOption("name", "Gradle.BeforeRunTask")
-                        .addStringOption("enabled", "true")
-                        .addStringOption("tasks", runFirst.joinToString(" ") { it.name })
-                        .addStringOption("externalProjectPath", "\$PROJECT_DIR\$")
-                        .addStringOption("vmOptions", "")
-                        .addStringOption("scriptParameters", "")
-                )
+            mv2.append(
+                XMLBuilder("option")
+                    .addStringOption("name", "Gradle.BeforeRunTask")
+                    .addStringOption("enabled", "true")
+                    .addStringOption("tasks", runFirst.joinToString(" ") { it.name })
+                    .addStringOption("externalProjectPath", "\$PROJECT_DIR\$/${project.projectDir.toPath().relativeTo(project.rootProject.projectDir.toPath())}")
+                    .addStringOption("vmOptions", "")
+                    .addStringOption("scriptParameters", "")
             )
         }
+
+        configuration.append(mv2)
 
         file.parentFile.mkdirs()
         file.writeText(
