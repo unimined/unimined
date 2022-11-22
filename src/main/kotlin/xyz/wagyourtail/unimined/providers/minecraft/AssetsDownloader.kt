@@ -8,6 +8,7 @@ import xyz.wagyourtail.unimined.providers.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.version.AssetIndex
 import xyz.wagyourtail.unimined.util.testSha1
 import java.io.InputStreamReader
+import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -66,8 +67,22 @@ class AssetsDownloader(val project: Project, private val parent: MinecraftProvid
                         val assetUrl = URI.create("$ASSET_BASE_URL${hash.substring(0, 2)}/$hash")
                         project.logger.info("Downloading $key : $assetUrl")
                         assetPath.parent.createDirectories()
-                        assetUrl.toURL().openStream().use {
-                            Files.copy(it, assetPath, StandardCopyOption.REPLACE_EXISTING)
+
+                        val urlConnection = assetUrl.toURL().openConnection() as HttpURLConnection
+
+                        urlConnection.connectTimeout = 5000
+                        urlConnection.readTimeout = 5000
+
+                        urlConnection.addRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+                        urlConnection.addRequestProperty("Accept", "*/*")
+                        urlConnection.addRequestProperty("Accept-Encoding", "gzip, deflate")
+
+                        if (urlConnection.responseCode == 200) {
+                            urlConnection.inputStream.use {
+                                Files.copy(it, assetPath, StandardCopyOption.REPLACE_EXISTING)
+                            }
+                        } else {
+                            project.logger.error("Failed to download asset $key : $assetUrl")
                         }
                         if (!testSha1(size, hash, assetPath)) {
                             project.logger.warn("Failed to download asset $key : $assetUrl")

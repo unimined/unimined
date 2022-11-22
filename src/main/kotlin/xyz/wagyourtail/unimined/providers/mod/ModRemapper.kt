@@ -4,6 +4,9 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
 import net.fabricmc.tinyremapper.*
 import net.fabricmc.tinyremapper.OutputConsumerPath.ResourceRemapper
+import net.fabricmc.tinyremapper.extension.mixin.MixinExtension
+import net.faricmc.loom.util.kotlin.KotlinClasspathService
+import net.faricmc.loom.util.kotlin.KotlinRemapperClassloader
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -106,6 +109,13 @@ class ModRemapper(
             .inferNameFromSameLvIndex(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .rebuildSourceFilenames(true)
+
+        tr.extension(MixinExtension())
+        val classpath = KotlinClasspathService.getOrCreateIfRequired(project)
+        if (classpath != null) {
+            tr.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
+        }
+
         tinyRemapperConf(tr)
         tinyRemapper = tr.build()
         val mc = mcRemapper.provider.getMinecraftWithMapping(configs.envType, fromMappings)

@@ -3,6 +3,8 @@ package xyz.wagyourtail.unimined.remap
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import net.fabricmc.tinyremapper.extension.mixin.MixinExtension
+import net.faricmc.loom.util.kotlin.KotlinClasspathService
+import net.faricmc.loom.util.kotlin.KotlinRemapperClassloader
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -92,6 +94,10 @@ abstract class RemapJarTask : Jar() {
             .ignoreConflicts(true)
             .threads(Runtime.getRuntime().availableProcessors())
             .extension(MixinExtension())
+        val classpath = KotlinClasspathService.getOrCreateIfRequired(project)
+        if (classpath != null) {
+            remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
+        }
         minecraftProvider.mcRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         val mc = minecraftProvider.mcRemapper.provider.getMinecraftWithMapping(

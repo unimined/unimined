@@ -59,6 +59,11 @@ dependencies {
 
     // at
     implementation("net.minecraftforge:accesstransformers:8.0.7")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
+        isTransitive = false
+    }
+
 }
 
 tasks.jar {
