@@ -122,6 +122,11 @@ object AccessTransformerMinecraftTransformer {
         val methodMatch = legacyMethod.matchEntire(line)
         if (methodMatch != null) {
             val (access, owner, name, desc, comment) = methodMatch.destructured
+            if (name == "*") {
+                if (desc == "()") {
+                    return "$access $owner $name${desc} $comment"
+                }
+            }
             return if (desc.endsWith(")")) {
                 if (!name.contains("<")) {
                     throw IllegalStateException("Missing return type in access transformer: $line")
