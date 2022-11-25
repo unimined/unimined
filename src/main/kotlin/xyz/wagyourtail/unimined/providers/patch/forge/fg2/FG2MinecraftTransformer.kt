@@ -54,38 +54,36 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        val patchedMC = minecraft.let(consumerApply {
-            val forgeUniversal = parent.forge.dependencies.last()
-            val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+        val forgeUniversal = parent.forge.dependencies.last()
+        val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
-            val outFolder = jarPath.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
-                .createDirectories()
+        val outFolder = minecraft.jarPath.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
+            .createDirectories()
 
-            // apply binary patches
-            val binaryPatchFile = ZipReader.readInputStreamFor("binpatches.pack.lzma", forgeJar.toPath()) {
-                outFolder.resolve("binpatches.pack.lzma")
-                    .apply {
-                        writeBytes(
-                            it.readBytes(),
-                            StandardOpenOption.CREATE,
-                            StandardOpenOption.TRUNCATE_EXISTING
-                        )
-                    }
-            }
-            val patchedMC = outFolder.resolve("${jarPath.nameWithoutExtension}-${forgeUniversal.name}-${forgeUniversal.version}.${jarPath.extension}")
-            if (!patchedMC.exists() || project.gradle.startParameter.isRefreshDependencies) {
-                patchedMC.deleteIfExists()
-                FG2TaskApplyBinPatches(project).doTask(
-                    jarPath.toFile(),
-                    binaryPatchFile.toFile(),
-                    patchedMC.toFile(),
-                    if (envType == EnvType.SERVER) "server" else "client"
-                )
-            }
-            MinecraftJar(this, patchedMC)
-        })
-
-        return super.transform(patchedMC)
+        // apply binary patches
+        val binaryPatchFile = ZipReader.readInputStreamFor("binpatches.pack.lzma", forgeJar.toPath()) {
+            outFolder.resolve("binpatches.pack.lzma")
+                .apply {
+                    writeBytes(
+                        it.readBytes(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING
+                    )
+                }
+        }
+        val patchedMC = outFolder.resolve("${minecraft.jarPath.nameWithoutExtension}-${forgeUniversal.name}-${forgeUniversal.version}.${minecraft.jarPath.extension}")
+        if (!patchedMC.exists() || project.gradle.startParameter.isRefreshDependencies) {
+            patchedMC.deleteIfExists()
+            FG2TaskApplyBinPatches(project).doTask(
+                minecraft.jarPath.toFile(),
+                binaryPatchFile.toFile(),
+                patchedMC.toFile(),
+                if (minecraft.envType == EnvType.SERVER) "server" else "client"
+            )
+        }
+        //   shade in forge jar
+        val shadedForge = super.transform(MinecraftJar(minecraft, patchedMC))
+        return MinecraftJar(shadedForge, provider.mcRemapper.provide(shadedForge, "searge", true), shadedForge.envType, "searge")
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
