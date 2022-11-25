@@ -56,6 +56,16 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         return AccessTransformerMinecraftTransformer.aw2at(input.toPath(), output.toPath()).toFile()
     }
 
+    fun aw2atLegacy(input: String): File = aw2atLegacy(File(input))
+
+    fun aw2atLegacy(input: String, output: String) = aw2atLegacy(File(input), File(output))
+
+    fun aw2atLegacy(input: File) = aw2atLegacy(input, project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first().resolve("META-INF/accesstransformer.cfg"))
+
+    fun aw2atLegacy(input: File, output: File): File {
+        return AccessTransformerMinecraftTransformer.aw2at(input.toPath(), output.toPath(), true).toFile()
+    }
+
     @get:ApiStatus.Internal
     val srgToMCPAsSRG: Path by lazy {
         provider.parent.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.srg").apply {

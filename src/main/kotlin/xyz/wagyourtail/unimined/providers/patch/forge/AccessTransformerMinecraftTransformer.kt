@@ -1,16 +1,10 @@
 package xyz.wagyourtail.unimined.providers.patch.forge
 
-import net.fabricmc.accesswidener.AccessWidener
 import net.fabricmc.accesswidener.AccessWidenerReader
-import net.fabricmc.tinyremapper.ClassInstance
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
-import net.minecraftforge.accesstransformer.AccessTransformer
 import net.minecraftforge.accesstransformer.TransformerProcessor
-import org.objectweb.asm.commons.Remapper
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStream
+import java.io.*
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -47,10 +41,10 @@ object AccessTransformerMinecraftTransformer {
                     ).use { writer ->
                         var line = reader.readLine()
                         while (line != null) {
-                            line = transformLegacyTransformer(line)
+                            line = transformFromLegacyTransformer(line)
                             line = remapModernTransformer(line, remapper)
                             if (remapToLegacy) {
-                                TODO()
+                                line = transformToLegacyTransformer(line)
                             }
                             writer.write("$line\n")
                             line = reader.readLine()
@@ -80,15 +74,51 @@ object AccessTransformerMinecraftTransformer {
         RegexOption.MULTILINE
     )
 
-    private fun transformFromLegacyTransformer(reader: BufferedReader, writer: BufferedWriter) {
-        var line = reader.readLine()
-        while (line != null) {
-            writer.write("${transformLegacyTransformer(line)}\n")
+    private fun transformFromLegacyTransformer(reader: BufferedReader): Reader = object : Reader() {
+        var line: String? = null
+        var closed = false
+
+        @Synchronized
+        override fun read(cbuf: CharArray, off: Int, len: Int): Int {
+            if (closed) {
+                throw IOException("Reader is closed")
+            }
+            if (len == 0) {
+                return 0
+            }
+            if (line != null) {
+                val read = line!!.length.coerceAtMost(len)
+                line!!.toCharArray(cbuf, off, read)
+                if (read == line!!.length) {
+                    line = null
+                    return read
+                }
+                line = line!!.substring(read)
+                return read
+            }
             line = reader.readLine()
+            if (line == null) {
+                return -1
+            }
+            line = transformFromLegacyTransformer(line!!)
+            return read(cbuf, off, len)
         }
+
+        override fun ready(): Boolean {
+            return line != null || reader.ready()
+        }
+
+        @Synchronized
+        override fun close() {
+            if (!closed) {
+                reader.close()
+                closed = true
+            }
+        }
+
     }
 
-    private fun transformLegacyTransformer(line: String): String {
+    private fun transformFromLegacyTransformer(line: String): String {
         val methodMatch = legacyMethod.matchEntire(line)
         if (methodMatch != null) {
             val (access, owner, name, desc, comment) = methodMatch.destructured
@@ -105,6 +135,68 @@ object AccessTransformerMinecraftTransformer {
         if (fieldMatch != null) {
             val (access, owner, name, comment) = fieldMatch.destructured
             return "$access $owner $name $comment"
+        }
+        return line
+    }
+
+    private fun transformToLegacyTransformer(writer: BufferedWriter): Writer = object : Writer(writer) {
+        var lineBuffer: String? = null
+        var closed = false
+
+        @Synchronized
+        override fun close() {
+            if (closed) {
+                return
+            }
+            closed = true
+            if (lineBuffer != null) {
+                writer.write(transformToLegacyTransformer(lineBuffer!!))
+                lineBuffer = null
+            }
+            writer.close()
+        }
+
+        override fun flush() {
+            writer.flush()
+        }
+
+        @Synchronized
+        override fun write(cbuf: CharArray, off: Int, len: Int) {
+            if (closed) {
+                throw IOException("Writer is closed")
+            }
+            if (len == 0) {
+                return
+            }
+            if (lineBuffer == null) {
+                lineBuffer = String(cbuf, off, len)
+            } else {
+                lineBuffer += String(cbuf, off, len)
+            }
+            if (lineBuffer!!.contains('\n')) {
+                val lines = lineBuffer!!.split('\n')
+                lineBuffer = lines.last()
+                if (lineBuffer!!.isEmpty()) {
+                    lineBuffer = null
+                }
+                lines.dropLast(1).forEach {
+                    writer.write(transformToLegacyTransformer(it))
+                    writer.write("\n")
+                }
+            }
+        }
+    }
+
+    private fun transformToLegacyTransformer(line: String): String {
+        val methodMatch = modernMethod.matchEntire(line)
+        if (methodMatch != null) {
+            val (access, owner, name, desc, comment) = methodMatch.destructured
+            return "$access $owner.$name${desc} $comment"
+        }
+        val fieldMatch = modernField.matchEntire(line)
+        if (fieldMatch != null) {
+            val (access, owner, name, comment) = fieldMatch.destructured
+            return "$access $owner.$name $comment"
         }
         return line
     }
@@ -172,8 +264,10 @@ object AccessTransformerMinecraftTransformer {
         return output
     }
 
-    fun aw2at(aw: Path, output: Path): Path {
-        AccessTransformerWriter(output.bufferedWriter(StandardCharsets.UTF_8, 1024, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use {
+    fun aw2at(aw: Path, output: Path, legacy: Boolean = false): Path {
+        val outWriter = output.bufferedWriter(StandardCharsets.UTF_8, 1024, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        val writer = if (legacy) transformToLegacyTransformer(outWriter) else outWriter
+        AccessTransformerWriter(writer.buffered()).use {
             AccessWidenerReader(it).read(aw.bufferedReader())
         }
         return output
