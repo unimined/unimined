@@ -33,21 +33,16 @@ object AccessTransformerMinecraftTransformer {
                 println("Transforming $relativePath")
                 val output = destinationDirectory.resolve(relativePath)
                 BufferedReader(input.reader()).use { reader ->
-                    Files.newBufferedWriter(
-                        output,
-                        StandardCharsets.UTF_8,
-                        StandardOpenOption.CREATE,
-                        StandardOpenOption.TRUNCATE_EXISTING
-                    ).use { writer ->
-                        var line = reader.readLine()
-                        while (line != null) {
-                            line = transformFromLegacyTransformer(line)
-                            line = remapModernTransformer(line, remapper)
-                            if (remapToLegacy) {
-                                line = transformToLegacyTransformer(line)
+                    transformFromLegacyTransformer(reader).use { fromLegacy ->
+                        remapModernTransformer(fromLegacy.buffered(), remapper).use { remapped ->
+                            Files.newBufferedWriter(output, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).let { if (remapToLegacy) {
+                                    transformToLegacyTransformer(it).buffered()
+                                } else {
+                                    it
+                                }
+                            }.use { writer ->
+                                remapped.copyTo(writer)
                             }
-                            writer.write("$line\n")
-                            line = reader.readLine()
                         }
                     }
                 }
@@ -206,11 +201,46 @@ object AccessTransformerMinecraftTransformer {
         return line
     }
 
-    private fun remapModernTransformer(reader: BufferedReader, writer: BufferedWriter, remapper: TinyRemapper) {
-        var line = reader.readLine()
-        while (line != null) {
-            writer.write("${remapModernTransformer(line, remapper)}\n")
+    private fun remapModernTransformer(reader: BufferedReader, remapper: TinyRemapper): Reader = object : Reader() {
+        var line: String? = null
+        var closed = false
+
+        @Synchronized
+        override fun read(cbuf: CharArray, off: Int, len: Int): Int {
+            if (closed) {
+                throw IOException("Reader is closed")
+            }
+            if (len == 0) {
+                return 0
+            }
+            if (line != null) {
+                val read = line!!.length.coerceAtMost(len)
+                line!!.toCharArray(cbuf, off, read)
+                if (read == line!!.length) {
+                    line = null
+                    return read
+                }
+                line = line!!.substring(read)
+                return read
+            }
             line = reader.readLine()
+            if (line == null) {
+                return -1
+            }
+            line = remapModernTransformer(line!!, remapper)
+            return read(cbuf, off, len)
+        }
+
+        override fun ready(): Boolean {
+            return line != null || reader.ready()
+        }
+
+        @Synchronized
+        override fun close() {
+            if (!closed) {
+                reader.close()
+                closed = true
+            }
         }
     }
 
