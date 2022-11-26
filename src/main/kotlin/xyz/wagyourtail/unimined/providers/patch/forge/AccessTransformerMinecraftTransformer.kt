@@ -93,6 +93,8 @@ object AccessTransformerMinecraftTransformer {
             line = reader.readLine()
             if (line == null) {
                 return -1
+            } else {
+                line += "\n"
             }
             line = transformFromLegacyTransformer(line!!)
             return read(cbuf, off, len)
@@ -225,6 +227,8 @@ object AccessTransformerMinecraftTransformer {
             line = reader.readLine()
             if (line == null) {
                 return -1
+            } else {
+                line += "\n"
             }
             line = remapModernTransformer(line!!, remapper)
             return read(cbuf, off, len)
