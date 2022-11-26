@@ -108,7 +108,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                         Files.walk(inject).forEach { path ->
                             project.logger.warn("testing $path")
                             if (!Files.isDirectory(path)) {
-                                val target = outputJar.getPath("/${inject.relativize(path)}")
+                                val target = outputJar.getPath("/${path.relativeTo(inject)}")
                                 project.logger.warn("injecting $path into minecraft jar")
                                 Files.createDirectories(target.parent)
                                 Files.copy(path, target, StandardCopyOption.REPLACE_EXISTING)

@@ -82,7 +82,7 @@ object AccessTransformerMinecraftTransformer {
             }
             if (line != null) {
                 val read = line!!.length.coerceAtMost(len)
-                line!!.toCharArray(cbuf, off, read)
+                line!!.toCharArray(cbuf, off, 0, read)
                 if (read == line!!.length) {
                     line = null
                     return read
@@ -214,7 +214,7 @@ object AccessTransformerMinecraftTransformer {
             }
             if (line != null) {
                 val read = line!!.length.coerceAtMost(len)
-                line!!.toCharArray(cbuf, off, read)
+                line!!.toCharArray(cbuf, off, 0, read)
                 if (read == line!!.length) {
                     line = null
                     return read
