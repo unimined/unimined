@@ -74,8 +74,7 @@ abstract class MinecraftProvider(
     private val repo: Repository = SimpleRepository.of(
         ArtifactProviderBuilder.begin(ArtifactIdentifier::class.java)
             .filter(
-                ArtifactIdentifier.groupEquals(Constants.MINECRAFT_GROUP)
-                .or(ArtifactIdentifier.groupEquals(Constants.MINECRAFT_FORGE_GROUP))
+                ArtifactIdentifier.groupMatches(Constants.MINECRAFT_GROUP.replace(".", "\\.") + ".+")
             )
             .provide(this)
     )
@@ -116,18 +115,14 @@ abstract class MinecraftProvider(
     }
 
     private fun afterEvaluate() {
-        if (minecraftTransformer is ForgeMinecraftTransformer) {
-            println("Switching to net.minecraftforge")
-            val dep = minecraftDownloader.dependency
-            combined.dependencies.clear()
-            val newDep = project.dependencies.create(
-                "net.minecraftforge:${dep.name}:${dep.version}"
-            )
-            combined.dependencies.add(newDep)
-            minecraftDownloader.dependency = newDep
-        } else {
-            println("not forge")
-        }
+        val dep = minecraftDownloader.dependency
+        combined.dependencies.clear()
+        val newDep = project.dependencies.create(
+            "net.minecraft${project.path.replace(":", "_")}:${dep.name}:${dep.version}"
+        )
+        combined.dependencies.add(newDep)
+        minecraftDownloader.dependency = newDep
+
         minecraftDownloader.afterEvaluate()
         addMcLibraries()
         minecraftTransformer.afterEvaluate()
@@ -315,7 +310,7 @@ abstract class MinecraftProvider(
     @ApiStatus.Internal
     override fun getArtifact(info: ArtifactIdentifier): Artifact {
 
-        if (info.group != Constants.MINECRAFT_GROUP && info.group != Constants.MINECRAFT_FORGE_GROUP) {
+        if (info.group != Constants.MINECRAFT_GROUP || info.group == Constants.MINECRAFT_FORGE_GROUP) {
             return Artifact.none()
         }
 
