@@ -70,14 +70,14 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 project.logger.warn("selecting split-jar client for sourceset client")
                 parent.client.dependencies.add(
                     project.dependencies.create(
-                        "${dependency.group}:minecraft:${version}:client"
+                        "net.minecraft:${dependency.name}:${version}:client"
                     )
                 )
             } else {
                 project.logger.warn("selecting combined-jar for sourceset client")
                 parent.client.dependencies.add(
                     project.dependencies.create(
-                        "${dependency.group}:minecraft:${version}"
+                        "net.minecraft:${dependency.name}:${version}"
                     )
                 )
             }
@@ -87,14 +87,14 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 project.logger.warn("selecting split-jar server for sourceset server")
                 parent.server.dependencies.add(
                     project.dependencies.create(
-                        "net.minecraft:minecraft:${version}:server"
+                        "net.minecraft:${dependency.name}:${version}:server"
                     )
                 )
             } else {
                 project.logger.warn("selecting combined-jar for sourceset server")
                 parent.server.dependencies.add(
                     project.dependencies.create(
-                        "net.minecraft:minecraft:${version}"
+                        "net.minecraft:${dependency.name}:${version}"
                     )
                 )
             }
@@ -106,14 +106,14 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 if (client) {
                     it.dependencies.add(
                         project.dependencies.create(
-                            "net.minecraft:minecraft:${version}:client"
+                            "net.minecraft:${dependency.name}:${version}:client"
                         )
                     )
                 }
                 if (server) {
                     it.dependencies.add(
                         project.dependencies.create(
-                            "net.minecraft:minecraft:${version}:server"
+                            "net.minecraft:${dependency.name}:${version}:server"
                         )
                     )
                 }
