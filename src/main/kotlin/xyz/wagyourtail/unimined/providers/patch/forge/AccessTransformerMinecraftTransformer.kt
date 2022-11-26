@@ -248,41 +248,46 @@ object AccessTransformerMinecraftTransformer {
     }
 
     private fun remapModernTransformer(line: String, tremapper: TinyRemapper): String {
-        val remapper = tremapper.environment.remapper
-        val classMatch = modernClass.matchEntire(line)
-        if (classMatch != null) {
-            val (access, owner, comment) = classMatch.destructured
-            val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
-            return "$access $remappedOwner $comment"
-        }
-        val methodMatch = modernMethod.matchEntire(line)
-        if (methodMatch != null) {
-            val (access, owner, name, desc, comment) = methodMatch.destructured
-            val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
-            if (name == "*") {
-                if (desc == "()") {
-                    return "$access $remappedOwner $name$desc $comment"
-                }
+        try {
+            val remapper = tremapper.environment.remapper
+            val classMatch = modernClass.matchEntire(line)
+            if (classMatch != null) {
+                val (access, owner, comment) = classMatch.destructured
+                val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
+                return "$access $remappedOwner $comment"
             }
-            var fixedDesc = desc
-            if (name == "<init>" || name == "<clinit>") {
-                if (fixedDesc.endsWith(")")) {
-                    fixedDesc += "V"
+            val methodMatch = modernMethod.matchEntire(line)
+            if (methodMatch != null) {
+                val (access, owner, name, desc, comment) = methodMatch.destructured
+                val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
+                if (name == "*") {
+                    if (desc == "()") {
+                        return "$access $remappedOwner $name$desc $comment"
+                    }
                 }
+                var fixedDesc = desc
+                if (name == "<init>" || name == "<clinit>") {
+                    if (fixedDesc.endsWith(")")) {
+                        fixedDesc += "V"
+                    }
+                }
+                val remappedName = remapper.mapMethodName(owner.replace(".", "/"), name, fixedDesc)
+                val remappedDesc = remapper.mapMethodDesc(fixedDesc)
+                return "$access $remappedOwner $remappedName$remappedDesc $comment"
             }
-            val remappedName = remapper.mapMethodName(owner.replace(".", "/"), name, fixedDesc)
-            val remappedDesc = remapper.mapMethodDesc(fixedDesc)
-            return "$access $remappedOwner $remappedName$remappedDesc $comment"
+            val fieldMatch = modernField.matchEntire(line)
+            if (fieldMatch != null) {
+                val (access, owner, name, comment) = fieldMatch.destructured
+                val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
+                val remappedName = remapper.mapFieldName(owner.replace(".", "/"), name, null)
+                return "$access $remappedOwner $remappedName $comment"
+            }
+            println("Failed to match: $line")
+            return line
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw IllegalStateException("Failed to remap line: $line", e)
         }
-        val fieldMatch = modernField.matchEntire(line)
-        if (fieldMatch != null) {
-            val (access, owner, name, comment) = fieldMatch.destructured
-            val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
-            val remappedName = remapper.mapFieldName(owner.replace(".", "/"), name, null)
-            return "$access $remappedOwner $remappedName $comment"
-        }
-        println("Failed to match: $line")
-        return line
     }
 
     fun transform(accessTransformers: List<Path>, baseMinecraft: Path, output: Path): Path {
