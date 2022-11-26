@@ -74,7 +74,7 @@ abstract class MinecraftProvider(
     private val repo: Repository = SimpleRepository.of(
         ArtifactProviderBuilder.begin(ArtifactIdentifier::class.java)
             .filter(
-                ArtifactIdentifier.groupMatches(Constants.MINECRAFT_GROUP.replace(".", "\\.") + ".+")
+                ArtifactIdentifier.groupEquals(Constants.MINECRAFT_GROUP)
             )
             .provide(this)
     )
