@@ -117,8 +117,9 @@ abstract class MinecraftProvider(
     private fun afterEvaluate() {
         val dep = minecraftDownloader.dependency
         combined.dependencies.clear()
+        val projectPath = project.path.replace(":", "_")
         val newDep = project.dependencies.create(
-            "net.minecraft${project.path.replace(":", "_")}:${dep.name}:${dep.version}"
+            "net.minecraft${if (projectPath == "_") "" else projectPath}:${dep.name}:${dep.version}"
         )
         combined.dependencies.add(newDep)
         minecraftDownloader.dependency = newDep
