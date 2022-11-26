@@ -298,24 +298,10 @@ abstract class MinecraftProvider(
         }
     }
 
-    fun checkGroup(info: ArtifactIdentifier) {
-        if (info.group == Constants.MINECRAFT_FORGE_GROUP && minecraftTransformer !is ForgeMinecraftTransformer) {
-            throw IllegalStateException("Minecraft transformer is not forge")
-        }
-
-        if (info.group == Constants.MINECRAFT_GROUP && minecraftTransformer is ForgeMinecraftTransformer) {
-            throw IllegalStateException("Minecraft transformer is forge")
-        }
-    }
-
     @ApiStatus.Internal
     override fun getArtifact(info: ArtifactIdentifier): Artifact {
 
         if (info.group != Constants.MINECRAFT_GROUP || info.group == Constants.MINECRAFT_FORGE_GROUP) {
-            return Artifact.none()
-        }
-
-        if (info.name != "minecraft") {
             return Artifact.none()
         }
 
@@ -325,7 +311,6 @@ abstract class MinecraftProvider(
             } else {
                 when (info.classifier) {
                     "client" -> {
-                        checkGroup(info)
                         val mc = getMinecraftWithMapping(EnvType.CLIENT, targetNamespace.get())
                         project.logger.info("providing client minecraft jar at $mc")
                         StreamableArtifact.ofFile(
@@ -336,7 +321,6 @@ abstract class MinecraftProvider(
                     }
 
                     "server" -> {
-                        checkGroup(info)
                         val mc = getMinecraftWithMapping(EnvType.SERVER, targetNamespace.get())
                         project.logger.info("providing server minecraft jar at $mc")
                         StreamableArtifact.ofFile(
@@ -359,7 +343,6 @@ abstract class MinecraftProvider(
                     )
 
                     null -> {
-                        checkGroup(info)
                         if (disableCombined.get()) {
                             Artifact.none()
                         } else {
