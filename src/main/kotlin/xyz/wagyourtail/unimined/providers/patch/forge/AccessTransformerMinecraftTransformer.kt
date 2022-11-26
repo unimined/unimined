@@ -35,13 +35,12 @@ object AccessTransformerMinecraftTransformer {
                 BufferedReader(input.reader()).use { reader ->
                     transformFromLegacyTransformer(reader).use { fromLegacy ->
                         remapModernTransformer(fromLegacy.buffered(), remapper).use { remapped ->
-                            Files.newBufferedWriter(output, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).let { if (remapToLegacy) {
+                            Files.newBufferedWriter(output, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use {
+                                remapped.copyTo(if (remapToLegacy) {
                                     transformToLegacyTransformer(it).buffered()
                                 } else {
                                     it
-                                }
-                            }.use { writer ->
-                                remapped.copyTo(writer)
+                                })
                             }
                         }
                     }

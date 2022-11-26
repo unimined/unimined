@@ -8,6 +8,7 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import java.io.BufferedReader
+import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.file.Files
@@ -58,18 +59,22 @@ object AccessWidenerMinecraftTransformer {
             Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
             ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
                 for (target in aw.targets) {
-                    val targetClass = target.replace(".", "/") + ".class"
-                    val targetPath = fs.getPath(targetClass)
-                    val reader = ClassReader(targetPath.inputStream())
-                    val writer = ClassWriter(0)
-                    val visitor = AccessWidenerClassVisitor.createClassVisitor(Opcodes.ASM9, writer, aw)
-                    reader.accept(visitor, 0)
-                    Files.write(
-                        targetPath,
-                        writer.toByteArray(),
-                        StandardOpenOption.CREATE,
-                        StandardOpenOption.TRUNCATE_EXISTING
-                    )
+                    try {
+                        val targetClass = target.replace(".", "/") + ".class"
+                        val targetPath = fs.getPath(targetClass)
+                        val reader = ClassReader(targetPath.inputStream())
+                        val writer = ClassWriter(0)
+                        val visitor = AccessWidenerClassVisitor.createClassVisitor(Opcodes.ASM9, writer, aw)
+                        reader.accept(visitor, 0)
+                        Files.write(
+                            targetPath,
+                            writer.toByteArray(),
+                            StandardOpenOption.CREATE,
+                            StandardOpenOption.TRUNCATE_EXISTING
+                        )
+                    } catch (e: FileNotFoundException) {
+                        println("AccessWidener: Class $target not found")
+                    }
                 }
             }
             return output
