@@ -325,7 +325,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
                 "{assets_root}" -> {
                     val assetsDir = provider.minecraftDownloader.metadata.assetIndex?.let {
-                        provider.assetsDownloader.downloadAssets(project, it)
+                        provider.assetsDownloader.assetsDir()
                     }
                     (assetsDir ?: provider.clientWorkingDirectory.get().resolve("assets").toPath()).toString()
                 }
