@@ -52,7 +52,7 @@ object AccessWidenerMinecraftTransformer {
         baseMinecraft: Path,
         output: Path,
         throwIfNSWrong: Boolean
-    ): Path {
+    ): Boolean {
         val aw = AccessWidener()
         AccessWidenerReader(aw).read(BufferedReader(accessWidener.reader()))
         if (aw.namespace == namespace) {
@@ -77,12 +77,12 @@ object AccessWidenerMinecraftTransformer {
                     }
                 }
             }
-            return output
+            return true
         }
         if (throwIfNSWrong) {
             throw IllegalStateException("AccessWidener namespace (${aw.namespace}) does not match minecraft namespace ($namespace)")
         }
-        return baseMinecraft
+        return false
     }
 
 }

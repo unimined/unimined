@@ -5,7 +5,6 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.providers.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.remap.RemapJarTask
 import java.nio.file.Path
 
@@ -14,7 +13,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     val provider: MinecraftProvider
 ) {
     @ApiStatus.Internal
-    open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, output: Path): MinecraftJar {
+    open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         //TODO: do this for real
         return clientjar
     }
@@ -52,7 +51,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     @ApiStatus.Internal
-    open fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
+    open fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         return baseMinecraft
     }
 

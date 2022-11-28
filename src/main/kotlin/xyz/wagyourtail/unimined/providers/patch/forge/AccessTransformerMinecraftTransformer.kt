@@ -4,15 +4,13 @@ import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import net.minecraftforge.accesstransformer.TransformerProcessor
+import xyz.wagyourtail.unimined.providers.patch.MinecraftJar
 import java.io.*
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.bufferedReader
-import kotlin.io.path.bufferedWriter
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.name
+import kotlin.io.path.*
 
 object AccessTransformerMinecraftTransformer {
 
@@ -285,21 +283,18 @@ object AccessTransformerMinecraftTransformer {
         }
     }
 
-    fun transform(accessTransformers: List<Path>, baseMinecraft: Path, output: Path): Path {
-        if (accessTransformers.isEmpty()) {
-            return baseMinecraft
-        }
-        output.deleteIfExists()
-        val transfomerProcessor = TransformerProcessor::class.java
-        val processJar = transfomerProcessor.getDeclaredMethod(
+    fun transform(accessTransformers: List<Path>, baseMinecraft: MinecraftJar, output: MinecraftJar) {
+        if (accessTransformers.isEmpty()) return
+        if (output.path.exists()) output.path.deleteIfExists()
+        output.path.parent.createDirectories()
+        val processJar = TransformerProcessor::class.java.getDeclaredMethod(
             "processJar",
             Path::class.java,
             Path::class.java,
             List::class.java
         )
         processJar.isAccessible = true
-        processJar(null, baseMinecraft, output, accessTransformers)
-        return output
+        processJar(null, baseMinecraft.path, output.path, accessTransformers)
     }
 
     fun aw2at(aw: Path, output: Path, legacy: Boolean = false): Path {

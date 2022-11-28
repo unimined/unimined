@@ -16,7 +16,10 @@ import xyz.wagyourtail.unimined.providers.patch.jarmod.JarModMinecraftTransforme
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.io.InputStream
 import java.net.URI
-import java.nio.file.*
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
 class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer) : JarModMinecraftTransformer(
@@ -209,25 +212,28 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
-        val out = fixForge(namespace, baseMinecraft)
-        return ZipReader.openZipFileSystem(out).use { fs ->
+    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+        val out = fixForge(baseMinecraft)
+        return ZipReader.openZipFileSystem(out.path).use { fs ->
             parent.applyATs(
                 out,
                 listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
         }
     }
 
-    private fun fixForge(namespace: String, baseMinecraft: Path): Path {
-        if (namespace == "named") {
-            val target = baseMinecraft.parent.resolve("${baseMinecraft.nameWithoutExtension}-stripped.${baseMinecraft.extension}")
+    private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
+        if (baseMinecraft.mappingNamespace == "named") {
+            val target = MinecraftJar(
+                baseMinecraft,
+                patches = baseMinecraft.patches + "fixForge",
+            )
 
-            if (target.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 return target
             }
 
-            Files.copy(baseMinecraft, target, StandardCopyOption.REPLACE_EXISTING)
-            val mc = URI.create("jar:${target.toUri()}")
+            Files.copy(baseMinecraft.path, target.path, StandardCopyOption.REPLACE_EXISTING)
+            val mc = URI.create("jar:${target.path.toUri()}")
             try {
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
                     val dynPath = out.getPath("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
@@ -252,7 +258,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     }
                 }
             } catch (e: Throwable) {
-                target.deleteExisting()
+                target.path.deleteIfExists()
                 throw e
             }
             return target

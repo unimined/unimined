@@ -27,7 +27,6 @@ import java.net.URI
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
-import kotlin.io.path.nameWithoutExtension
 
 class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         AbstractMinecraftTransformer(project, provider) {
@@ -197,8 +196,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         return forgeTransformer
     }
 
-    override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, output: Path): MinecraftJar {
-        return forgeTransformer.merge(clientjar, serverjar, output)
+    override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
+        return forgeTransformer.merge(clientjar, serverjar)
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
@@ -259,38 +258,34 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         ),
     }
 
-    override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
-        return forgeTransformer.afterRemap(envType, namespace, baseMinecraft)
+    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+        return forgeTransformer.afterRemap(baseMinecraft)
     }
 
-    fun applyATs(baseMinecraft: Path, ats: List<Path>): Path {
+    fun applyATs(baseMinecraft: MinecraftJar, ats: List<Path>): MinecraftJar {
         project.logger.lifecycle("Applying ATs $ats")
         return if (accessTransformer != null) {
             project.logger.lifecycle("Using user access transformer $accessTransformer")
-            val output = getOutputJarLocation(baseMinecraft)
-            if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-                output
-            } else {
+            val output = MinecraftJar(
+                baseMinecraft,
+                parentPath = provider.parent.getLocalCache().resolve("forge"),
+                awOrAt = "at+${accessTransformer!!.toPath().getSha1()}"
+            )
+            if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
                 AccessTransformerMinecraftTransformer.transform(
                     ats + listOf(accessTransformer!!.toPath()),
                     baseMinecraft,
                     output
                 )
             }
+            output
         } else {
-            val output = baseMinecraft.parent
-                .resolve("${baseMinecraft.nameWithoutExtension}-at.jar")
-            if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-                output
-            } else {
+            val output = MinecraftJar(baseMinecraft, awOrAt = "at")
+            if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
                 AccessTransformerMinecraftTransformer.transform(ats, baseMinecraft, output)
             }
+            output
         }
-    }
-
-    fun getOutputJarLocation(baseMinecraft: Path): Path {
-        return provider.parent.getLocalCache()
-            .resolve("${baseMinecraft.nameWithoutExtension}-at-${accessTransformer!!.toPath().getSha1()}.jar")
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {

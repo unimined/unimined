@@ -9,11 +9,16 @@ import xyz.wagyourtail.unimined.providers.patch.MinecraftJar
 import xyz.wagyourtail.unimined.providers.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.util.SemVerUtils
-import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.net.URI
-import java.nio.file.*
-import kotlin.io.path.*
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.exists
+import kotlin.io.path.writeBytes
 
 class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer) : JarModMinecraftTransformer(
     project,
@@ -57,8 +62,14 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         val forgeUniversal = parent.forge.dependencies.last()
         val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
-        val outFolder = minecraft.jarPath.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
+        val outFolder = minecraft.path.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
             .createDirectories()
+
+        val patchedMC = MinecraftJar(
+            minecraft,
+            name = "forge",
+            parentPath = outFolder,
+        )
 
         // apply binary patches
         val binaryPatchFile = ZipReader.readInputStreamFor("binpatches.pack.lzma", forgeJar.toPath()) {
@@ -71,19 +82,20 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     )
                 }
         }
-        val patchedMC = outFolder.resolve("${minecraft.jarPath.nameWithoutExtension}-${forgeUniversal.name}-${forgeUniversal.version}.${minecraft.jarPath.extension}")
-        if (!patchedMC.exists() || project.gradle.startParameter.isRefreshDependencies) {
-            patchedMC.deleteIfExists()
+
+        if (!patchedMC.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
+            patchedMC.path.deleteIfExists()
             FG2TaskApplyBinPatches(project).doTask(
-                minecraft.jarPath.toFile(),
+                minecraft.path.toFile(),
                 binaryPatchFile.toFile(),
-                patchedMC.toFile(),
+                patchedMC.path.toFile(),
                 if (minecraft.envType == EnvType.SERVER) "server" else "client"
             )
         }
+
         //   shade in forge jar
-        val shadedForge = super.transform(MinecraftJar(minecraft, patchedMC))
-        return MinecraftJar(shadedForge, provider.mcRemapper.provide(shadedForge, "searge", true), shadedForge.envType, "searge")
+        val shadedForge = super.transform(patchedMC)
+        return provider.mcRemapper.provide(shadedForge, "searge")
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {
@@ -94,25 +106,28 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
-        val out = fixForge(envType, namespace, baseMinecraft)
-        return ZipReader.openZipFileSystem(out).use { fs ->
+    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+        val out = fixForge(baseMinecraft)
+        return ZipReader.openZipFileSystem(out.path).use { fs ->
             parent.applyATs(
                 out,
                 listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
         }
     }
 
-    fun fixForge(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
-        if (namespace == "named") {
-            val target = baseMinecraft.parent.resolve("${baseMinecraft.nameWithoutExtension}-stripped.${baseMinecraft.extension}")
+    private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
+        if (baseMinecraft.mappingNamespace == "named") {
+            val target = MinecraftJar(
+                baseMinecraft,
+                patches = baseMinecraft.patches + "fixForge",
+            )
 
-            if (target.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 return target
             }
 
-            Files.copy(baseMinecraft, target, StandardCopyOption.REPLACE_EXISTING)
-            val mc = URI.create("jar:${target.toUri()}")
+            Files.copy(baseMinecraft.path, target.path, StandardCopyOption.REPLACE_EXISTING)
+            val mc = URI.create("jar:${target.path.toUri()}")
             try {
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
                     out.getPath("argo").apply {
@@ -143,7 +158,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                         .deleteIfExists()
                 }
             } catch (e: Throwable) {
-                target.deleteExisting()
+                target.path.deleteIfExists()
                 throw e
             }
             return target

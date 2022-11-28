@@ -15,9 +15,8 @@ import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.net.URI
 import java.nio.file.*
 import java.util.zip.ZipInputStream
-import kotlin.io.path.deleteExisting
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
-import kotlin.io.path.nameWithoutExtension
 
 open class JarModMinecraftTransformer(
     project: Project,
@@ -68,9 +67,12 @@ open class JarModMinecraftTransformer(
             return minecraft
         }
         return minecraft.let(consumerApply {
-            val target = getTransformedMinecraftPath(jarPath, combinedNames)
-            if (target.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-                return@consumerApply MinecraftJar(this, target)
+            val target = MinecraftJar(
+                minecraft,
+                patches = minecraft.patches + combinedNames
+            )
+            if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+                return@consumerApply target
             }
 
             val jarmod = jarModConfiguration(envType).resolve().toMutableSet()
@@ -78,8 +80,8 @@ open class JarModMinecraftTransformer(
                 jarmod.addAll(jarModConfiguration(EnvType.COMBINED).resolve())
             }
 
-            Files.copy(jarPath, target, StandardCopyOption.REPLACE_EXISTING)
-            val mc = URI.create("jar:${target.toUri()}")
+            Files.copy(path, target.path, StandardCopyOption.REPLACE_EXISTING)
+            val mc = URI.create("jar:${target.path.toUri()}")
             try {
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
                     if (out.getPath("META-INF").exists()) {
@@ -109,10 +111,10 @@ open class JarModMinecraftTransformer(
                     transform.forEach { it(out) }
                 }
             } catch (e: Throwable) {
-                target.deleteExisting()
+                target.path.deleteIfExists()
                 throw e
             }
-            MinecraftJar(this, target)
+            target
         })
     }
 
@@ -131,9 +133,4 @@ open class JarModMinecraftTransformer(
             }
         }
     }
-
-    private fun getTransformedMinecraftPath(baseMinecraft: Path, combinedNames: String): Path {
-        return baseMinecraft.parent.resolve("${baseMinecraft.nameWithoutExtension}-${combinedNames}.jar")
-    }
-
 }

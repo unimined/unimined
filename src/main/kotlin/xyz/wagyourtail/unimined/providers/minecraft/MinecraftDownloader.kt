@@ -394,11 +394,6 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         return mcVersionFolder(version).resolve("server_mappings.txt")
     }
 
-    @Suppress("UNUSED")
-    fun combinedJarDownloadPath(version: String): Path {
-        return mcVersionFolder(version).resolve("minecraft-$version.jar")
-    }
-
     fun versionJsonDownloadPath(version: String): Path {
         return mcVersionFolder(version).resolve("version.json")
     }

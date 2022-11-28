@@ -19,7 +19,6 @@ import xyz.wagyourtail.unimined.providers.patch.forge.fg3.mcpconfig.McpConfigDat
 import xyz.wagyourtail.unimined.providers.patch.forge.fg3.mcpconfig.McpConfigStep
 import xyz.wagyourtail.unimined.providers.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.providers.patch.jarmod.JarModMinecraftTransformer
-import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.util.getFile
 import java.io.File
 import java.io.IOException
@@ -31,9 +30,7 @@ import java.nio.file.*
 import kotlin.io.path.*
 
 class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer) : JarModMinecraftTransformer(
-    project,
-    parent.provider,
-    Constants.FORGE_PROVIDER
+    project, parent.provider, Constants.FORGE_PROVIDER
 ) {
 
     @ApiStatus.Internal
@@ -61,9 +58,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         //   read if forgeDep has binpatches file
         val forgeUni = parent.forge.getFile(forgeDep)
         val userdevClassifier = ZipReader.readInputStreamFor<String?>(
-            "binpatches.pack.lzma",
-            forgeUni.toPath(),
-            false
+            "binpatches.pack.lzma", forgeUni.toPath(), false
         ) {
             "userdev3"
         } ?: "userdev"
@@ -178,35 +173,29 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, output: Path): MinecraftJar {
+    override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         project.logger.lifecycle("Merging client and server jars...")
-        unstripResources(clientjar, serverjar, output)
-        return if (userdevCfg["notchObf"]?.asBoolean == true) {
-            if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-                MinecraftJar(clientjar, output, EnvType.COMBINED)
-            } else {
-                executeMcp("merge", output, EnvType.COMBINED)
-                MinecraftJar(clientjar, output, EnvType.COMBINED)
-            }
-        } else {
-            val output = output.parent.resolve("${output.nameWithoutExtension}-searge.jar")
-            if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-                MinecraftJar(clientjar, output, EnvType.COMBINED, "searge")
-            } else {
-                executeMcp("rename", output, EnvType.COMBINED)
-                MinecraftJar(clientjar, output, EnvType.COMBINED, "searge")
-            }
-
+        val output = MinecraftJar(
+            clientjar,
+            parentPath = provider.minecraftDownloader.mcVersionFolder(provider.minecraftDownloader.version).resolve("forge"),
+            envType = EnvType.COMBINED,
+            mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) "official" else "searge"
+        )
+        createClientExtra(clientjar, serverjar, output.path)
+        if (output.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            return output
         }
+        if (userdevCfg["notchObf"]?.asBoolean == true) {
+            executeMcp("merge", output.path, EnvType.COMBINED)
+        } else {
+            executeMcp("rename", output.path, EnvType.COMBINED)
+        }
+        return output
     }
 
-    private fun unstripResources(
-        baseMinecraftClient: MinecraftJar,
-        baseMinecraftServer: MinecraftJar,
-        patchedMinecraft: Path
+    private fun createClientExtra(
+        baseMinecraftClient: MinecraftJar, baseMinecraftServer: MinecraftJar, patchedMinecraft: Path
     ) {
-//        val unstripped = patchedMinecraft.jarPath.parent.resolve("${patchedMinecraft.jarPath.nameWithoutExtension}-unstripped.jar")
-//        patchedMinecraft.jarPath.copyTo(unstripped, StandardCopyOption.REPLACE_EXISTING)
         val clientExtra = patchedMinecraft.parent.createDirectories()
             .resolve("client-extra-${provider.minecraftDownloader.version}.jar")
 
@@ -224,23 +213,19 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             }
         }
 
-        ZipReader.openZipFileSystem(clientExtra, mapOf("mutable" to true, "create" to true)).use { unstripped ->
-            ZipReader.openZipFileSystem(baseMinecraftClient.jarPath).use { base ->
-                unstrip(base, unstripped)
-            }
-        }
-    }
-
-    private fun unstrip(inp: FileSystem, out: FileSystem) {
-        for (path in Files.walk(inp.getPath("/"))) {
-            // skip meta-inf
-            if (path.nameCount > 0 && path.getName(0).toString().equals("META-INF", ignoreCase = true)) continue
+        ZipReader.openZipFileSystem(clientExtra, mapOf("mutable" to true, "create" to true)).use { extra ->
+            ZipReader.openZipFileSystem(baseMinecraftClient.path).use { base ->
+                for (path in Files.walk(base.getPath("/"))) {
+                    // skip meta-inf
+                    if (path.nameCount > 0 && path.getName(0).toString().equals("META-INF", ignoreCase = true)) continue
 //            project.logger.warn("Checking $path")
-            if (!path.isDirectory() && path.extension != "class") {
+                    if (!path.isDirectory() && path.extension != "class") {
 //                project.logger.warn("Copying $path")
-                val target = out.getPath(path.toString())
-                target.parent.createDirectories()
-                path.copyTo(target, StandardCopyOption.REPLACE_EXISTING)
+                        val target = extra.getPath(path.toString())
+                        target.parent.createDirectories()
+                        path.copyTo(target, StandardCopyOption.REPLACE_EXISTING)
+                    }
+                }
             }
         }
     }
@@ -251,44 +236,36 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         val forgeUniversal = parent.forge.dependencies.last()
         val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
 
-        // get forge jar
-        val forge = parent.forge.getFile(forgeUniversal)
-
-        val outFolder = minecraft.jarPath.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
+        val outFolder = minecraft.path.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
             .createDirectories()
+
+        val patchedMC = MinecraftJar(
+            minecraft,
+            name = "forge",
+            parentPath = outFolder
+        )
 
         // if userdev cfg says notch
         if (userdevCfg["notchObf"]?.asBoolean == true && minecraft.envType != EnvType.COMBINED) {
             throw IllegalStateException("Forge userdev3 (legacy fg3, aka 1.12.2) is not supported for non-combined environments.")
         }
 
-        //   apply binpatches
+        //  extract binpatches
         val binPatchFile = ZipReader.readInputStreamFor(userdevCfg["binpatches"].asString, forgeUd.toPath()) {
-            outFolder.resolve("binpatches.pack.lzma")
-                .apply {
+            outFolder.resolve("binpatches.pack.lzma").apply {
                     writeBytes(
-                        it.readBytes(),
-                        StandardOpenOption.CREATE,
-                        StandardOpenOption.TRUNCATE_EXISTING
+                        it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
                     )
                 }
         }
 
-        val patchedMC = outFolder.resolve(
-            "${
-                minecraft.jarPath.nameWithoutExtension.replace(
-                    "minecraft",
-                    "forge"
-                )
-            }-${forgeUniversal.name}-${forgeUniversal.version}.${minecraft.jarPath.extension}"
-        )
-        if (!patchedMC.exists() || project.gradle.startParameter.isRefreshDependencies) {
-            patchedMC.deleteIfExists()
+        if (!patchedMC.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
+            patchedMC.path.deleteIfExists()
             val args = (userdevCfg["binpatcher"].asJsonObject["args"].asJsonArray.map {
                 when (it.asString) {
-                    "{clean}" -> minecraft.jarPath.toString()
+                    "{clean}" -> minecraft.path.toString()
                     "{patch}" -> binPatchFile.toString()
-                    "{output}" -> patchedMC.toString()
+                    "{output}" -> patchedMC.path.toString()
                     else -> it.asString
                 }
             } + listOf("--data", "--unpatched")).toTypedArray()
@@ -301,7 +278,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 ConsoleTool.main(args)
             } catch (e: Throwable) {
                 e.printStackTrace()
-                patchedMC.deleteIfExists()
+                patchedMC.path.deleteIfExists()
                 throw e
             }
             if (stoutLevel > LogLevel.INFO) {
@@ -309,9 +286,9 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             }
         }
         //   shade in forge jar
-        val shadedForge = super.transform(MinecraftJar(minecraft, patchedMC))
+        val shadedForge = super.transform(patchedMC)
         return if (userdevCfg["notchObf"]?.asBoolean == true) {
-            MinecraftJar(shadedForge, provider.mcRemapper.provide(shadedForge, "searge", true), shadedForge.envType, "searge")
+            provider.mcRemapper.provide(shadedForge, "searge")
         } else {
             shadedForge
         }
@@ -345,7 +322,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
                 "{asset_index}" -> provider.minecraftDownloader.metadata.assetIndex?.id ?: ""
                 "{source_roots}" -> {
-                    (listOf(config.commonClasspath.output.resourcesDir) + config.commonClasspath.output.classesDirs + parent.includeSubprojectSourceSets.flatMap { listOf(it.output.resourcesDir) + it.output.classesDirs }).joinToString(
+                    (listOf(config.commonClasspath.output.resourcesDir) + config.commonClasspath.output.classesDirs + parent.includeSubprojectSourceSets.flatMap {
+                        listOf(
+                            it.output.resourcesDir
+                        ) + it.output.classesDirs
+                    }).joinToString(
                         File.pathSeparator
                     ) { "mod%%$it" }
                 }
@@ -371,9 +352,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         legacyClasspath.writeText(
             (provider.mcLibraries.resolve() + provider.combined.resolve() + provider.client.resolve() + clientExtra.resolve()).joinToString(
                 "\n"
-            ) { it.toString() },
-            StandardCharsets.UTF_8,
-            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
+            ) { it.toString() }, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
         )
     }
 
@@ -409,29 +388,28 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
-        val out = fixForge(envType, namespace, baseMinecraft)
-        ZipReader.openZipFileSystem(out).use { fs ->
-            return parent.applyATs(
-                out,
-                listOf(
-                    fs.getPath("fml_at.cfg"),
-                    fs.getPath("forge_at.cfg"),
-                    fs.getPath("META-INF/accesstransformer.cfg")
-                ).filter { Files.exists(it) })
+    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+        val out = fixForge(baseMinecraft)
+        ZipReader.openZipFileSystem(out.path).use { fs ->
+            return parent.applyATs(out, listOf(
+                fs.getPath("fml_at.cfg"), fs.getPath("forge_at.cfg"), fs.getPath("META-INF/accesstransformer.cfg")
+            ).filter { Files.exists(it) })
         }
     }
 
-    fun fixForge(envType: EnvType, namespace: String, baseMinecraft: Path): Path {
-        if (namespace == "named") {
-            val target = baseMinecraft.parent.resolve("${baseMinecraft.nameWithoutExtension}-stripped.${baseMinecraft.extension}")
+    private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
+        if (baseMinecraft.mappingNamespace == "named") {
+            val target = MinecraftJar(
+                baseMinecraft,
+                patches = baseMinecraft.patches + "fixForge",
+            )
 
-            if (target.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 return target
             }
 
-            Files.copy(baseMinecraft, target, StandardCopyOption.REPLACE_EXISTING)
-            val mc = URI.create("jar:${target.toUri()}")
+            Files.copy(baseMinecraft.path, target.path, StandardCopyOption.REPLACE_EXISTING)
+            val mc = URI.create("jar:${target.path.toUri()}")
             try {
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
                     out.getPath("binpatches.pack.lzma").deleteIfExists()
@@ -441,7 +419,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                         .deleteIfExists()
                 }
             } catch (e: Throwable) {
-                target.deleteExisting()
+                target.path.deleteIfExists()
                 throw e
             }
             return target

@@ -9,7 +9,6 @@ import xyz.wagyourtail.unimined.providers.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.patch.MinecraftJar
 import xyz.wagyourtail.unimined.providers.patch.forge.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.util.consumerApply
-import java.nio.file.Path
 import kotlin.io.path.*
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -23,24 +22,24 @@ class MinecraftRemapper(
     var tinyRemapperConf: (TinyRemapper.Builder) -> Unit = {}
 
     @ApiStatus.Internal
-    fun provide(minecraft: MinecraftJar, remapTo: String, skipMappingId: Boolean = false): Path {
+    fun provide(minecraft: MinecraftJar, remapTo: String): MinecraftJar {
         return minecraft.let(consumerApply {
+            val mappingsId = mappings.getCombinedNames(minecraft.envType)
             val parent = if (mappings.hasStubs(envType)) {
-                provider.parent.getLocalCache().resolve("minecraft").createDirectories()
+                provider.parent.getLocalCache().resolve("minecraft").resolve(mappingsId).createDirectories()
             } else {
-                jarPath.parent
+                parentPath.resolve(mappingsId)
             }
-            val target = if (skipMappingId) {
-                parent.resolve(mappings.getCombinedNames(envType))
-                    .resolve("${jarPath.nameWithoutExtension}-${remapTo}.${jarPath.extension}")
-            } else {
-                parent.resolve(mappings.getCombinedNames(envType))
-                    .resolve("${jarPath.nameWithoutExtension}-mapped-${mappings.getCombinedNames(envType)}-${remapTo}.${jarPath.extension}")
-            }
+            val target = MinecraftJar(
+                minecraft,
+                parentPath = parent,
+                mappingNamespace = remapTo,
+                fallbackNamespace = fallbackTarget
+            )
 
 
 
-            if (target.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 return@consumerApply target
             }
 
@@ -49,7 +48,7 @@ class MinecraftRemapper(
                     mappings.getMappingProvider(
                         envType,
                         mappingNamespace,
-                        fallbackMappingNamespace,
+                        fallbackNamespace,
                         fallbackTarget,
                         remapTo
                     )
@@ -64,22 +63,22 @@ class MinecraftRemapper(
             val remapper = remapperB.build()
 
             project.logger.lifecycle("Remapping minecraft to $remapTo")
-            project.logger.info("Remapping ${jarPath.name} to $target")
+            project.logger.info("Remapping ${path.name} to $target")
             project.logger.info("Mappings: $mappingNamespace to $remapTo")
-            project.logger.info("Fallback: $fallbackMappingNamespace to $fallbackTarget")
+            project.logger.info("Fallback: $fallbackNamespace to $fallbackTarget")
 
             try {
-                remapper.readInputs(jarPath)
-                OutputConsumerPath.Builder(target).build().use {
+                remapper.readInputs(path)
+                OutputConsumerPath.Builder(target.path).build().use {
                     it.addNonClassFiles(
-                        jarPath, remapper,
+                        path, remapper,
                         listOf(AccessTransformerMinecraftTransformer.atRemapper()) + NonClassCopyMode.FIX_META_INF.remappers
                     )
                     remapper.apply(it)
                 }
             } catch (e: RuntimeException) {
-                project.logger.warn("Failed to remap ${jarPath.name} to $target")
-                target.deleteIfExists()
+                project.logger.warn("Failed to remap ${path.name} to $target")
+                target.path.deleteIfExists()
                 throw e
             }
             remapper.finish()

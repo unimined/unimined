@@ -273,28 +273,50 @@ abstract class MinecraftProvider(
         }.computeIfAbsent(namespace) {
             val mc = if (envType == EnvType.COMBINED) {
                 val client = MinecraftJar(
-                    minecraftDownloader.getMinecraft(EnvType.CLIENT),
+                    minecraftDownloader.mcVersionFolder(minecraftDownloader.version),
+                    "minecraft",
                     EnvType.CLIENT,
+                    minecraftDownloader.version,
+                    listOf(),
                     "official",
-                    "official"
+                    "official",
+                    null,
+                    "jar",
+                    minecraftDownloader.getMinecraft(EnvType.CLIENT)
                 )
                 val server = MinecraftJar(
-                    minecraftDownloader.getMinecraft(EnvType.SERVER),
+                    minecraftDownloader.mcVersionFolder(minecraftDownloader.version),
+                    "minecraft",
                     EnvType.SERVER,
+                    minecraftDownloader.version,
+                    listOf(),
                     "official",
-                    "official"
+                    "official",
+                    null,
+                    "jar",
+                    minecraftDownloader.getMinecraft(EnvType.SERVER)
                 )
                 minecraftTransformer.merge(
                     client,
-                    server,
-                    minecraftDownloader.combinedJarDownloadPath(minecraftDownloader.version)
+                    server
                 )
-            } else MinecraftJar(minecraftDownloader.getMinecraft(envType), envType, "official", "official")
+            } else {
+                MinecraftJar(
+                    minecraftDownloader.mcVersionFolder(minecraftDownloader.version),
+                    "minecraft",
+                    envType,
+                    minecraftDownloader.version,
+                    listOf(),
+                    "official",
+                    "official",
+                    null,
+                    "jar",
+                    minecraftDownloader.getMinecraft(envType)
+                )
+            }
             minecraftTransformer.afterRemap(
-                envType,
-                namespace,
                 mcRemapper.provide(minecraftTransformer.transform(mc), namespace)
-            )
+            ).path
         }
     }
 

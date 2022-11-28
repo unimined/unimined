@@ -1,9 +1,6 @@
 package xyz.wagyourtail.unimined.providers.patch.fabric
 
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
+import com.google.gson.*
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -15,7 +12,6 @@ import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.MinecraftJar
 import xyz.wagyourtail.unimined.remap.RemapJarTask
-import xyz.wagyourtail.unimined.util.getSha1
 import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
@@ -25,7 +21,6 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
-import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.writeText
 
 class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(
@@ -33,7 +28,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     provider
 ) {
     companion object {
-        val GSON = GsonBuilder().setPrettyPrinting().create()
+        val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
     }
 
     val fabric: Configuration = project.configurations.maybeCreate(Constants.FABRIC_PROVIDER)
@@ -165,26 +160,28 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar = minecraft
 
-    override fun afterRemap(envType: EnvType, namespace: String, baseMinecraft: Path): Path =
+    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar =
         if (accessWidener != null) {
-            val output = getOutputJarLocation(baseMinecraft)
-            if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-                output
-            } else {
-                AccessWidenerMinecraftTransformer.transform(
+            val output = MinecraftJar(
+                baseMinecraft,
+                parentPath = provider.parent.getLocalCache().resolve("fabric")
+            )
+            if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
+                if (AccessWidenerMinecraftTransformer.transform(
                     accessWidener!!.toPath(),
-                    namespace,
-                    baseMinecraft,
-                    output,
+                    baseMinecraft.mappingNamespace,
+                    baseMinecraft.path,
+                    output.path,
                     false
-                )
+                )) {
+                    output
+                } else {
+                    baseMinecraft
+                }
+            } else {
+                output
             }
         } else baseMinecraft
-
-    fun getOutputJarLocation(baseMinecraft: Path): Path {
-        return provider.parent.getLocalCache()
-            .resolve("${baseMinecraft.nameWithoutExtension}-aw-${accessWidener!!.toPath().getSha1()}.jar")
-    }
 
     private fun getIntermediaryClassPath(envType: EnvType): String {
         val remapClasspath = provider.parent.getLocalCache().resolve("remapClasspath.txt")
