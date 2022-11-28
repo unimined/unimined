@@ -20,6 +20,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.writeText
 
@@ -164,7 +165,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
         if (accessWidener != null) {
             val output = MinecraftJar(
                 baseMinecraft,
-                parentPath = provider.parent.getLocalCache().resolve("fabric")
+                parentPath = provider.parent.getLocalCache().resolve("fabric").createDirectories()
             )
             if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
                 if (AccessWidenerMinecraftTransformer.transform(
