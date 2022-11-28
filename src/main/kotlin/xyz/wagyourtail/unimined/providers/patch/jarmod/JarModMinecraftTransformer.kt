@@ -5,7 +5,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.MinecraftJar
@@ -20,7 +20,7 @@ import kotlin.io.path.exists
 
 open class JarModMinecraftTransformer(
     project: Project,
-    provider: MinecraftProvider,
+    provider: MinecraftProviderImpl,
     private val jarModProvider: String = Constants.JARMOD_PROVIDER,
 ) : AbstractMinecraftTransformer(
     project, provider

@@ -7,7 +7,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.Constants.METADATA_URL
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.providers.version.Download
 import xyz.wagyourtail.unimined.providers.version.Extract
 import xyz.wagyourtail.unimined.providers.version.VersionData
@@ -30,7 +30,7 @@ import kotlin.io.path.inputStream
 import kotlin.properties.Delegates
 
 @Suppress("MemberVisibilityCanBePrivate")
-class MinecraftDownloader(val project: Project, private val parent: MinecraftProvider) {
+class MinecraftDownloader(val project: Project, private val parent: MinecraftProviderImpl) {
 
     companion object {
         fun download(download: Download, path: Path) {

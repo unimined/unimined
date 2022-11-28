@@ -1,12 +1,12 @@
 package xyz.wagyourtail.unimined.providers.mod
 
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.UniminedExtension
+import xyz.wagyourtail.unimined.UniminedExtensionImpl
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 
-class ModProvider(
+class ModProviderImpl(
     val project: Project,
-    val parent: UniminedExtension
+    val parent: UniminedExtensionImpl
 ) {
     val modRemapper = ModRemapper(project, this)
 

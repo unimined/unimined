@@ -9,8 +9,8 @@ import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.internal.ConventionTask
 import org.gradle.api.tasks.TaskAction
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.UniminedExtension
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.UniminedExtensionImpl
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.File
 import java.io.OutputStreamWriter
@@ -20,8 +20,8 @@ import java.util.*
 import kotlin.io.path.outputStream
 
 open class MappingExportTask : ConventionTask() {
-    private val minecraftProvider = project.extensions.getByType(MinecraftProvider::class.java)
-    private val uniminedExtension = project.extensions.getByType(UniminedExtension::class.java)
+    private val minecraftProvider = project.extensions.getByType(MinecraftProviderImpl::class.java)
+    private val uniminedExtension = project.extensions.getByType(UniminedExtensionImpl::class.java)
 
     private val exports: MutableMap<EnvType, MutableSet<MappingExport>> = mutableMapOf()
 
@@ -33,7 +33,13 @@ open class MappingExportTask : ConventionTask() {
             val exportSet = exports[envType] ?: continue
             for (export in exportSet) {
                 project.logger.info("Exporting mappings to ${export.location}")
-                project.logger.debug("${export.type} ${export.sourceNamespace} -> [${export.targetNamespace?.joinToString(", ") }}]")
+                project.logger.debug(
+                    "${export.type} ${export.sourceNamespace} -> [${
+                        export.targetNamespace?.joinToString(
+                            ", "
+                        )
+                    }}]"
+                )
                 export.exportFunc(mappings)
             }
         }
@@ -58,6 +64,7 @@ class MappingExport(val envType: EnvType) {
     var location: File? = null
     var sourceNamespace: String? = null
     var targetNamespace: List<String>? = null
+
     @set:ApiStatus.Internal
     var exportFunc: (MappingTreeView) -> Unit = ::export
 

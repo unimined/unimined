@@ -4,7 +4,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.Constants.ASSET_BASE_URL
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.providers.version.AssetIndex
 import xyz.wagyourtail.unimined.util.testSha1
 import java.io.InputStreamReader
@@ -16,7 +16,7 @@ import java.nio.file.StandardCopyOption
 import kotlin.io.path.createDirectories
 import kotlin.io.path.inputStream
 
-class AssetsDownloader(val project: Project, private val parent: MinecraftProvider) {
+class AssetsDownloader(val project: Project, private val parent: MinecraftProviderImpl) {
 
     fun downloadAssets(project: Project, assets: AssetIndex): Path {
         val dir = assetsDir()

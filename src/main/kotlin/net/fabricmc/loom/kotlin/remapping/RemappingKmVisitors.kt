@@ -24,42 +24,8 @@
 
 package net.fabricmc.loom.kotlin.remapping
 
-import kotlinx.metadata.ClassName
-import kotlinx.metadata.Flags
-import kotlinx.metadata.KmAnnotation
-import kotlinx.metadata.KmClassExtensionVisitor
-import kotlinx.metadata.KmClassVisitor
-import kotlinx.metadata.KmConstructorExtensionVisitor
-import kotlinx.metadata.KmConstructorVisitor
-import kotlinx.metadata.KmContractVisitor
-import kotlinx.metadata.KmEffectExpressionVisitor
-import kotlinx.metadata.KmEffectInvocationKind
-import kotlinx.metadata.KmEffectType
-import kotlinx.metadata.KmEffectVisitor
-import kotlinx.metadata.KmExtensionType
-import kotlinx.metadata.KmFunctionExtensionVisitor
-import kotlinx.metadata.KmFunctionVisitor
-import kotlinx.metadata.KmLambdaVisitor
-import kotlinx.metadata.KmPackageExtensionVisitor
-import kotlinx.metadata.KmPackageVisitor
-import kotlinx.metadata.KmPropertyExtensionVisitor
-import kotlinx.metadata.KmPropertyVisitor
-import kotlinx.metadata.KmTypeAliasVisitor
-import kotlinx.metadata.KmTypeExtensionVisitor
-import kotlinx.metadata.KmTypeParameterExtensionVisitor
-import kotlinx.metadata.KmTypeParameterVisitor
-import kotlinx.metadata.KmTypeVisitor
-import kotlinx.metadata.KmValueParameterVisitor
-import kotlinx.metadata.KmVariance
-import kotlinx.metadata.jvm.JvmClassExtensionVisitor
-import kotlinx.metadata.jvm.JvmConstructorExtensionVisitor
-import kotlinx.metadata.jvm.JvmFieldSignature
-import kotlinx.metadata.jvm.JvmFunctionExtensionVisitor
-import kotlinx.metadata.jvm.JvmMethodSignature
-import kotlinx.metadata.jvm.JvmPackageExtensionVisitor
-import kotlinx.metadata.jvm.JvmPropertyExtensionVisitor
-import kotlinx.metadata.jvm.JvmTypeExtensionVisitor
-import kotlinx.metadata.jvm.JvmTypeParameterExtensionVisitor
+import kotlinx.metadata.*
+import kotlinx.metadata.jvm.*
 import org.objectweb.asm.commons.Remapper
 
 class RemappingKmVisitors(private val remapper: Remapper) {
@@ -104,7 +70,12 @@ class RemappingKmVisitors(private val remapper: Remapper) {
             return RemappingKmTypeVisitor(super.visitInlineClassUnderlyingType(flags))
         }
 
-        override fun visitProperty(flags: Flags, name: String, getterFlags: Flags, setterFlags: Flags): KmPropertyVisitor {
+        override fun visitProperty(
+            flags: Flags,
+            name: String,
+            getterFlags: Flags,
+            setterFlags: Flags
+        ): KmPropertyVisitor {
             return RemappingKmPropertyVisitor(super.visitProperty(flags, name, getterFlags, setterFlags))
         }
 
@@ -219,7 +190,9 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingKmEffectExpressionVisitor(delegate: KmEffectExpressionVisitor?) : KmEffectExpressionVisitor(delegate) {
+    inner class RemappingKmEffectExpressionVisitor(delegate: KmEffectExpressionVisitor?) : KmEffectExpressionVisitor(
+        delegate
+    ) {
         override fun visitAndArgument(): KmEffectExpressionVisitor {
             return RemappingKmEffectExpressionVisitor(super.visitAndArgument())
         }
@@ -260,14 +233,20 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmPropertyExtensionVisitor(delegate: JvmPropertyExtensionVisitor?) : JvmPropertyExtensionVisitor(delegate) {
+    inner class RemappingJvmPropertyExtensionVisitor(delegate: JvmPropertyExtensionVisitor?) :
+            JvmPropertyExtensionVisitor(delegate) {
         override fun visit(
             jvmFlags: Flags,
             fieldSignature: JvmFieldSignature?,
             getterSignature: JvmMethodSignature?,
             setterSignature: JvmMethodSignature?
         ) {
-            super.visit(jvmFlags, remapJvmFieldSignature(fieldSignature), remapJvmMethodSignature(getterSignature), remapJvmMethodSignature(setterSignature))
+            super.visit(
+                jvmFlags,
+                remapJvmFieldSignature(fieldSignature),
+                remapJvmMethodSignature(getterSignature),
+                remapJvmMethodSignature(setterSignature)
+            )
         }
 
         override fun visitSyntheticMethodForAnnotations(signature: JvmMethodSignature?) {
@@ -289,7 +268,8 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmTypeParameterExtensionVisitor(delegate: JvmTypeParameterExtensionVisitor?) : JvmTypeParameterExtensionVisitor(delegate) {
+    inner class RemappingJvmTypeParameterExtensionVisitor(delegate: JvmTypeParameterExtensionVisitor?) :
+            JvmTypeParameterExtensionVisitor(delegate) {
         override fun visitAnnotation(annotation: KmAnnotation) {
             super.visitAnnotation(KmAnnotation(remapper.map(annotation.className), annotation.arguments))
         }
@@ -328,7 +308,8 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmFunctionExtensionVisitor(delegate: JvmFunctionExtensionVisitor?) : JvmFunctionExtensionVisitor(delegate) {
+    inner class RemappingJvmFunctionExtensionVisitor(delegate: JvmFunctionExtensionVisitor?) :
+            JvmFunctionExtensionVisitor(delegate) {
         override fun visit(signature: JvmMethodSignature?) {
             super.visit(remapJvmMethodSignature(signature))
         }
@@ -338,7 +319,9 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmClassExtensionVisitor(delegate: JvmClassExtensionVisitor?) : JvmClassExtensionVisitor(delegate) {
+    inner class RemappingJvmClassExtensionVisitor(delegate: JvmClassExtensionVisitor?) : JvmClassExtensionVisitor(
+        delegate
+    ) {
         override fun visitAnonymousObjectOriginName(internalName: String) {
             super.visitAnonymousObjectOriginName(remapper.map(internalName))
         }
@@ -363,7 +346,8 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmConstructorExtensionVisitor(delegate: JvmConstructorExtensionVisitor?) : JvmConstructorExtensionVisitor(delegate) {
+    inner class RemappingJvmConstructorExtensionVisitor(delegate: JvmConstructorExtensionVisitor?) :
+            JvmConstructorExtensionVisitor(delegate) {
         override fun visit(signature: JvmMethodSignature?) {
             super.visit(remapJvmMethodSignature(signature))
         }
@@ -392,7 +376,9 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmPackageExtensionVisitor(delegate: JvmPackageExtensionVisitor?) : JvmPackageExtensionVisitor(delegate) {
+    inner class RemappingJvmPackageExtensionVisitor(delegate: JvmPackageExtensionVisitor?) : JvmPackageExtensionVisitor(
+        delegate
+    ) {
         override fun visitLocalDelegatedProperty(
             flags: Flags,
             name: String,

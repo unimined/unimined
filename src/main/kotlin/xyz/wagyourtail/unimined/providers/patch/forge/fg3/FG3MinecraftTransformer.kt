@@ -146,7 +146,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             EnvType.SERVER -> "server"
             EnvType.COMBINED -> "joined"
         }
-        val steps: List<McpConfigStep> = mcpConfigData.steps.get(type)!!
+        val steps: List<McpConfigStep> = mcpConfigData.steps[type]!!
         val executor = McpExecutor(
             project,
             provider,
@@ -177,7 +177,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         project.logger.lifecycle("Merging client and server jars...")
         val output = MinecraftJar(
             clientjar,
-            parentPath = provider.minecraftDownloader.mcVersionFolder(provider.minecraftDownloader.version).resolve("forge"),
+            parentPath = provider.minecraftDownloader.mcVersionFolder(provider.minecraftDownloader.version)
+                .resolve("forge"),
             envType = EnvType.COMBINED,
             mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) "official" else "searge"
         )
@@ -253,10 +254,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         //  extract binpatches
         val binPatchFile = ZipReader.readInputStreamFor(userdevCfg["binpatches"].asString, forgeUd.toPath()) {
             outFolder.resolve("binpatches.pack.lzma").apply {
-                    writeBytes(
-                        it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
-                    )
-                }
+                writeBytes(
+                    it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
+                )
+            }
         }
 
         if (!patchedMC.path.exists() || project.gradle.startParameter.isRefreshDependencies) {

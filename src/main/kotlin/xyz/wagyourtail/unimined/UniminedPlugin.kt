@@ -10,7 +10,7 @@ import xyz.wagyourtail.unimined.remap.RemapJarTask
 
 @Suppress("UNUSED")
 class UniminedPlugin : Plugin<Project> {
-    lateinit var ext: UniminedExtension
+    lateinit var ext: UniminedExtensionImpl
 
     override fun apply(project: Project) {
         project.apply(
@@ -24,7 +24,7 @@ class UniminedPlugin : Plugin<Project> {
             )
         )
 
-        ext = project.extensions.create("unimined", UniminedExtension::class.java, project)
+        ext = project.extensions.create("unimined", UniminedExtensionImpl::class.java, project)
         remapJarTask(project, project.tasks)
         genIntellijRunsTask(project, project.tasks)
     }

@@ -1,37 +1,33 @@
 package xyz.wagyourtail.unimined
 
 import org.gradle.api.Project
-import org.gradle.api.provider.Property
+import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.gradle.GradleEvents
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.MappingsProvider
-import xyz.wagyourtail.unimined.providers.mod.ModProvider
+import xyz.wagyourtail.unimined.providers.MappingsProviderImpl
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
+import xyz.wagyourtail.unimined.providers.mod.ModProviderImpl
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 
 @Suppress("LeakingThis")
-abstract class UniminedExtension(val project: Project) {
+abstract class UniminedExtensionImpl(val project: Project) : UniminedExtension() {
     val events = GradleEvents(project)
 
-    val minecraftProvider: MinecraftProvider = project.extensions.create(
+    val minecraftProvider: MinecraftProviderImpl = project.extensions.create(
         "minecraft",
-        MinecraftProvider::class.java,
+        MinecraftProviderImpl::class.java,
         project,
         this
     )
-    val mappingsProvider: MappingsProvider = project.extensions.create(
+
+    val mappingsProvider: MappingsProviderImpl = project.extensions.create(
         "mappings",
-        MappingsProvider::class.java,
+        MappingsProviderImpl::class.java,
         project,
         this
     )
-    val modProvider = ModProvider(project, this)
 
-    abstract val useGlobalCache: Property<Boolean>
-
-    init {
-        useGlobalCache.convention(true).finalizeValueOnRead()
-    }
+    val modProvider = ModProviderImpl(project, this)
 
     fun getGlobalCache(): Path {
         return if (useGlobalCache.get()) {
@@ -40,6 +36,7 @@ abstract class UniminedExtension(val project: Project) {
             getLocalCache().resolve("fakeglobal").createDirectories()
         }
     }
+
     fun getLocalCache(): Path {
         return project.rootProject.buildDir.toPath().resolve("unimined").createDirectories()
     }

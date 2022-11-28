@@ -9,7 +9,7 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.process.JavaExecSpec
 import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.forge.fg3.FG3MinecraftTransformer
@@ -25,7 +25,7 @@ import kotlin.io.path.writeBytes
 
 data class McpExecutor(
     private val project: Project,
-    private val minecraftProvider: MinecraftProvider,
+    private val minecraftProvider: MinecraftProviderImpl,
     private val cache: Path,
     private val steps: List<McpConfigStep>,
     private val functions: Map<String, McpConfigFunction>,

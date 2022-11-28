@@ -8,7 +8,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.providers.mappings.MappingExport
 import xyz.wagyourtail.unimined.providers.mappings.MappingExportTypes
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
@@ -28,7 +28,7 @@ import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 
-class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
+class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImpl) :
         AbstractMinecraftTransformer(project, provider) {
 
     val forge = project.configurations.maybeCreate(Constants.FORGE_PROVIDER)
@@ -49,7 +49,11 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
 
     fun aw2at(input: String, output: String) = aw2at(File(input), File(output))
 
-    fun aw2at(input: File) = aw2at(input, project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first().resolve("META-INF/accesstransformer.cfg"))
+    fun aw2at(input: File) = aw2at(
+        input,
+        project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
+            .resolve("META-INF/accesstransformer.cfg")
+    )
 
     fun aw2at(input: File, output: File): File {
         return AccessTransformerMinecraftTransformer.aw2at(input.toPath(), output.toPath()).toFile()
@@ -59,7 +63,11 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
 
     fun aw2atLegacy(input: String, output: String) = aw2atLegacy(File(input), File(output))
 
-    fun aw2atLegacy(input: File) = aw2atLegacy(input, project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first().resolve("META-INF/accesstransformer.cfg"))
+    fun aw2atLegacy(input: File) = aw2atLegacy(
+        input,
+        project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
+            .resolve("META-INF/accesstransformer.cfg")
+    )
 
     fun aw2atLegacy(input: File, output: File): File {
         return AccessTransformerMinecraftTransformer.aw2at(input.toPath(), output.toPath(), true).toFile()

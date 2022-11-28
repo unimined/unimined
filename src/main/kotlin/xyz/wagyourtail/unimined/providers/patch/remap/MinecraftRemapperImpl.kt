@@ -5,16 +5,16 @@ import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.providers.patch.MinecraftJar
 import xyz.wagyourtail.unimined.providers.patch.forge.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.util.consumerApply
 import kotlin.io.path.*
 
 @Suppress("MemberVisibilityCanBePrivate")
-class MinecraftRemapper(
+class MinecraftRemapperImpl(
     val project: Project,
-    val provider: MinecraftProvider,
+    val provider: MinecraftProviderImpl,
 ) {
     private val mappings by lazy { provider.parent.mappingsProvider }
 

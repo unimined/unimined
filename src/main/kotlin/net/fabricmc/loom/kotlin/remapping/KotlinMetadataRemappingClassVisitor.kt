@@ -31,7 +31,10 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.Remapper
 
-class KotlinMetadataRemappingClassVisitor(private val remapper: Remapper, next: ClassVisitor?) : ClassVisitor(Opcodes.ASM9, next) {
+class KotlinMetadataRemappingClassVisitor(
+    private val remapper: Remapper,
+    next: ClassVisitor?
+) : ClassVisitor(Opcodes.ASM9, next) {
     companion object {
         val ANNOTATION_DESCRIPTOR: String = Type.getDescriptor(Metadata::class.java)
     }

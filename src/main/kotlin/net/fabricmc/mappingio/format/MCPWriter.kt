@@ -50,11 +50,13 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
                 lastFieldDst = true
                 fields.append(lastField)
             }
+
             MappedElementKind.METHOD -> {
                 lastMethod += "$name,$side,"
                 lastMethodDst = true
                 methods.append(lastMethod)
             }
+
             else -> {}
         }
     }
@@ -65,10 +67,12 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
                 if (lastFieldDst)
                     fields.append(",\"").append(comment).append("\"")
             }
+
             MappedElementKind.METHOD -> {
                 if (lastMethodDst)
                     methods.append(",\"").append(comment).append("\"")
             }
+
             else -> {}
         }
     }

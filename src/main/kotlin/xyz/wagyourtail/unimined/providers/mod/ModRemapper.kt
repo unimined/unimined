@@ -26,7 +26,7 @@ import kotlin.io.path.name
 
 class ModRemapper(
     val project: Project,
-    val modProvider: ModProvider
+    val modProvider: ModProviderImpl
 ) {
 
     val mcRemapper by lazy { modProvider.parent.minecraftProvider.mcRemapper }

@@ -8,21 +8,18 @@ import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.tasks.TaskContainer
 import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.UniminedExtension
+import xyz.wagyourtail.unimined.UniminedExtensionImpl
 import xyz.wagyourtail.unimined.providers.mappings.MappingExportTask
 import xyz.wagyourtail.unimined.providers.mappings.MemoryMapping
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
-import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -31,8 +28,8 @@ import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
 
-abstract class MappingsProvider(
-    val project: Project, val parent: UniminedExtension
+abstract class MappingsProviderImpl(
+    val project: Project, val parent: UniminedExtensionImpl
 ) {
 
     init {

@@ -7,7 +7,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.MinecraftJar
@@ -24,7 +24,7 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.writeText
 
-class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) : AbstractMinecraftTransformer(
+class FabricMinecraftTransformer(project: Project, provider: MinecraftProviderImpl) : AbstractMinecraftTransformer(
     project,
     provider
 ) {
@@ -169,12 +169,13 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
             )
             if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
                 if (AccessWidenerMinecraftTransformer.transform(
-                    accessWidener!!.toPath(),
-                    baseMinecraft.mappingNamespace,
-                    baseMinecraft.path,
-                    output.path,
-                    false
-                )) {
+                        accessWidener!!.toPath(),
+                        baseMinecraft.mappingNamespace,
+                        baseMinecraft.path,
+                        output.path,
+                        false
+                    )
+                ) {
                     output
                 } else {
                     baseMinecraft

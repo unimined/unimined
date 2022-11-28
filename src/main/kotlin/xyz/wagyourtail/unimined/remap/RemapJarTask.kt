@@ -13,8 +13,8 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.UniminedExtension
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.UniminedExtensionImpl
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.patch.fabric.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.forge.AccessTransformerMinecraftTransformer
@@ -22,8 +22,8 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 abstract class RemapJarTask : Jar() {
-    private val minecraftProvider = project.extensions.getByType(MinecraftProvider::class.java)
-    private val uniminedExtension = project.extensions.getByType(UniminedExtension::class.java)
+    private val minecraftProvider = project.extensions.getByType(MinecraftProviderImpl::class.java)
+    private val uniminedExtension = project.extensions.getByType(UniminedExtensionImpl::class.java)
 
     @get:InputFile
     abstract val inputFile: RegularFileProperty

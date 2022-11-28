@@ -3,7 +3,7 @@ package xyz.wagyourtail.unimined.util
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.slf4j.LoggerFactory
-import xyz.wagyourtail.unimined.UniminedExtension
+import xyz.wagyourtail.unimined.UniminedExtensionImpl
 import java.io.File
 import java.io.IOException
 import java.nio.file.*
@@ -118,7 +118,7 @@ fun runJarInSubprocess(
     processBuilder.redirectOutput()
     processBuilder.redirectError()
 //    processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT)
-    LoggerFactory.getLogger(UniminedExtension::class.java)
+    LoggerFactory.getLogger(UniminedExtensionImpl::class.java)
         .warn("Running: ${processBuilder.command().joinToString(" ")}")
     val process = processBuilder.start()
     if (wait) {

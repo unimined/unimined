@@ -28,7 +28,9 @@ data class RunConfig(
 ) {
 
     fun createIdeaRunConfig() {
-        val file = project.rootDir.resolve(".idea").resolve("runConfigurations").resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}$taskName.xml")
+        val file = project.rootDir.resolve(".idea")
+            .resolve("runConfigurations")
+            .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}$taskName.xml")
 
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
             .addStringOption("name", "${project.path} $description")
@@ -46,7 +48,17 @@ data class RunConfig(
                 ),
                 XMLBuilder("option").addStringOption("name", "MAIN_CLASS_NAME")
                     .addStringOption("value", mainClass),
-                XMLBuilder("module").addStringOption("name", "${if (project != project.rootProject) "${project.rootProject.name}${project.path.replace(":", ".")}" else project.name}.${launchClasspath.name}"),
+                XMLBuilder("module").addStringOption(
+                    "name",
+                    "${
+                        if (project != project.rootProject) "${project.rootProject.name}${
+                            project.path.replace(
+                                ":",
+                                "."
+                            )
+                        }" else project.name
+                    }.${launchClasspath.name}"
+                ),
                 XMLBuilder("option").addStringOption("name", "PROGRAM_PARAMETERS")
                     .addStringOption("value", args.joinToString(" ")),
                 XMLBuilder("option").addStringOption("name", "VM_PARAMETERS")
@@ -63,7 +75,7 @@ data class RunConfig(
                     ),
             )
 
-        val mv2 =XMLBuilder("method")
+        val mv2 = XMLBuilder("method")
             .addStringOption("v", "2")
             .append(
                 XMLBuilder("option").addStringOption("name", "Make").addStringOption("enabled", "true")
@@ -75,7 +87,13 @@ data class RunConfig(
                     .addStringOption("name", "Gradle.BeforeRunTask")
                     .addStringOption("enabled", "true")
                     .addStringOption("tasks", runFirst.joinToString(" ") { it.name })
-                    .addStringOption("externalProjectPath", "\$PROJECT_DIR\$/${project.projectDir.toPath().relativeTo(project.rootProject.projectDir.toPath())}")
+                    .addStringOption(
+                        "externalProjectPath",
+                        "\$PROJECT_DIR\$/${
+                            project.projectDir.toPath()
+                                .relativeTo(project.rootProject.projectDir.toPath())
+                        }"
+                    )
                     .addStringOption("vmOptions", "")
                     .addStringOption("scriptParameters", "")
             )

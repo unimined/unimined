@@ -32,8 +32,12 @@ import org.objectweb.asm.commons.Remapper
 import org.objectweb.asm.tree.AnnotationNode
 import org.slf4j.LoggerFactory
 
-class KotlinClassMetadataRemappingAnnotationVisitor(private val remapper: Remapper, val next: AnnotationVisitor, val className: String?) :
-    AnnotationNode(Opcodes.ASM9, KotlinMetadataRemappingClassVisitor.ANNOTATION_DESCRIPTOR) {
+class KotlinClassMetadataRemappingAnnotationVisitor(
+    private val remapper: Remapper,
+    val next: AnnotationVisitor,
+    val className: String?
+) :
+        AnnotationNode(Opcodes.ASM9, KotlinMetadataRemappingClassVisitor.ANNOTATION_DESCRIPTOR) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -65,6 +69,7 @@ class KotlinClassMetadataRemappingAnnotationVisitor(private val remapper: Remapp
                 writeClassHeader(remapped)
                 validateKotlinClassHeader(remapped, header)
             }
+
             is KotlinClassMetadata.SyntheticClass -> {
                 val klambda = metadata.toKmLambda()
 
@@ -78,6 +83,7 @@ class KotlinClassMetadataRemappingAnnotationVisitor(private val remapper: Remapp
                     accept(next)
                 }
             }
+
             is KotlinClassMetadata.FileFacade -> {
                 val kpackage = metadata.toKmPackage()
                 val writer = KotlinClassMetadata.FileFacade.Writer()
@@ -86,14 +92,20 @@ class KotlinClassMetadataRemappingAnnotationVisitor(private val remapper: Remapp
                 writeClassHeader(remapped)
                 validateKotlinClassHeader(remapped, header)
             }
+
             is KotlinClassMetadata.MultiFileClassPart -> {
                 val kpackage = metadata.toKmPackage()
                 val writer = KotlinClassMetadata.MultiFileClassPart.Writer()
                 kpackage.accept(RemappingKmVisitors(remapper).RemappingKmPackageVisitor(writer))
-                val remapped = writer.write(metadata.facadeClassName, metadata.header.metadataVersion, metadata.header.extraInt).header
+                val remapped = writer.write(
+                    metadata.facadeClassName,
+                    metadata.header.metadataVersion,
+                    metadata.header.extraInt
+                ).header
                 writeClassHeader(remapped)
                 validateKotlinClassHeader(remapped, header)
             }
+
             is KotlinClassMetadata.MultiFileClassFacade, is KotlinClassMetadata.Unknown, null -> {
                 // do nothing
                 accept(next)

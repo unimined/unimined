@@ -31,7 +31,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -39,58 +38,61 @@ import java.util.stream.Collectors;
 
 public class KotlinClasspathService implements KotlinClasspath {
 
-	final Set<URL> classpath;
-	final String version;
+    private static Map<Project, KotlinClasspathService> cache = new WeakHashMap<>();
+    final Set<URL> classpath;
+    final String version;
 
-	public KotlinClasspathService(Set<URL> classpath, String version) {
-		this.classpath = classpath;
-		this.version = version;
-	}
+    public KotlinClasspathService(Set<URL> classpath, String version) {
+        this.classpath = classpath;
+        this.version = version;
+    }
 
-	@Nullable
-	public static KotlinClasspathService getOrCreateIfRequired(Project project) {
-		if (!KotlinPluginUtils.hasKotlinPlugin(project)) {
-			return null;
-		}
+    @Nullable
+    public static KotlinClasspathService getOrCreateIfRequired(Project project) {
+        if (!KotlinPluginUtils.hasKotlinPlugin(project)) {
+            return null;
+        }
 
-		return getOrCreate(project, KotlinPluginUtils.getKotlinPluginVersion(project), KotlinPluginUtils.getKotlinMetadataVersion());
-	}
+        return getOrCreate(
+            project,
+            KotlinPluginUtils.getKotlinPluginVersion(project),
+            KotlinPluginUtils.getKotlinMetadataVersion()
+        );
+    }
 
-	private static Map<Project, KotlinClasspathService> cache = new WeakHashMap<>();
+    public static synchronized KotlinClasspathService getOrCreate(Project project, String kotlinVersion, String kotlinMetadataVersion) {
+        final String id = String.format("kotlinclasspath:%s:%s", kotlinVersion, kotlinMetadataVersion);
+        return cache.computeIfAbsent(project, (i) -> create(project, kotlinVersion, kotlinMetadataVersion));
+    }
 
-	public static synchronized KotlinClasspathService getOrCreate(Project project, String kotlinVersion, String kotlinMetadataVersion) {
-		final String id = String.format("kotlinclasspath:%s:%s", kotlinVersion, kotlinMetadataVersion);
-		return cache.computeIfAbsent(project, (i) -> create(project, kotlinVersion, kotlinMetadataVersion));
-	}
+    private static KotlinClasspathService create(Project project, String kotlinVersion, String kotlinMetadataVersion) {
+        // Create a detached config to resolve the kotlin std lib for the provided version.
+        Configuration detachedConfiguration = project.getConfigurations().detachedConfiguration(
+            project.getDependencies().create("org.jetbrains.kotlin:kotlin-stdlib:" + kotlinVersion),
+            // Load kotlinx-metadata-jvm like this to work around: https://github.com/gradle/gradle/issues/14727
+            project.getDependencies().create("org.jetbrains.kotlinx:kotlinx-metadata-jvm:" + kotlinMetadataVersion)
+        );
 
-	private static KotlinClasspathService create(Project project, String kotlinVersion, String kotlinMetadataVersion) {
-		// Create a detached config to resolve the kotlin std lib for the provided version.
-		Configuration detachedConfiguration = project.getConfigurations().detachedConfiguration(
-				project.getDependencies().create("org.jetbrains.kotlin:kotlin-stdlib:" + kotlinVersion),
-				// Load kotlinx-metadata-jvm like this to work around: https://github.com/gradle/gradle/issues/14727
-				project.getDependencies().create("org.jetbrains.kotlinx:kotlinx-metadata-jvm:" + kotlinMetadataVersion)
-		);
+        Set<URL> classpath = detachedConfiguration.getFiles().stream()
+            .map(file -> {
+                try {
+                    return file.toURI().toURL();
+                } catch (MalformedURLException e) {
+                    throw new UncheckedIOException(e);
+                }
+            }).collect(Collectors.toSet());
 
-		Set<URL> classpath = detachedConfiguration.getFiles().stream()
-				.map(file -> {
-					try {
-						return file.toURI().toURL();
-					} catch (MalformedURLException e) {
-						throw new UncheckedIOException(e);
-					}
-				}).collect(Collectors.toSet());
+        return new KotlinClasspathService(classpath, kotlinVersion);
+    }
 
-		return new KotlinClasspathService(classpath, kotlinVersion);
-	}
+    @Override
+    public String version() {
+        return version;
+    }
 
-	@Override
-	public String version() {
-		return version;
-	}
-
-	@Override
-	public Set<URL> classpath() {
-		return classpath;
-	}
+    @Override
+    public Set<URL> classpath() {
+        return classpath;
+    }
 
 }

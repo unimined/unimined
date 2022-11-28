@@ -4,13 +4,13 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.remap.RemapJarTask
 import java.nio.file.Path
 
 abstract class AbstractMinecraftTransformer protected constructor(
     protected val project: Project,
-    val provider: MinecraftProvider
+    val provider: MinecraftProviderImpl
 ) {
     @ApiStatus.Internal
     open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {

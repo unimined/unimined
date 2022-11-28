@@ -10,11 +10,13 @@ class AccessTransformerWriter(private val output: BufferedWriter) : AccessWidene
     private val methods = mutableMapOf<String, MutableSet<AccessType>>()
 
     override fun visitClass(name: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
-        classes.getOrPut(name.replace("/", ".")) { mutableSetOf() }.addAll(when (access) {
-            AccessWidenerReader.AccessType.ACCESSIBLE -> setOf(AccessType.PUBLIC)
-            AccessWidenerReader.AccessType.EXTENDABLE -> setOf(AccessType.PUBLIC, AccessType.UNFINAL)
-            AccessWidenerReader.AccessType.MUTABLE -> throw UnsupportedOperationException("AccessWidenerReader.AccessType.MUTABLE is not supported for classes")
-        })
+        classes.getOrPut(name.replace("/", ".")) { mutableSetOf() }.addAll(
+            when (access) {
+                AccessWidenerReader.AccessType.ACCESSIBLE -> setOf(AccessType.PUBLIC)
+                AccessWidenerReader.AccessType.EXTENDABLE -> setOf(AccessType.PUBLIC, AccessType.UNFINAL)
+                AccessWidenerReader.AccessType.MUTABLE -> throw UnsupportedOperationException("AccessWidenerReader.AccessType.MUTABLE is not supported for classes")
+            }
+        )
     }
 
     override fun visitField(
@@ -25,11 +27,13 @@ class AccessTransformerWriter(private val output: BufferedWriter) : AccessWidene
         transitive: Boolean
     ) {
         val desc = "${owner.replace("/", ".")} $name"
-        fields.getOrPut(desc) { mutableSetOf() }.addAll(when (access) {
-            AccessWidenerReader.AccessType.ACCESSIBLE -> setOf(AccessType.PUBLIC)
-            AccessWidenerReader.AccessType.EXTENDABLE -> throw UnsupportedOperationException("AccessWidenerReader.AccessType.EXTENDABLE is not supported for fields")
-            AccessWidenerReader.AccessType.MUTABLE -> setOf(AccessType.UNFINAL)
-        })
+        fields.getOrPut(desc) { mutableSetOf() }.addAll(
+            when (access) {
+                AccessWidenerReader.AccessType.ACCESSIBLE -> setOf(AccessType.PUBLIC)
+                AccessWidenerReader.AccessType.EXTENDABLE -> throw UnsupportedOperationException("AccessWidenerReader.AccessType.EXTENDABLE is not supported for fields")
+                AccessWidenerReader.AccessType.MUTABLE -> setOf(AccessType.UNFINAL)
+            }
+        )
     }
 
     override fun visitMethod(
@@ -40,11 +44,13 @@ class AccessTransformerWriter(private val output: BufferedWriter) : AccessWidene
         transitive: Boolean
     ) {
         val desc = "${owner.replace("/", ".")} $name$descriptor"
-        methods.getOrPut(desc) { mutableSetOf() }.addAll(when (access) {
-            AccessWidenerReader.AccessType.ACCESSIBLE -> setOf(AccessType.PUBLIC)
-            AccessWidenerReader.AccessType.EXTENDABLE -> setOf(AccessType.PROTECTED, AccessType.UNFINAL)
-            AccessWidenerReader.AccessType.MUTABLE -> throw UnsupportedOperationException("AccessWidenerReader.AccessType.MUTABLE is not supported for methods")
-        })
+        methods.getOrPut(desc) { mutableSetOf() }.addAll(
+            when (access) {
+                AccessWidenerReader.AccessType.ACCESSIBLE -> setOf(AccessType.PUBLIC)
+                AccessWidenerReader.AccessType.EXTENDABLE -> setOf(AccessType.PROTECTED, AccessType.UNFINAL)
+                AccessWidenerReader.AccessType.MUTABLE -> throw UnsupportedOperationException("AccessWidenerReader.AccessType.MUTABLE is not supported for methods")
+            }
+        )
     }
 
     enum class AccessType(val str: String) {

@@ -32,12 +32,19 @@ object AccessTransformerMinecraftTransformer {
                 BufferedReader(input.reader()).use { reader ->
                     transformFromLegacyTransformer(reader).use { fromLegacy ->
                         remapModernTransformer(fromLegacy.buffered(), remapper).use { remapped ->
-                            Files.newBufferedWriter(output, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use {
-                                remapped.copyTo(if (remapToLegacy) {
-                                    transformToLegacyTransformer(it).buffered()
-                                } else {
-                                    it
-                                })
+                            Files.newBufferedWriter(
+                                output,
+                                StandardCharsets.UTF_8,
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.TRUNCATE_EXISTING
+                            ).use {
+                                remapped.copyTo(
+                                    if (remapToLegacy) {
+                                        transformToLegacyTransformer(it).buffered()
+                                    } else {
+                                        it
+                                    }
+                                )
                             }
                         }
                     }
@@ -298,7 +305,12 @@ object AccessTransformerMinecraftTransformer {
     }
 
     fun aw2at(aw: Path, output: Path, legacy: Boolean = false): Path {
-        val outWriter = output.bufferedWriter(StandardCharsets.UTF_8, 1024, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        val outWriter = output.bufferedWriter(
+            StandardCharsets.UTF_8,
+            1024,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING
+        )
         val writer = if (legacy) transformToLegacyTransformer(outWriter) else outWriter
         AccessTransformerWriter(writer.buffered()).use {
             AccessWidenerReader(it).read(aw.bufferedReader())

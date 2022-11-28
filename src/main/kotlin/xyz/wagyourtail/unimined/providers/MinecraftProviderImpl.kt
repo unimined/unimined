@@ -15,12 +15,12 @@ import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
-import org.gradle.api.provider.Property
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
-import xyz.wagyourtail.unimined.UniminedExtension
+import xyz.wagyourtail.unimined.UniminedExtensionImpl
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.providers.minecraft.AssetsDownloader
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.minecraft.MinecraftDownloader
@@ -30,12 +30,11 @@ import xyz.wagyourtail.unimined.providers.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.fabric.FabricMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.providers.patch.jarmod.JarModMinecraftTransformer
-import xyz.wagyourtail.unimined.providers.patch.remap.MinecraftRemapper
+import xyz.wagyourtail.unimined.providers.patch.remap.MinecraftRemapperImpl
 import xyz.wagyourtail.unimined.providers.version.Extract
 import xyz.wagyourtail.unimined.providers.version.Library
 import xyz.wagyourtail.unimined.util.OSUtils
 import xyz.wagyourtail.unimined.util.consumerApply
-import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.file.Path
@@ -46,14 +45,21 @@ import kotlin.io.path.inputStream
 import kotlin.io.path.writeBytes
 
 @Suppress("LeakingThis")
-abstract class MinecraftProvider(
-    val project: Project,
-    val parent: UniminedExtension
-) : ArtifactProvider<ArtifactIdentifier> {
+abstract class MinecraftProviderImpl(
+    project: Project,
+    val parent: UniminedExtensionImpl
+) : MinecraftProvider(project), ArtifactProvider<ArtifactIdentifier> {
 
+    @ApiStatus.Internal
     val combined: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_COMBINED_PROVIDER)
+
+    @ApiStatus.Internal
     val client: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_CLIENT_PROVIDER)
+
+    @ApiStatus.Internal
     val server: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_SERVER_PROVIDER)
+
+    @ApiStatus.Internal
     val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER).apply {
         isTransitive = true
     }
@@ -79,27 +85,12 @@ abstract class MinecraftProvider(
             .provide(this)
     )
 
-    val mcRemapper = MinecraftRemapper(project, this)
-
-    abstract val overrideMainClassClient: Property<String?>
-    abstract val overrideMainClassServer: Property<String?>
-    abstract val targetNamespace: Property<String>
-    abstract val clientWorkingDirectory: Property<File>
-    abstract val serverWorkingDirectory: Property<File>
-    abstract val disableCombined: Property<Boolean>
-    abstract val alphaServerVersionOverride: Property<String?>
+    override val mcRemapper = MinecraftRemapperImpl(project, this)
 
     @ApiStatus.Internal
     var minecraftTransformer: AbstractMinecraftTransformer = NoTransformMinecraftTransformer(project, this)
 
     init {
-        overrideMainClassClient.convention(null as String?).finalizeValueOnRead()
-        targetNamespace.convention("named").finalizeValueOnRead()
-        clientWorkingDirectory.convention(project.projectDir.resolve("run").resolve("client")).finalizeValueOnRead()
-        serverWorkingDirectory.convention(project.projectDir.resolve("run").resolve("server")).finalizeValueOnRead()
-        disableCombined.convention(false).finalizeValueOnRead()
-        alphaServerVersionOverride.convention(null as String?).finalizeValueOnRead()
-
         project.repositories.maven {
             it.url = URI.create(Constants.MINECRAFT_MAVEN)
         }
