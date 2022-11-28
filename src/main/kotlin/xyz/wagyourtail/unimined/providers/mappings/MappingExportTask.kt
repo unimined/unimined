@@ -29,6 +29,7 @@ open class MappingExportTask : ConventionTask() {
     fun run() {
         project.logger.lifecycle("Exporting mappings...")
         for (envType in EnvType.values()) {
+            if (envType == EnvType.COMBINED && minecraftProvider.disableCombined.get()) continue
             val mappings = uniminedExtension.mappingsProvider.getMappingTree(envType)
             val exportSet = exports[envType] ?: continue
             for (export in exportSet) {
