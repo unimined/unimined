@@ -46,8 +46,7 @@ abstract class MappingsProvider(
     }
 
     private fun getOfficialMappings(): MemoryMappingTree {
-        val off = project.configurations.maybeCreate(Constants.OFFICIAL_MAPPINGS_INTERNAL)
-        off.dependencies.add(
+        val off = project.configurations.detachedConfiguration(
             project.dependencies.create(
                 "net.minecraft:minecraft:${parent.minecraftProvider.minecraftDownloader.version}:client-mappings"
             )

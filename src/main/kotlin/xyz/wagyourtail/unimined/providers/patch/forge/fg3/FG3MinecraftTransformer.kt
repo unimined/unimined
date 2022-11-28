@@ -34,13 +34,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 ) {
 
     @ApiStatus.Internal
-    val forgeUd = project.configurations.maybeCreate(Constants.FORGE_USERDEV)
+    val forgeUd = project.configurations.detachedConfiguration()
 
     @ApiStatus.Internal
     val clientExtra = project.configurations.maybeCreate(Constants.FORGE_CLIENT_EXTRA)
-
-    @ApiStatus.Internal
-    val forgeInstaller = project.configurations.maybeCreate(Constants.FORGE_INSTALLER)
 
     lateinit var mcpConfig: Dependency
     val mcpConfigData by lazy {

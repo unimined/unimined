@@ -4,7 +4,7 @@ import org.jetbrains.annotations.ApiStatus
 import java.net.URI
 
 object Constants {
-    val MAPPINGS_PROVIDER = "mappings"
+    const val MAPPINGS_PROVIDER = "mappings"
 
     const val MINECRAFT_COMBINED_PROVIDER = "minecraft"
 
@@ -12,6 +12,7 @@ object Constants {
 
     const val MINECRAFT_CLIENT_PROVIDER = "minecraftClient"
 
+    @ApiStatus.Internal
     const val MINECRAFT_LIBRARIES_PROVIDER = "minecraftLibraries"
 
     const val MINECRAFT_MAVEN = "https://libraries.minecraft.net/"
@@ -33,27 +34,12 @@ object Constants {
     val METADATA_URL: URI = URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
 
     @ApiStatus.Internal
-    val DYNAMIC_TRANSFORMER_DEPENDENCIES = "dynamicTransformerDependencies"
-
-    @ApiStatus.Internal
-    const val FABRIC_JSON = "fabricHiddenDontTouch"
-
-    @ApiStatus.Internal
-    const val MAPPINGS_INTERNAL = "mappingsHiddenDontTouch"
-
-    @ApiStatus.Internal
-    const val FORGE_DEPS = "forgeDeps"
-
-    @ApiStatus.Internal
-    const val FORGE_USERDEV = "forgeUserdev"
-
-    @ApiStatus.Internal
     const val FORGE_CLIENT_EXTRA = "forgeClientExtra"
 
     @ApiStatus.Internal
-    const val FORGE_INSTALLER = "forgeInstaller"
+    const val MAPPINGS_INTERNAL = "mappingsInternal"
 
     @ApiStatus.Internal
-    const val OFFICIAL_MAPPINGS_INTERNAL = "officialMappingsHiddenDontTouch"
+    const val FORGE_DEPS = "forgeDeps"
 }
 

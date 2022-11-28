@@ -33,7 +33,7 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProvider) 
     }
 
     val fabric: Configuration = project.configurations.maybeCreate(Constants.FABRIC_PROVIDER)
-    val fabricJson: Configuration = project.configurations.maybeCreate(Constants.FABRIC_JSON)
+    private val fabricJson: Configuration = project.configurations.detachedConfiguration()
 
     val include: Configuration = project.configurations.maybeCreate(Constants.INCLUDE_PROVIDER)
 
