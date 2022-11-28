@@ -97,7 +97,7 @@ abstract class MinecraftProvider(
         targetNamespace.convention("named").finalizeValueOnRead()
         clientWorkingDirectory.convention(project.projectDir.resolve("run").resolve("client")).finalizeValueOnRead()
         serverWorkingDirectory.convention(project.projectDir.resolve("run").resolve("server")).finalizeValueOnRead()
-        disableCombined.convention(false).finalizeValueOnRead()
+        disableCombined.convention(false)
         alphaServerVersionOverride.convention(null as String?).finalizeValueOnRead()
 
         project.repositories.maven {
