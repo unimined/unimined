@@ -46,6 +46,7 @@ open class MappingExportTask : ConventionTask() {
 
     @ApiStatus.Internal
     fun addExport(envType: EnvType, export: (MappingExport) -> Unit) {
+        if (envType == EnvType.COMBINED && minecraftProvider.disableCombined.get()) throw IllegalArgumentException("Cannot export mappings for combined environment when combined is currently disabled.")
         val me = MappingExport(envType)
         export(me)
         me.validate()

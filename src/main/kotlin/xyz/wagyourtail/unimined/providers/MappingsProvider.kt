@@ -141,7 +141,7 @@ abstract class MappingsProvider(
     }
 
     @ApiStatus.Internal
-    fun mappingCacheFile(envType: EnvType) =
+    fun mappingCacheFile(envType: EnvType): Path =
         (if (stubs.contains(envType)) parent.getLocalCache() else parent.getGlobalCache()).resolve("mappings")
             .resolve("mappings-${getCombinedNames(envType)}-${envType}.jar")
 
