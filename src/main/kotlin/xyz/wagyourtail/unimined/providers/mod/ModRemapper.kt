@@ -120,7 +120,9 @@ class ModRemapper(
         tinyRemapper = tr.build()
         val mc = mcRemapper.provider.getMinecraftWithMapping(configs.envType, fromMappings)
         tinyRemapper.readClassPathAsync(mc)
-        project.logger.warn("Remapping mods using $mc")
+        project.logger.lifecycle("Remapping mods")
+        project.logger.info("using mc $mc")
+        project.logger.info("using mappings $fromMappings -> ${mcRemapper.provider.targetNamespace.get()}")
         tinyRemapper.readClassPathAsync(*mcRemapper.provider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
         configs.configurations.forEach {
             transform(configs.envType, it)

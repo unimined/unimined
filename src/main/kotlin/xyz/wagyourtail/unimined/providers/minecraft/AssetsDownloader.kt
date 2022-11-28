@@ -55,6 +55,7 @@ class AssetsDownloader(val project: Project, private val parent: MinecraftProvid
     companion object {
         @Synchronized
         private fun resolveAssets(project: Project, assetsJson: JsonObject, dir: Path) {
+            project.logger.lifecycle("Resolving assets...")
             val copyToResources = assetsJson.get("map_to_resources")?.asBoolean ?: false
             for (key in assetsJson.keySet()) {
                 val keyDir = dir.resolve(key)
@@ -69,7 +70,7 @@ class AssetsDownloader(val project: Project, private val parent: MinecraftProvid
                         while (!testSha1(size, hash, assetPath) && i < 3) {
                             i += 1
                             val assetUrl = URI.create("$ASSET_BASE_URL${hash.substring(0, 2)}/$hash")
-                            project.logger.info("Downloading $key : $assetUrl")
+                            project.logger.debug("Downloading $key : $assetUrl")
                             assetPath.parent.createDirectories()
 
                             val urlConnection = assetUrl.toURL().openConnection() as HttpURLConnection

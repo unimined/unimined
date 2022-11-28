@@ -3,8 +3,10 @@ package xyz.wagyourtail.unimined.providers.patch.forge.fg3
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.format.ZipReader
 import net.minecraftforge.binarypatcher.ConsoleTool
+import org.apache.commons.io.output.NullOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
@@ -22,6 +24,7 @@ import xyz.wagyourtail.unimined.util.getFile
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
+import java.io.PrintStream
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.*
@@ -99,17 +102,17 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         // get forge userdev jar
         val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
         if (userdevCfg.has("inject")) {
-            project.logger.warn("injecting forge userdev into minecraft jar")
+            project.logger.lifecycle("injecting forge userdev into minecraft jar")
             this.addTransform { outputJar ->
                 ZipReader.openZipFileSystem(forgeUd.toPath()).use { inputJar ->
                     val inject = inputJar.getPath("inject")
                     if (Files.exists(inject)) {
-                        project.logger.warn("injecting forge userdev into minecraft jar")
+                        project.logger.info("injecting forge userdev into minecraft jar")
                         Files.walk(inject).forEach { path ->
-                            project.logger.warn("testing $path")
+                            project.logger.debug("testing $path")
                             if (!Files.isDirectory(path)) {
                                 val target = outputJar.getPath("/${path.relativeTo(inject)}")
-                                project.logger.warn("injecting $path into minecraft jar")
+                                project.logger.debug("injecting $path into minecraft jar")
                                 Files.createDirectories(target.parent)
                                 Files.copy(path, target, StandardCopyOption.REPLACE_EXISTING)
                             }
@@ -122,7 +125,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
             val mainClass = get("main").asString
             if (!mainClass.startsWith("net.minecraftforge.legacydev")) {
-                project.logger.warn("inserting mcp mappings")
+                project.logger.info("inserting mcp mappings")
                 provider.mcLibraries.dependencies.add(
                     project.dependencies.create(project.files(parent.srgToMCPAsMCP))
                 )
@@ -176,7 +179,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, output: Path): MinecraftJar {
-        project.logger.warn("Merging client and server jars...")
+        project.logger.lifecycle("Merging client and server jars...")
         unstripResources(clientjar, serverjar, output)
         return if (userdevCfg["notchObf"]?.asBoolean == true) {
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
@@ -186,6 +189,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 MinecraftJar(clientjar, output, EnvType.COMBINED)
             }
         } else {
+            val output = output.parent.resolve("${output.nameWithoutExtension}-searge.jar")
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 MinecraftJar(clientjar, output, EnvType.COMBINED, "searge")
             } else {
@@ -242,7 +246,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        project.logger.warn("transforming minecraft jar $minecraft for FG3")
+        project.logger.lifecycle("transforming minecraft jar for FG3")
+        project.logger.info("minecraft: $minecraft")
         val forgeUniversal = parent.forge.dependencies.last()
         val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
 
@@ -287,12 +292,20 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     else -> it.asString
                 }
             } + listOf("--data", "--unpatched")).toTypedArray()
+            val stoutLevel = project.gradle.startParameter.logLevel
+            val stdout = System.out
+            if (stoutLevel > LogLevel.INFO) {
+                System.setOut(PrintStream(NullOutputStream()))
+            }
             try {
                 ConsoleTool.main(args)
             } catch (e: Throwable) {
                 e.printStackTrace()
                 patchedMC.deleteIfExists()
                 throw e
+            }
+            if (stoutLevel > LogLevel.INFO) {
+                System.setOut(stdout)
             }
         }
         //   shade in forge jar

@@ -63,9 +63,10 @@ class MinecraftRemapper(
             tinyRemapperConf(remapperB)
             val remapper = remapperB.build()
 
-            project.logger.warn("Remapping ${jarPath.name} to $target")
-            project.logger.warn("Mappings: $mappingNamespace to $remapTo")
-            project.logger.warn("Fallback: $fallbackMappingNamespace to $fallbackTarget")
+            project.logger.lifecycle("Remapping minecraft to $remapTo")
+            project.logger.info("Remapping ${jarPath.name} to $target")
+            project.logger.info("Mappings: $mappingNamespace to $remapTo")
+            project.logger.info("Fallback: $fallbackMappingNamespace to $fallbackTarget")
 
             try {
                 remapper.readInputs(jarPath)

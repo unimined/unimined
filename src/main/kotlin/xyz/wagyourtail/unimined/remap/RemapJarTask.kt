@@ -104,9 +104,9 @@ abstract class RemapJarTask : Jar() {
             envType,
             minecraftProvider.targetNamespace.get()
         )
-        project.logger.warn("Remapping output ${inputFile.get()} using $mc")
-        project.logger.warn("Environment: $envType")
-        project.logger.warn("Remap from: ${sourceNamespace.get()} to: ${targetNamespace.get()}")
+        project.logger.lifecycle("Remapping output ${inputFile.get()} using $mc")
+        project.logger.info("Environment: $envType")
+        project.logger.info("Remap from: ${sourceNamespace.get()} to: ${targetNamespace.get()}")
         remapper.readClassPathAsync(mc)
         remapper.readClassPathAsync(
             *minecraftProvider.mcRemapper.provider.mcLibraries.resolve()

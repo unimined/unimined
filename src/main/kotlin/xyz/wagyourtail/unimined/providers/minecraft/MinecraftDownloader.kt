@@ -60,21 +60,22 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
             parent.disableCombined.set(true)
         }
 
-        project.logger.warn("Disable combined: ${parent.disableCombined.get()}")
+        project.logger.info("Disable combined: ${parent.disableCombined.get()}")
 
         client = !parent.disableCombined.get() || sourceSets.findByName("client") != null
         server = !parent.disableCombined.get() || sourceSets.findByName("server") != null
 
         if (client) {
             if (parent.disableCombined.get()) {
-                project.logger.warn("selecting split-jar client for sourceset client")
+                project.logger.info("selecting split-jar client for sourceset client")
                 parent.client.dependencies.add(
                     project.dependencies.create(
                         "net.minecraft:${dependency.name}:${version}:client"
                     )
                 )
             } else {
-                project.logger.warn("selecting combined-jar for sourceset client")
+                //TODO: don't provide merged (breaks fg3 currently...)
+                project.logger.info("selecting combined-jar for sourceset client")
                 parent.client.dependencies.add(
                     project.dependencies.create(
                         "net.minecraft:${dependency.name}:${version}"
@@ -84,14 +85,15 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
         if (server) {
             if (parent.disableCombined.get()) {
-                project.logger.warn("selecting split-jar server for sourceset server")
+                project.logger.info("selecting split-jar server for sourceset server")
                 parent.server.dependencies.add(
                     project.dependencies.create(
                         "net.minecraft:${dependency.name}:${version}:server"
                     )
                 )
             } else {
-                project.logger.warn("selecting combined-jar for sourceset server")
+                //TODO: don't provide merged (breaks fg3 currently...)
+                project.logger.info("selecting combined-jar for sourceset server")
                 parent.server.dependencies.add(
                     project.dependencies.create(
                         "net.minecraft:${dependency.name}:${version}"

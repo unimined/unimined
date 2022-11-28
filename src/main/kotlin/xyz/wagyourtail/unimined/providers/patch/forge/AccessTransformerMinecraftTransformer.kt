@@ -30,7 +30,6 @@ object AccessTransformerMinecraftTransformer {
                 input: InputStream,
                 remapper: TinyRemapper
             ) {
-                println("Transforming $relativePath")
                 val output = destinationDirectory.resolve(relativePath)
                 BufferedReader(input.reader()).use { reader ->
                     transformFromLegacyTransformer(reader).use { fromLegacy ->

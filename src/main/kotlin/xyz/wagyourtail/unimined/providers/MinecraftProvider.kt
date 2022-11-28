@@ -246,7 +246,7 @@ abstract class MinecraftProvider(
     fun addMcLibraries(libs: List<Library>) {
         for (library in libs) {
             if (library.rules.all { it.testRule() }) {
-                project.logger.warn("Added dependency ${library.name}")
+                project.logger.info("Added dependency ${library.name}")
                 val native = library.natives[OSUtils.oSId]
                 if (library.url != null || library.downloads?.artifact != null || native == null) {
                     val dep = project.dependencies.create(library.name)
@@ -267,7 +267,7 @@ abstract class MinecraftProvider(
 
     @ApiStatus.Internal
     fun getMinecraftWithMapping(envType: EnvType, namespace: String): Path {
-        project.logger.warn("Getting minecraft with mapping $envType:$namespace")
+        project.logger.lifecycle("Getting minecraft with mapping $envType:$namespace")
         return minecraftMapped.computeIfAbsent(envType) {
             mutableMapOf()
         }.computeIfAbsent(namespace) {

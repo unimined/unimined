@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.providers.mappings
+package xyz.wagyourtail.unimined.providers
 
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
 import net.fabricmc.mappingio.format.*
@@ -8,10 +8,13 @@ import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskContainer
 import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.UniminedExtension
+import xyz.wagyourtail.unimined.providers.mappings.MappingExportTask
+import xyz.wagyourtail.unimined.providers.mappings.MemoryMapping
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import java.io.File
 import java.io.InputStreamReader
@@ -36,6 +39,10 @@ abstract class MappingsProvider(
         for (envType in EnvType.values()) {
             getMappings(envType)
         }
+        project.tasks.register("exportMappings", MappingExportTask::class.java) {
+            it.group = "unimined"
+            it.description = "Exports mappings to various formats."
+        }
     }
 
     private fun getOfficialMappings(): MemoryMappingTree {
@@ -50,29 +57,6 @@ abstract class MappingsProvider(
         file.inputStream()
             .use { ProGuardReader.read(it.reader(), "mojmap", "official", MappingSourceNsSwitch(tree, "official")) }
         return tree
-    }
-
-    private val mappingExports = mutableListOf<MappingExport>()
-
-    fun addExport(envType: String, export: (MappingExport) -> Unit) {
-        addExport(EnvType.valueOf(envType), false, export)
-    }
-
-    @ApiStatus.Internal
-    fun addExport(envType: EnvType, now: Boolean = false, export: (MappingExport) -> Unit) {
-        val me = MappingExport(envType)
-        export(me)
-        if (me.location != null && me.type != null) {
-            mappingExports.add(me)
-            if (mappingTrees.contains(envType)) {
-                project.logger.warn("Mappings for $envType already exist, exporting ${me.location} directly.")
-                me.export(mappingTrees[envType]!!)
-            } else {
-                if (now) {
-                    getMappingTree(envType)
-                }
-            }
-        }
     }
 
     @ApiStatus.Internal
@@ -163,6 +147,7 @@ abstract class MappingsProvider(
             .resolve("mappings-${getCombinedNames(envType)}-${envType}.jar")
 
     private fun resolveMappingTree(envType: EnvType): MemoryMappingTree {
+        project.logger.lifecycle("Resolving mappings for $envType")
         val hasStub = stubs.contains(envType)
         val file = mappingCacheFile(envType)
         val mappingTree = MemoryMappingTree()
@@ -175,25 +160,25 @@ abstract class MappingsProvider(
                         throw IllegalStateException("No mappings.tiny found in $file")
                     }
                 }
-                project.logger.warn("Found mappings.tiny in $file at ${entry.name}")
+                project.logger.info("Found mappings.tiny in $file at ${entry.name}")
                 Tiny2Reader2.read(InputStreamReader(zip), mappingTree)
             }
         } else {
             for (mapping in mappingsFiles(envType)) {
-                project.logger.warn(
+                project.logger.info(
                     "mapping ns's already read: ${mappingTree.srcNamespace}, ${
                         mappingTree.dstNamespaces?.joinToString(
                             ", "
                         )
                     }"
                 )
-                project.logger.warn("Reading mappings from $mapping")
+                project.logger.info("Reading mappings from $mapping")
                 if (mapping.extension == "zip" || mapping.extension == "jar") {
                     val contents = ZipReader.readContents(mapping.toPath())
-                    project.logger.warn("Detected mapping type: ${ZipReader.getZipTypeFromContentList(contents)}")
+                    project.logger.info("Detected mapping type: ${ZipReader.getZipTypeFromContentList(contents)}")
                     ZipReader.readMappings(envType, mapping.toPath(), contents, mappingTree)
                 } else if (mapping.name == "client_mappings.txt" || mapping.name == "server_mappings.txt") {
-                    project.logger.warn("Detected proguard mappings")
+                    project.logger.info("Detected proguard mappings")
                     InputStreamReader(mapping.inputStream()).use {
                         ProGuardReader.read(it, "named", "official", MappingSourceNsSwitch(mappingTree, "official"))
                     }
@@ -205,7 +190,7 @@ abstract class MappingsProvider(
                 getStub(envType).visit(mappingTree)
             }
             if (mappingTree.dstNamespaces.contains("srg")) {
-                project.logger.warn("Detected TSRG2 mappings (1.17+) - converting to have the right class names for runtime forge")
+                project.logger.info("Detected TSRG2 mappings (1.17+) - converting to have the right class names for runtime forge")
                 // read mojmap (possible again, TODO: detect if already there on named)
                 val mojmap = getOfficialMappings()
                 mojmap.accept(mappingTree)
@@ -235,21 +220,13 @@ abstract class MappingsProvider(
                 it.runtimeClasspath += getInternalMappingsConfig(envType)
             }
         }
-        project.logger.warn(
+        project.logger.info(
             "mappings for $envType, srcNamespace: ${mappingTree.srcNamespace} dstNamespaces: ${
                 mappingTree.dstNamespaces.joinToString(
                     ","
                 )
             }"
         )
-        for (export in mappingExports) {
-            if (export.envType == envType) {
-                project.logger.warn("Exporting ${export.location}")
-                export.export(mappingTree)
-            } else {
-                project.logger.warn("Skipping export ${export.location} for $envType")
-            }
-        }
         return mappingTree
     }
 
@@ -296,11 +273,11 @@ abstract class MappingsProvider(
                 var toClassName = classDef.getName(toId) ?: classDef.getName(fallbackToId)
 
                 if (fromClassName == null) {
-                    project.logger.warn("From class name not found for $classDef")
+                    project.logger.debug("From class name not found for $classDef")
                     fromClassName = toClassName
                 }
                 if (toClassName == null) {
-                    project.logger.warn("To class name not found for $classDef")
+                    project.logger.debug("To class name not found for $classDef")
                     toClassName = fromClassName
                 }
 
@@ -317,7 +294,7 @@ abstract class MappingsProvider(
                     val fromFieldName = fieldDef.getName(fromId) ?: fieldDef.getName(fallbackSrcId)
                     val toFieldName = fieldDef.getName(toId) ?: fieldDef.getName(fallbackToId)
                     if (fromFieldName == null || toFieldName == null) {
-                        project.logger.warn("No field name for $fieldDef")
+                        project.logger.debug("No field name for $fieldDef")
                         continue
                     }
                     project.logger.debug("fromFieldName: $fromFieldName toFieldName: $toFieldName")
@@ -331,7 +308,7 @@ abstract class MappingsProvider(
                     val toMethodName = methodDef.getName(toId) ?: methodDef.getName(fallbackToId)
                     val fromMethodDesc = methodDef.getDesc(fromId) ?: methodDef.getDesc(fallbackSrcId)
                     if (fromMethodName == null || toMethodName == null) {
-                        project.logger.warn("No method name for $methodDef")
+                        project.logger.debug("No method name for $methodDef")
                         continue
                     }
                     val method = memberOf(fromClassName, fromMethodName, fromMethodDesc)
@@ -356,48 +333,4 @@ abstract class MappingsProvider(
             }
         }
     }
-
-    inner class MappingExport(val envType: EnvType) {
-        @set:ApiStatus.Internal
-        var type: MappingExportTypes? = null
-        var location: File? = null
-        var sourceNamespace: String? = null
-        var targetNamespace: List<String>? = null
-
-        fun setType(type: String) {
-            this.type = MappingExportTypes.valueOf(type.uppercase(Locale.getDefault()))
-        }
-
-        @ApiStatus.Internal
-        fun export(mappingTree: MappingTreeView) {
-            project.logger.warn("Exporting mappings for $envType to $location")
-            location!!.toPath()
-                .outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-                .use { os ->
-                    val visitor = when (type) {
-                        MappingExportTypes.MCP -> MCPWriter(os, envType.ordinal)
-                        MappingExportTypes.TINY_V2 -> Tiny2Writer2(
-                            OutputStreamWriter(os, StandardCharsets.UTF_8),
-                            false
-                        )
-
-                        MappingExportTypes.SRG -> SrgWriter(OutputStreamWriter(os, StandardCharsets.UTF_8))
-                        else -> throw RuntimeException("Unknown export type $type")
-                    }
-                    mappingTree.accept(
-                        MappingSourceNsSwitch(
-                            MappingDstNsFilter(
-                                visitor, targetNamespace ?: mappingTree.dstNamespaces
-                            ), sourceNamespace ?: mappingTree.srcNamespace
-                        )
-                    )
-                    os.flush()
-                    visitor.close()
-                }
-        }
-    }
-}
-
-enum class MappingExportTypes {
-    TINY_V2, SRG, MCP
 }

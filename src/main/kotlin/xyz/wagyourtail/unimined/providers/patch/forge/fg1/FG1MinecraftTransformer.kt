@@ -261,7 +261,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun getDynLibs(stream: InputStream): Set<String> {
-        project.logger.warn("Getting dynamic libraries from FML")
+        project.logger.lifecycle("Getting dynamic libraries from FML")
         val classReader = ClassReader(stream)
 
         val classNode = ClassNode()

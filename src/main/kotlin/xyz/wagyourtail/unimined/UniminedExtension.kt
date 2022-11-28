@@ -4,7 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import xyz.wagyourtail.unimined.gradle.GradleEvents
 import xyz.wagyourtail.unimined.providers.MinecraftProvider
-import xyz.wagyourtail.unimined.providers.mappings.MappingsProvider
+import xyz.wagyourtail.unimined.providers.MappingsProvider
 import xyz.wagyourtail.unimined.providers.mod.ModProvider
 import java.nio.file.Path
 import kotlin.io.path.createDirectories

@@ -9,6 +9,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.Constants
 import xyz.wagyourtail.unimined.providers.MinecraftProvider
+import xyz.wagyourtail.unimined.providers.mappings.MappingExport
 import xyz.wagyourtail.unimined.providers.mappings.MappingExportTypes
 import xyz.wagyourtail.unimined.providers.minecraft.EnvType
 import xyz.wagyourtail.unimined.providers.patch.AbstractMinecraftTransformer
@@ -25,7 +26,6 @@ import java.io.InputStreamReader
 import java.net.URI
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
-import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.io.path.nameWithoutExtension
 
@@ -69,24 +69,28 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
     @get:ApiStatus.Internal
     val srgToMCPAsSRG: Path by lazy {
         provider.parent.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.srg").apply {
-            provider.parent.mappingsProvider.addExport(EnvType.COMBINED) {
-                it.location = toFile()
-                it.type = MappingExportTypes.SRG
-                it.sourceNamespace = "searge"
-                it.targetNamespace = listOf("named")
+            val export = MappingExport(EnvType.COMBINED).apply {
+                location = toFile()
+                type = MappingExportTypes.SRG
+                sourceNamespace = "searge"
+                targetNamespace = listOf("named")
             }
+            export.validate()
+            export.exportFunc(this@ForgeMinecraftTransformer.provider.parent.mappingsProvider.getMappingTree(EnvType.COMBINED))
         }
     }
 
     @get:ApiStatus.Internal
     val srgToMCPAsMCP: Path by lazy {
         provider.parent.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.jar").apply {
-            provider.parent.mappingsProvider.addExport(EnvType.COMBINED, true) {
-                it.location = toFile()
-                it.type = MappingExportTypes.MCP
-                it.sourceNamespace = "searge"
-                it.targetNamespace = listOf("named")
+            val export = MappingExport(EnvType.COMBINED).apply {
+                location = toFile()
+                type = MappingExportTypes.MCP
+                sourceNamespace = "searge"
+                targetNamespace = listOf("named")
             }
+            export.validate()
+            export.exportFunc(this@ForgeMinecraftTransformer.provider.parent.mappingsProvider.getMappingTree(EnvType.COMBINED))
         }
     }
 
@@ -164,20 +168,20 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
         var forgeTransformer: JarModMinecraftTransformer? = null
         for (vers in ForgeVersion.values()) {
             if (files.containsAll(vers.accept) && files.none { it in vers.deny }) {
-                project.logger.info("Files $files")
+                project.logger.debug("Files $files")
                 forgeTransformer = when (vers) {
                     ForgeVersion.FG1 -> {
-                        project.logger.warn("Selected FG1")
+                        project.logger.lifecycle("Selected FG1")
                         FG1MinecraftTransformer(project, this)
                     }
 
                     ForgeVersion.FG2 -> {
-                        project.logger.warn("Selected FG2")
+                        project.logger.lifecycle("Selected FG2")
                         FG2MinecraftTransformer(project, this)
                     }
 
                     ForgeVersion.FG3 -> {
-                        project.logger.warn("Selected FG3")
+                        project.logger.lifecycle("Selected FG3")
                         FG3MinecraftTransformer(project, this)
                     }
                 }
@@ -260,9 +264,9 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) :
     }
 
     fun applyATs(baseMinecraft: Path, ats: List<Path>): Path {
-        project.logger.warn("Applying ATs $ats")
+        project.logger.lifecycle("Applying ATs $ats")
         return if (accessTransformer != null) {
-            project.logger.warn("Using user access transformer $accessTransformer")
+            project.logger.lifecycle("Using user access transformer $accessTransformer")
             val output = getOutputJarLocation(baseMinecraft)
             if (output.exists() && !project.gradle.startParameter.isRefreshDependencies) {
                 output
