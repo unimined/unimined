@@ -1,6 +1,9 @@
 name: Build Snapshot
 
-on: push
+on:
+  push:
+    branches-ignore:
+      - 'feature/**'
 
 jobs:
   build:
