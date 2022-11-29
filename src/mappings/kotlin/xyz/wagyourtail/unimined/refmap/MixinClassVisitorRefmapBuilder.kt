@@ -35,24 +35,28 @@ class MixinClassVisitorRefmapBuilder(
                 }
 
                 override fun visitArray(name: String?): AnnotationVisitor {
-                    return if (name == AnnotationElement.TARGETS) {
-                        return object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
-                            override fun visit(name: String?, value: Any) {
-                                if (remap.get()) {
-                                    classTargets.add(value as String)
+                    return when (name) {
+                        AnnotationElement.TARGETS -> {
+                            return object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                                override fun visit(name: String?, value: Any) {
+                                    if (remap.get()) {
+                                        classTargets.add(value as String)
+                                    }
                                 }
                             }
                         }
-                    } else if (name == AnnotationElement.VALUE || name == null) {
-                        return object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
-                            override fun visit(name: String?, value: Any) {
-                                if (remap.get()) {
-                                    classValues.add((value as Type).internalName)
+                        AnnotationElement.VALUE, null -> {
+                            return object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                                override fun visit(name: String?, value: Any) {
+                                    if (remap.get()) {
+                                        classValues.add((value as Type).internalName)
+                                    }
                                 }
                             }
                         }
-                    } else {
-                        super.visitArray(name)
+                        else -> {
+                            super.visitArray(name)
+                        }
                     }
                 }
 
@@ -338,17 +342,21 @@ class MixinClassVisitorRefmapBuilder(
                 }
 
                 override fun visitArray(name: String): AnnotationVisitor {
-                    return if (name == AnnotationElement.TARGET) {
-                        ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { visitDesc(it, remap) }
-                    } else if (name == AnnotationElement.METHOD) {
-                        object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
-                            override fun visit(name: String?, value: Any) {
-                                super.visit(name, value)
-                                targetNames.add(value as String)
+                    return when (name) {
+                        AnnotationElement.TARGET -> {
+                            ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { visitDesc(it, remap) }
+                        }
+                        AnnotationElement.METHOD -> {
+                            object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                                override fun visit(name: String?, value: Any) {
+                                    super.visit(name, value)
+                                    targetNames.add(value as String)
+                                }
                             }
                         }
-                    } else {
-                        super.visitArray(name)
+                        else -> {
+                            super.visitArray(name)
+                        }
                     }
                 }
 
