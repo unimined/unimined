@@ -162,18 +162,22 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun sourceSets(sourceSets: SourceSetContainer) {
-        sourceSets.getByName("main").apply {
-            compileClasspath += clientExtra
-            runtimeClasspath += clientExtra
+
+        for (sourceSet in provider.combinedSourceSets) {
+            sourceSet.compileClasspath += clientExtra
+            sourceSet.runtimeClasspath += clientExtra
         }
-        sourceSets.findByName("client")?.apply {
-            compileClasspath += clientExtra
-            runtimeClasspath += clientExtra
+
+        for (sourceSet in provider.clientSourceSets) {
+            sourceSet.compileClasspath += clientExtra
+            sourceSet.runtimeClasspath += clientExtra
         }
-        sourceSets.findByName("server")?.apply {
-            compileClasspath += clientExtra
-            runtimeClasspath += clientExtra
+
+        for (sourceSet in provider.serverSourceSets) {
+            sourceSet.compileClasspath += clientExtra
+            sourceSet.runtimeClasspath += clientExtra
         }
+
     }
 
     override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {

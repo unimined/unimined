@@ -5,12 +5,15 @@ import groovy.lang.DelegatesTo
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.reamp.MinecraftRemapper
+import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.File
 import java.nio.file.Path
 
@@ -42,6 +45,21 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
 
     abstract val clientWorkingDirectory: Property<File>
     abstract val serverWorkingDirectory: Property<File>
+
+    var combinedSourceSets: List<SourceSet> by LazyMutable {
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+        listOf(sourceSets.getByName("main"))
+    }
+
+    var clientSourceSets: List<SourceSet> by LazyMutable {
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+        listOfNotNull(sourceSets.findByName("client"))
+    }
+
+    var serverSourceSets: List<SourceSet> by LazyMutable {
+        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+        listOfNotNull(sourceSets.findByName("server"))
+    }
 
     /**
      * disables the combined mc jar

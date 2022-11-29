@@ -328,31 +328,31 @@ class ModRemapperImpl(
         private fun sourceSets(sourceSets: SourceSetContainer) {
             when (envType) {
                 EnvType.SERVER -> {
-                    sourceSets.findByName("server")?.apply {
-                        compileClasspath += modCompileOnly + modImplementation
-                        runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+                    for (sourceSet in parent.provider.parent.minecraftProvider.serverSourceSets){
+                        sourceSet.compileClasspath += modCompileOnly + modImplementation
+                        sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
                 }
 
                 EnvType.CLIENT -> {
-                    sourceSets.findByName("client")?.apply {
-                        compileClasspath += modCompileOnly + modImplementation
-                        runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+                    for (sourceSet in parent.provider.parent.minecraftProvider.clientSourceSets){
+                        sourceSet.compileClasspath += modCompileOnly + modImplementation
+                        sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
                 }
 
                 EnvType.COMBINED -> {
-                    sourceSets.findByName("main")?.apply {
-                        compileClasspath += modCompileOnly + modImplementation
-                        runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+                    for (sourceSet in parent.provider.parent.minecraftProvider.combinedSourceSets){
+                        sourceSet.compileClasspath += modCompileOnly + modImplementation
+                        sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
-                    sourceSets.findByName("server")?.apply {
-                        compileClasspath += modCompileOnly + modImplementation
-                        runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+                    for (sourceSet in parent.provider.parent.minecraftProvider.serverSourceSets){
+                        sourceSet.compileClasspath += modCompileOnly + modImplementation
+                        sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
-                    sourceSets.findByName("client")?.apply {
-                        compileClasspath += modCompileOnly + modImplementation
-                        runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
+                    for (sourceSet in parent.provider.parent.minecraftProvider.clientSourceSets){
+                        sourceSet.compileClasspath += modCompileOnly + modImplementation
+                        sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
                 }
             }
