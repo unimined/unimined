@@ -153,7 +153,7 @@ class MixinClassVisitorRefmapBuilder(
                             target.ifPresent {
                                 val mappedName = mapper.mapName(it)
                                 val mappedDesc = mapper.mapDesc(it)
-                                refmap.addProperty(targetName, "L$targetClass;$mappedName:$mappedDesc")
+                                refmap.addProperty(targetName, "$mappedName:$mappedDesc")
                             }
                             if (target.isPresent) return
                         }
@@ -218,7 +218,7 @@ class MixinClassVisitorRefmapBuilder(
                             target.ifPresent {
                                 val mappedName = mapper.mapName(it)
                                 val mappedDesc = mapper.mapDesc(it)
-                                refmap.addProperty(targetName, "L$targetClass;$mappedName$mappedDesc")
+                                refmap.addProperty(targetName, "$mappedName$mappedDesc")
                             }
                             if (target.isPresent) {
                                 return
@@ -560,16 +560,12 @@ class MixinClassVisitorRefmapBuilder(
     }
 
     fun visitSlice(visitor: AnnotationVisitor, remap: AtomicBoolean) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
-        val remapSlice = AtomicBoolean(remap.get())
-        override fun visit(name: String, value: Any) {
-            TODO()
-            super.visit(name, value)
-        }
-
         override fun visitAnnotation(name: String?, descriptor: String?): AnnotationVisitor {
-            TODO()
-            logger.warn("Found annotation in target descriptor: $name $descriptor")
-            return super.visitAnnotation(name, descriptor)
+            return if (name == AnnotationElement.FROM || name == AnnotationElement.TO) {
+                visitAt(super.visitAnnotation(name, descriptor), remap)
+            } else {
+                super.visitAnnotation(name, descriptor)
+            }
         }
     }
 
@@ -579,7 +575,7 @@ class MixinClassVisitorRefmapBuilder(
     }
 }
 
-class ArrayVisitorWrapper(val api: Int, val delegate: AnnotationVisitor, val delegateCreator: (AnnotationVisitor) -> AnnotationVisitor): AnnotationVisitor(api, delegate) {
+class ArrayVisitorWrapper(val api: Int, delegate: AnnotationVisitor, val delegateCreator: (AnnotationVisitor) -> AnnotationVisitor): AnnotationVisitor(api, delegate) {
     override fun visitAnnotation(name: String?, descriptor: String): AnnotationVisitor {
         return delegateCreator(super.visitAnnotation(name, descriptor))
     }
