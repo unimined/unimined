@@ -1,14 +1,34 @@
 package xyz.wagyourtail.unimined.api.minecraft.transform.patch
 
-import org.gradle.api.provider.Property
+/**
+ * The class responsible for patching minecraft.
+ * @see [FabricPatcher], [JarModPatcher], [ForgePatcher]
+ * @since 0.2.3
+ */
+interface MinecraftPatcher {
+    fun name(): String {
+        return this::class.simpleName!!
+    }
 
-abstract class MinecraftPatcher {
-    abstract val name: String
+    /**
+     * the namespace to use for the production jar.
+     */
+    val prodNamespace: String
 
-    abstract val prodNamespace: String
-    abstract val prodFallbackNamespace: String
+    /**
+     * the namespace to use for fallback on the production jar.
+     */
+    val prodFallbackNamespace: String
+        get() = "official"
 
-    abstract val devNamespace: Property<String>
-    abstract val devFallbackNamespace: Property<String>
+    /**
+     * the namespace to use for the development jar.
+     */
+    var devNamespace: String
+
+    /**
+     * the namespace to use for fallback on the development jar.
+     */
+    var devFallbackNamespace: String
 
 }

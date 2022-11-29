@@ -5,8 +5,8 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
-import xyz.wagyourtail.unimined.providers.minecraft.EnvType
-import xyz.wagyourtail.unimined.remap.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.remap.RemapJarTaskImpl
 
 @Suppress("UNUSED")
 class UniminedPlugin : Plugin<Project> {
@@ -41,7 +41,7 @@ class UniminedPlugin : Plugin<Project> {
         } else {
             jarTask.archiveClassifier.set("dev")
         }
-        val remapJar = tasks.register("remapJar", RemapJarTask::class.java) {
+        val remapJar = tasks.register("remapJar", RemapJarTaskImpl::class.java) {
             it.dependsOn(jarTask)
             it.group = "unimined"
             it.inputFile.convention(jarTask.archiveFile)
@@ -56,7 +56,7 @@ class UniminedPlugin : Plugin<Project> {
                 it.group = "unimined"
                 it.archiveClassifier.set("server-dev")
             }.get()
-            val serverRemapJar = tasks.register("serverRemapJar", RemapJarTask::class.java) {
+            val serverRemapJar = tasks.register("serverRemapJar", RemapJarTaskImpl::class.java) {
                 it.dependsOn(serverJar)
                 it.group = "unimined"
                 it.inputFile.convention(serverJar.archiveFile)
