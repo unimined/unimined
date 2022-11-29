@@ -40,8 +40,8 @@ unified minecraft modding environment.
     * maybe by hash check?
 * figure out what versions need `-Djava.util.Arrays.useLegacyMergeSort=true` to not randomly crash, this should really
   be part of the legacy mc version.json, or at least betacraft's, but it's not
-  * ~~make myself a maven to host this on~~: https://maven.wagyourtail.xyz
-  * ~~fix forge mappings on 1.17+~~
+* ~~make myself a maven to host this on~~: https://maven.wagyourtail.xyz
+* ~~fix forge mappings on 1.17+~~
 * mixin support
 
 
