@@ -138,26 +138,25 @@ abstract class MinecraftProviderImpl(
     }
 
     private fun sourceSets(sourceSets: SourceSetContainer) {
-        val main = sourceSets.getByName("main")
-        val client = sourceSets.findByName("client")
-        val server = sourceSets.findByName("server")
 
-        main.compileClasspath += mcLibraries
-        main.runtimeClasspath += mcLibraries
-        main.runtimeClasspath += project.files(main.output.resourcesDir)
-
-        client?.let {
-            it.compileClasspath += this.client + main.compileClasspath + main.output
-            it.runtimeClasspath += this.client + main.runtimeClasspath + main.output
+        for (sourceSet in combinedSourceSets) {
+            sourceSet.compileClasspath += combined + mcLibraries
+            sourceSet.runtimeClasspath += combined + mcLibraries
+            sourceSet.runtimeClasspath += project.files(sourceSet.output.resourcesDir)
         }
 
-        server?.let {
-            it.compileClasspath += this.server + main.compileClasspath + main.output
-            it.runtimeClasspath += this.server + main.runtimeClasspath + main.output
+        for (sourceSet in clientSourceSets) {
+            sourceSet.compileClasspath += client + mcLibraries
+            sourceSet.runtimeClasspath += client + mcLibraries
+            sourceSet.runtimeClasspath += project.files(sourceSet.output.resourcesDir)
         }
 
-        main.compileClasspath += combined
-        main.runtimeClasspath += combined
+        for (sourceSet in serverSourceSets) {
+            sourceSet.compileClasspath += server + mcLibraries
+            sourceSet.runtimeClasspath += server + mcLibraries
+            sourceSet.runtimeClasspath += project.files(sourceSet.output.resourcesDir)
+        }
+
     }
 
     private var extractDependencies: MutableMap<Dependency, Extract> = mutableMapOf()

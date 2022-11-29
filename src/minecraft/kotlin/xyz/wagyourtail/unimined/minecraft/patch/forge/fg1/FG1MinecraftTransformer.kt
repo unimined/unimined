@@ -10,10 +10,10 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.io.InputStream
 import java.net.URI
 import java.nio.file.FileSystems
@@ -192,24 +192,22 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun sourceSets(sourceSets: SourceSetContainer) {
-        val main = sourceSets.getByName("main")
 
-        main.compileClasspath += forgeDeps
-        main.runtimeClasspath += forgeDeps
-
-        if (provider.minecraft.client) {
-            sourceSets.findByName("client")?.let {
-                it.compileClasspath += forgeDeps
-                it.runtimeClasspath += forgeDeps
-            }
+        for (sourceSet in provider.combinedSourceSets) {
+            sourceSet.compileClasspath += forgeDeps
+            sourceSet.runtimeClasspath += forgeDeps
         }
 
-        if (provider.minecraft.server) {
-            sourceSets.findByName("server")?.let {
-                it.compileClasspath += forgeDeps
-                it.runtimeClasspath += forgeDeps
-            }
+        for (sourceSet in provider.clientSourceSets) {
+            sourceSet.compileClasspath += forgeDeps
+            sourceSet.runtimeClasspath += forgeDeps
         }
+
+        for (sourceSet in provider.serverSourceSets) {
+            sourceSet.compileClasspath += forgeDeps
+            sourceSet.runtimeClasspath += forgeDeps
+        }
+
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer) {

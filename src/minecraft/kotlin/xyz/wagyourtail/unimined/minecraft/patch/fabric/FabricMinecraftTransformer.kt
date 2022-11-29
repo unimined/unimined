@@ -145,23 +145,20 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProviderIm
     }
 
     override fun sourceSets(sourceSets: SourceSetContainer) {
-        val main = sourceSets.getByName("main")
 
-        main.compileClasspath += fabric
-        main.runtimeClasspath += fabric
-
-        if (provider.minecraft.client) {
-            sourceSets.findByName("client")?.let {
-                it.compileClasspath += fabric
-                it.runtimeClasspath += fabric
-            }
+        for (sourceSet in provider.combinedSourceSets) {
+            sourceSet.compileClasspath += fabric
+            sourceSet.runtimeClasspath += fabric
         }
 
-        if (provider.minecraft.server) {
-            sourceSets.findByName("server")?.let {
-                it.compileClasspath += fabric
-                it.runtimeClasspath += fabric
-            }
+        for (sourceSet in provider.clientSourceSets) {
+            sourceSet.compileClasspath += fabric
+            sourceSet.runtimeClasspath += fabric
+        }
+
+        for (sourceSet in provider.serverSourceSets) {
+            sourceSet.compileClasspath += fabric
+            sourceSet.runtimeClasspath += fabric
         }
 
     }

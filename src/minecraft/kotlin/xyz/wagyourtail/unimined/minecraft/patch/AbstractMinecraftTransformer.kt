@@ -13,13 +13,13 @@ abstract class AbstractMinecraftTransformer protected constructor(
     val provider: MinecraftProviderImpl
 ) : MinecraftPatcher {
     @ApiStatus.Internal
-    open fun merge(clientjar: xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar, serverjar: xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar): xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar {
+    open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         //TODO: do this for real
         return clientjar
     }
 
     @ApiStatus.Internal
-    abstract fun transform(minecraft: xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar): xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
+    abstract fun transform(minecraft: MinecraftJar): MinecraftJar
 
     private fun applyRunConfigs(tasks: TaskContainer) {
         project.logger.lifecycle("Applying run configs")
@@ -51,7 +51,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     @ApiStatus.Internal
-    open fun afterRemap(baseMinecraft: xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar): xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar {
+    open fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         return baseMinecraft
     }
 
