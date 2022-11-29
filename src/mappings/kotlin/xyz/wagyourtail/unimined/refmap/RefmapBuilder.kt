@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.remap.mixin
+package xyz.wagyourtail.unimined.refmap
 
 import net.fabricmc.tinyremapper.TinyRemapper
 import net.fabricmc.tinyremapper.api.TrClass
