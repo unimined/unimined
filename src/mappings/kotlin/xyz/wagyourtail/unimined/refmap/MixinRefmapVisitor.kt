@@ -36,7 +36,7 @@ class MixinRefmapVisitor(
                 }
 
                 override fun visitArray(name: String): AnnotationVisitor {
-                    return if (name == "targets") {
+                    return if (name == AnnotationElement.TARGETS) {
                         return object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
                             override fun visit(name: String, value: Any) {
                                 if (remap.get()) {
