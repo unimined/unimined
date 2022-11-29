@@ -12,35 +12,42 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
 import java.util.concurrent.atomic.AtomicBoolean
 
-class MixinRefmapVisitor(
-    commonData: CommonData, val mixinName: String, val refmap: JsonObject, delegate: ClassVisitor
+class MixinClassVisitorRefmapBuilder(
+    commonData: CommonData, val mixinName: String, val refmap: JsonObject, delegate: ClassVisitor, private val onEnd: () -> Unit = {}
 ) : ClassVisitor(Constant.ASM_VERSION, delegate) {
     private val mapper = commonData.mapper
     private val resolver = commonData.resolver
     private val logger = commonData.logger
     private var remap = AtomicBoolean(true)
 
-    private lateinit var primaryClass: String
+    val classTargets = mutableListOf<String>()
+    val classValues = mutableListOf<String>()
 
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
-        val targets = mutableListOf<String>()
         val av = if (Annotation.MIXIN == descriptor) {
             object : AnnotationVisitor(Constant.ASM_VERSION, super.visitAnnotation(descriptor, visible)) {
                 override fun visit(name: String, value: Any) {
+                    super.visit(name, value)
+                    logger.info("Found annotation value $name: $value")
                     if (name == AnnotationElement.REMAP) {
                         remap.set(value as Boolean)
-                    } else if (name == AnnotationElement.VALUE) {
-                        primaryClass = (value as Type).internalName
                     }
-                    super.visit(name, value)
                 }
 
-                override fun visitArray(name: String): AnnotationVisitor {
+                override fun visitArray(name: String?): AnnotationVisitor {
                     return if (name == AnnotationElement.TARGETS) {
                         return object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
-                            override fun visit(name: String, value: Any) {
+                            override fun visit(name: String?, value: Any) {
                                 if (remap.get()) {
-                                    targets.add(value as String)
+                                    classTargets.add(value as String)
+                                }
+                            }
+                        }
+                    } else if (name == AnnotationElement.VALUE || name == null) {
+                        return object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                            override fun visit(name: String?, value: Any) {
+                                if (remap.get()) {
+                                    classValues.add((value as Type).internalName)
                                 }
                             }
                         }
@@ -52,10 +59,7 @@ class MixinRefmapVisitor(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remap.get()) {
-                        if (!this@MixinRefmapVisitor::primaryClass.isInitialized) {
-                            primaryClass = targets.first().replace('.', '/')
-                        }
-                        for (target in targets) {
+                        for (target in classTargets) {
                             val clz = resolver.resolveClass(target.replace('.', '/'))
                             clz.ifPresent {
                                 refmap.addProperty(target, mapper.mapName(it))
@@ -74,7 +78,7 @@ class MixinRefmapVisitor(
     }
 
     override fun visitMethod(
-        access: Int, name: String, descriptor: String, signature: String, exceptions: Array<out String>?
+        access: Int, name: String, descriptor: String, signature: String?, exceptions: Array<out String>?
     ): MethodVisitor {
         val remap = AtomicBoolean(remap.get())
         return object : MethodVisitor(
@@ -100,50 +104,67 @@ class MixinRefmapVisitor(
             fun visitAccessor(visitor: AnnotationVisitor) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
                 val remapAccessor = AtomicBoolean(remap.get())
                 var targetName: String? = null
-                override fun visit(name: String, value: Any) {
+                override fun visit(name: String? , value: Any) {
                     super.visit(name, value)
-                    if (name == AnnotationElement.VALUE) targetName = value as String
+                    if (name == AnnotationElement.VALUE || name == null) targetName = value as String
                     if (name == AnnotationElement.REMAP) remapAccessor.set(value as Boolean)
                 }
 
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapAccessor.get()) {
-                        val targetOwner = primaryClass
-                        val targetName = if (targetName != null) {
-                            targetName!!.split(":")[0]
-                        } else {
-                            val prefix = if (name.startsWith("get")) {
-                                "get"
-                            } else if (name.startsWith("is")) {
-                                "is"
-                            } else if (name.startsWith("set")) {
-                                "set"
+                        for (targetClass in classValues + classTargets) {
+                            val targetName = if (targetName != null) {
+                                targetName!!.split(":")[0]
                             } else {
-                                logger.warn("Failed to resolve accessor $name in mixin ${mixinName.replace('/', '.')}, unknown prefix")
-                                return
+                                val prefix = if (name.startsWith("get")) {
+                                    "get"
+                                } else if (name.startsWith("is")) {
+                                    "is"
+                                } else if (name.startsWith("set")) {
+                                    "set"
+                                } else {
+                                    logger.warn(
+                                        "Failed to resolve accessor $name in mixin ${
+                                            mixinName.replace(
+                                                '/',
+                                                '.'
+                                            )
+                                        }, unknown prefix"
+                                    )
+                                    return
+                                }
+                                "${
+                                    name.substring(prefix.length, prefix.length + 1)
+                                        .lowercase()
+                                }${name.substring(prefix.length + 1)}"
                             }
-                            "${name.substring(prefix.length, prefix.length + 1).lowercase()}${name.substring(prefix.length + 1)}"
+                            val targetDesc = if (descriptor.startsWith("()")) {
+                                descriptor.split(')')[1]
+                            } else {
+                                descriptor.split(")")[0].substring(1)
+                            }
+                            val target = resolver.resolveField(
+                                targetClass,
+                                targetName,
+                                targetDesc,
+                                ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                            )
+                            target.ifPresent {
+                                val mappedName = mapper.mapName(it)
+                                val mappedDesc = mapper.mapDesc(it)
+                                refmap.addProperty(targetName, "L$targetClass;$mappedName:$mappedDesc")
+                            }
+                            if (target.isPresent) return
                         }
-                        val targetDesc = if (descriptor.startsWith("()")) {
-                            descriptor.split(')')[1]
-                        } else {
-                            descriptor.split(")")[0].substring(1)
-                        }
-                        val target = resolver.resolveField(
-                            targetOwner,
-                            targetName,
-                            targetDesc,
-                            ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                        logger.warn(
+                            "Failed to resolve field accessor $targetName ($name$descriptor) in mixin ${
+                                mixinName.replace(
+                                    '/',
+                                    '.'
+                                )
+                            }"
                         )
-                        target.ifPresent {
-                            val mappedName = mapper.mapName(it)
-                            val mappedDesc = mapper.mapDesc(it)
-                            refmap.addProperty(targetName, "$mappedName:$mappedDesc")
-                        }
-                        if (!target.isPresent) {
-                            logger.warn("Failed to resolve field accessor $targetName ($name$descriptor) in mixin ${mixinName.replace('/', '.')}")
-                        }
                     }
                 }
             }
@@ -151,47 +172,66 @@ class MixinRefmapVisitor(
             fun visitInvoker(visitor: AnnotationVisitor) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
                 val remapInvoker = AtomicBoolean(remap.get())
                 var targetName: String? = null
-                override fun visit(name: String, value: Any) {
+                override fun visit(name: String?, value: Any) {
                     super.visit(name, value)
-                    if (name == AnnotationElement.VALUE) targetName = value as String
+                    if (name == AnnotationElement.VALUE || name == null) targetName = value as String
                     if (name == AnnotationElement.REMAP) remapInvoker.set(value as Boolean)
                 }
 
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapInvoker.get()) {
-                        val targetOwner = primaryClass
-                        val targetName = if (targetName != null) {
-                            targetName!!.split(":")[0]
-                        } else {
-                            val prefix = if (name.startsWith("call")) {
-                                "call"
-                            } else if (name.startsWith("invoke")) {
-                                "invoke"
-                            } else if (name.startsWith("new")) {
-                                "new"
-                            } else if (name.startsWith("create")) {
-                                "create"
+                        for (targetClass in classValues + classTargets) {
+                            val targetName = if (targetName != null) {
+                                targetName!!.split(":")[0]
                             } else {
-                                logger.warn("Failed to resolve invoker $name in mixin ${mixinName.replace('/', '.')}, unknown prefix")
+                                val prefix = if (name.startsWith("call")) {
+                                    "call"
+                                } else if (name.startsWith("invoke")) {
+                                    "invoke"
+                                } else if (name.startsWith("new")) {
+                                    "new"
+                                } else if (name.startsWith("create")) {
+                                    "create"
+                                } else {
+                                    logger.warn(
+                                        "Failed to resolve invoker $name in mixin ${
+                                            mixinName.replace(
+                                                '/',
+                                                '.'
+                                            )
+                                        }, unknown prefix"
+                                    )
+                                    return
+                                }
+                                "${
+                                    name.substring(prefix.length, prefix.length + 1)
+                                        .lowercase()
+                                }${name.substring(prefix.length + 1)}"
+                            }
+                            val target = resolver.resolveMethod(
+                                targetClass,
+                                targetName,
+                                descriptor,
+                                ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                            )
+                            target.ifPresent {
+                                val mappedName = mapper.mapName(it)
+                                val mappedDesc = mapper.mapDesc(it)
+                                refmap.addProperty(targetName, "L$targetClass;$mappedName$mappedDesc")
+                            }
+                            if (target.isPresent) {
                                 return
                             }
-                            "${name.substring(prefix.length, prefix.length + 1).lowercase()}${name.substring(prefix.length + 1)}"
                         }
-                        val target = resolver.resolveMethod(
-                            targetOwner,
-                            targetName,
-                            descriptor,
-                            ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                        logger.warn(
+                            "Failed to resolve invoker $targetName ($name$descriptor) in mixin ${
+                                mixinName.replace(
+                                    '/',
+                                    '.'
+                                )
+                            }"
                         )
-                        target.ifPresent {
-                            val mappedName = mapper.mapName(it)
-                            val mappedDesc = mapper.mapDesc(it)
-                            refmap.addProperty(targetName, "$mappedName$mappedDesc")
-                        }
-                        if (!target.isPresent) {
-                            logger.warn("Failed to resolve invoker $targetName ($name$descriptor) in mixin ${mixinName.replace('/', '.')}")
-                        }
                     }
                 }
             }
@@ -201,7 +241,7 @@ class MixinRefmapVisitor(
                 var targetNames = mutableListOf<String>()
                 override fun visit(name: String, value: Any) {
                     super.visit(name, value)
-                    if (name == "remap") remapInject.set(value as Boolean)
+                    if (name == AnnotationElement.REMAP) remapInject.set(value as Boolean)
                 }
 
                 override fun visitArray(name: String): AnnotationVisitor {
@@ -218,7 +258,7 @@ class MixinRefmapVisitor(
                         }
                         AnnotationElement.METHOD -> {
                             object : AnnotationVisitor(Constant.ASM_VERSION, delegate) {
-                                override fun visit(name: String, value: Any) {
+                                override fun visit(name: String?, value: Any) {
                                     super.visit(name, value)
                                     targetNames.add(value as String)
                                 }
@@ -238,28 +278,37 @@ class MixinRefmapVisitor(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapInject.get()) {
-                        val targetOwner = primaryClass
                         targetNames.forEach { targetName ->
-                            val targetDesc = if (targetName.contains("(")) {
-                                "(" + targetName.split("(")[1]
-                            } else {
-                                stripCallbackInfoFromDesc(descriptor)
-                            }
+                            for (targetClass in classValues + classTargets) {
+                                val targetDesc = if (targetName.contains("(")) {
+                                    "(" + targetName.split("(")[1]
+                                } else {
+                                    stripCallbackInfoFromDesc(descriptor)
+                                }
 
-                            val target = resolver.resolveMethod(
-                                targetOwner,
-                                targetName,
-                                targetDesc,
-                                ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                val target = resolver.resolveMethod(
+                                    targetClass,
+                                    targetName,
+                                    targetDesc,
+                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                )
+                                target.ifPresent {
+                                    val mappedName = mapper.mapName(it)
+                                    val mappedDesc = mapper.mapDesc(it)
+                                    refmap.addProperty(targetName, "L$targetClass;$mappedName$mappedDesc")
+                                }
+                                if (target.isPresent) {
+                                    return@forEach
+                                }
+                            }
+                            logger.warn(
+                                "Failed to resolve Inject $targetName ($name$descriptor) $signature in mixin ${
+                                    mixinName.replace(
+                                        '/',
+                                        '.'
+                                    )
+                                }"
                             )
-                            target.ifPresent {
-                                val mappedName = mapper.mapName(it)
-                                val mappedDesc = mapper.mapDesc(it)
-                                refmap.addProperty(targetName, "$mappedName$mappedDesc")
-                            }
-                            if (!target.isPresent) {
-                                logger.warn("Failed to resolve Inject $targetName ($name$descriptor) in mixin ${mixinName.replace('/', '.')}")
-                            }
                         }
                     }
                 }
@@ -293,7 +342,7 @@ class MixinRefmapVisitor(
                         ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { visitDesc(it, remap) }
                     } else if (name == AnnotationElement.METHOD) {
                         object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
-                            override fun visit(name: String, value: Any) {
+                            override fun visit(name: String?, value: Any) {
                                 super.visit(name, value)
                                 targetNames.add(value as String)
                             }
@@ -306,28 +355,37 @@ class MixinRefmapVisitor(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapModifyArg.get()) {
-                        val targetOwner = primaryClass
                         targetNames.forEach { targetName ->
-                            val targetDesc = if (targetName.contains("(")) {
-                                "(" + targetName.split("(")[1]
-                            } else {
-                                null
-                            }
+                            for (targetClass in classValues + classTargets) {
+                                val targetDesc = if (targetName.contains("(")) {
+                                    "(" + targetName.split("(")[1]
+                                } else {
+                                    null
+                                }
 
-                            val target = resolver.resolveMethod(
-                                targetOwner,
-                                targetName,
-                                targetDesc,
-                                ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                val target = resolver.resolveMethod(
+                                    targetClass,
+                                    targetName,
+                                    targetDesc,
+                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                )
+                                target.ifPresent {
+                                    val mappedName = mapper.mapName(it)
+                                    val mappedDesc = mapper.mapDesc(it)
+                                    refmap.addProperty(targetName, "L$targetClass;$mappedName$mappedDesc")
+                                }
+                                if (target.isPresent) {
+                                    return@forEach
+                                }
+                            }
+                            logger.warn(
+                                "Failed to resolve ModifyArg(s)/Redirect $targetName ($name$descriptor) in mixin ${
+                                    mixinName.replace(
+                                        '/',
+                                        '.'
+                                    )
+                                }"
                             )
-                            target.ifPresent {
-                                val mappedName = mapper.mapName(it)
-                                val mappedDesc = mapper.mapDesc(it)
-                                refmap.addProperty(targetName, "$mappedName$mappedDesc")
-                            }
-                            if (!target.isPresent) {
-                                logger.warn("Failed to resolve ModifyArg(s)/Redirect $targetName ($name$descriptor) in mixin ${mixinName.replace('/', '.')}")
-                            }
                         }
                     }
                 }
@@ -352,7 +410,7 @@ class MixinRefmapVisitor(
                             ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { visitSlice(it, remap) }
                         } else if (name == AnnotationElement.METHOD) {
                             object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
-                                override fun visit(name: String, value: Any) {
+                                override fun visit(name: String?, value: Any) {
                                     super.visit(name, value)
                                     targetNames.add(value as String)
                                 }
@@ -365,28 +423,37 @@ class MixinRefmapVisitor(
                     override fun visitEnd() {
                         super.visitEnd()
                         if (remapModifyConstant.get()) {
-                            val targetOwner = primaryClass
                             targetNames.forEach { targetName ->
-                                val targetDesc = if (targetName.contains("(")) {
-                                    "(" + targetName.split("(")[1]
-                                } else {
-                                    null
-                                }
+                                for (targetClass in classValues + classTargets) {
+                                    val targetDesc = if (targetName.contains("(")) {
+                                        "(" + targetName.split("(")[1]
+                                    } else {
+                                        null
+                                    }
 
-                                val target = resolver.resolveMethod(
-                                    targetOwner,
-                                    targetName,
-                                    targetDesc,
-                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                    val target = resolver.resolveMethod(
+                                        targetClass,
+                                        targetName,
+                                        targetDesc,
+                                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                    )
+                                    target.ifPresent {
+                                        val mappedName = mapper.mapName(it)
+                                        val mappedDesc = mapper.mapDesc(it)
+                                        refmap.addProperty(targetName, "L$targetClass;$mappedName$mappedDesc")
+                                    }
+                                    if (target.isPresent) {
+                                        return@forEach
+                                    }
+                                }
+                                logger.warn(
+                                    "Failed to resolve ModifyConstant $targetName ($name$descriptor) in mixin ${
+                                        mixinName.replace(
+                                            '/',
+                                            '.'
+                                        )
+                                    }"
                                 )
-                                target.ifPresent {
-                                    val mappedName = mapper.mapName(it)
-                                    val mappedDesc = mapper.mapDesc(it)
-                                    refmap.addProperty(targetName, "$mappedName$mappedDesc")
-                                }
-                                if (!target.isPresent) {
-                                    logger.warn("Failed to resolve ModifyConstant $targetName ($name$descriptor) in mixin ${mixinName.replace('/', '.')}")
-                                }
                             }
                         }
                     }
@@ -421,7 +488,7 @@ class MixinRefmapVisitor(
 
         override fun visitEnd() {
             super.visitEnd()
-            if (remapAt.get()) {
+            if (remapAt.get() && targetName != null) {
                 val matchFd = targetField.matchEntire(targetName!!)
                 if (matchFd != null) {
                     val targetOwner = matchFd.groupValues[1]
@@ -505,10 +572,15 @@ class MixinRefmapVisitor(
             return super.visitAnnotation(name, descriptor)
         }
     }
+
+    override fun visitEnd() {
+        super.visitEnd()
+        onEnd()
+    }
 }
 
 class ArrayVisitorWrapper(val api: Int, val delegate: AnnotationVisitor, val delegateCreator: (AnnotationVisitor) -> AnnotationVisitor): AnnotationVisitor(api, delegate) {
-    override fun visitAnnotation(name: String, descriptor: String): AnnotationVisitor {
+    override fun visitAnnotation(name: String?, descriptor: String): AnnotationVisitor {
         return delegateCreator(super.visitAnnotation(name, descriptor))
     }
 }

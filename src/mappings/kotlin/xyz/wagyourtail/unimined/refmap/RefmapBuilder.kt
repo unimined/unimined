@@ -47,7 +47,7 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
 
     override fun attach(builder: TinyRemapper.Builder) {
         super.attach(builder)
-
+        logger.info("Attaching RefmapBuilder")
         builder.extraPreApplyVisitor(this)
     }
 
@@ -62,9 +62,9 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
                     refmap.add("mappings", JsonObject())
                 }
                 val mappings = refmap.getAsJsonObject("mappings")
-                mappings.add(cls.name, JsonObject())
+                mappings.add(cls.name, target)
             }
-            return MixinRefmapVisitor(CommonData(cls.environment, logger), cls.name, target, next)
+            return MixinClassVisitorRefmapBuilder(CommonData(cls.environment, logger), cls.name, target, next)
         }
         return next
     }
@@ -89,13 +89,13 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
         val refmap = json.get("refmap")?.asString ?: defaultRefmapPath
         val pkg = json.get("package").asString
         refmaps.computeIfAbsent(refmap) { JsonObject() }
-        for (mixin in json.getAsJsonArray("mixin")) {
+        for (mixin in json.getAsJsonArray("mixin") ?: listOf()) {
             classesToRefmap.computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
         }
-        for (mixin in json.getAsJsonArray("client")) {
+        for (mixin in json.getAsJsonArray("client") ?: listOf()) {
             classesToRefmap.computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
         }
-        for (mixin in json.getAsJsonArray("server")) {
+        for (mixin in json.getAsJsonArray("server") ?: listOf()) {
             classesToRefmap.computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
         }
         json.addProperty("refmap", refmap)
