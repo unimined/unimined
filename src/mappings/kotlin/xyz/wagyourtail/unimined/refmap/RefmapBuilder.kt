@@ -64,7 +64,7 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
                 val mappings = refmap.getAsJsonObject("mappings")
                 mappings.add(cls.name, JsonObject())
             }
-            return MixinRefmapVisitor(CommonData(cls.environment, logger), target, next)
+            return MixinRefmapVisitor(CommonData(cls.environment, logger), cls.name, target, next)
         }
         return next
     }
