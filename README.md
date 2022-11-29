@@ -12,12 +12,12 @@ unified minecraft modding environment.
 ## TODO
 
 * Refactor, refactor, refactor
-  ~~* FG3+ support (>1.12.2)~~
-* test user AT support
-  ~~* fix fg3 versions of 1.12.2~~
-* fabric aw support
-* combined jar support
-  ~~* figure out how to get forge to recognise resources as part of the dev mod~~
+  * ~~FG3+ support (>1.12.2)~~
+* ~~test user AT support~~
+  * ~~fix fg3 versions of 1.12.2~~
+* ~~fabric aw support~~
+* combined jar support : forge 1.13+ does this, do with the rest
+  * ~~figure out how to get forge to recognise resources as part of the dev mod~~
 * split fg2+ out of the mc jar
 * figure out how to do automated testing
     * figure out how to determine the correctness of remap output
@@ -40,8 +40,10 @@ unified minecraft modding environment.
     * maybe by hash check?
 * figure out what versions need `-Djava.util.Arrays.useLegacyMergeSort=true` to not randomly crash, this should really
   be part of the legacy mc version.json, or at least betacraft's, but it's not
-  ~~* make myself a maven to host this on~~
-  ~~* fix forge mappings on 1.17+~~
+  * ~~make myself a maven to host this on~~: https://maven.wagyourtail.xyz
+  * ~~fix forge mappings on 1.17+~~
+* mixin support
+
 
 ## Example Usage
 
@@ -69,20 +71,18 @@ minecraft {
     // if you don't include this, it will default to no mod loader transforms
     forge {
         // required for 1.7+ if you want to use mcp mappings
-        it.mcpVersion = '39-1.12'
-        it.mcpChannel = 'stable'
+        mcpVersion = '39-1.12'
+        mcpChannel = 'stable'
         
-        // untested
-        it.accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+        accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+        devFallbackNamespace = "searge" // you may need to change this to "intermediary" on multi-platform projects
     }
-    // required when using mcp mappings
-    mcRemapper.fallbackTarget = "searge"
 
     mcRemapper.tinyRemapperConf = {
         // most mcp mappings (except older format) dont include field desc
-        it.ignoreFieldDesc(true)
+        ignoreFieldDesc(true)
         // this also fixes some issues with them, as it tells tiny remapper to try harder to resolve conflicts
-        it.ignoreConflicts(true)
+        ignoreConflicts(true)
     }
 }
 
@@ -132,11 +132,13 @@ unimined {
 }
 
 minecraft {
-    jarMod()
-    mcRemapper.fallbackTarget = "searge"
+    jarMod {
+      // unlike forge, jarmod (currently) defaults to intermediary. so we have to change this
+      devFallbackNamespace = "searge"
+    }
     mcRemapper.tinyRemapperConf = {
-        it.ignoreFieldDesc(true)
-        it.ignoreConflicts(true)
+        ignoreFieldDesc(true)
+        ignoreConflicts(true)
     }
 }
 
@@ -157,12 +159,5 @@ dependencies {
     // you'll have to provide them locally unless I decide to throw these on my maven
     jarMod 'local_mod:ModLoader:B1.3_01v5@zip'
     mappings 'local_mod:mcp:29a@zip'
-
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
-}
-
-test {
-    useJUnitPlatform()
 }
 ```
