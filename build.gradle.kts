@@ -28,6 +28,29 @@ repositories {
     }
 }
 
+sourceSets {
+    create("api") {
+        compileClasspath += main.get().compileClasspath
+        runtimeClasspath += main.get().runtimeClasspath
+    }
+    create("mappings") {
+        compileClasspath += main.get().compileClasspath + sourceSets["api"].output
+        runtimeClasspath += main.get().runtimeClasspath + sourceSets["api"].output
+    }
+    create("minecraft") {
+        compileClasspath += main.get().compileClasspath + sourceSets["mappings"].output + sourceSets["api"].output
+        runtimeClasspath += main.get().runtimeClasspath + sourceSets["mappings"].output + sourceSets["api"].output
+    }
+    create("mod") {
+        compileClasspath += main.get().compileClasspath + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
+        runtimeClasspath += main.get().runtimeClasspath + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
+    }
+    main {
+        compileClasspath += sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
+        runtimeClasspath += sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
+    }
+}
+
 dependencies {
     testImplementation(kotlin("test"))
     // guava
@@ -67,6 +90,8 @@ dependencies {
 }
 
 tasks.jar {
+    from(sourceSets["api"].output, sourceSets["mappings"].output, sourceSets["minecraft"].output, sourceSets["mod"].output, sourceSets["main"].output)
+
     manifest {
         attributes.putAll(
             mapOf(
