@@ -557,13 +557,10 @@ class MixinClassVisitorRefmapBuilder(
         val remapDesc = AtomicBoolean(remap.get())
         override fun visit(name: String, value: Any) {
             TODO()
-            super.visit(name, value)
         }
 
         override fun visitAnnotation(name: String?, descriptor: String?): AnnotationVisitor {
             TODO()
-            logger.warn("Found annotation in target descriptor: $name $descriptor")
-            return super.visitAnnotation(name, descriptor)
         }
     }
 
