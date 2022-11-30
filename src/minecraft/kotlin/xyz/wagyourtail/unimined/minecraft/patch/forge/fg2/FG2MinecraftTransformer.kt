@@ -27,8 +27,18 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 ) {
 
     override val prodNamespace: String = "searge"
-    override var devNamespace: String = "named"
-    override var devFallbackNamespace: String = "searge"
+
+    override var devNamespace: String
+        get() = parent.devNamespace
+        set(value) {
+            parent.devNamespace = value
+        }
+
+    override var devFallbackNamespace: String
+        get() = parent.devFallbackNamespace
+        set(value) {
+            parent.devFallbackNamespace = value
+        }
 
     override fun afterEvaluate() {
         // get and add forge-src to mappings
