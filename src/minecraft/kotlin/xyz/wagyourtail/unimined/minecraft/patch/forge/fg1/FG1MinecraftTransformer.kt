@@ -31,8 +31,17 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override val prodNamespace: String
         get() = "official"
 
-    override var devNamespace: String = "named"
-    override var devFallbackNamespace: String = "searge"
+    override var devNamespace: String
+        get() = parent.devNamespace
+        set(value) {
+            parent.devNamespace = value
+        }
+
+    override var devFallbackNamespace: String
+        get() = parent.devFallbackNamespace
+        set(value) {
+            parent.devFallbackNamespace = value
+        }
 
     val afterForgeJarModder = JarModMinecraftTransformer(project, provider)
     var resolvedForgeDeps = false

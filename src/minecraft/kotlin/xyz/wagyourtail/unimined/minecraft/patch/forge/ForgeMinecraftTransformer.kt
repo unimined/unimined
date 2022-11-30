@@ -47,17 +47,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     override val prodFallbackNamespace: String
         get() = forgeTransformer.prodFallbackNamespace
 
-    override var devNamespace: String
-        get() = forgeTransformer.devNamespace
-        set(value) {
-            forgeTransformer.devNamespace = value
-        }
-
-    override var devFallbackNamespace: String
-        get() = forgeTransformer.devFallbackNamespace
-        set(value) {
-            forgeTransformer.devFallbackNamespace = value
-        }
+    override var devNamespace: String = "named"
+    override var devFallbackNamespace: String = "searge"
 
     var includeSubprojectSourceSets = mutableSetOf<SourceSet>()
 
