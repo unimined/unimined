@@ -13,7 +13,11 @@ import org.objectweb.asm.Type
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MixinClassVisitorRefmapBuilder(
-    commonData: CommonData, val mixinName: String, val refmap: JsonObject, delegate: ClassVisitor, private val onEnd: () -> Unit = {}
+    commonData: CommonData,
+    val mixinName: String,
+    val refmap: JsonObject,
+    delegate: ClassVisitor,
+    private val onEnd: () -> Unit = {}
 ) : ClassVisitor(Constant.ASM_VERSION, delegate) {
     private val mapper = commonData.mapper
     private val resolver = commonData.resolver
@@ -42,18 +46,22 @@ class MixinClassVisitorRefmapBuilder(
                                     if (remap.get()) {
                                         classTargets.add(value as String)
                                     }
+                                    super.visit(name, value)
                                 }
                             }
                         }
+
                         AnnotationElement.VALUE, null -> {
                             return object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
                                 override fun visit(name: String?, value: Any) {
                                     if (remap.get()) {
                                         classValues.add((value as Type).internalName)
                                     }
+                                    super.visit(name, value)
                                 }
                             }
                         }
+
                         else -> {
                             super.visitArray(name)
                         }
@@ -108,7 +116,7 @@ class MixinClassVisitorRefmapBuilder(
             fun visitAccessor(visitor: AnnotationVisitor) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
                 val remapAccessor = AtomicBoolean(remap.get())
                 var targetName: String? = null
-                override fun visit(name: String? , value: Any) {
+                override fun visit(name: String?, value: Any) {
                     super.visit(name, value)
                     if (name == AnnotationElement.VALUE || name == null) targetName = value as String
                     if (name == AnnotationElement.REMAP) remapAccessor.set(value as Boolean)
@@ -187,7 +195,7 @@ class MixinClassVisitorRefmapBuilder(
                     if (remapInvoker.get()) {
                         for (targetClass in classValues + classTargets) {
                             val targetName = if (targetName != null) {
-                                targetName!!.split(":")[0]
+                                targetName
                             } else {
                                 val prefix = if (name.startsWith("call")) {
                                     "call"
@@ -254,12 +262,15 @@ class MixinClassVisitorRefmapBuilder(
                         AnnotationElement.AT -> {
                             ArrayVisitorWrapper(Constant.ASM_VERSION, delegate) { visitAt(it, remap) }
                         }
+
                         AnnotationElement.SLICE -> {
                             ArrayVisitorWrapper(Constant.ASM_VERSION, delegate) { visitSlice(it, remap) }
                         }
+
                         AnnotationElement.TARGET -> {
                             ArrayVisitorWrapper(Constant.ASM_VERSION, delegate) { visitDesc(it, remap) }
                         }
+
                         AnnotationElement.METHOD -> {
                             object : AnnotationVisitor(Constant.ASM_VERSION, delegate) {
                                 override fun visit(name: String?, value: Any) {
@@ -268,6 +279,7 @@ class MixinClassVisitorRefmapBuilder(
                                 }
                             }
                         }
+
                         else -> {
                             delegate
                         }
@@ -277,36 +289,86 @@ class MixinClassVisitorRefmapBuilder(
                 val callbackInfo = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;"
                 val callbackInfoReturn = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable;"
 
-                private fun stripCallbackInfoFromDesc(desc: String): String = desc.replace(callbackInfo, "").replace(callbackInfoReturn, "")
+                private fun parseCIRVal(): String {
+                    val remain = signature!!.split("Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable<")[1]
+                    var valBuild = ""
+                    var depth = 1
+                    for (c in remain) {
+                        if (c == '<') {
+                            depth++
+                        } else if (c == '>') {
+                            depth--
+                        }
+                        if (depth == 0) {
+                            break
+                        }
+                        valBuild += c
+                    }
+                    return valBuild
+                }
+
+                private fun toPrimitive(sig: String): String? {
+                    return when (sig) {
+                        "Ljava/lang/Integer;" -> "I"
+                        "Ljava/lang/Long;" -> "J"
+                        "Ljava/lang/Short;" -> "S"
+                        "Ljava/lang/Byte;" -> "B"
+                        "Ljava/lang/Character;" -> "C"
+                        "Ljava/lang/Float;" -> "F"
+                        "Ljava/lang/Double;" -> "D"
+                        "Ljava/lang/Boolean;" -> "Z"
+                        else -> null
+                    }
+                }
+
+                private fun stripCallbackInfoFromDesc(): Set<String> {
+                    val desc = descriptor.replace(callbackInfo, "").replace(callbackInfoReturn, "")
+                    if (descriptor.contains(callbackInfoReturn)) {
+                        val returnType = parseCIRVal()
+                        val rets = setOfNotNull(
+                            desc.replace(")V", ")$returnType"),
+                            toPrimitive(returnType)?.let { desc.replace(")V", ")${it}") })
+                        logger.info("Found returnable inject, signatures $rets, return type $returnType")
+                        return rets
+                    }
+                    return setOf(desc)
+                }
 
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapInject.get()) {
-                        targetNames.forEach { targetName ->
-                            for (targetClass in classValues + classTargets) {
-                                val targetDesc = if (targetName.contains("(")) {
-                                    "(" + targetName.split("(")[1]
-                                } else {
-                                    stripCallbackInfoFromDesc(descriptor)
-                                }
-
-                                val target = resolver.resolveMethod(
-                                    targetClass,
-                                    targetName,
-                                    targetDesc,
-                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                                )
-                                target.ifPresent {
-                                    val mappedName = mapper.mapName(it)
-                                    val mappedDesc = mapper.mapDesc(it)
-                                    refmap.addProperty(targetName, "L$targetClass;$mappedName$mappedDesc")
-                                }
-                                if (target.isPresent) {
-                                    return@forEach
+                        targetNames.forEach { targetMethod ->
+                            if (targetMethod.equals("<init>") || targetMethod.equals("<clinit>") ||
+                                targetMethod.equals("<init>*")) {
+                                return@forEach
+                            }
+                            val (targetName, targetDescs) = if (targetMethod.contains("(")) {
+                                val n = targetMethod.split("(")
+                                (n[0] to setOf("(${n[1]}"))
+                            } else {
+                                (targetMethod to stripCallbackInfoFromDesc() + setOf(null))
+                            }
+                            for (targetDesc in targetDescs) {
+                                for (targetClass in classValues + classTargets) {
+                                    val target = resolver.resolveMethod(
+                                        targetClass,
+                                        targetName,
+                                        targetDesc,
+                                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                    )
+                                    target.ifPresent {
+                                        val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
+                                        val mappedName = mapper.mapName(it)
+                                        val mappedDesc = mapper.mapDesc(it)
+                                        refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
+                                    }
+                                    if (target.isPresent) {
+                                        return@forEach
+                                    }
                                 }
                             }
                             logger.warn(
-                                "Failed to resolve Inject $targetName ($name$descriptor) $signature in mixin ${
+                                "Failed to resolve Inject $targetMethod ($name$descriptor) $signature in mixin ${
                                     mixinName.replace(
                                         '/',
                                         '.'
@@ -332,9 +394,11 @@ class MixinClassVisitorRefmapBuilder(
                         AnnotationElement.AT -> {
                             visitAt(super.visitAnnotation(name, descriptor), remap)
                         }
+
                         AnnotationElement.SLICE -> {
                             visitSlice(super.visitAnnotation(name, descriptor), remap)
                         }
+
                         else -> {
                             super.visitAnnotation(name, descriptor)
                         }
@@ -346,6 +410,7 @@ class MixinClassVisitorRefmapBuilder(
                         AnnotationElement.TARGET -> {
                             ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { visitDesc(it, remap) }
                         }
+
                         AnnotationElement.METHOD -> {
                             object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
                                 override fun visit(name: String?, value: Any) {
@@ -354,6 +419,7 @@ class MixinClassVisitorRefmapBuilder(
                                 }
                             }
                         }
+
                         else -> {
                             super.visitArray(name)
                         }
@@ -378,9 +444,10 @@ class MixinClassVisitorRefmapBuilder(
                                     ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
                                 )
                                 target.ifPresent {
+                                    val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
                                     val mappedName = mapper.mapName(it)
                                     val mappedDesc = mapper.mapDesc(it)
-                                    refmap.addProperty(targetName, "L$targetClass;$mappedName$mappedDesc")
+                                    refmap.addProperty(targetName, "L$mappedClass;$mappedName$mappedDesc")
                                 }
                                 if (target.isPresent) {
                                     return@forEach
@@ -445,10 +512,13 @@ class MixinClassVisitorRefmapBuilder(
                                         targetDesc,
                                         ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
                                     )
+
+
                                     target.ifPresent {
+                                        val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
                                         val mappedDesc = mapper.mapDesc(it)
-                                        refmap.addProperty(targetName, "L$targetClass;$mappedName$mappedDesc")
+                                        refmap.addProperty(targetName, "L$mappedClass;$mappedName$mappedDesc")
                                     }
                                     if (target.isPresent) {
                                         return@forEach
@@ -473,106 +543,140 @@ class MixinClassVisitorRefmapBuilder(
         }
     }
 
-    fun visitAt(visitor: AnnotationVisitor, remap: AtomicBoolean) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
-        val remapAt = AtomicBoolean(remap.get())
-        var targetName: String? = null
-        override fun visit(name: String, value: Any) {
-            super.visit(name, value)
-            if (name == AnnotationElement.REMAP) remapAt.set(value as Boolean)
-            if (name == AnnotationElement.TARGET) targetName = value as String
-        }
-
-        override fun visitAnnotation(name: String, descriptor: String): AnnotationVisitor {
-            return if (name == AnnotationElement.DESC) {
-                visitDesc(super.visitAnnotation(name, descriptor), remapAt)
-            } else {
-                logger.warn("Found annotation in target descriptor: $name $descriptor")
-                super.visitAnnotation(name, descriptor)
+    fun visitAt(visitor: AnnotationVisitor, remap: AtomicBoolean) =
+        object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+            val remapAt = AtomicBoolean(remap.get())
+            var targetName: String? = null
+            override fun visit(name: String, value: Any) {
+                super.visit(name, value)
+                if (name == AnnotationElement.REMAP) remapAt.set(value as Boolean)
+                if (name == AnnotationElement.TARGET) targetName = value as String
             }
-        }
 
-        val targetField = Regex("^(L[^;]+;)([^:]+):(.+)$")
-        val targetMethod = Regex("^(L[^;]+;)([^(]+)(.+)$")
-
-        override fun visitEnd() {
-            super.visitEnd()
-            if (remapAt.get() && targetName != null) {
-                val matchFd = targetField.matchEntire(targetName!!)
-                if (matchFd != null) {
-                    val targetOwner = matchFd.groupValues[1]
-                    val targetName = matchFd.groupValues[2]
-                    val targetDesc = matchFd.groupValues[3]
-                    val target = resolver.resolveField(
-                        targetOwner.substring(1, targetOwner.length - 1),
-                        targetName,
-                        targetDesc,
-                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                    )
-                    val targetClass = resolver.resolveClass(targetOwner.substring(1, targetOwner.length - 1))
-                    targetClass.ifPresent { clz ->
-                        target.ifPresent {
-                            val mappedOwner = mapper.mapName(clz)
-                            val mappedName = mapper.mapName(it)
-                            val mappedDesc = mapper.mapDesc(it)
-                            refmap.addProperty(targetName, "$mappedOwner$mappedName:$mappedDesc")
-                        }
-                    }
-                    if (!target.isPresent || !targetClass.isPresent) {
-                        logger.warn("Failed to resolve At target $targetName in mixin ${mixinName.replace('/', '.')}")
-                    }
-                    return
+            override fun visitAnnotation(name: String, descriptor: String): AnnotationVisitor {
+                return if (name == AnnotationElement.DESC) {
+                    visitDesc(super.visitAnnotation(name, descriptor), remapAt)
+                } else {
+                    logger.warn("Found annotation in target descriptor: $name $descriptor")
+                    super.visitAnnotation(name, descriptor)
                 }
-                val matchMd = targetMethod.matchEntire(targetName!!)
-                if (matchMd != null) {
-                    val targetOwner = matchMd.groupValues[1]
-                    val targetName = matchMd.groupValues[2]
-                    val targetDesc = matchMd.groupValues[3]
-                    val target = resolver.resolveMethod(
-                        targetOwner.substring(1, targetOwner.length - 1),
-                        targetName,
-                        targetDesc,
-                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                    )
-                    val targetClass = resolver.resolveClass(targetOwner.substring(1, targetOwner.length - 1))
-                    targetClass.ifPresent { clz ->
-                        target.ifPresent {
-                            val mappedOwner = mapper.mapName(clz)
-                            val mappedName = mapper.mapName(it)
-                            val mappedDesc = mapper.mapDesc(it)
-                            refmap.addProperty(targetName, "$mappedOwner$mappedName$mappedDesc")
+            }
+
+            val targetField = Regex("^(L[^;]+;|[^.]+?\\.)([^:]+):(.+)$")
+            val targetMethod = Regex("^(L[^;]+;|[^.]+?\\.)([^(]+)(.+)$")
+
+            override fun visitEnd() {
+                super.visitEnd()
+                if (remapAt.get() && targetName != null) {
+                    val matchFd = targetField.matchEntire(targetName!!)
+                    if (matchFd != null) {
+                        val targetOwner = matchFd.groupValues[1].let {
+                            if (it.startsWith("L") && it.endsWith(";")) it.substring(
+                                1,
+                                it.length - 1
+                            ) else it.substring(0, it.length - 1)
                         }
+                        val targetName = matchFd.groupValues[2]
+                        val targetDesc = matchFd.groupValues[3]
+                        val target = resolver.resolveField(
+                            targetOwner,
+                            targetName,
+                            targetDesc,
+                            ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                        )
+                        val targetClass = resolver.resolveClass(targetOwner)
+                        targetClass.ifPresent { clz ->
+                            target.ifPresent {
+                                val mappedOwner = mapper.mapName(clz)
+                                val mappedName = mapper.mapName(it)
+                                val mappedDesc = mapper.mapDesc(it)
+                                refmap.addProperty(this.targetName, "L$mappedOwner;$mappedName:$mappedDesc")
+                            }
+                        }
+                        if (!target.isPresent || !targetClass.isPresent) {
+                            logger.warn(
+                                "Failed to resolve At target $targetName in mixin ${
+                                    mixinName.replace(
+                                        '/',
+                                        '.'
+                                    )
+                                }"
+                            )
+                        }
+                        return
                     }
-                    if (!target.isPresent || !targetClass.isPresent) {
-                        logger.warn("Failed to resolve At target $targetName in mixin ${mixinName.replace('/', '.')}")
+                    val matchMd = targetMethod.matchEntire(targetName!!)
+                    if (matchMd != null) {
+                        val targetOwner = matchMd.groupValues[1].let {
+                            if (it.startsWith("L") && it.endsWith(";")) it.substring(
+                                1,
+                                it.length - 1
+                            ) else it.substring(0, it.length - 1)
+                        }
+                        val targetName = matchMd.groupValues[2]
+                        val targetDesc = matchMd.groupValues[3]
+                        val target = resolver.resolveMethod(
+                            targetOwner,
+                            targetName,
+                            targetDesc,
+                            ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                        )
+                        val targetClass = resolver.resolveClass(targetOwner)
+                        targetClass.ifPresent { clz ->
+                            target.ifPresent {
+                                val mappedOwner = mapper.mapName(clz)
+                                val mappedName = mapper.mapName(it)
+                                val mappedDesc = mapper.mapDesc(it)
+                                refmap.addProperty(this.targetName, "L$mappedOwner;$mappedName$mappedDesc")
+                            }
+                        }
+                        if (!target.isPresent || !targetClass.isPresent) {
+                            logger.warn(
+                                "Failed to resolve At target $targetName in mixin ${
+                                    mixinName.replace(
+                                        '/',
+                                        '.'
+                                    )
+                                }"
+                            )
+                        }
+                        return
                     }
-                    return
+
+                    logger.warn(
+                        "Failed to parse target descriptor: $targetName in mixin ${
+                            mixinName.replace(
+                                '/',
+                                '.'
+                            )
+                        }"
+                    )
                 }
-
-                logger.warn("Failed to parse target descriptor: $targetName in mixin ${mixinName.replace('/', '.')}")
             }
         }
-    }
 
-    fun visitDesc(visitor: AnnotationVisitor, remap: AtomicBoolean) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
-        val remapDesc = AtomicBoolean(remap.get())
-        override fun visit(name: String, value: Any) {
-            TODO()
-        }
+    fun visitDesc(visitor: AnnotationVisitor, remap: AtomicBoolean) =
+        object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+            val remapDesc = AtomicBoolean(remap.get())
+            override fun visit(name: String, value: Any) {
+                TODO()
+            }
 
-        override fun visitAnnotation(name: String?, descriptor: String?): AnnotationVisitor {
-            TODO()
-        }
-    }
-
-    fun visitSlice(visitor: AnnotationVisitor, remap: AtomicBoolean) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
-        override fun visitAnnotation(name: String?, descriptor: String?): AnnotationVisitor {
-            return if (name == AnnotationElement.FROM || name == AnnotationElement.TO) {
-                visitAt(super.visitAnnotation(name, descriptor), remap)
-            } else {
-                super.visitAnnotation(name, descriptor)
+            override fun visitAnnotation(name: String?, descriptor: String?): AnnotationVisitor {
+                TODO()
             }
         }
-    }
+
+    fun visitSlice(visitor: AnnotationVisitor, remap: AtomicBoolean) =
+        object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+            override fun visitAnnotation(name: String?, descriptor: String?): AnnotationVisitor {
+                return if (name == AnnotationElement.FROM || name == AnnotationElement.TO) {
+                    visitAt(super.visitAnnotation(name, descriptor), remap)
+                } else {
+                    super.visitAnnotation(name, descriptor)
+                }
+            }
+        }
 
     override fun visitEnd() {
         super.visitEnd()
@@ -580,7 +684,11 @@ class MixinClassVisitorRefmapBuilder(
     }
 }
 
-class ArrayVisitorWrapper(val api: Int, delegate: AnnotationVisitor, val delegateCreator: (AnnotationVisitor) -> AnnotationVisitor): AnnotationVisitor(api, delegate) {
+class ArrayVisitorWrapper(
+    val api: Int,
+    delegate: AnnotationVisitor,
+    val delegateCreator: (AnnotationVisitor) -> AnnotationVisitor
+) : AnnotationVisitor(api, delegate) {
     override fun visitAnnotation(name: String?, descriptor: String): AnnotationVisitor {
         return delegateCreator(super.visitAnnotation(name, descriptor))
     }

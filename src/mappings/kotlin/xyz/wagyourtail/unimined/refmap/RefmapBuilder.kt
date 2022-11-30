@@ -21,7 +21,7 @@ import kotlin.io.path.name
 import kotlin.io.path.writeText
 
 class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = LogLevel.WARN) :
-    MixinExtension(setOf(AnnotationTarget.HARD), translateLogLevel(loggerLevel)),
+        MixinExtension(setOf(AnnotationTarget.HARD), translateLogLevel(loggerLevel)),
         TinyRemapper.Extension,
         TinyRemapper.ApplyVisitorProvider,
         OutputConsumerPath.ResourceRemapper {
@@ -30,13 +30,13 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
         private val GSON = GsonBuilder().setPrettyPrinting().create()
 
         private fun translateLogLevel(loggerLevel: LogLevel) = when (loggerLevel) {
-                LogLevel.DEBUG -> Logger.Level.INFO
-                LogLevel.INFO -> Logger.Level.INFO
-                LogLevel.WARN -> Logger.Level.WARN
-                LogLevel.ERROR -> Logger.Level.ERROR
-                LogLevel.QUIET -> Logger.Level.ERROR
-                else -> Logger.Level.WARN
-            }
+            LogLevel.DEBUG -> Logger.Level.INFO
+            LogLevel.INFO -> Logger.Level.INFO
+            LogLevel.WARN -> Logger.Level.WARN
+            LogLevel.ERROR -> Logger.Level.ERROR
+            LogLevel.QUIET -> Logger.Level.ERROR
+            else -> Logger.Level.WARN
+        }
     }
 
     val defaultRefmap = JsonObject()
@@ -71,12 +71,19 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
 
     fun write(fs: FileSystem) {
         for ((path, refmap) in refmaps) {
-            fs.getPath(path).writeText(GSON.toJson(refmap), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            if (refmap.size() > 0)
+                fs.getPath(path)
+                    .writeText(
+                        GSON.toJson(refmap),
+                        StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING
+                    )
         }
     }
 
     override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
-        return relativePath.name.endsWith("mixins.json")
+        return relativePath.name.contains("mixins") && relativePath.name.endsWith(".json")
     }
 
     override fun transform(
@@ -85,22 +92,32 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
         input: InputStream,
         remapper: TinyRemapper
     ) {
-        val json = JsonParser.parseReader(input.reader()).asJsonObject
-        val refmap = json.get("refmap")?.asString ?: defaultRefmapPath
-        val pkg = json.get("package").asString
-        refmaps.computeIfAbsent(refmap) { JsonObject() }
-        for (mixin in json.getAsJsonArray("mixin") ?: listOf()) {
-            classesToRefmap.computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
+        try {
+            val json = JsonParser.parseReader(input.reader()).asJsonObject
+            val refmap = json.get("refmap")?.asString ?: defaultRefmapPath
+            val pkg = json.get("package").asString
+            refmaps.computeIfAbsent(refmap) { JsonObject() }
+            val mixins = (json.getAsJsonArray("mixins") ?: listOf()) +
+                    (json.getAsJsonArray("client") ?: listOf()) +
+                    (json.getAsJsonArray("server") ?: listOf())
+
+            for (mixin in mixins) {
+                classesToRefmap.computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
+            }
+
+            if (mixins.isNotEmpty()) {
+                json.addProperty("refmap", refmap)
+                val output = destinationDirectory.resolve(relativePath)
+                output.parent.createDirectories()
+                output.writeText(
+                    GSON.toJson(json),
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING
+                )
+            }
+        } catch (e: Exception) {
+            logger.error("Error while processing refmap ($relativePath): ${e.message}")
         }
-        for (mixin in json.getAsJsonArray("client") ?: listOf()) {
-            classesToRefmap.computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
-        }
-        for (mixin in json.getAsJsonArray("server") ?: listOf()) {
-            classesToRefmap.computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
-        }
-        json.addProperty("refmap", refmap)
-        val output = destinationDirectory.resolve(relativePath)
-        output.parent.createDirectories()
-        output.writeText(GSON.toJson(json), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
     }
 }
