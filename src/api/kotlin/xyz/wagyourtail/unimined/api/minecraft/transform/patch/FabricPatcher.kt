@@ -11,6 +11,9 @@ interface FabricPatcher : MinecraftPatcher {
     override val prodNamespace: String
         get() = "intermediary"
 
+    override val prodFallbackNamespace: String
+        get() = "intermediary"
+
     /**
      * location of access widener file to apply to the minecraft jar.
      */

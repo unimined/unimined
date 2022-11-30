@@ -14,13 +14,13 @@ import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.run.RunConfig
-import xyz.wagyourtail.unimined.util.getFile
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.mcpconfig.McpConfigData
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.util.getFile
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
@@ -207,11 +207,13 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         val clientExtra = patchedMinecraft.parent.createDirectories()
             .resolve("client-extra-${provider.minecraft.version}.jar")
 
-        this.clientExtra.dependencies.add(
-            project.dependencies.create(
-                project.files(clientExtra.toString())
+        if (this.clientExtra.dependencies.isEmpty()) {
+            this.clientExtra.dependencies.add(
+                project.dependencies.create(
+                    project.files(clientExtra.toString())
+                )
             )
-        )
+        }
 
         if (clientExtra.exists()) {
             if (project.gradle.startParameter.isRefreshDependencies) {

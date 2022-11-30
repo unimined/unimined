@@ -268,6 +268,11 @@ abstract class MappingsProviderImpl(
                 fallbackSrcId = fromId
             }
 
+            // we don't need to remap it if it's already in the target namespace
+            if (fallbackSrcId == toId) {
+                fallbackSrcId = fromId
+            }
+
             project.logger.debug("Mapping from $srcName to $targetName, fallbackSrc: $fallbackSrc, fallbackTarget: $fallbackTarget")
             project.logger.debug("ids: from $fromId to $toId fallbackTo $fallbackToId fallbackFrom $fallbackSrcId")
 
