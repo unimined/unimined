@@ -23,6 +23,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     abstract fun transform(minecraft: MinecraftJar): MinecraftJar
 
     private fun applyRunConfigs(tasks: TaskContainer) {
+        if (provider.runs.off) return
         project.logger.lifecycle("Applying run configs")
         project.logger.info("client: ${provider.client}, server: ${provider.server}")
         if (provider.minecraft.client) {

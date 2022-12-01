@@ -5,6 +5,8 @@ import groovy.lang.DelegatesTo
 
 class Runs {
 
+    var off: Boolean = false
+
     var client: RunConfig.() -> Unit = {}
 
     fun setClient(@DelegatesTo(
