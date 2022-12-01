@@ -48,17 +48,35 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
 
     var combinedSourceSets: List<SourceSet> by LazyMutable {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-        sourceSets.asMap.values - (clientSourceSets + serverSourceSets).toSet()
+        val sets = (sourceSets.asMap.values.toSet() - (clientSourceSets + serverSourceSets).toSet())
+        val main = sourceSets.getByName("main")
+        if (sets.contains(main)) {
+            listOf(main) + (sets - main)
+        } else {
+            sets.toList()
+        }
     }
 
     var clientSourceSets: List<SourceSet> by LazyMutable {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-        listOfNotNull(sourceSets.findByName("client"))
+        val sets = setOfNotNull(sourceSets.findByName("client"))
+        val main = sourceSets.getByName("main")
+        if (sets.contains(main)) {
+            listOf(main) + (sets - main)
+        } else {
+            sets.toList()
+        }
     }
 
     var serverSourceSets: List<SourceSet> by LazyMutable {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-        listOfNotNull(sourceSets.findByName("server"))
+        val sets = setOfNotNull(sourceSets.findByName("server"))
+        val main = sourceSets.getByName("main")
+        if (sets.contains(main)) {
+            listOf(main) + (sets - main)
+        } else {
+            sets.toList()
+        }
     }
 
     /**

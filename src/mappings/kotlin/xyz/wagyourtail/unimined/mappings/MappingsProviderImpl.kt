@@ -209,17 +209,17 @@ abstract class MappingsProviderImpl(
 
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
         if (envType == EnvType.COMBINED) {
-            sourceSets.findByName("main")?.let {
+            mcProvider.combinedSourceSets.forEach {
                 it.runtimeClasspath += getInternalMappingsConfig(envType)
             }
         }
         if (envType == EnvType.CLIENT) {
-            sourceSets.findByName("client")?.let {
+            mcProvider.clientSourceSets.forEach {
                 it.runtimeClasspath += getInternalMappingsConfig(envType)
             }
         }
         if (envType == EnvType.SERVER) {
-            sourceSets.findByName("server")?.let {
+            mcProvider.serverSourceSets.forEach {
                 it.runtimeClasspath += getInternalMappingsConfig(envType)
             }
         }

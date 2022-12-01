@@ -5,6 +5,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
+import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import java.nio.file.Path
 
@@ -32,11 +33,11 @@ abstract class AbstractMinecraftTransformer protected constructor(
         }
     }
 
-    protected open fun applyClientRunConfig(tasks: TaskContainer) {
+    protected open fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit = {}) {
         provider.provideVanillaRunClientTask(tasks) { }
     }
 
-    protected open fun applyServerRunConfig(tasks: TaskContainer) {
+    protected open fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit = {}) {
         provider.provideVanillaRunServerTask(tasks)
     }
 

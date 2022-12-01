@@ -139,12 +139,6 @@ abstract class MinecraftProviderImpl(
 
     private fun sourceSets(sourceSets: SourceSetContainer) {
 
-        for (sourceSet in combinedSourceSets) {
-            sourceSet.compileClasspath += combined + mcLibraries
-            sourceSet.runtimeClasspath += combined + mcLibraries
-            sourceSet.runtimeClasspath += project.files(sourceSet.output.resourcesDir)
-        }
-
         for (sourceSet in clientSourceSets) {
             sourceSet.compileClasspath += client + mcLibraries
             sourceSet.runtimeClasspath += client + mcLibraries
@@ -154,6 +148,12 @@ abstract class MinecraftProviderImpl(
         for (sourceSet in serverSourceSets) {
             sourceSet.compileClasspath += server + mcLibraries
             sourceSet.runtimeClasspath += server + mcLibraries
+            sourceSet.runtimeClasspath += project.files(sourceSet.output.resourcesDir)
+        }
+
+        for (sourceSet in combinedSourceSets) {
+            sourceSet.compileClasspath += combined + mcLibraries
+            sourceSet.runtimeClasspath += combined + mcLibraries
             sourceSet.runtimeClasspath += project.files(sourceSet.output.resourcesDir)
         }
 
@@ -382,8 +382,8 @@ abstract class MinecraftProviderImpl(
             project,
             "runClient",
             "Minecraft Client",
-            sourceSets.getByName("main"),
-            sourceSets.findByName("client") ?: sourceSets.getByName("main"),
+            combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
+            clientSourceSets.firstOrNull() ?: combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
             overrideMainClassClient.getOrElse(minecraft.metadata.mainClass)!!,
             minecraft.metadata.getGameArgs(
                 "Dev",
@@ -421,8 +421,8 @@ abstract class MinecraftProviderImpl(
             project,
             "runServer",
             "Minecraft Server",
-            sourceSets.getByName("main"),
-            sourceSets.findByName("server") ?: sourceSets.getByName("main"),
+            combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
+            serverSourceSets.firstOrNull() ?: combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
             overrideMainClassServer.getOrElse(minecraft.metadata.mainClass)!!, // TODO: get from meta-inf, this is wrong
             mutableListOf("nogui"),
             mutableListOf(),
