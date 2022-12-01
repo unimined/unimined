@@ -3,7 +3,7 @@ package xyz.wagyourtail.unimined.minecraft.patch
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 
-class NoTransformMinecraftTransformer(project: Project, provider: MinecraftProviderImpl) : xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer(
+class NoTransformMinecraftTransformer(project: Project, provider: MinecraftProviderImpl) : AbstractMinecraftTransformer(
     project,
     provider
 ) {
@@ -14,7 +14,7 @@ class NoTransformMinecraftTransformer(project: Project, provider: MinecraftProvi
     override var devNamespace: String = "named"
     override var devFallbackNamespace: String = "intermediary"
 
-    override fun transform(minecraft: xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar): xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar {
+    override fun transform(minecraft: MinecraftJar): MinecraftJar {
         return minecraft
     }
 

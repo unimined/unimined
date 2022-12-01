@@ -5,11 +5,12 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.util.SemVerUtils
-import xyz.wagyourtail.unimined.util.deleteRecursively
+import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.util.SemVerUtils
+import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -112,11 +113,13 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return provider.mcRemapper.provide(shadedForge, "searge", "official")
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
         provider.provideVanillaRunClientTask(tasks) {
+            if (parent.mainClass != null) it.mainClass = parent.mainClass!!
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
             it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
             it.args += "--tweakClass ${parent.tweakClass ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
+            action(it)
         }
     }
 

@@ -39,25 +39,27 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
      * please manipulate from within [jarMod], [fabric], or [forge].
      * @since 0.2.3
      */
-    protected abstract var mcPatcher: U
+    @get:ApiStatus.Internal
+    @set:ApiStatus.Internal
+    abstract var mcPatcher: U
 
     val runs = Runs()
-
-    abstract val overrideMainClassClient: Property<String?>
-    abstract val overrideMainClassServer: Property<String?>
-
 
     abstract val clientWorkingDirectory: Property<File>
     abstract val serverWorkingDirectory: Property<File>
 
     var combinedSourceSets: List<SourceSet> by LazyMutable {
-        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-        val sets = (sourceSets.asMap.values.toSet() - (clientSourceSets + serverSourceSets).toSet())
-        val main = sourceSets.getByName("main")
-        if (sets.contains(main)) {
-            listOf(main) + (sets - main)
+        if (disableCombined.get()) {
+            listOf()
         } else {
-            sets.toList()
+            val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+            val sets = (sourceSets.asMap.values.toSet() - (clientSourceSets + serverSourceSets).toSet())
+            val main = sourceSets.getByName("main")
+            if (sets.contains(main)) {
+                listOf(main) + (sets - main)
+            } else {
+                sets.toList()
+            }
         }
     }
 
@@ -98,9 +100,6 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
     abstract val mcLibraries: Configuration
 
     init {
-        overrideMainClassClient.convention(null as String?).finalizeValueOnRead()
-        overrideMainClassServer.convention(null as String?).finalizeValueOnRead()
-
         clientWorkingDirectory.convention(project.projectDir.resolve("run").resolve("client")).finalizeValueOnRead()
         serverWorkingDirectory.convention(project.projectDir.resolve("run").resolve("server")).finalizeValueOnRead()
 

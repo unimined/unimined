@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.fabric.FabricApiExtension
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricPatcher
+import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
@@ -57,8 +58,8 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProviderIm
 
     override fun afterEvaluate() {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-        val client = !provider.disableCombined.get() || sourceSets.findByName("client") != null
-        val server = !provider.disableCombined.get() || sourceSets.findByName("server") != null
+        val client = provider.clientSourceSets.isNotEmpty() || provider.combinedSourceSets.isNotEmpty()
+        val server = provider.serverSourceSets.isNotEmpty() || provider.combinedSourceSets.isNotEmpty()
 
         val dependencies = fabric.dependencies
 
@@ -200,23 +201,25 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProviderIm
     }
 
 
-    override fun applyClientRunConfig(tasks: TaskContainer) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
         provider.provideVanillaRunClientTask(tasks) { task ->
             clientMainClass?.let { task.mainClass = it }
             task.jvmArgs += listOf(
                 "-Dfabric.development=true",
                 "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.CLIENT)}\""
             )
+            action(task)
         }
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer) {
+    override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
         provider.provideVanillaRunServerTask(tasks) { task ->
             serverMainClass?.let { task.mainClass = it }
             task.jvmArgs += listOf(
                 "-Dfabric.development=true",
                 "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.SERVER)}\""
             )
+            action(task)
         }
     }
 

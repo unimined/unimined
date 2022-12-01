@@ -24,6 +24,20 @@ interface ForgePatcher : JarModPatcher {
     var mcpChannel: String?
 
     /**
+     * add mixin configs for launch
+     */
+    var mixinConfig: List<String>
+
+    /**
+     * add mixin configs for launch
+     */
+    var mixinConfigs: List<String>
+        get() = mixinConfig
+        set(value) {
+            mixinConfig = value
+        }
+
+    /**
      * set the access transformer file to apply to the minecraft jar.
      */
     fun setAccessTransformer(file: String) {

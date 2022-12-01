@@ -32,8 +32,8 @@ class UniminedPlugin : Plugin<Project> {
     private fun remapJarTask(project: Project, tasks: TaskContainer) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
         val jarTask = tasks.getByName("jar") as Jar
-        val client = sourceSets.findByName("client")
-        val server = sourceSets.findByName("server")
+        val client = ext.minecraftProvider.clientSourceSets.firstOrNull()
+        val server = ext.minecraftProvider.serverSourceSets.firstOrNull()
         val build = tasks.getByName("build")
         if (client != null || server != null) {
             jarTask.archiveClassifier.set("client-dev")

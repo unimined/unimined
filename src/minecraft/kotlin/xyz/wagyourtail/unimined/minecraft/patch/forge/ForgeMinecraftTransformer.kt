@@ -7,14 +7,15 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
+import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
+import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.api.tasks.MappingExportTypes
-import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
-import xyz.wagyourtail.unimined.util.getSha1
 import xyz.wagyourtail.unimined.mappings.MappingExportImpl
+import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg1.FG1MinecraftTransformer
@@ -22,6 +23,7 @@ import xyz.wagyourtail.unimined.minecraft.patch.forge.fg2.FG2MinecraftTransforme
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.resolve.parseAllLibraries
+import xyz.wagyourtail.unimined.util.getSha1
 import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
@@ -52,8 +54,22 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
 
     var includeSubprojectSourceSets = mutableSetOf<SourceSet>()
 
+    override var mixinConfig: List<String> = mutableListOf()
+
     @ApiStatus.Internal
     var tweakClass: String? = null
+
+    @ApiStatus.Internal
+    internal var mainClass: String? = null
+
+    init {
+        provider.parent.events.register(::applyToTask)
+    }
+
+
+    fun setMixinConfig(mixinConfig: String) {
+        this.mixinConfig = listOf(mixinConfig)
+    }
 
     override fun aw2at(input: String): File = aw2at(File(input))
 
@@ -158,9 +174,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
                 JsonParser.parseReader(InputStreamReader(it)).asJsonObject
             }?.let { versionJson ->
                 val libraries = parseAllLibraries(versionJson.getAsJsonArray("libraries"))
-                val mainClass = versionJson.get("mainClass").asString
+                mainClass = versionJson.get("mainClass").asString
                 val args = versionJson.get("minecraftArguments").asString
-                provider.overrideMainClassClient.set(mainClass)
                 provider.addMcLibraries(libraries.filter {
                     !it.name.startsWith("net.minecraftforge:minecraftforge:") && !it.name.startsWith(
                         "net.minecraftforge:forge:"
@@ -306,16 +321,34 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         }
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer) {
-
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+        forgeTransformer.applyClientRunConfig(tasks) {
+            action(it)
+            for (mixinConfig in mixinConfig) {
+                it.args += listOf("-mixin.config", mixinConfig)
+            }
+        }
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer) {
-
+    override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+        forgeTransformer.applyServerRunConfig(tasks) {
+            action(it)
+            for (mixinConfig in mixinConfig) {
+                it.args += listOf("-mixin.config", mixinConfig)
+            }
+        }
     }
 
     override fun afterRemapJarTask(output: Path) {
         //TODO: JarJar
+    }
+
+    private fun applyToTask(container: TaskContainer) {
+        for (jar in container.withType(Jar::class.java)) {
+            jar.manifest {
+                it.attributes["MixinConfigs"] = mixinConfig.joinToString(",")
+            }
+        }
     }
 
 }

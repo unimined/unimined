@@ -375,12 +375,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         )
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
         createLegacyClasspath()
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
             val mainClass = get("main").asString
 
-            provider.overrideMainClassClient.set(mainClass)
             parent.tweakClass = get("env")?.asJsonObject?.get("tweakClass")?.asString
             if (mainClass.startsWith("net.minecraftforge.legacydev")) {
                 provider.provideVanillaRunClientTask(tasks) {
@@ -388,6 +387,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
                     it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
                     it.args += "--tweakClass ${parent.tweakClass ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
+                    action(it)
                 }
             } else {
                 val args = get("args")?.asJsonArray?.map { it.asString } ?: listOf()
@@ -402,6 +402,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     run.jvmArgs += props.map { "-D${it.key}=${getArgValue(run, it.value)}" }
                     run.env += mapOf("FORGE_SPEC" to userdevCfg.get("spec").asNumber.toString())
                     run.env += env.map { it.key to getArgValue(run, it.value) }
+                    action(run)
                 }
             }
         }

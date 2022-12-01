@@ -33,11 +33,13 @@ abstract class AbstractMinecraftTransformer protected constructor(
         }
     }
 
-    protected open fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit = {}) {
+    @ApiStatus.Internal
+    open fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit = {}) {
         provider.provideVanillaRunClientTask(tasks, action)
     }
 
-    protected open fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit = {}) {
+    @ApiStatus.Internal
+    open fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit = {}) {
         provider.provideVanillaRunServerTask(tasks, action)
     }
 

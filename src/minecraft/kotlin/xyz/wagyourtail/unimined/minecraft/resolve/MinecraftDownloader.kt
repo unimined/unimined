@@ -9,9 +9,9 @@ import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.Constants.METADATA_URL
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftResolver
+import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.testSha1
-import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStreamReader
@@ -60,8 +60,8 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
         project.logger.info("Disable combined: ${parent.disableCombined.get()}")
 
-        client = !parent.disableCombined.get() || sourceSets.findByName("client") != null
-        server = !parent.disableCombined.get() || sourceSets.findByName("server") != null
+        client = parent.clientSourceSets.isNotEmpty() || parent.combinedSourceSets.isNotEmpty()
+        server = parent.serverSourceSets.isNotEmpty() || parent.combinedSourceSets.isNotEmpty()
 
         if (client) {
             if (parent.disableCombined.get()) {

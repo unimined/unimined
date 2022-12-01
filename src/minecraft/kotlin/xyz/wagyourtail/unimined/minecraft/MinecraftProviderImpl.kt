@@ -90,7 +90,12 @@ abstract class MinecraftProviderImpl(
 
     override val mcRemapper = MinecraftRemapperImpl(project, this)
 
-    override var mcPatcher: AbstractMinecraftTransformer by ChangeOnce(NoTransformMinecraftTransformer(project, this))
+    /**
+     * patcher for the minecraft jar.
+     * please use [jarMod], [forge], or [fabric] instead.
+     */
+    @get:ApiStatus.Internal
+    public override var mcPatcher: AbstractMinecraftTransformer by ChangeOnce(NoTransformMinecraftTransformer(project, this))
 
     init {
         project.repositories.maven {
@@ -384,7 +389,7 @@ abstract class MinecraftProviderImpl(
             "Minecraft Client",
             combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
             clientSourceSets.firstOrNull() ?: combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
-            overrideMainClassClient.getOrElse(minecraft.metadata.mainClass)!!,
+            minecraft.metadata.mainClass,
             minecraft.metadata.getGameArgs(
                 "Dev",
                 clientWorkingDirectory.get().toPath(),
@@ -423,7 +428,7 @@ abstract class MinecraftProviderImpl(
             "Minecraft Server",
             combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
             serverSourceSets.firstOrNull() ?: combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
-            overrideMainClassServer.getOrElse(minecraft.metadata.mainClass)!!, // TODO: get from meta-inf, this is wrong
+            minecraft.metadata.mainClass, // TODO: get from meta-inf, this is wrong
             mutableListOf("nogui"),
             mutableListOf(),
             project.projectDir.resolve("run").resolve("server"),
