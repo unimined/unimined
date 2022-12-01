@@ -30,7 +30,7 @@ data class RunConfig(
     val workingDir: File,
     val env: MutableMap<String, String>,
     val assetsDir: Path,
-    val runFirst: List<Task>? = null
+    val runFirst: MutableList<Task> = mutableListOf(),
 ) {
 
     fun createIdeaRunConfig() {
@@ -87,7 +87,7 @@ data class RunConfig(
                 XMLBuilder("option").addStringOption("name", "Make").addStringOption("enabled", "true")
             )
 
-        if (!runFirst.isNullOrEmpty()) {
+        if (runFirst.isNotEmpty()) {
             mv2.append(
                 XMLBuilder("option")
                     .addStringOption("name", "Gradle.BeforeRunTask")
@@ -130,7 +130,7 @@ data class RunConfig(
             it.args = args
             it.jvmArgs = jvmArgs
 
-            if (!runFirst.isNullOrEmpty()) {
+            if (runFirst.isNotEmpty()) {
                 for (task in runFirst) {
                     it.dependsOn(task)
                 }

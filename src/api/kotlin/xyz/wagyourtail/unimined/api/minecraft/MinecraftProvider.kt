@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.reamp.MinecraftRemapper
+import xyz.wagyourtail.unimined.api.run.Runs
 import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.File
 import java.nio.file.Path
@@ -35,9 +36,12 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
 
     /**
      * The class responsible for patching minecraft.
+     * please manipulate from within [jarMod], [fabric], or [forge].
      * @since 0.2.3
      */
-    abstract var mcPatcher: U
+    protected abstract var mcPatcher: U
+
+    val runs = Runs()
 
     abstract val overrideMainClassClient: Property<String?>
     abstract val overrideMainClassServer: Property<String?>

@@ -397,7 +397,7 @@ abstract class MinecraftProviderImpl(
             clientWorkingDirectory.get(),
             mutableMapOf(),
             assetsDir,
-            listOf(preRunClient)
+            mutableListOf(preRunClient)
         )
 
         overrides(runConfig)

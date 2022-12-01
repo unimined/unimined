@@ -10,6 +10,7 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
@@ -219,9 +220,10 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
         provider.provideVanillaRunClientTask(tasks) {
             it.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${it.workingDir.absolutePath}\"")
+            action(it)
         }
     }
 

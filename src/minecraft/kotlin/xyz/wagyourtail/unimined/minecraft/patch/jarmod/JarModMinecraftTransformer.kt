@@ -7,6 +7,7 @@ import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
+import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
@@ -122,19 +123,21 @@ open class JarModMinecraftTransformer(
         })
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
         provider.provideVanillaRunClientTask(tasks) {
             if (clientMainClass != null) {
                 it.mainClass = clientMainClass as String
             }
+            action(it)
         }
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer) {
+    override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
         provider.provideVanillaRunServerTask(tasks) {
             if (serverMainClass != null) {
                 it.mainClass = serverMainClass as String
             }
+            action(it)
         }
     }
 }

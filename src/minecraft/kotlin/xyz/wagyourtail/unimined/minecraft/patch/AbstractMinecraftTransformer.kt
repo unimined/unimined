@@ -26,19 +26,19 @@ abstract class AbstractMinecraftTransformer protected constructor(
         project.logger.lifecycle("Applying run configs")
         project.logger.info("client: ${provider.client}, server: ${provider.server}")
         if (provider.minecraft.client) {
-            applyClientRunConfig(tasks)
+            applyClientRunConfig(tasks, provider.runs.client)
         }
         if (provider.minecraft.server) {
-            applyServerRunConfig(tasks)
+            applyServerRunConfig(tasks, provider.runs.server)
         }
     }
 
     protected open fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit = {}) {
-        provider.provideVanillaRunClientTask(tasks) { }
+        provider.provideVanillaRunClientTask(tasks, action)
     }
 
     protected open fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit = {}) {
-        provider.provideVanillaRunServerTask(tasks)
+        provider.provideVanillaRunServerTask(tasks, action)
     }
 
     @ApiStatus.Internal
