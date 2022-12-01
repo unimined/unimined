@@ -11,7 +11,9 @@ class Runs {
         value = RunConfig::class,
         strategy = Closure.DELEGATE_FIRST
     ) action: Closure<*>) {
+        val prev = client
         client = {
+            prev()
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -24,7 +26,9 @@ class Runs {
         value = RunConfig::class,
         strategy = Closure.DELEGATE_FIRST
     ) action: Closure<*>) {
+        val prev = server
         server = {
+            prev()
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
