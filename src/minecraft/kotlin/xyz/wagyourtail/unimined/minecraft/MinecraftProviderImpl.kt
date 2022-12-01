@@ -157,6 +157,17 @@ abstract class MinecraftProviderImpl(
             sourceSet.runtimeClasspath += project.files(sourceSet.output.resourcesDir)
         }
 
+        assert(clientSourceSets.none { serverSourceSets.contains(it) } &&
+        combinedSourceSets.none { serverSourceSets.contains(it) } &&
+        combinedSourceSets.none { clientSourceSets.contains(it) }
+        ) {
+         """
+            |Can only provide one version of minecraft to each sourceSet.
+            |client: $clientSourceSets
+            |server: $serverSourceSets
+            |combined: $combinedSourceSets
+            """.trimMargin() }
+
     }
 
     private var extractDependencies: MutableMap<Dependency, Extract> = mutableMapOf()

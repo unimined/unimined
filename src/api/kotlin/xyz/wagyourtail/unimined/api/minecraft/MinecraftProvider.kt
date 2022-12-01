@@ -48,7 +48,7 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
 
     var combinedSourceSets: List<SourceSet> by LazyMutable {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-        listOf(sourceSets.getByName("main"))
+        sourceSets.asMap.values - (clientSourceSets + serverSourceSets).toSet()
     }
 
     var clientSourceSets: List<SourceSet> by LazyMutable {
