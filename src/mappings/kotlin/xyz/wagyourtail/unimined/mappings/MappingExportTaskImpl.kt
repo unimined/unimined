@@ -7,7 +7,6 @@ import net.fabricmc.mappingio.format.SrgWriter
 import net.fabricmc.mappingio.format.Tiny2Writer2
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.tasks.TaskAction
-import org.gradle.internal.impldep.org.eclipse.jgit.util.FileUtils.toPath
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
@@ -29,7 +28,12 @@ open class MappingExportTaskImpl : MappingExportTask() {
     fun run() {
         project.logger.lifecycle("Exporting mappings...")
         for (envType in EnvType.values()) {
-            if (envType == EnvType.COMBINED && minecraftProvider.disableCombined.get()) continue
+            if (envType == EnvType.COMBINED && minecraftProvider.disableCombined.get()) {
+                if (exports.containsKey(EnvType.COMBINED) && exports[EnvType.COMBINED]!!.isNotEmpty()) {
+                    project.logger.warn("Cannot export combined mappings when combined is disabled.")
+                }
+                continue
+            }
             val mappings = mappingsProvider.getMappingTree(envType)
             val exportSet = exports[envType] ?: continue
             for (export in exportSet) {
