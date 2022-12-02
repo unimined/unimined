@@ -116,7 +116,17 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             if (parent.mainClass != null) it.mainClass = parent.mainClass!!
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
             it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-            it.args += "--tweakClass ${parent.tweakClass ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
+            it.args += "--tweakClass ${parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
+            action(it)
+        }
+    }
+
+    override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+        provider.provideVanillaRunClientTask(tasks) {
+            if (parent.mainClass != null) it.mainClass = parent.mainClass!!
+            it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
+            it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
+            it.args += "--tweakClass ${parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLServerTweaker"}"
             action(it)
         }
     }

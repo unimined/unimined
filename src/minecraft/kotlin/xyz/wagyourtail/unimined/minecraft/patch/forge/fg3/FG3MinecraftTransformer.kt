@@ -394,14 +394,50 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
             val mainClass = get("main").asString
 
-            parent.tweakClass = get("env")?.asJsonObject?.get("tweakClass")?.asString
+            parent.tweakClassClient = get("env")?.asJsonObject?.get("tweakClass")?.asString
             if (mainClass.startsWith("net.minecraftforge.legacydev")) {
                 project.logger.info("[fg3] Using legacy client run config")
                 provider.provideVanillaRunClientTask(tasks) {
                     it.mainClass = "net.minecraft.launchwrapper.Launch"
                     it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
                     it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-                    it.args += "--tweakClass ${parent.tweakClass ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
+                    it.args += "--tweakClass ${parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
+                    project.logger.info("[fg3] Run config: $it")
+                    action(it)
+                }
+            } else {
+                project.logger.info("[fg3] Using new client run config")
+                val args = get("args")?.asJsonArray?.map { it.asString } ?: listOf()
+                val jvmArgs = get("jvmArgs")?.asJsonArray?.map { it.asString } ?: listOf()
+                val env = get("env")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString } ?: mapOf()
+                val props = get("props")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString } ?: mapOf()
+                provider.provideVanillaRunClientTask(tasks) { run ->
+                    run.mainClass = mainClass
+                    run.args.clear()
+                    run.args += args.map { getArgValue(run, it) }
+                    run.jvmArgs += jvmArgs.map { getArgValue(run, it) }
+                    run.jvmArgs += props.map { "-D${it.key}=${getArgValue(run, it.value)}" }
+                    run.env += mapOf("FORGE_SPEC" to userdevCfg.get("spec").asNumber.toString())
+                    run.env += env.map { it.key to getArgValue(run, it.value) }
+                    project.logger.info("[fg3] Run config: $run")
+                    action(run)
+                }
+            }
+        }
+    }
+
+    override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+        userdevCfg.get("runs").asJsonObject.get("server").asJsonObject.apply {
+            val mainClass = get("main").asString
+
+            parent.tweakClassClient = get("env")?.asJsonObject?.get("tweakClass")?.asString
+            if (mainClass.startsWith("net.minecraftforge.legacydev")) {
+                project.logger.info("[fg3] Using legacy client run config")
+                provider.provideVanillaRunClientTask(tasks) {
+                    it.mainClass = "net.minecraft.launchwrapper.Launch"
+                    it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
+                    it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
+                    it.args += "--tweakClass ${parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
                     project.logger.info("[fg3] Run config: $it")
                     action(it)
                 }

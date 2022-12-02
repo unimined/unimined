@@ -54,7 +54,10 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     override var mixinConfig: List<String> = mutableListOf()
 
     @ApiStatus.Internal
-    var tweakClass: String? = null
+    var tweakClassClient: String? = null
+
+    @ApiStatus.Internal
+    var tweakClassServer: String? = null
 
     @ApiStatus.Internal
     internal var mainClass: String? = null
@@ -173,7 +176,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
                         "net.minecraftforge:forge:"
                     )
                 })
-                tweakClass = args.split("--tweakClass")[1].trim()
+                tweakClassClient = args.split("--tweakClass")[1].trim()
             }
         }
 

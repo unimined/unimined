@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.minecraft
 
+import net.fabricmc.mappingio.format.ZipReader
 import net.minecraftforge.artifactural.api.artifact.Artifact
 import net.minecraftforge.artifactural.api.artifact.ArtifactIdentifier
 import net.minecraftforge.artifactural.api.artifact.ArtifactType
@@ -430,6 +431,16 @@ abstract class MinecraftProviderImpl(
     fun provideVanillaRunServerTask(tasks: TaskContainer, overrides: (RunConfig) -> Unit = { }) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
+        var mainClass: String? = null
+        ZipReader.openZipFileSystem(minecraft.getMinecraft(EnvType.SERVER)).use {
+            val properties = Properties()
+            val metainf = it.getPath("META-INF/MANIFEST.MF");
+            if (metainf.exists()) {
+                metainf.inputStream().use { properties.load(it) }
+                mainClass = properties.getProperty("Main-Class")
+            }
+        }
+
         @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
         val runConfig = RunConfig(
             project,
@@ -437,7 +448,7 @@ abstract class MinecraftProviderImpl(
             "Minecraft Server",
             combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
             serverSourceSets.firstOrNull() ?: combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
-            minecraft.metadata.mainClass, // TODO: get from meta-inf, this is wrong
+            mainClass ?: "unknown.main.class", // TODO: get from meta-inf, this is wrong
             mutableListOf("nogui"),
             mutableListOf(),
             project.projectDir.resolve("run").resolve("server"),
