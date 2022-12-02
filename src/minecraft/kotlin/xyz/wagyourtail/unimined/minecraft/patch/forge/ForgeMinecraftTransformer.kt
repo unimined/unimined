@@ -4,7 +4,6 @@ import com.google.gson.JsonParser
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
@@ -52,8 +51,6 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     override var devNamespace: String = "named"
     override var devFallbackNamespace: String = "searge"
 
-    var includeSubprojectSourceSets = mutableSetOf<SourceSet>()
-
     override var mixinConfig: List<String> = mutableListOf()
 
     @ApiStatus.Internal
@@ -64,11 +61,6 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
 
     init {
         provider.parent.events.register(::applyToTask)
-    }
-
-
-    fun setMixinConfig(mixinConfig: String) {
-        this.mixinConfig = listOf(mixinConfig)
     }
 
     override fun aw2at(input: String): File = aw2at(File(input))
@@ -186,7 +178,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         }
 
         forgeTransformer.afterEvaluate()
-
+        super.afterEvaluate()
     }
 
     private fun determineForgeProviderFromUniversal(universal: File): JarModMinecraftTransformer {
@@ -322,20 +314,24 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+        project.logger.info("[fg3] Applying client run config")
         forgeTransformer.applyClientRunConfig(tasks) {
-            action(it)
-            for (mixinConfig in mixinConfig) {
-                it.args += listOf("-mixin.config", mixinConfig)
+            project.logger.info("Adding mixin config $mixinConfig to run config")
+            for (config in mixinConfig) {
+                it.args += listOf("-mixin.config", config)
             }
+            action(it)
         }
     }
 
     override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+        project.logger.info("[fg3] Applying server run config")
         forgeTransformer.applyServerRunConfig(tasks) {
-            action(it)
-            for (mixinConfig in mixinConfig) {
-                it.args += listOf("-mixin.config", mixinConfig)
+            project.logger.info("Adding mixin config $mixinConfig to run config")
+            for (config in mixinConfig) {
+                it.args += listOf("-mixin.config", config)
             }
+            action(it)
         }
     }
 
@@ -349,6 +345,10 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
                 it.attributes["MixinConfigs"] = mixinConfig.joinToString(",")
             }
         }
+    }
+
+    override fun sourceSets(sourceSets: SourceSetContainer) {
+        forgeTransformer.sourceSets(sourceSets)
     }
 
 }

@@ -27,9 +27,11 @@ abstract class AbstractMinecraftTransformer protected constructor(
         project.logger.lifecycle("Applying run configs")
         project.logger.info("client: ${provider.client}, server: ${provider.server}")
         if (provider.minecraft.client) {
+            project.logger.info("client config")
             applyClientRunConfig(tasks, provider.runs.client)
         }
         if (provider.minecraft.server) {
+            project.logger.info("server config")
             applyServerRunConfig(tasks, provider.runs.server)
         }
     }

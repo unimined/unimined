@@ -63,8 +63,6 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             if (isEmpty())
                 add(project.dependencies.create(forgeSrc))
         }
-
-        super.afterEvaluate()
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {

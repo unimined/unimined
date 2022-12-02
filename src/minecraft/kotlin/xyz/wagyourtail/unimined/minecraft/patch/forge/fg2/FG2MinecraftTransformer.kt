@@ -69,8 +69,6 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 addAll(deps)
             }
         }
-
-        super.afterEvaluate()
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
