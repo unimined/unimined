@@ -7,6 +7,7 @@ import net.fabricmc.mappingio.format.SrgWriter
 import net.fabricmc.mappingio.format.Tiny2Writer2
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.impldep.org.eclipse.jgit.util.FileUtils.toPath
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
@@ -64,6 +65,7 @@ class MappingExportImpl(envType: EnvType) : MappingExport(envType) {
     override var exportFunc: (MappingTreeView) -> Unit = ::export
 
     private fun export(mappingTree: MappingTreeView) {
+        location!!.parentFile.mkdirs()
         location!!.toPath()
             .outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
             .use { os ->
