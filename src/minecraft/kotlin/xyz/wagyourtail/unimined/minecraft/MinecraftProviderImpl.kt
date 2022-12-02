@@ -112,12 +112,17 @@ abstract class MinecraftProviderImpl(
         parent.events.register(::sourceSets)
     }
 
+
+    private fun getMinecraftDepName(): String {
+        val projectPath = project.path.replace(":", "_")
+        return "minecraft${if (projectPath == "_") "" else projectPath}"
+    }
+
     private fun afterEvaluate() {
         val dep = minecraft.dependency
         combined.dependencies.clear()
-        val projectPath = project.path.replace(":", "_")
         val newDep = project.dependencies.create(
-            "net.minecraft:minecraft${if (projectPath == "_") "" else projectPath}:${dep.version}"
+            "net.minecraft:${getMinecraftDepName()}:${dep.version}"
         )
         combined.dependencies.add(newDep)
         minecraft.dependency = newDep
@@ -263,6 +268,10 @@ abstract class MinecraftProviderImpl(
     override fun getArtifact(info: ArtifactIdentifier): Artifact {
 
         if (info.group != Constants.MINECRAFT_GROUP || info.group == Constants.MINECRAFT_FORGE_GROUP) {
+            return Artifact.none()
+        }
+
+        if (info.name != "minecraft" && info.name != getMinecraftDepName()) {
             return Artifact.none()
         }
 
