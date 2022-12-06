@@ -271,6 +271,16 @@ object ZipReader {
                                 )
                             }
                         }
+
+                        MappingType.PARCHMENT -> {
+                            readInputStreamFor(entry, zip) {
+                                ParchmentReader.read(
+                                    InputStreamReader(it),
+                                    "named",
+                                    mappingTree
+                                )
+                            }
+                        }
                     }
                     break
                 }
@@ -332,6 +342,7 @@ object ZipReader {
 
     enum class MappingType(val pattern: Regex) {
         TINY(Regex("""(.+[/\\]|^)mappings.tiny$""")),
+        PARCHMENT(Regex("""(.+[/\\]|^)parchment.json$""")),
         SRG_CLIENT(Regex("""(.+[/\\]|^)client.srg$""")),
         SRG_SERVER(Regex("""(.+[/\\]|^)server.srg$""")),
         SRG_MERGED(Regex("""(.+[/\\]|^)joined.srg$""")),
@@ -343,6 +354,13 @@ object ZipReader {
         MCP_PARAMS(Regex("""(.+[/\\]|^)params.csv$""")),
         MCP_FIELDS(Regex("""(.+[/\\]|^)fields.csv$""")),
         MCP_PACKAGES(Regex("""(.+[/\\]|^)packages.csv$""")),
+        ;
+
+        companion object {
+            fun allBut(set: Set<MappingType>): Set<MappingType> {
+                return values().toSet() - set
+            }
+        }
     }
 
     enum class MCPConfigVersion(
@@ -352,32 +370,15 @@ object ZipReader {
     ) {
         TINY_JAR(
             setOf(MappingType.TINY),
-            setOf(
-                MappingType.SRG_CLIENT,
-                MappingType.SRG_SERVER,
-                MappingType.SRG_MERGED,
-                MappingType.TSRG,
-                MappingType.RGS_CLIENT,
-                MappingType.RGS_SERVER,
-                MappingType.MCP_METHODS,
-                MappingType.MCP_PARAMS,
-                MappingType.MCP_FIELDS,
-                MappingType.MCP_CLASSES
-            )
+            MappingType.allBut(setOf(MappingType.TINY))
+        ),
+        PARCHMENT_ZIP(
+            setOf(MappingType.PARCHMENT),
+            MappingType.allBut(setOf(MappingType.PARCHMENT))
         ),
         NEW_MCPCONFIG(
             setOf(MappingType.TSRG),
-            setOf(
-                MappingType.MCP_FIELDS,
-                MappingType.MCP_METHODS,
-                MappingType.MCP_PARAMS,
-                MappingType.MCP_CLASSES,
-                MappingType.RGS_SERVER,
-                MappingType.RGS_CLIENT,
-                MappingType.SRG_SERVER,
-                MappingType.SRG_CLIENT,
-                MappingType.SRG_MERGED
-            )
+            MappingType.allBut(setOf(MappingType.TSRG))
         ),
         MCPCONFIG(
             setOf(MappingType.SRG_MERGED),

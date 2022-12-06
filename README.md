@@ -16,7 +16,7 @@ unified minecraft modding environment.
 * ~~test user AT support~~
 * ~~fix fg3 versions of 1.12.2~~
 * ~~fabric aw support~~
-* combined jar support : forge 1.13+ does this, do with the rest
+* combined jar support : forge 1.13+ does this, do with the rest - also fix split jars on fg3
 * ~~figure out how to get forge to recognise resources as part of the dev mod~~
 * split fg2+ out of the mc jar
 * figure out how to do automated testing
@@ -42,8 +42,8 @@ unified minecraft modding environment.
   be part of the legacy mc version.json, or at least betacraft's, but it's not
 * ~~make myself a maven to host this on~~: https://maven.wagyourtail.xyz
 * ~~fix forge mappings on 1.17+~~
-* mixin support
-
+* ~~mixin support~~
+* ~~add parchment mappings support~~
 
 ## Example Usage
 
