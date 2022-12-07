@@ -399,6 +399,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 project.logger.info("[fg3] Using legacy client run config")
                 provider.provideVanillaRunClientTask(tasks) {
                     it.mainClass = "net.minecraft.launchwrapper.Launch"
+                    it.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
                     it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
                     it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
                     it.args += "--tweakClass ${parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
@@ -436,6 +437,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 provider.provideVanillaRunServerTask(tasks) {
                     it.mainClass = "net.minecraft.launchwrapper.Launch"
                     it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
+                    it.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
                     it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
                     it.args += "--tweakClass ${parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
                     project.logger.info("[fg3] Run config: $it")
@@ -487,10 +489,6 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             try {
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
                     out.getPath("binpatches.pack.lzma").deleteIfExists()
-
-                    //TODO: FIXME, hack. remove forge trying to transform class names for fg2 dev launch
-                    out.getPath("net/minecraftforge/fml/common/asm/transformers/DeobfuscationTransformer.class")
-                        .deleteIfExists()
                 }
             } catch (e: Throwable) {
                 target.path.deleteIfExists()

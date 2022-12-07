@@ -115,6 +115,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         provider.provideVanillaRunClientTask(tasks) {
             if (parent.mainClass != null) it.mainClass = parent.mainClass!!
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
+            it.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
             it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
             it.args += "--tweakClass ${parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
             action(it)
@@ -125,6 +126,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         provider.provideVanillaRunClientTask(tasks) {
             if (parent.mainClass != null) it.mainClass = parent.mainClass!!
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
+            it.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
             it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
             it.args += "--tweakClass ${parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLServerTweaker"}"
             action(it)
@@ -177,10 +179,6 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     }
 
                     out.getPath("binpatches.pack.lzma").deleteIfExists()
-
-                    //TODO: FIXME, hack. remove forge trying to transform class names for fg2 dev launch
-                    out.getPath("net/minecraftforge/fml/common/asm/transformers/DeobfuscationTransformer.class")
-                        .deleteIfExists()
                 }
             } catch (e: Throwable) {
                 target.path.deleteIfExists()
