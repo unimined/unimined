@@ -433,7 +433,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             parent.tweakClassClient = get("env")?.asJsonObject?.get("tweakClass")?.asString
             if (mainClass.startsWith("net.minecraftforge.legacydev")) {
                 project.logger.info("[fg3] Using legacy client run config")
-                provider.provideVanillaRunClientTask(tasks) {
+                provider.provideVanillaRunServerTask(tasks) {
                     it.mainClass = "net.minecraft.launchwrapper.Launch"
                     it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
                     it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
@@ -447,7 +447,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 val jvmArgs = get("jvmArgs")?.asJsonArray?.map { it.asString } ?: listOf()
                 val env = get("env")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString } ?: mapOf()
                 val props = get("props")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString } ?: mapOf()
-                provider.provideVanillaRunClientTask(tasks) { run ->
+                provider.provideVanillaRunServerTask(tasks) { run ->
                     run.mainClass = mainClass
                     run.args.clear()
                     run.args += args.map { getArgValue(run, it) }
