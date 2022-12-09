@@ -4,6 +4,7 @@ import net.fabricmc.accesswidener.*
 import net.fabricmc.mappingio.format.ZipReader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
+import org.gradle.api.logging.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
@@ -51,7 +52,8 @@ object AccessWidenerMinecraftTransformer {
         namespace: String,
         baseMinecraft: Path,
         output: Path,
-        throwIfNSWrong: Boolean
+        throwIfNSWrong: Boolean,
+        logger: Logger
     ): Boolean {
         val aw = AccessWidener()
         AccessWidenerReader(aw).read(BufferedReader(accessWidener.reader()))
@@ -60,20 +62,25 @@ object AccessWidenerMinecraftTransformer {
             ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
                 for (target in aw.targets) {
                     try {
-                        val targetClass = target.replace(".", "/") + ".class"
+                        val targetClass = "/" + target.replace(".", "/") + ".class"
                         val targetPath = fs.getPath(targetClass)
-                        val reader = ClassReader(targetPath.inputStream())
-                        val writer = ClassWriter(0)
-                        val visitor = AccessWidenerClassVisitor.createClassVisitor(Opcodes.ASM9, writer, aw)
-                        reader.accept(visitor, 0)
-                        Files.write(
-                            targetPath,
-                            writer.toByteArray(),
-                            StandardOpenOption.CREATE,
-                            StandardOpenOption.TRUNCATE_EXISTING
-                        )
-                    } catch (e: FileNotFoundException) {
-                        println("AccessWidener: Class $target not found")
+                        logger.debug("Transforming $targetPath with access widener $accessWidener for namespace $namespace in $output")
+                        if (Files.exists(targetPath)) {
+                            val reader = ClassReader(targetPath.inputStream())
+                            val writer = ClassWriter(0)
+                            val visitor = AccessWidenerClassVisitor.createClassVisitor(Opcodes.ASM9, writer, aw)
+                            reader.accept(visitor, 0)
+                            Files.write(
+                                targetPath,
+                                writer.toByteArray(),
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.TRUNCATE_EXISTING
+                            )
+                        } else {
+                            logger.warn("Could not find class $targetClass in $output")
+                        }
+                    } catch (e: Exception) {
+                        logger.warn("An error occurred while transforming $target with access widener $accessWidener for namespace $namespace in $output", e)
                     }
                 }
             }

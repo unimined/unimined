@@ -178,7 +178,8 @@ class FabricMinecraftTransformer(project: Project, provider: MinecraftProviderIm
                         baseMinecraft.mappingNamespace,
                         baseMinecraft.path,
                         output.path,
-                        false
+                        false,
+                        project.logger
                     )
                 ) {
                     output
