@@ -113,7 +113,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             project.logger.lifecycle("injecting forge userdev into minecraft jar")
             this.addTransform { outputJar ->
                 ZipReader.openZipFileSystem(forgeUd.toPath()).use { inputJar ->
-                    val inject = inputJar.getPath("inject")
+                    val inject = inputJar.getPath("/" + userdevCfg.get("inject").asString)
                     if (Files.exists(inject)) {
                         project.logger.info("injecting forge userdev into minecraft jar")
                         Files.walk(inject).forEach { path ->
