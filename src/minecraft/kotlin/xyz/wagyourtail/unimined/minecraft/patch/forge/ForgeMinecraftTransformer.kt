@@ -45,6 +45,12 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     override val prodNamespace: String
         get() = forgeTransformer.prodNamespace
 
+    override var deleteMetaInf: Boolean
+        get() = forgeTransformer.deleteMetaInf
+        set(value) {
+            forgeTransformer.deleteMetaInf = value
+        }
+
     override val prodFallbackNamespace: String
         get() = forgeTransformer.prodFallbackNamespace
 
