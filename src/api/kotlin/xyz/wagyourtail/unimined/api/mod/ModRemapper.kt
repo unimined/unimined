@@ -39,13 +39,13 @@ abstract class ModRemapper(val provider: ModProvider) {
     /**
      * pass a closure to configure the remapper seperately from the one in MinecraftRemapper.
      * it defaults to whatever MinecraftRemapper has set for it.
-     * @since 0.2.3
+     * @since 0.3.3
      */
     abstract var tinyRemapperConf: (TinyRemapper.Builder) -> Unit
 
     /**
      * pass a closure to configure the remapper.
-     * @since 0.2.3
+     * @since 0.3.3
      */
     fun setTinyRemapperConf(@DelegatesTo(
         value = ForgePatcher::class,
