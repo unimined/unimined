@@ -123,7 +123,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
-        provider.provideVanillaRunClientTask(tasks) {
+        provider.provideVanillaRunServerTask(tasks) {
             if (parent.mainClass != null) it.mainClass = parent.mainClass!!
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
             it.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
