@@ -34,7 +34,7 @@ class ModRemapperImpl(
     val mcProvider by lazy { provider.parent.minecraftProvider }
     val mappings by lazy { provider.parent.mappingsProvider }
 
-    var tinyRemapperConf by LazyMutable { provider.parent.minecraftProvider.mcRemapper.tinyRemapperConf }
+    override var tinyRemapperConf by LazyMutable { provider.parent.minecraftProvider.mcRemapper.tinyRemapperConf }
 
     private val combinedConfig = Configs(project, EnvType.COMBINED, this)
     private val clientConfig = Configs(project, EnvType.CLIENT, this)
