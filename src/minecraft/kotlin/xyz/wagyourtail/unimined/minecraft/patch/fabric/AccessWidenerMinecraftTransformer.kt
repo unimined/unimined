@@ -60,11 +60,12 @@ object AccessWidenerMinecraftTransformer {
         if (aw.namespace == namespace) {
             Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
             ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
+                logger.debug("Transforming $output with access widener $accessWidener and namespace $namespace")
                 for (target in aw.targets) {
                     try {
                         val targetClass = "/" + target.replace(".", "/") + ".class"
                         val targetPath = fs.getPath(targetClass)
-                        logger.debug("Transforming $targetPath with access widener $accessWidener for namespace $namespace in $output")
+                        logger.debug("Transforming $targetPath")
                         if (Files.exists(targetPath)) {
                             val reader = ClassReader(targetPath.inputStream())
                             val writer = ClassWriter(0)
