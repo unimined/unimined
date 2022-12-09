@@ -17,6 +17,7 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.mod.ModRemapper
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -33,7 +34,7 @@ class ModRemapperImpl(
     val mcProvider by lazy { provider.parent.minecraftProvider }
     val mappings by lazy { provider.parent.mappingsProvider }
 
-    var tinyRemapperConf: (TinyRemapper.Builder) -> Unit = {}
+    var tinyRemapperConf by LazyMutable { provider.parent.minecraftProvider.mcRemapper.tinyRemapperConf }
 
     private val combinedConfig = Configs(project, EnvType.COMBINED, this)
     private val clientConfig = Configs(project, EnvType.CLIENT, this)
