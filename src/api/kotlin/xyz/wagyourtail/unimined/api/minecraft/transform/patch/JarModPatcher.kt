@@ -9,4 +9,5 @@ interface JarModPatcher : MinecraftPatcher {
     override val prodNamespace: String
         get() = "official"
 
+    var deleteMetaInf: Boolean
 }

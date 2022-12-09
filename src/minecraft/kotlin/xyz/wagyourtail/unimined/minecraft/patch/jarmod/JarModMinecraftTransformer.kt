@@ -30,6 +30,7 @@ open class JarModMinecraftTransformer(
 
     override var devNamespace: String = "named"
     override var devFallbackNamespace: String = "intermediary"
+    override var deleteMetaInf: Boolean = false
 
     init {
         for (envType in EnvType.values()) {
@@ -89,7 +90,7 @@ open class JarModMinecraftTransformer(
             val mc = URI.create("jar:${target.path.toUri()}")
             try {
                 FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
-                    if (out.getPath("META-INF").exists()) {
+                    if (out.getPath("META-INF").exists() && deleteMetaInf) {
                         out.getPath("META-INF").deleteRecursively()
                     }
                     for (file in jarmod) {
