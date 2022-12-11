@@ -21,14 +21,16 @@ import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricPatcher
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
 import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.NoTransformMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.FabricLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.FabricMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.QuiltMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.remap.MinecraftRemapperImpl
@@ -133,9 +135,14 @@ abstract class MinecraftProviderImpl(
         mcPatcher.afterEvaluate()
     }
 
-    override fun fabric(action: (FabricPatcher) -> Unit) {
+    override fun fabric(action: (FabricLikePatcher) -> Unit) {
         mcPatcher = FabricMinecraftTransformer(project, this)
-        action(mcPatcher as FabricMinecraftTransformer)
+        action(mcPatcher as FabricLikeMinecraftTransformer)
+    }
+
+    override fun quilt (action: (FabricLikePatcher) -> Unit) {
+        mcPatcher = QuiltMinecraftTransformer(project, this)
+        action(mcPatcher as FabricLikeMinecraftTransformer)
     }
 
     override fun jarMod(action: (JarModPatcher) -> Unit) {

@@ -6,7 +6,7 @@ import java.io.File
  * The class responsible for patching minecraft for fabric.
  * @since 0.2.3
  */
-interface FabricPatcher : MinecraftPatcher {
+interface FabricLikePatcher : MinecraftPatcher {
 
     override val prodNamespace: String
         get() = "intermediary"

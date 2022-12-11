@@ -8,7 +8,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricPatcher
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
@@ -113,7 +113,7 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
      * @param action the action to configure the patcher.
      * @since 0.1.0
      */
-    abstract fun fabric(action: (FabricPatcher) -> Unit)
+    abstract fun fabric(action: (FabricLikePatcher) -> Unit)
 
     /**
      * enables the fabric patcher.
@@ -122,7 +122,7 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
      */
     fun fabric(
         @DelegatesTo(
-            value = FabricPatcher::class,
+            value = FabricLikePatcher::class,
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {
@@ -139,6 +139,40 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
      */
     fun fabric() {
         fabric {}
+    }
+
+    /**
+     * enables the quilt patcher.
+     * @param action the action to configure the patcher.
+     * @since 0.3.4
+     */
+    abstract fun quilt(action: (FabricLikePatcher) -> Unit)
+
+    /**
+     * enables the quilt patcher.
+     * @param action the action to perform on the patcher.
+     * @since 0.3.4
+     */
+    fun quilt(
+        @DelegatesTo(
+            value = FabricLikePatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        quilt {
+            action.delegate = it
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the quilt patcher.
+     * @since 0.3.4
+     * @since 0.3.4
+     */
+    fun quilt() {
+        quilt {}
     }
 
     /**

@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined.api.minecraft.transform.patch
 
 /**
  * The class responsible for patching minecraft.
- * @see [FabricPatcher], [JarModPatcher], [ForgePatcher]
+ * @see [FabricLikePatcher], [JarModPatcher], [ForgePatcher]
  * @since 0.2.3
  */
 interface MinecraftPatcher {
