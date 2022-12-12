@@ -125,7 +125,7 @@ class MixinClassVisitorRefmapBuilder(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapAccessor.get()) {
-                        for (targetClass in classValues + classTargets) {
+                        for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
                             val targetName = if (targetName != null) {
                                 targetName!!.split(":")[0]
                             } else {
@@ -193,7 +193,7 @@ class MixinClassVisitorRefmapBuilder(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapInvoker.get()) {
-                        for (targetClass in classValues + classTargets) {
+                        for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
                             val targetName = if (targetName != null) {
                                 targetName
                             } else {
@@ -349,7 +349,7 @@ class MixinClassVisitorRefmapBuilder(
                                 (targetMethod to stripCallbackInfoFromDesc() + setOf(null))
                             }
                             for (targetDesc in targetDescs) {
-                                for (targetClass in classValues + classTargets) {
+                                for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
                                     val target = resolver.resolveMethod(
                                         targetClass,
                                         targetName,
@@ -430,7 +430,7 @@ class MixinClassVisitorRefmapBuilder(
                     super.visitEnd()
                     if (remapModifyArg.get()) {
                         targetNames.forEach { targetName ->
-                            for (targetClass in classValues + classTargets) {
+                            for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
                                 val targetDesc = if (targetName.contains("(")) {
                                     "(" + targetName.split("(")[1]
                                 } else {
@@ -499,7 +499,7 @@ class MixinClassVisitorRefmapBuilder(
                         super.visitEnd()
                         if (remapModifyConstant.get()) {
                             targetNames.forEach { targetName ->
-                                for (targetClass in classValues + classTargets) {
+                                for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
                                     val targetDesc = if (targetName.contains("(")) {
                                         "(" + targetName.split("(")[1]
                                     } else {
