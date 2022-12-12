@@ -272,6 +272,18 @@ abstract class MinecraftProviderImpl(
         }
     }
 
+    fun getMinecraftConfig(env: EnvType): Configuration = when (env) {
+        EnvType.CLIENT -> {
+            client
+        }
+        EnvType.SERVER -> {
+            server
+        }
+        EnvType.COMBINED -> {
+            combined
+        }
+    }
+
     @ApiStatus.Internal
     override fun getArtifact(info: ArtifactIdentifier): Artifact {
 

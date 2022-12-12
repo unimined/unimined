@@ -7,6 +7,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.remap.RemapJarTaskImpl
+import xyz.wagyourtail.unimined.sources.GenSourcesTaskImpl
 
 @Suppress("UNUSED")
 class UniminedPlugin : Plugin<Project> {
@@ -27,6 +28,7 @@ class UniminedPlugin : Plugin<Project> {
         ext = project.extensions.create("unimined", UniminedExtensionImpl::class.java, project)
         remapJarTask(project, project.tasks)
         genIntellijRunsTask(project, project.tasks)
+        genSourcesTask(project, project.tasks)
     }
 
     private fun remapJarTask(project: Project, tasks: TaskContainer) {
@@ -78,5 +80,11 @@ class UniminedPlugin : Plugin<Project> {
             }
         }
         tasks.findByName("idea")?.dependsOn(genIntellijRuns)
+    }
+
+    private fun genSourcesTask(project: Project, tasks: TaskContainer) {
+        val genSources = tasks.register("genSources", GenSourcesTaskImpl::class.java) {
+            it.group = "unimined"
+        }
     }
 }

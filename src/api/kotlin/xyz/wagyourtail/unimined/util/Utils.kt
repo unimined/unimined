@@ -4,8 +4,10 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.slf4j.LoggerFactory
 import xyz.wagyourtail.unimined.api.UniminedExtension
+import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
+import java.io.OutputStream
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
@@ -113,13 +115,59 @@ fun runJarInSubprocess(
         *jvmArgs.toTypedArray(),
         *processArgs,
     )
+
+    val logger = LoggerFactory.getLogger(UniminedExtension::class.java);
+
     processBuilder.directory(workingDir.toFile())
     processBuilder.environment().putAll(env)
-    processBuilder.redirectOutput()
-    processBuilder.redirectError()
-    LoggerFactory.getLogger(UniminedExtension::class.java)
-        .info("Running: ${processBuilder.command().joinToString(" ")}")
+
+    logger.info("Running: ${processBuilder.command().joinToString(" ")}")
     val process = processBuilder.start()
+
+    val inputStream = process.inputStream
+    val errorStream = process.errorStream
+
+    val outputThread = Thread {
+        inputStream.copyTo(object : OutputStream() {
+            // buffer and write lines
+            private var line: String? = null
+
+            override fun write(b: Int) {
+                if (b == '\r'.toInt()) {
+                    return
+                }
+                if (b == '\n'.toInt()) {
+                    logger.info(line)
+                    line = null
+                } else {
+                    line = (line ?: "") + b.toChar()
+                }
+            }
+        })
+    }
+
+    val errorThread = Thread {
+        errorStream.copyTo(object : OutputStream() {
+            // buffer and write lines
+            private var line: String? = null
+
+            override fun write(b: Int) {
+                if (b == '\r'.toInt()) {
+                    return
+                }
+                if (b == '\n'.toInt()) {
+                    logger.error(line)
+                    line = null
+                } else {
+                    line = (line ?: "") + b.toChar()
+                }
+            }
+        })
+    }
+
+    outputThread.start()
+    errorThread.start()
+
     if (wait) {
         process.waitFor()
         return process.exitValue()

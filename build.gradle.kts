@@ -45,9 +45,13 @@ sourceSets {
         compileClasspath += main.get().compileClasspath + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
         runtimeClasspath += main.get().runtimeClasspath + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
     }
+    create("sources") {
+        compileClasspath += main.get().compileClasspath + sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["api"].output
+        runtimeClasspath += main.get().runtimeClasspath + sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["api"].output
+    }
     main {
-        compileClasspath += sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
-        runtimeClasspath += sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
+        compileClasspath += sourceSets["sources"].output + sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
+        runtimeClasspath += sourceSets["sources"].output + sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
     }
 }
 
@@ -86,11 +90,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false
     }
-
 }
 
 tasks.jar {
-    from(sourceSets["api"].output, sourceSets["mappings"].output, sourceSets["minecraft"].output, sourceSets["mod"].output, sourceSets["main"].output)
+    from(sourceSets["api"].output, sourceSets["mappings"].output, sourceSets["minecraft"].output, sourceSets["mod"].output, sourceSets["main"].output, sourceSets["sources"].output)
 
     manifest {
         attributes.putAll(
