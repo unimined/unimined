@@ -105,17 +105,15 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
                 classesToRefmap.computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
             }
 
-            if (mixins.isNotEmpty()) {
-                json.addProperty("refmap", refmap)
-                val output = destinationDirectory.resolve(relativePath)
-                output.parent.createDirectories()
-                output.writeText(
-                    GSON.toJson(json),
-                    StandardCharsets.UTF_8,
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.TRUNCATE_EXISTING
-                )
-            }
+            json.addProperty("refmap", refmap)
+            val output = destinationDirectory.resolve(relativePath)
+            output.parent.createDirectories()
+            output.writeText(
+                GSON.toJson(json),
+                StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING
+            )
         } catch (e: Exception) {
             logger.error("Error while processing refmap ($relativePath): ${e.message}")
         }
