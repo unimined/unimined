@@ -6,6 +6,7 @@ import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.CommonData
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
+import org.gradle.internal.impldep.org.bouncycastle.asn1.x509.Target.targetName
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
@@ -435,18 +436,18 @@ class MixinClassVisitorRefmapBuilder(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapModifyArg.get()) {
-                        targetNames.forEach { targetName ->
+                        targetNames.forEach { targetMethod ->
                             for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
-                                val targetDesc = if (targetName.contains("(")) {
-                                    "(" + targetName.split("(")[1]
+                                val targetDesc = if (targetMethod.contains("(")) {
+                                    "(" + targetMethod.split("(")[1]
                                 } else {
                                     null
                                 }
-                                val wildcard = targetName.endsWith("*")
+                                val wildcard = targetMethod.endsWith("*")
                                 val targetName = if (wildcard) {
-                                    targetName.substring(0, targetName.length - 1)
+                                    targetMethod.substring(0, targetMethod.length - 1)
                                 } else {
-                                    targetName.split("(")[0]
+                                    targetMethod.split("(")[0]
                                 }
 
                                 val target = resolver.resolveMethod(
@@ -459,7 +460,7 @@ class MixinClassVisitorRefmapBuilder(
                                     val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
                                     val mappedName = mapper.mapName(it)
                                     val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
-                                    refmap.addProperty(targetName, "L$mappedClass;$mappedName$mappedDesc")
+                                    refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
                                 }
                                 if (target.isPresent) {
                                     return@forEach
@@ -510,19 +511,19 @@ class MixinClassVisitorRefmapBuilder(
                     override fun visitEnd() {
                         super.visitEnd()
                         if (remapModifyConstant.get()) {
-                            targetNames.forEach { targetName ->
+                            targetNames.forEach { targetMethod ->
                                 for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
-                                    val targetDesc = if (targetName.contains("(")) {
-                                        "(" + targetName.split("(")[1]
+                                    val targetDesc = if (targetMethod.contains("(")) {
+                                        "(" + targetMethod.split("(")[1]
                                     } else {
                                         null
                                     }
 
-                                    val wildcard = targetName.endsWith("*")
+                                    val wildcard = targetMethod.endsWith("*")
                                     val targetName = if (wildcard) {
-                                        targetName.substring(0, targetName.length - 1)
+                                        targetMethod.substring(0, targetMethod.length - 1)
                                     } else {
-                                        targetName.split("(")[0]
+                                        targetMethod.split("(")[0]
                                     }
 
                                     val target = resolver.resolveMethod(
@@ -537,7 +538,7 @@ class MixinClassVisitorRefmapBuilder(
                                         val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
                                         val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
-                                        refmap.addProperty(targetName, "L$mappedClass;$mappedName$mappedDesc")
+                                        refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
                                     }
                                     if (target.isPresent) {
                                         return@forEach
