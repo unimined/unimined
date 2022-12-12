@@ -47,6 +47,13 @@ abstract class RemapJarTask : Jar() {
     abstract val targetNamespace: Property<String?>
 
     /**
+     * remap through official, use on forge in multi project builds for best results.
+     */
+    @get:Input
+    @get:Optional
+    abstract val remapThroughOfficial: Property<Boolean>
+
+    /**
      * whether to remap AccessTransformers to the legacy format (<=1.7.10)
      */
     @get:Input
@@ -74,6 +81,7 @@ abstract class RemapJarTask : Jar() {
         fallbackTargetNamespace.convention(null as String?)
         targetNamespace.convention(null as String?)
         remapATToLegacy.convention(false)
+        remapThroughOfficial.convention(false)
         envType.convention(EnvType.COMBINED)
     }
 }

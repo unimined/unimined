@@ -4,7 +4,6 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.slf4j.LoggerFactory
 import xyz.wagyourtail.unimined.api.UniminedExtension
-import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
@@ -190,3 +189,11 @@ fun Path.deleteRecursively() {
 }
 
 fun ByteArray.toHex() = joinToString(separator = "") { byte -> "%02x".format(byte) }
+
+fun <T> Optional<T>.orElse(invoke: () -> Optional<T>): Optional<T> {
+    return if (isPresent) {
+        this
+    } else {
+        invoke()
+    }
+}

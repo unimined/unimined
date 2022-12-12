@@ -11,6 +11,8 @@ import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
+import xyz.wagyourtail.unimined.util.orElse
+import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MixinClassVisitorRefmapBuilder(
@@ -18,6 +20,7 @@ class MixinClassVisitorRefmapBuilder(
     val mixinName: String,
     val refmap: JsonObject,
     delegate: ClassVisitor,
+    val existingMappings: Map<String, String>,
     private val onEnd: () -> Unit = {}
 ) : ClassVisitor(Constant.ASM_VERSION, delegate) {
     private val mapper = commonData.mapper
@@ -72,8 +75,17 @@ class MixinClassVisitorRefmapBuilder(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remap.get()) {
-                        for (target in classTargets) {
+                        logger.info("existing mappings: $existingMappings")
+                        for (target in classTargets.toSet()) {
                             val clz = resolver.resolveClass(target.replace('.', '/'))
+                                .orElse {
+                                    existingMappings[target]?.let {
+                                        logger.info("remapping $it from existing refmap")
+                                        classTargets.remove(target)
+                                        classTargets.add(it)
+                                        resolver.resolveClass(it)
+                                    } ?: Optional.empty()
+                                }
                             clz.ifPresent {
                                 refmap.addProperty(target, mapper.mapName(it))
                             }
@@ -162,7 +174,18 @@ class MixinClassVisitorRefmapBuilder(
                                 targetName,
                                 targetDesc,
                                 ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                            )
+                            ).orElse {
+                                existingMappings[targetName]?.let {
+                                    logger.info("remapping $it from existing refmap")
+                                    val (name, desc) = it.split(":")
+                                    resolver.resolveField(
+                                        targetClass,
+                                        name,
+                                        desc,
+                                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                    )
+                                } ?: Optional.empty()
+                            }
                             target.ifPresent {
                                 val mappedName = mapper.mapName(it)
                                 val mappedDesc = mapper.mapDesc(it)
@@ -227,7 +250,18 @@ class MixinClassVisitorRefmapBuilder(
                                 targetName,
                                 descriptor,
                                 ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                            )
+                            ).orElse {
+                                existingMappings[targetName]?.let {
+                                    logger.info("remapping $it from existing refmap")
+                                    val (name, desc) = it.split("(")
+                                    resolver.resolveMethod(
+                                        targetClass,
+                                        name,
+                                        "($desc",
+                                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                    )
+                                } ?: Optional.empty()
+                            }
                             target.ifPresent {
                                 val mappedName = mapper.mapName(it)
                                 val mappedDesc = mapper.mapDesc(it)
@@ -362,7 +396,29 @@ class MixinClassVisitorRefmapBuilder(
                                         targetName,
                                         targetDesc,
                                         (if (wildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
-                                    )
+                                    ).orElse {
+                                        existingMappings[targetMethod]?.let {
+                                            if (wildcard) {
+                                                val name = it.substringAfter(";").substring(0, it.length - 1)
+                                                logger.info("remapping $targetMethod from existing refmap, name $targetClass;$name")
+                                                resolver.resolveMethod(
+                                                    targetClass,
+                                                    name,
+                                                    null,
+                                                    ResolveUtility.FLAG_FIRST or ResolveUtility.FLAG_RECURSIVE
+                                                )
+                                            } else {
+                                                val (name, desc) = it.substringAfter(";").split("(")
+                                                logger.info("remapping $targetMethod from existing refmap, name $targetClass;$name")
+                                                resolver.resolveMethod(
+                                                    targetClass,
+                                                    name,
+                                                    "($desc",
+                                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                                )
+                                            }
+                                        } ?: Optional.empty()
+                                    }
                                     target.ifPresent {
                                         val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
@@ -455,7 +511,28 @@ class MixinClassVisitorRefmapBuilder(
                                     targetName,
                                     targetDesc,
                                     (if (wildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
-                                )
+                                ).orElse {
+                                    existingMappings[targetMethod]?.let {
+                                        logger.info("remapping $it from existing refmap")
+                                        if (wildcard) {
+                                            val name = it.substringAfter(";").substring(0, it.length - 1)
+                                            resolver.resolveMethod(
+                                                targetClass,
+                                                name,
+                                                null,
+                                                ResolveUtility.FLAG_FIRST or ResolveUtility.FLAG_RECURSIVE
+                                            )
+                                        } else {
+                                            val (name, desc) = it.substringAfter(";").split("(")
+                                            resolver.resolveMethod(
+                                                targetClass,
+                                                name,
+                                                "($desc",
+                                                ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                            )
+                                        }
+                                    } ?: Optional.empty()
+                                }
                                 target.ifPresent {
                                     val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
                                     val mappedName = mapper.mapName(it)
@@ -531,7 +608,28 @@ class MixinClassVisitorRefmapBuilder(
                                         targetName,
                                         targetDesc,
                                         (if (wildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
-                                    )
+                                    ).orElse {
+                                        existingMappings[targetMethod]?.let {
+                                            logger.info("remapping $it from existing refmap")
+                                            if (wildcard) {
+                                                val name = it.substringAfter(";").substring(0, it.length - 1)
+                                                resolver.resolveMethod(
+                                                    targetClass,
+                                                    name,
+                                                    null,
+                                                    ResolveUtility.FLAG_FIRST or ResolveUtility.FLAG_RECURSIVE
+                                                )
+                                            } else {
+                                                val (name, desc) = it.substringAfter(";").split("(")
+                                                resolver.resolveMethod(
+                                                    targetClass,
+                                                    name,
+                                                    "($desc",
+                                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                                )
+                                            }
+                                        } ?: Optional.empty()
+                                    }
 
 
                                     target.ifPresent {
@@ -590,7 +688,7 @@ class MixinClassVisitorRefmapBuilder(
                 if (remapAt.get() && targetName != null) {
                     val matchFd = targetField.matchEntire(targetName!!)
                     if (matchFd != null) {
-                        val targetOwner = matchFd.groupValues[1].let {
+                        var targetOwner = matchFd.groupValues[1].let {
                             if (it.startsWith("L") && it.endsWith(";")) it.substring(
                                 1,
                                 it.length - 1
@@ -603,7 +701,30 @@ class MixinClassVisitorRefmapBuilder(
                             targetName,
                             targetDesc,
                             ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                        )
+                        ).orElse {
+                            existingMappings[this.targetName]?.let {
+                                logger.info("remapping $it from existing refmap")
+                                val matchEFd = targetField.matchEntire(it)
+                                if (matchEFd != null) {
+                                    targetOwner = matchEFd.groupValues[1].let {
+                                        if (it.startsWith("L") && it.endsWith(";")) it.substring(
+                                            1,
+                                            it.length - 1
+                                        ) else it.substring(0, it.length - 1)
+                                    }
+                                    val targetName = matchEFd.groupValues[2]
+                                    val targetDesc = matchEFd.groupValues[3]
+                                    resolver.resolveField(
+                                        targetOwner,
+                                        targetName,
+                                        targetDesc,
+                                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                    )
+                                } else {
+                                    Optional.empty()
+                                }
+                            } ?: Optional.empty()
+                        }
                         val targetClass = resolver.resolveClass(targetOwner)
                         targetClass.ifPresent { clz ->
                             target.ifPresent {
@@ -627,7 +748,7 @@ class MixinClassVisitorRefmapBuilder(
                     }
                     val matchMd = targetMethod.matchEntire(targetName!!)
                     if (matchMd != null) {
-                        val targetOwner = matchMd.groupValues[1].let {
+                        var targetOwner = matchMd.groupValues[1].let {
                             if (it.startsWith("L") && it.endsWith(";")) it.substring(
                                 1,
                                 it.length - 1
@@ -640,7 +761,30 @@ class MixinClassVisitorRefmapBuilder(
                             targetName,
                             targetDesc,
                             ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                        )
+                        ).orElse {
+                            existingMappings[this.targetName]?.let {
+                                logger.info("remapping $it from existing refmap")
+                                val matchEMd = targetMethod.matchEntire(it)
+                                if (matchEMd != null) {
+                                    targetOwner = matchEMd.groupValues[1].let {
+                                        if (it.startsWith("L") && it.endsWith(";")) it.substring(
+                                            1,
+                                            it.length - 1
+                                        ) else it.substring(0, it.length - 1)
+                                    }
+                                    val targetName = matchEMd.groupValues[2]
+                                    val targetDesc = matchEMd.groupValues[3]
+                                    resolver.resolveMethod(
+                                        targetOwner,
+                                        targetName,
+                                        targetDesc,
+                                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                    )
+                                } else {
+                                    Optional.empty()
+                                }
+                            } ?: Optional.empty()
+                        }
                         val targetClass = resolver.resolveClass(targetOwner)
                         targetClass.ifPresent { clz ->
                             target.ifPresent {
