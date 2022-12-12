@@ -7,9 +7,9 @@ import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.transform.reamp.MinecraftRemapper
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
-import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.util.consumerApply
 import kotlin.io.path.*
 
 @Suppress("MemberVisibilityCanBePrivate")

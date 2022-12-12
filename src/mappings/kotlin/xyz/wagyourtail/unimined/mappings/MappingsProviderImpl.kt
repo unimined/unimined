@@ -268,13 +268,8 @@ abstract class MappingsProviderImpl(
                 fallbackSrcId = fromId
             }
 
-            // we don't need to remap it if it's already in the target namespace
-            if (fallbackSrcId == toId) {
-                fallbackSrcId = fromId
-            }
-
-            project.logger.debug("Mapping from $srcName to $targetName, fallbackSrc: $fallbackSrc, fallbackTarget: $fallbackTarget")
-            project.logger.debug("ids: from $fromId to $toId fallbackTo $fallbackToId fallbackFrom $fallbackSrcId")
+            project.logger.info("Mapping from $srcName to $targetName, fallbackSrc: $fallbackSrc, fallbackTarget: $fallbackTarget")
+            project.logger.info("ids: from $fromId to $toId fallbackTo $fallbackToId fallbackFrom $fallbackSrcId")
 
             for (classDef in mappingTree.classes) {
                 var fromClassName = classDef.getName(fromId) ?: classDef.getName(fallbackSrcId)
@@ -284,6 +279,21 @@ abstract class MappingsProviderImpl(
                     project.logger.debug("From class name not found for $classDef")
                     fromClassName = toClassName
                 }
+
+                // detect missing inner class
+                if (fromClassName != null && fromClassName.contains("$")) {
+                    val outerClass = fromClassName.substringBefore("$")
+                    val outerClassDef = mappingTree.getClass(outerClass, fromId) ?: mappingTree.getClass(outerClass, fallbackSrcId)
+                    if (outerClassDef != null) {
+                        val outerToClassName = outerClassDef.getName(toId) ?: outerClassDef.getName(fallbackToId)
+                        val innerClassName = toClassName?.substringAfter("$") ?: fromClassName.substringAfter("$")
+                        if (outerToClassName != null && (toClassName == null || !toClassName.startsWith(outerToClassName))) {
+                            toClassName = "$outerToClassName$$innerClassName"
+                            project.logger.warn("Detected missing inner class, replacing with: $fromClassName -> $toClassName")
+                        }
+                    }
+                }
+
                 if (toClassName == null) {
                     project.logger.debug("To class name not found for $classDef")
                     toClassName = fromClassName

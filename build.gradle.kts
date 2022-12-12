@@ -67,7 +67,7 @@ dependencies {
     implementation("net.minecraftforge:artifactural:3.0.8")
 
     // remapper
-    implementation("net.fabricmc:tiny-remapper:0.8.5")
+    implementation("net.fabricmc:tiny-remapper:0.8.6")
 
     // mappings
     implementation("net.fabricmc:mapping-io:0.3.0")

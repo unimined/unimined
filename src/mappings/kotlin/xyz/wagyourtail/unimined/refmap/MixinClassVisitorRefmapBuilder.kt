@@ -338,15 +338,21 @@ class MixinClassVisitorRefmapBuilder(
                     super.visitEnd()
                     if (remapInject.get()) {
                         targetNames.forEach { targetMethod ->
-                            if (targetMethod.equals("<init>") || targetMethod.equals("<clinit>") ||
-                                targetMethod.equals("<init>*")) {
+                            if (targetMethod == "<init>" || targetMethod == "<clinit>" ||
+                                targetMethod == "<init>*"
+                            ) {
                                 return@forEach
                             }
+                            var wildcard = targetMethod.endsWith("*")
                             val (targetName, targetDescs) = if (targetMethod.contains("(")) {
                                 val n = targetMethod.split("(")
                                 (n[0] to setOf("(${n[1]}"))
                             } else {
-                                (targetMethod to stripCallbackInfoFromDesc() + setOf(null))
+                                if (wildcard) {
+                                    (targetMethod.substring(0, targetMethod.length - 1) to setOf(null))
+                                } else {
+                                    (targetMethod to stripCallbackInfoFromDesc() + setOf(null))
+                                }
                             }
                             for (targetDesc in targetDescs) {
                                 for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
@@ -354,12 +360,12 @@ class MixinClassVisitorRefmapBuilder(
                                         targetClass,
                                         targetName,
                                         targetDesc,
-                                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                        (if (wildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
                                     )
                                     target.ifPresent {
                                         val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
-                                        val mappedDesc = mapper.mapDesc(it)
+                                        val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
                                         refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
                                     }
                                     if (target.isPresent) {
@@ -436,17 +442,23 @@ class MixinClassVisitorRefmapBuilder(
                                 } else {
                                     null
                                 }
+                                val wildcard = targetName.endsWith("*")
+                                val targetName = if (wildcard) {
+                                    targetName.substring(0, targetName.length - 1)
+                                } else {
+                                    targetName.split("(")[0]
+                                }
 
                                 val target = resolver.resolveMethod(
                                     targetClass,
                                     targetName,
                                     targetDesc,
-                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                    (if (wildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
                                 )
                                 target.ifPresent {
                                     val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
                                     val mappedName = mapper.mapName(it)
-                                    val mappedDesc = mapper.mapDesc(it)
+                                    val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
                                     refmap.addProperty(targetName, "L$mappedClass;$mappedName$mappedDesc")
                                 }
                                 if (target.isPresent) {
@@ -506,18 +518,25 @@ class MixinClassVisitorRefmapBuilder(
                                         null
                                     }
 
+                                    val wildcard = targetName.endsWith("*")
+                                    val targetName = if (wildcard) {
+                                        targetName.substring(0, targetName.length - 1)
+                                    } else {
+                                        targetName.split("(")[0]
+                                    }
+
                                     val target = resolver.resolveMethod(
                                         targetClass,
                                         targetName,
                                         targetDesc,
-                                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                        (if (wildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
                                     )
 
 
                                     target.ifPresent {
                                         val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
-                                        val mappedDesc = mapper.mapDesc(it)
+                                        val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
                                         refmap.addProperty(targetName, "L$mappedClass;$mappedName$mappedDesc")
                                     }
                                     if (target.isPresent) {
