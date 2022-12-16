@@ -121,6 +121,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
                 location = toFile()
                 type = MappingExportTypes.MCP
                 sourceNamespace = "searge"
+                skipComments = true // the reader forge uses now is too dumb...
                 targetNamespace = listOf("named")
             }
             export.validate()

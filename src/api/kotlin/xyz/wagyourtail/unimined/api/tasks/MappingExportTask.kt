@@ -78,7 +78,17 @@ abstract class MappingExport(val envType: EnvType) {
      */
     var targetNamespace: List<String>? = null
 
+    /**
+     * should the export skip comments?
+     * @since 0.3.6
+     */
+    var skipComments: Boolean = false
+
     @set:ApiStatus.Experimental
+    /**
+     * function for exporting the mapping tree
+     * @since 0.3.4
+     */
     abstract var exportFunc: (MappingTreeView) -> Unit
 
     /**

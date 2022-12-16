@@ -46,13 +46,13 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
     override fun visitDstName(targetKind: MappedElementKind, namespace: Int, name: String) {
         when (targetKind) {
             MappedElementKind.FIELD -> {
-                lastField += "$name,$side,"
+                lastField += "$name,$side"
                 lastFieldDst = true
                 fields.append(lastField)
             }
 
             MappedElementKind.METHOD -> {
-                lastMethod += "$name,$side,"
+                lastMethod += "$name,$side"
                 lastMethodDst = true
                 methods.append(lastMethod)
             }
@@ -65,12 +65,12 @@ class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
         when (targetKind) {
             MappedElementKind.FIELD -> {
                 if (lastFieldDst)
-                    fields.append(",\"").append(comment).append("\"")
+                    fields.append(",\"").append(comment.replace("\"", "\"\"")).append("\"")
             }
 
             MappedElementKind.METHOD -> {
                 if (lastMethodDst)
-                    methods.append(",\"").append(comment).append("\"")
+                    methods.append(",\"").append(comment.replace("\"", "\"\"")).append("\"")
             }
 
             else -> {}

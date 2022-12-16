@@ -29,6 +29,7 @@ object AccessTransformerMinecraftTransformer {
                 remapper: TinyRemapper
             ) {
                 val output = destinationDirectory.resolve(relativePath)
+                output.parent.createDirectories()
                 BufferedReader(input.reader()).use { reader ->
                     transformFromLegacyTransformer(reader).use { fromLegacy ->
                         remapModernTransformer(fromLegacy.buffered(), remapper).use { remapped ->
