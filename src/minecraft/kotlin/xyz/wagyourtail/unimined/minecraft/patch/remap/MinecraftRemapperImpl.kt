@@ -21,6 +21,14 @@ class MinecraftRemapperImpl(
 
     override var tinyRemapperConf: (TinyRemapper.Builder) -> Unit = {}
 
+    val MC_LV_PATTERN = Regex("\\$\\$\\d+")
+
+    val JSR_TO_JETBRAINS = mapOf(
+        "javax/annotation/Nullable" to "org/jetbrains/annotations/Nullable",
+        "javax/annotation/Nonnull" to "org/jetbrains/annotations/NotNull",
+        "javax/annotation/concurrent/Immutable" to "org/jetbrains/annotations/Unmodifiable"
+    )
+
     @ApiStatus.Internal
     fun provide(minecraft: MinecraftJar, remapTo: String, remapFallback: String): MinecraftJar {
         return minecraft.let(consumerApply {
@@ -53,12 +61,14 @@ class MinecraftRemapperImpl(
                         remapTo
                     )
                 )
-                .renameInvalidLocals(true)
-                .inferNameFromSameLvIndex(true)
+                .withMappings { JSR_TO_JETBRAINS.forEach(it::acceptClass) }
                 .threads(Runtime.getRuntime().availableProcessors())
+                .renameInvalidLocals(true)
+                .rebuildSourceFilenames(true)
+                .invalidLvNamePattern(MC_LV_PATTERN.toPattern())
+                .inferNameFromSameLvIndex(true)
                 .checkPackageAccess(true)
                 .fixPackageAccess(true)
-                .rebuildSourceFilenames(true)
             tinyRemapperConf(remapperB)
             val remapper = remapperB.build()
 
