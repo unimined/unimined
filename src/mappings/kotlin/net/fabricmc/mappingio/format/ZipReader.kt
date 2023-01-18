@@ -2,6 +2,7 @@ package net.fabricmc.mappingio.format
 
 import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.tree.MemoryMappingTree
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -46,12 +47,10 @@ object ZipReader {
         zip: Path,
         zipContents: List<String>,
         mappingTree: MemoryMappingTree,
-        notchNamespaceName: String = "official",
-        seargeNamespaceName: String = "searge",
-        mCPNamespaceName: String = "named"
+        named: MappingNamespace
     ) {
         val mcpConfigVersion = getZipTypeFromContentList(zipContents)
-        System.out.println("Detected Zip Format: ${mcpConfigVersion.name} & envType: $envType")
+        println("Detected Zip Format: ${mcpConfigVersion.name} & envType: $envType")
         for (entry in zipContents.mapNotNull { getTypeOf(it)?.let { t -> Pair(t, it) } }
             .sortedBy { it.first.ordinal }
             .map { it.second }) {
@@ -60,7 +59,7 @@ object ZipReader {
                     if (mcpConfigVersion.ignore.contains(mappingType)) {
                         break
                     }
-                    System.out.println("Reading $entry")
+                    println("Reading $entry")
                     when (mappingType) {
                         MappingType.MCP_METHODS -> {
                             when (mcpConfigVersion) {
@@ -69,9 +68,9 @@ object ZipReader {
                                         OldMCPReader.readMethod(
                                             envType,
                                             InputStreamReader(it),
-                                            notchNamespaceName,
-                                            seargeNamespaceName,
-                                            mCPNamespaceName,
+                                            MappingNamespace.OFFICIAL.namespace,
+                                            MappingNamespace.SEARGE.namespace,
+                                            MappingNamespace.MCP.namespace,
                                             mappingTree
                                         )
                                     }
@@ -82,8 +81,8 @@ object ZipReader {
                                         OlderMCPReader.readMethod(
                                             envType,
                                             InputStreamReader(it),
-                                            seargeNamespaceName,
-                                            mCPNamespaceName,
+                                            MappingNamespace.SEARGE.namespace,
+                                            MappingNamespace.MCP.namespace,
                                             mappingTree
                                         )
                                     }
@@ -94,8 +93,8 @@ object ZipReader {
                                         MCPReader.readMethod(
                                             envType,
                                             InputStreamReader(it),
-                                            seargeNamespaceName,
-                                            mCPNamespaceName,
+                                            MappingNamespace.SEARGE.namespace,
+                                            MappingNamespace.MCP.namespace,
                                             mappingTree
                                         )
                                     }
@@ -108,8 +107,8 @@ object ZipReader {
                                 MCPReader.readParam(
                                     envType,
                                     InputStreamReader(it),
-                                    seargeNamespaceName,
-                                    mCPNamespaceName,
+                                    MappingNamespace.SEARGE.namespace,
+                                    MappingNamespace.MCP.namespace,
                                     mappingTree
                                 )
                             }
@@ -122,9 +121,9 @@ object ZipReader {
                                         OldMCPReader.readField(
                                             envType,
                                             InputStreamReader(it),
-                                            notchNamespaceName,
-                                            seargeNamespaceName,
-                                            mCPNamespaceName,
+                                            MappingNamespace.OFFICIAL.namespace,
+                                            MappingNamespace.SEARGE.namespace,
+                                            MappingNamespace.MCP.namespace,
                                             mappingTree
                                         )
                                     }
@@ -135,8 +134,8 @@ object ZipReader {
                                         OlderMCPReader.readField(
                                             envType,
                                             InputStreamReader(it),
-                                            seargeNamespaceName,
-                                            mCPNamespaceName,
+                                            MappingNamespace.SEARGE.namespace,
+                                            MappingNamespace.MCP.namespace,
                                             mappingTree
                                         )
                                     }
@@ -147,8 +146,8 @@ object ZipReader {
                                         MCPReader.readField(
                                             envType,
                                             InputStreamReader(it),
-                                            seargeNamespaceName,
-                                            mCPNamespaceName,
+                                            MappingNamespace.SEARGE.namespace,
+                                            MappingNamespace.MCP.namespace,
                                             mappingTree
                                         )
                                     }
@@ -161,9 +160,9 @@ object ZipReader {
                                 OldMCPReader.readClasses(
                                     envType,
                                     InputStreamReader(it),
-                                    notchNamespaceName,
-                                    seargeNamespaceName,
-                                    mCPNamespaceName,
+                                    MappingNamespace.OFFICIAL.namespace,
+                                    MappingNamespace.SEARGE.namespace,
+                                    MappingNamespace.MCP.namespace,
                                     mappingTree
                                 )
                             }
@@ -174,8 +173,8 @@ object ZipReader {
                                 readInputStreamFor(entry, zip) {
                                     SrgReader.read(
                                         InputStreamReader(it),
-                                        notchNamespaceName,
-                                        seargeNamespaceName,
+                                        MappingNamespace.OFFICIAL.namespace,
+                                        MappingNamespace.SEARGE.namespace,
                                         mappingTree
                                     )
                                 }
@@ -187,8 +186,8 @@ object ZipReader {
                                 if (envType == EnvType.SERVER) {
                                     SrgReader.read(
                                         InputStreamReader(it),
-                                        notchNamespaceName,
-                                        seargeNamespaceName,
+                                        MappingNamespace.OFFICIAL.namespace,
+                                        MappingNamespace.SEARGE.namespace,
                                         mappingTree
                                     )
                                 }
@@ -200,8 +199,8 @@ object ZipReader {
                             readInputStreamFor(entry, zip) {
                                 SrgReader.read(
                                     InputStreamReader(it),
-                                    notchNamespaceName,
-                                    seargeNamespaceName,
+                                    MappingNamespace.OFFICIAL.namespace,
+                                    MappingNamespace.SEARGE.namespace,
                                     mappingTree
                                 )
                             }
@@ -213,8 +212,8 @@ object ZipReader {
                                 readInputStreamFor(entry, zip) {
                                     RGSReader.read(
                                         InputStreamReader(it),
-                                        notchNamespaceName,
-                                        seargeNamespaceName,
+                                        MappingNamespace.OFFICIAL.namespace,
+                                        MappingNamespace.SEARGE.namespace,
                                         mappingTree
                                     )
                                 }
@@ -226,8 +225,8 @@ object ZipReader {
                                 readInputStreamFor(entry, zip) {
                                     RGSReader.read(
                                         InputStreamReader(it),
-                                        notchNamespaceName,
-                                        seargeNamespaceName,
+                                        MappingNamespace.OFFICIAL.namespace,
+                                        MappingNamespace.SEARGE.namespace,
                                         mappingTree
                                     )
                                 }
@@ -239,15 +238,14 @@ object ZipReader {
                                 val temp = MemoryMappingTree()
                                 TsrgReader.read(
                                     InputStreamReader(it),
-                                    "official",
-                                    "searge",
+                                    MappingNamespace.OFFICIAL.namespace,
+                                    MappingNamespace.SEARGE.namespace,
                                     temp
                                 )
                                 temp.accept(
                                     MappingNsRenamer(
                                         mappingTree, mapOf(
-                                            temp.srcNamespace to notchNamespaceName,
-//                                    temp.dstNamespaces[0] to seargeNamespaceName
+                                            temp.srcNamespace to MappingNamespace.OFFICIAL.namespace,
                                         )
                                     )
                                 )
@@ -256,7 +254,16 @@ object ZipReader {
 
                         MappingType.TINY -> {
                             readInputStreamFor(entry, zip) {
-                                Tiny2Reader.read(InputStreamReader(it), mappingTree)
+                                Tiny2Reader.read(InputStreamReader(it),
+                                    MappingNsRenamer(
+                                        mappingTree, mapOf(
+                                            "official" to MappingNamespace.OFFICIAL.namespace,
+                                            "intermediary" to MappingNamespace.INTERMEDIARY.namespace,
+                                            "hashed" to MappingNamespace.HASHED.namespace,
+                                            "named" to named.namespace
+                                        )
+                                    )
+                                )
                             }
                         }
 
@@ -265,8 +272,8 @@ object ZipReader {
                                 MCPReader.readPackages(
                                     envType,
                                     InputStreamReader(it),
-                                    seargeNamespaceName,
-                                    mCPNamespaceName,
+                                    MappingNamespace.SEARGE.namespace,
+                                    MappingNamespace.MCP.namespace,
                                     mappingTree
                                 )
                             }
@@ -276,7 +283,7 @@ object ZipReader {
                             readInputStreamFor(entry, zip) {
                                 ParchmentReader.read(
                                     InputStreamReader(it),
-                                    "named",
+                                    MappingNamespace.MOJMAP.namespace,
                                     mappingTree
                                 )
                             }

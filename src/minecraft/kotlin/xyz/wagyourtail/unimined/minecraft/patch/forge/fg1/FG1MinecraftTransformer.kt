@@ -9,6 +9,8 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
@@ -29,16 +31,16 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     Constants.FORGE_PROVIDER
 ) {
 
-    override val prodNamespace: String
-        get() = "official"
+    override val prodNamespace: MappingNamespace
+        get() = MappingNamespace.OFFICIAL
 
-    override var devNamespace: String
+    override var devNamespace: MappingNamespace
         get() = parent.devNamespace
         set(value) {
             parent.devNamespace = value
         }
 
-    override var devFallbackNamespace: String
+    override var devFallbackNamespace: MappingNamespace
         get() = parent.devFallbackNamespace
         set(value) {
             parent.devFallbackNamespace = value
@@ -59,7 +61,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
 
         val forgeSrc = "${forge.group}:${forge.name}:${forge.version}:src@zip"
-        provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).dependencies.apply {
+        project.mappings.getMappings(EnvType.COMBINED).dependencies.apply {
             if (isEmpty())
                 add(project.dependencies.create(forgeSrc))
         }
@@ -236,7 +238,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (baseMinecraft.mappingNamespace == "named") {
+        if (baseMinecraft.mappingNamespace.type == MappingNamespace.Type.NAMED) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",

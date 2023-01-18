@@ -19,9 +19,9 @@ abstract class UniminedExtensionImpl(project: Project) : UniminedExtension(proje
     override val mappingsProvider = project.extensions.create(
         "mappings",
         MappingsProviderImpl::class.java,
-        project,
-        this
+        project
     )
+
 
     override val modProvider = ModProviderImpl(project, this)
 

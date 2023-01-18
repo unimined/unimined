@@ -8,8 +8,8 @@ import org.gradle.api.logging.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import java.io.BufferedReader
-import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.file.Files
@@ -49,7 +49,7 @@ object AccessWidenerMinecraftTransformer {
 
     fun transform(
         accessWidener: Path,
-        namespace: String,
+        namespace: MappingNamespace,
         baseMinecraft: Path,
         output: Path,
         throwIfNSWrong: Boolean,
@@ -57,7 +57,7 @@ object AccessWidenerMinecraftTransformer {
     ): Boolean {
         val aw = AccessWidener()
         AccessWidenerReader(aw).read(BufferedReader(accessWidener.reader()))
-        if (aw.namespace == namespace) {
+        if (aw.namespace == namespace.namespace) {
             Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
             ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
                 logger.debug("Transforming $output with access widener $accessWidener and namespace $namespace")

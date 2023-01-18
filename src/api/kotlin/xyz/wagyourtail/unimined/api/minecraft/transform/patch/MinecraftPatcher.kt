@@ -1,5 +1,8 @@
 package xyz.wagyourtail.unimined.api.minecraft.transform.patch
 
+import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+
 /**
  * The class responsible for patching minecraft.
  * @see [FabricLikePatcher], [JarModPatcher], [ForgePatcher]
@@ -13,22 +16,27 @@ interface MinecraftPatcher {
     /**
      * the namespace to use for the production jar.
      */
-    val prodNamespace: String
-
-    /**
-     * the namespace to use for fallback on the production jar.
-     */
-    val prodFallbackNamespace: String
-        get() = "official"
+    @get:ApiStatus.Internal
+    val prodNamespace: MappingNamespace
 
     /**
      * the namespace to use for the development jar.
      */
-    var devNamespace: String
+    @set:ApiStatus.Internal
+    var devNamespace: MappingNamespace
 
     /**
      * the namespace to use for fallback on the development jar.
      */
-    var devFallbackNamespace: String
+    @set:ApiStatus.Internal
+    var devFallbackNamespace: MappingNamespace
+
+    fun setDevNamespace(namespace: String) {
+        devNamespace = MappingNamespace.getNamespace(namespace)
+    }
+
+    fun setDevFallbackNamespace(namespace: String) {
+        devFallbackNamespace = MappingNamespace.getNamespace(namespace)
+    }
 
 }

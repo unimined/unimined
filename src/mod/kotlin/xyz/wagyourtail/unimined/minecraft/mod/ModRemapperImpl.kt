@@ -2,28 +2,27 @@ package xyz.wagyourtail.unimined.minecraft.mod
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
-import net.fabricmc.loom.util.kotlin.KotlinClasspathService
-import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader
 import net.fabricmc.tinyremapper.*
 import net.fabricmc.tinyremapper.OutputConsumerPath.ResourceRemapper
-import net.fabricmc.tinyremapper.extension.mixin.MixinExtension
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
-import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.mod.ModRemapper
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.util.LazyMutable
+import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
 import kotlin.io.path.name
 
 class ModRemapperImpl(
@@ -31,8 +30,8 @@ class ModRemapperImpl(
     provider: ModProviderImpl
 ) : ModRemapper(provider) {
 
-    val mcProvider by lazy { provider.parent.minecraftProvider }
-    val mappings by lazy { provider.parent.mappingsProvider }
+    private val mcProvider by lazy { provider.parent.minecraftProvider }
+    private val mappings by lazy { provider.parent.mappingsProvider }
 
     override var tinyRemapperConf by LazyMutable { provider.parent.minecraftProvider.mcRemapper.tinyRemapperConf }
 
@@ -40,34 +39,10 @@ class ModRemapperImpl(
     private val clientConfig = Configs(project, EnvType.CLIENT, this)
     private val serverConfig = Configs(project, EnvType.SERVER, this)
 
+    private val preTransform = mutableMapOf<EnvType, List<File>>()
 
-    private val internalCombinedModRemapperConfiguration: Configuration = project.configurations.maybeCreate("internalModRemapper")
-        .apply {
-            exclude(
-                mapOf(
-                    "group" to "net.fabricmc",
-                    "module" to "fabric-loader"
-                )
-            )
-        }
-
-    @ApiStatus.Internal
-    override fun internalModRemapperConfiguration(envType: EnvType): Configuration = when (envType) {
-        EnvType.COMBINED -> internalCombinedModRemapperConfiguration
-        EnvType.CLIENT -> project.configurations.maybeCreate("internalModRemapperClient").apply {
-            try {
-                extendsFrom(internalCombinedModRemapperConfiguration)
-            } catch (ignored: InvalidUserDataException) {
-            }
-        }
-
-        EnvType.SERVER -> project.configurations.maybeCreate("internalModRemapperServer").apply {
-            try {
-                extendsFrom(internalCombinedModRemapperConfiguration)
-            } catch (ignored: InvalidUserDataException) {
-            }
-        }
-    }
+    override fun preTransform(envType: EnvType): List<File> =
+        preTransform.getOrDefault(envType, emptyList())
 
     init {
         project.repositories.forEach { repo ->
@@ -83,140 +58,153 @@ class ModRemapperImpl(
         }
     }
 
-    private val seen = mutableSetOf<EnvType>()
+    private fun constructRemapper(envType: EnvType, fromNs: MappingNamespace, toNs: MappingNamespace, mc: Path): TinyRemapper {
+        val remapperB = TinyRemapper.newRemapper()
+            .withMappings(
+                project.mappings.getMappingsProvider(
+                    envType,
+                    fromNs to toNs,
+                    false
+                )
+            )
+            .skipLocalVariableMapping(true)
+            .ignoreConflicts(true)
+            .threads(Runtime.getRuntime().availableProcessors())
+        tinyRemapperConf(remapperB)
+        val remapper = remapperB.build()
+        remapper.readClassPathAsync(
+            *project.minecraft.mcLibraries.resolve().map { it.toPath() }.toTypedArray()
+        )
+        remapper.readClassPathAsync(mc)
+        return remapper
+    }
 
     fun remap(envType: EnvType) {
-        val configs = when (envType) {
+        val config = when (envType) {
             EnvType.COMBINED -> combinedConfig
             EnvType.CLIENT -> clientConfig
             EnvType.SERVER -> serverConfig
         }
-        if (seen.contains(envType)) return
-        seen.add(envType)
-        val count = configs.configurations.sumOf {
-            preTransform(configs.envType, it)
-        }
+
+        val prodNamespace = project.minecraft.mcPatcher.prodNamespace
+        val devFallbackNamespace = project.minecraft.mcPatcher.devFallbackNamespace
+        val devNamespace = project.minecraft.mcPatcher.devNamespace
+
+        val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
+            prodNamespace,
+            prodNamespace,
+            devFallbackNamespace,
+            devNamespace,
+            project.mappings.getAvailableMappings(envType)
+        )
+        project.logger.lifecycle("remapping from $prodNamespace to ${devNamespace}/${devFallbackNamespace}")
+        project.logger.lifecycle("Calculating total mod dependency count...")
+        val count = config.configurations.sumOf { it.dependencies.size }
+        val last = path.last()
+        project.logger.lifecycle("Found $count dependencies, remapping to $last")
         if (count == 0) return
-        val tr = TinyRemapper.newRemapper()
-            .withMappings(
-                mappings.getMappingProvider(
-                    configs.envType,
-                    fromNamespace,
-                    fromFallbackNamespace,
-                    toFallbackNamespace,
-                    toNamespace
-                )
+        val configs = mutableMapOf<Configuration, Configuration>()
+        for (c in config.configurations) {
+            val newC = project.configurations.detachedConfiguration()
+            configs[newC] = c
+            // copy out dependencies
+            newC.dependencies.addAll(c.dependencies)
+            // remove from original
+            c.dependencies.clear()
+        }
+        val mods = mutableMapOf<ResolvedArtifact, File>()
+        for (c in configs.keys) {
+            for (r in c.resolvedConfiguration.resolvedArtifacts) {
+                if (r.extension != "jar") continue
+                mods[r] = r.file
+            }
+        }
+        preTransform[envType] = mods.values.toList()
+        var prevNamespace = prodNamespace
+        var prevPrevNamespace = MappingNamespace.OFFICIAL
+        for (i in path.indices) {
+            val step = path[i]
+            val mcNamespace = prevNamespace
+            val mcFallbackNamespace = if (step.first) {
+                step.second
+            } else {
+                prevPrevNamespace
+            }
+            val mc = mcProvider.getMinecraftWithMapping(
+                envType,
+                mcNamespace,
+                mcFallbackNamespace
             )
-            .renameInvalidLocals(true)
-            .inferNameFromSameLvIndex(true)
-            .threads(Runtime.getRuntime().availableProcessors())
-            .rebuildSourceFilenames(true)
-
-        tr.extension(MixinExtension())
-        val classpath = KotlinClasspathService.getOrCreateIfRequired(project)
-        if (classpath != null) {
-            tr.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
+            val remapper = constructRemapper(envType, prevNamespace, step.second, mc)
+            val tags = preRemapInternal(remapper, mods)
+            mods.clear()
+            mods.putAll(remapInternal(remapper, envType, tags, step == last, prevNamespace to step.second))
+            prevNamespace = step.second
+            prevPrevNamespace = mcNamespace
         }
-
-        tinyRemapperConf(tr)
-        tinyRemapper = tr.build()
-        val mc = provider.parent.minecraftProvider.getMinecraftWithMapping(configs.envType, fromNamespace, fromFallbackNamespace)
-        tinyRemapper.readClassPathAsync(mc)
-        project.logger.lifecycle("Remapping mods")
-        project.logger.info("using mc $mc")
-        project.logger.info("using mappings $fromNamespace -> $toNamespace")
-        project.logger.info("using fallback mappings $fromFallbackNamespace -> $toFallbackNamespace")
-        tinyRemapper.readClassPathAsync(*mcProvider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
-        configs.configurations.forEach {
-            transform(configs.envType, it)
-        }
-        configs.configurations.forEach {
-            postTransform(configs.envType, it)
-        }
-        tinyRemapper.finish()
-    }
-
-    private val dependencyMap = mutableMapOf<Configuration, MutableSet<Dependency>>()
-
-    private fun preTransform(envType: EnvType, configuration: Configuration): Int {
-        val count = configuration.dependencies.size
-        configuration.dependencies.forEach {
-            internalModRemapperConfiguration(envType).dependencies.add(it)
-            dependencyMap.computeIfAbsent(configuration) { mutableSetOf() } += (it)
-        }
-        configuration.dependencies.clear()
-        return count
-    }
-
-    private fun transform(envType: EnvType, configuration: Configuration) {
-        dependencyMap[configuration]?.forEach {
-            transformMod(envType, it)
-        }
-    }
-
-    private fun postTransform(envType: EnvType, configuration: Configuration) {
-        dependencyMap[configuration]?.forEach {
-
-            getOutputs(envType, it).forEach { artifact ->
-                configuration.dependencies.add(
+        // copy back to original
+        val combinedNames = mappings.getCombinedNames(envType)
+        for ((newC, c) in configs) {
+            for (artifact in newC.resolvedConfiguration.resolvedArtifacts) {
+                val classifier = artifact.classifier?.let { "$it-" } ?: ""
+                val output = "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${combinedNames}-${mcProvider.mcPatcher.devNamespace}"
+                c.dependencies.add(
                     project.dependencies.create(
-                        artifact
+                        output
                     )
                 )
             }
         }
     }
 
+    private fun preRemapInternal(remapper: TinyRemapper, deps: Map<ResolvedArtifact, File>): Map<ResolvedArtifact, Pair<InputTag, File>> {
+        val output = mutableMapOf<ResolvedArtifact, Pair<InputTag, File>>()
+        val tag = remapper.createInputTag()
+        for ((artifact, file) in deps) {
+            if (file.isDirectory) {
+                throw InvalidUserDataException("Cannot remap directory ${file.absolutePath}")
+            } else {
+                remapper.readInputsAsync(tag, file.toPath())
+            }
+            output[artifact] = tag to file
+        }
+        return output
+    }
+
+    private fun remapInternal(remapper: TinyRemapper, envType: EnvType, deps: Map<ResolvedArtifact, Pair<InputTag, File>>, final: Boolean, remap: Pair<MappingNamespace, MappingNamespace>): Map<ResolvedArtifact, File> {
+        val output = mutableMapOf<ResolvedArtifact, File>()
+        for ((artifact, tag) in deps) {
+            output[artifact] = remapModInternal(remapper, envType, artifact, tag, final, remap).toFile()
+        }
+        remapper.finish()
+        return output
+    }
+
+    private fun remapModInternal(remapper: TinyRemapper, envType: EnvType, dep: ResolvedArtifact, input: Pair<InputTag, File>, final: Boolean, remap: Pair<MappingNamespace, MappingNamespace>): Path {
+        val combinedNames = mappings.getCombinedNames(envType)
+        val target = if (final) {
+            modTransformFolder().resolve("${dep.file.nameWithoutExtension}-mapped-${combinedNames}-${mcProvider.mcPatcher.devNamespace}.${dep.file.extension}")
+        } else {
+            getTempFilePath(dep.file.nameWithoutExtension, ".jar")
+        }
+        OutputConsumerPath.Builder(target).build().use {
+            it.addNonClassFiles(
+                input.second.toPath(),
+                remapper,
+                listOf(
+                    AccessWidenerMinecraftTransformer.awRemapper(
+                        remap.first.namespace,
+                        remap.second.namespace
+                    ), innerJarStripper
+                ) + NonClassCopyMode.FIX_META_INF.remappers
+            )
+            remapper.apply(it, input.first)
+        }
+        return target
+    }
+
     private fun modTransformFolder(): Path {
         return provider.parent.getLocalCache().resolve("modTransform").createDirectories()
-
-    }
-
-    private lateinit var tinyRemapper: TinyRemapper
-    private val outputMap = mutableMapOf<File, InputTag>()
-
-    private fun transformMod(envType: EnvType, dependency: Dependency) {
-        val files = internalModRemapperConfiguration(envType).files(dependency)
-        for (file in files) {
-            if (file.extension == "jar") {
-                val targetTag = tinyRemapper.createInputTag()
-                tinyRemapper.readInputs(targetTag, file.toPath())
-                outputMap[file] = targetTag
-            }
-        }
-    }
-
-    private fun getOutputs(envType: EnvType, dependency: Dependency): Set<String> {
-        val combinedNames = mappings.getCombinedNames(envType)
-        val outputs = mutableSetOf<String>()
-        for (innerDep in internalModRemapperConfiguration(envType).resolvedConfiguration.getFirstLevelModuleDependencies { it == dependency }) {
-            for (artifact in innerDep.allModuleArtifacts) {
-                if (artifact.file.extension == "jar") {
-                    val target = modTransformFolder().resolve("${artifact.file.nameWithoutExtension}-mapped-${combinedNames}-${mcProvider.mcPatcher.devNamespace}.${artifact.file.extension}")
-                    val classifier = artifact.classifier?.let { "$it-" } ?: ""
-                    outputs += "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${combinedNames}-${mcProvider.mcPatcher.devNamespace}"
-                    if (target.exists()) {
-                        continue
-                    }
-                    OutputConsumerPath.Builder(target).build().use {
-                        it.addNonClassFiles(
-                            artifact.file.toPath(),
-                            tinyRemapper,
-                            listOf(
-                                AccessWidenerMinecraftTransformer.awRemapper(
-                                    fromNamespace,
-                                    toNamespace
-                                ), innerJarStripper
-                            ) + NonClassCopyMode.FIX_META_INF.remappers
-                        )
-                        tinyRemapper.apply(it, outputMap[artifact.file])
-                    }
-                } else {
-                    outputs += artifact.id.toString()
-                }
-            }
-        }
-        return outputs
     }
 
     private val innerJarStripper: ResourceRemapper = object : ResourceRemapper {

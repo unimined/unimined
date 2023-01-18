@@ -8,6 +8,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
@@ -17,6 +18,9 @@ import xyz.wagyourtail.unimined.api.run.Runs
 import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.File
 import java.nio.file.Path
+
+val Project.minecraft
+    get() = this.extensions.getByType(MinecraftProvider::class.java)
 
 /**
  * The main interface for interacting with minecraft.
@@ -242,5 +246,6 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
     }
 
     @ApiStatus.Internal
-    abstract fun getMinecraftWithMapping(envType: EnvType, namespace: String, fallbackNamespace: String): Path
+    abstract fun getMinecraftWithMapping(envType: EnvType, namespace: MappingNamespace, fallbackNamespace: MappingNamespace): Path
+    abstract fun isMinecraftJar(path: Path): Boolean
 }

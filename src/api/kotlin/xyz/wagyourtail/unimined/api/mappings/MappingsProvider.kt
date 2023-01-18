@@ -2,9 +2,13 @@ package xyz.wagyourtail.unimined.api.mappings
 
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.tinyremapper.IMappingProvider
+import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+
+val Project.mappings
+    get() = this.extensions.getByType(MappingsProvider::class.java)
 
 /**
  * Mappings block, contains methods for manipulation of mappings.
@@ -44,13 +48,13 @@ abstract class MappingsProvider {
     abstract fun getCombinedNames(envType: EnvType): String
 
     @ApiStatus.Internal
-    abstract fun getMappingProvider(
+    abstract fun getMappingsProvider(
         envType: EnvType,
-        srcName: String,
-        fallbackSrc: String,
-        fallbackTarget: String,
-        targetName: String,
+        remap: Pair<MappingNamespace, MappingNamespace>,
         remapLocalVariables: Boolean = true,
     ): (IMappingProvider.MappingAcceptor) -> Unit
+
+    @ApiStatus.Internal
+    abstract fun getAvailableMappings(envType: EnvType): Set<MappingNamespace>
 
 }

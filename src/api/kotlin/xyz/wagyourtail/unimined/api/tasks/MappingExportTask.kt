@@ -5,6 +5,7 @@ import groovy.lang.DelegatesTo
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.internal.ConventionTask
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import java.io.File
 
@@ -70,13 +71,15 @@ abstract class MappingExport(val envType: EnvType) {
      * the namespace to export from.
      * @since 0.2.3
      */
-    var sourceNamespace: String? = null
+    @set:ApiStatus.Internal
+    var sourceNamespace: MappingNamespace? = null
 
     /**
      * the namespace(s) to export to.
      * @since 0.2.3
      */
-    var targetNamespace: List<String>? = null
+    @set:ApiStatus.Internal
+    var targetNamespace: List<MappingNamespace>? = null
 
     /**
      * should the export skip comments?
@@ -103,6 +106,14 @@ abstract class MappingExport(val envType: EnvType) {
      */
     fun setLocation(location: String) {
         this.location = File(location)
+    }
+
+    fun setSourceNamespace(namespace: String) {
+        this.sourceNamespace = MappingNamespace.getNamespace(namespace)
+    }
+
+    fun setTargetNamespaces(namespace: List<String>) {
+        this.targetNamespace = namespace.map { MappingNamespace.getNamespace(it) }
     }
 
     @ApiStatus.Internal

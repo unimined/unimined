@@ -9,6 +9,7 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.process.JavaExecSpec
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.util.getFile
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
@@ -90,7 +91,7 @@ data class McpExecutor(
     }
 
     private fun mappings(step: McpConfigStep): Path {
-        val mappings = minecraftProvider.parent.mappingsProvider.getMappings(EnvType.COMBINED)
+        val mappings = project.mappings.getMappings(EnvType.COMBINED)
         val transformer = ((minecraftProvider.mcPatcher as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
         val mcpConfig = mappings.getFile(transformer.mcpConfig, Regex("zip"))
         val target = getStepCache(step.name).createDirectories()
@@ -179,7 +180,7 @@ data class McpExecutor(
         }
 
         override fun mappings(): Path {
-            val mappings = minecraftProvider.parent.mappingsProvider.getMappings(EnvType.COMBINED)
+            val mappings = project.mappings.getMappings(EnvType.COMBINED)
             val transformer = ((minecraftProvider.mcPatcher as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
             val mcpConfig = mappings.getFile(transformer.mcpConfig, Regex("zip"))
             val target = getStepCache(step.name).createDirectories()

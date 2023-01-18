@@ -7,15 +7,16 @@ import net.fabricmc.mappingio.tree.MemoryMappingTree
 import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.artifacts.Dependency
 import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.Constants
-import xyz.wagyourtail.unimined.api.UniminedExtension
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.MappingsProvider
 import xyz.wagyourtail.unimined.api.mappings.MemoryMapping
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.api.unimined
 import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
@@ -30,8 +31,9 @@ import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
 
 abstract class MappingsProviderImpl(
-    val project: Project, val parent: UniminedExtension
+    val project: Project
 ) : MappingsProvider() {
+
     private val mcProvider = project.extensions.getByType(MinecraftProvider::class.java)
 
     init {
@@ -108,31 +110,34 @@ abstract class MappingsProviderImpl(
         }
     }
 
-    private val mappingFileEnvs = mutableMapOf<EnvType, Set<File>>()
+    private val mappingFileEnvs = mutableMapOf<EnvType, Set<Pair<Dependency, File>>>()
 
     @Synchronized
-    private fun mappingsFiles(envType: EnvType): Set<File> {
+    private fun mappingsFiles(envType: EnvType): Set<Pair<Dependency, File>> {
         return if (envType != EnvType.COMBINED) {
             mappingsFiles(EnvType.COMBINED)
         } else {
             setOf()
         } + mappingFileEnvs.computeIfAbsent(envType) {
-            getMappings(envType).resolve()
+            val config = getMappings(envType)
+            config.dependencies.map {
+                it to config.files(it).first { it.extension != "pom" }
+            }.toSet()
         }
     }
 
     private fun writeToCache(file: Path, mappingTree: MappingTreeView) {
         file.parent.createDirectories()
-        val filtered = MemoryMappingTree()
-        mappingTree.accept(
-            MappingDstNsFilter(
-                filtered,
-                listOf("intermediary", "searge", "named").filter { mappingTree.dstNamespaces.contains(it) })
-        )
+//        val filtered = MemoryMappingTree()
+//        mappingTree.accept(
+//            MappingDstNsFilter(
+//                filtered,
+//                listOf("intermediary", "searge", "named").filter { mappingTree.dstNamespaces.contains(it) })
+//        )
         ZipOutputStream(file.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use {
             it.putNextEntry(ZipEntry("mappings/mappings.tiny"))
             OutputStreamWriter(it).let { writer ->
-                filtered.accept(Tiny2Writer2(writer, false))
+                mappingTree.accept(Tiny2Writer2(writer, false))
                 writer.flush()
             }
             it.closeEntry()
@@ -141,7 +146,7 @@ abstract class MappingsProviderImpl(
 
     @ApiStatus.Internal
     fun mappingCacheFile(envType: EnvType): Path =
-        (if (stubs.contains(envType)) parent.getLocalCache() else parent.getGlobalCache()).resolve("mappings")
+        (if (stubs.contains(envType)) project.unimined.getLocalCache() else project.unimined.getGlobalCache()).resolve("mappings")
             .resolve("mappings-${getCombinedNames(envType)}-${envType}.jar")
 
     private fun resolveMappingTree(envType: EnvType): MemoryMappingTree {
@@ -171,22 +176,26 @@ abstract class MappingsProviderImpl(
                     }"
                 )
                 project.logger.info("Reading mappings from $mapping")
-                if (mapping.extension == "zip" || mapping.extension == "jar") {
-                    val contents = ZipReader.readContents(mapping.toPath())
+                if (mapping.second.extension == "zip" || mapping.second.extension == "jar") {
+                    val contents = ZipReader.readContents(mapping.second.toPath())
                     project.logger.info("Detected mapping type: ${ZipReader.getZipTypeFromContentList(contents)}")
-                    ZipReader.readMappings(envType, mapping.toPath(), contents, mappingTree)
-                } else if (mapping.name == "client_mappings.txt" || mapping.name == "server_mappings.txt") {
+                    ZipReader.readMappings(envType, mapping.second.toPath(), contents, mappingTree, when (mapping.first.name) {
+                        "yarn" -> MappingNamespace.YARN
+                        "quilt-mappings" -> MappingNamespace.QUILT
+                        else -> MappingNamespace.YARN
+                    })
+                } else if (mapping.second.name == "client_mappings.txt" || mapping.second.name == "server_mappings.txt") {
                     project.logger.info("Detected proguard mappings")
-                    InputStreamReader(mapping.inputStream()).use {
-                        ProGuardReader.read(it, "named", "official",
+                    InputStreamReader(mapping.second.inputStream()).use {
+                        ProGuardReader.read(it, MappingNamespace.MOJMAP.namespace, MappingNamespace.OFFICIAL.namespace,
                             MappingSourceNsSwitch(
                                 mappingTree,
-                                "official"
+                                MappingNamespace.OFFICIAL.namespace
                             )
                         )
                     }
                 } else {
-                    throw IllegalStateException("Unknown mapping file type ${mapping.name}")
+                    throw IllegalStateException("Unknown mapping file type ${mapping.first} ${mapping.second.name}")
                 }
             }
             if (hasStub) {
@@ -207,7 +216,6 @@ abstract class MappingsProviderImpl(
             )
         )
 
-        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
         if (envType == EnvType.COMBINED) {
             mcProvider.combinedSourceSets.forEach {
                 it.runtimeClasspath += getInternalMappingsConfig(envType)
@@ -230,6 +238,8 @@ abstract class MappingsProviderImpl(
                 )
             }"
         )
+        val available = (mappingTree.dstNamespaces.map { MappingNamespace.getNamespace(it) } + MappingNamespace.OFFICIAL).toSet()
+        project.logger.lifecycle("found mappings for $envType: $available")
         return mappingTree
     }
 
@@ -238,117 +248,226 @@ abstract class MappingsProviderImpl(
         return IMappingProvider.Member(className, memberName, descriptor)
     }
 
-    @ApiStatus.Internal
-    override fun getMappingProvider(
+    private fun fixInnerClassName(
+        mappings: MappingTreeView,
+        fromId: Int,
+        toId: Int,
+        fromClassName: String,
+        toClassName: String?
+    ): String? {
+        var toClassName = toClassName
+        val outerClass = fromClassName.substring(0, fromClassName.lastIndexOf('$'))
+        val outerClassDef = mappings.getClass(outerClass, fromId)
+        if (outerClassDef != null) {
+            val outerFromClassName = outerClassDef.getName(fromId)
+            var outerToClassName = outerClassDef.getName(toId)
+            if (outerFromClassName != null && outerFromClassName.contains("$")) {
+                outerToClassName = fixInnerClassName(
+                    mappings,
+                    fromId,
+                    toId,
+                    outerFromClassName,
+                    outerToClassName
+                )
+            }
+            val innerClassName = toClassName?.let {
+                it.substring(
+                    it.lastIndexOf(
+                        '$'
+                    )
+                )
+            } ?: fromClassName.substring(fromClassName.lastIndexOf('$'))
+            if (outerToClassName != null && (toClassName == null || !toClassName.startsWith(outerToClassName))) {
+                toClassName = "$outerToClassName$$innerClassName"
+                project.logger.warn("Detected missing inner class, replacing with: {} -> {}", fromClassName, toClassName)
+            }
+        }
+        return toClassName
+    }
+
+    private open class Mapping(val to: String?)
+    private class ClassMapping(val from: String, to: String) : Mapping(to)
+    private open class MemberMapping(val from: String, val fromDesc: String, to: String) : Mapping(to)
+    private class MethodMapping(from: String, fromDesc: String, to: String) : MemberMapping(from, fromDesc, to)
+    private class FieldMapping(from: String, fromDesc: String, to: String) : MemberMapping(from, fromDesc, to)
+    private class ArgumentMapping(to: String, val index: Int) : Mapping(to)
+    private class LocalVariableMapping(to: String, val lvIndex: Int, val startOpIdx: Int, val lvtRowIndex: Int) : Mapping(to)
+
+    private val mappingCache = mutableMapOf<Pair<MappingNamespace, MappingNamespace>, List<Mapping>>()
+
+    private fun getInternalMappingsProvider(
         envType: EnvType,
-        srcName: String,
-        fallbackSrc: String,
-        fallbackTarget: String,
-        targetName: String,
+        remap: Pair<MappingNamespace, MappingNamespace>,
         remapLocalVariables: Boolean,
-    ): (IMappingProvider.MappingAcceptor) -> Unit {
-        val mappingTree = getMappingTree(envType)
-        return { acceptor: IMappingProvider.MappingAcceptor ->
+    ) : List<Mapping> {
+        return mappingCache.computeIfAbsent(remap) {
+            val reverse = remap.first.shouldReverse(remap.second)
+            val srcName = remap.first.namespace
+            val dstName = remap.second.namespace
+
+            val mappingTree = getMappingTree(envType)
             val fromId = mappingTree.getNamespaceId(srcName)
-            var fallbackSrcId = mappingTree.getNamespaceId(fallbackSrc)
-            var fallbackToId = mappingTree.getNamespaceId(fallbackTarget)
-            val toId = mappingTree.getNamespaceId(targetName)
+            val toId = mappingTree.getNamespaceId(dstName)
+
+            if (fromId == MappingTreeView.NULL_NAMESPACE_ID) {
+                throw IllegalArgumentException("Unknown source namespace: $srcName")
+            }
 
             if (toId == MappingTreeView.NULL_NAMESPACE_ID) {
-                throw RuntimeException("Namespace $targetName not found in mappings")
+                throw IllegalArgumentException("Unknown target namespace: $dstName")
             }
 
-            if (fallbackToId == MappingTreeView.NULL_NAMESPACE_ID) {
-                project.logger.warn("Namespace $fallbackTarget not found in mappings, using $srcName as fallback")
-                fallbackToId = fromId
-            }
-
-            if (fallbackSrcId == MappingTreeView.NULL_NAMESPACE_ID) {
-                project.logger.warn("Namespace $fallbackSrc not found in mappings, using $srcName as fallback")
-                fallbackSrcId = fromId
-            }
-
-            project.logger.info("Mapping from $srcName to $targetName, fallbackSrc: $fallbackSrc, fallbackTarget: $fallbackTarget")
-            project.logger.info("ids: from $fromId to $toId fallbackTo $fallbackToId fallbackFrom $fallbackSrcId")
+            val mappings = mutableListOf<Mapping>()
 
             for (classDef in mappingTree.classes) {
-                var fromClassName = classDef.getName(fromId) ?: classDef.getName(fallbackSrcId)
-                var toClassName = classDef.getName(toId) ?: classDef.getName(fallbackToId)
+                var fromClassName = classDef.getName(fromId)
+                var toClassName = classDef.getName(toId)
 
                 if (fromClassName == null) {
-                    project.logger.debug("From class name not found for $classDef")
+                    project.logger.warn("Target class {} has no name in namespace {}", classDef, srcName)
                     fromClassName = toClassName
                 }
 
                 // detect missing inner class
                 if (fromClassName != null && fromClassName.contains("$")) {
-                    val outerClass = fromClassName.substringBefore("$")
-                    val outerClassDef = mappingTree.getClass(outerClass, fromId) ?: mappingTree.getClass(outerClass, fallbackSrcId)
-                    if (outerClassDef != null) {
-                        val outerToClassName = outerClassDef.getName(toId) ?: outerClassDef.getName(fallbackToId)
-                        val innerClassName = toClassName?.substringAfter("$") ?: fromClassName.substringAfter("$")
-                        if (outerToClassName != null && (toClassName == null || !toClassName.startsWith(outerToClassName))) {
-                            toClassName = "$outerToClassName$$innerClassName"
-                            project.logger.warn("Detected missing inner class, replacing with: $fromClassName -> $toClassName")
-                        }
-                    }
+                    toClassName = fixInnerClassName(
+                        mappingTree,
+                        fromId,
+                        toId,
+                        fromClassName,
+                        toClassName
+                    )
                 }
 
                 if (toClassName == null) {
-                    project.logger.debug("To class name not found for $classDef")
+                    project.logger.warn("Target class {} has no name in namespace {}", classDef, dstName)
                     toClassName = fromClassName
                 }
 
                 if (fromClassName == null) {
-                    project.logger.error("Class name not found for $classDef")
+                    project.logger.warn("Class $classDef has no name in either namespace $srcName or $dstName")
+                    continue
                 }
 
-                project.logger.debug("fromClassName: $fromClassName toClassName: $toClassName")
-                if (toClassName != null) {
-                    acceptor.acceptClass(fromClassName, toClassName)
+                if (reverse) {
+                    mappings.add(ClassMapping(toClassName, fromClassName))
+                } else {
+                    mappings.add(ClassMapping(fromClassName, toClassName))
                 }
 
                 for (fieldDef in classDef.fields) {
-                    val fromFieldName = fieldDef.getName(fromId) ?: fieldDef.getName(fallbackSrcId)
-                    val toFieldName = fieldDef.getName(toId) ?: fieldDef.getName(fallbackToId)
-                    if (fromFieldName == null || toFieldName == null) {
-                        project.logger.debug("No field name for $fieldDef")
+                    val fromFieldName = fieldDef.getName(fromId)
+                    val toFieldName = fieldDef.getName(toId)
+
+                    if (fromFieldName == null) {
+                        project.logger.warn("Target field {} has no name in namespace {}", fieldDef, srcName)
                         continue
                     }
-                    project.logger.debug("fromFieldName: $fromFieldName toFieldName: $toFieldName")
-                    acceptor.acceptField(
-                        memberOf(fromClassName, fromFieldName, fieldDef.getDesc(fromId)), toFieldName
-                    )
+
+                    if (toFieldName == null) {
+                        project.logger.warn("Target field {} has no name in namespace {}", fieldDef, dstName)
+                        continue
+                    }
+
+                    if (reverse) {
+                        mappings.add(FieldMapping(toFieldName, fieldDef.getDesc(toId), fromFieldName))
+                    } else {
+                        mappings.add(FieldMapping(fromFieldName, fieldDef.getDesc(fromId), toFieldName))
+                    }
                 }
 
                 for (methodDef in classDef.methods) {
-                    val fromMethodName = methodDef.getName(fromId) ?: methodDef.getName(fallbackSrcId)
-                    val toMethodName = methodDef.getName(toId) ?: methodDef.getName(fallbackToId)
-                    val fromMethodDesc = methodDef.getDesc(fromId) ?: methodDef.getDesc(fallbackSrcId)
-                    if (fromMethodName == null || toMethodName == null) {
-                        project.logger.debug("No method name for $methodDef")
+                    val fromMethodName = methodDef.getName(fromId)
+                    val toMethodName = methodDef.getName(toId)
+
+                    if (fromMethodName == null) {
+                        project.logger.warn("Target method {} has no name in namespace {}", methodDef, srcName)
                         continue
                     }
-                    val method = memberOf(fromClassName, fromMethodName, fromMethodDesc)
 
-                    project.logger.debug("fromMethodName: $fromMethodName toMethodName: $toMethodName")
-                    acceptor.acceptMethod(method, toMethodName)
+                    if (toMethodName == null) {
+                        project.logger.warn("Target method {} has no name in namespace {}", methodDef, dstName)
+                        continue
+                    }
+
+                    if (reverse) {
+                        mappings.add(MethodMapping(toMethodName, methodDef.getDesc(toId)!!, fromMethodName))
+                    } else {
+                        mappings.add(MethodMapping(fromMethodName, methodDef.getDesc(fromId)!!, toMethodName))
+                    }
 
                     if (remapLocalVariables) {
                         for (arg in methodDef.args) {
-                            val toArgName = arg.getName(toId) ?: arg.getName(fallbackToId) ?: continue
-                            acceptor.acceptMethodArg(method, arg.lvIndex, toArgName)
+                            val toArgName = if (reverse) arg.getName(fromId) else arg.getName(toId)
+
+                            if (toArgName != null) {
+                                mappings.add(ArgumentMapping(toArgName, arg.lvIndex))
+                            }
                         }
 
                         for (localVar in methodDef.vars) {
-                            val toLocalVarName = localVar.getName(toId) ?: localVar.getName(fallbackToId) ?: continue
-                            acceptor.acceptMethodVar(
-                                method, localVar.lvIndex, localVar.startOpIdx, localVar.lvtRowIndex, toLocalVarName
-                            )
+                            val toLocalVarName = if (reverse) localVar.getName(fromId) else localVar.getName(toId)
+
+                            if (toLocalVarName != null) {
+                                mappings.add(
+                                    LocalVariableMapping(
+                                        toLocalVarName,
+                                        localVar.lvIndex,
+                                        localVar.startOpIdx,
+                                        localVar.lvtRowIndex
+                                    )
+                                )
+                            }
                         }
+                    }
+                }
+            }
+            mappings
+        }
+    }
+
+    @ApiStatus.Internal
+    override fun getMappingsProvider(
+        envType: EnvType,
+        remap: Pair<MappingNamespace, MappingNamespace>,
+        remapLocalVariables: Boolean,
+    ): (IMappingProvider.MappingAcceptor) -> Unit {
+        val mappings = getInternalMappingsProvider(envType, remap, remapLocalVariables)
+        return { acceptor ->
+            var lastClass: String? = null
+            var lastMethod: IMappingProvider.Member? = null
+            for (mapping in mappings) {
+                when (mapping) {
+                    is ClassMapping -> {
+                        lastClass = mapping.from
+                        lastMethod = null
+                        acceptor.acceptClass(mapping.from, mapping.to)
+                    }
+                    is MethodMapping -> {
+                        if (lastClass == null) throw IllegalStateException("Method mapping before class mapping")
+                        lastMethod = memberOf(lastClass, mapping.from, mapping.fromDesc)
+
+                        acceptor.acceptMethod(lastMethod, mapping.to)
+                    }
+                    is FieldMapping -> {
+                        if (lastClass == null) throw IllegalStateException("Field mapping before class mapping")
+                        lastMethod = null
+                        acceptor.acceptField(memberOf(lastClass, mapping.from, mapping.fromDesc), mapping.to)
+                    }
+                    is ArgumentMapping -> {
+                        if (lastMethod == null) throw IllegalStateException("Argument mapping before method mapping")
+                        acceptor.acceptMethodArg(lastMethod, mapping.index, mapping.to)
+                    }
+                    is LocalVariableMapping -> {
+                        if (lastMethod == null) throw IllegalStateException("Local variable mapping before method mapping")
+                        acceptor.acceptMethodVar(lastMethod, mapping.lvIndex, mapping.startOpIdx, mapping.lvtRowIndex, mapping.to)
                     }
                 }
             }
         }
     }
+
+    @ApiStatus.Internal
+    override fun getAvailableMappings(envType: EnvType): Set<MappingNamespace> = (getMappingTree(envType).dstNamespaces.map { MappingNamespace.getNamespace(it) } + MappingNamespace.OFFICIAL).toSet()
+
 }

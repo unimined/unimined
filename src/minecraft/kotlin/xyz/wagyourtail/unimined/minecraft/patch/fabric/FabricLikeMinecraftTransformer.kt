@@ -10,11 +10,15 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.File
 import java.io.InputStreamReader
 import java.nio.file.Files
@@ -51,9 +55,9 @@ abstract class FabricLikeMinecraftTransformer(
     protected var serverMainClass: String? = null
 
 
-    override val prodNamespace: String = "intermediary"
-    override var devNamespace: String = "named"
-    override var devFallbackNamespace: String = "intermediary"
+    override val prodNamespace = MappingNamespace.INTERMEDIARY
+    override var devNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.NAMED, project.mappings.getAvailableMappings(EnvType.COMBINED)) }
+    override var devFallbackNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.INT, project.mappings.getAvailableMappings(EnvType.COMBINED)) }
 
     init {
         addMavens()
@@ -175,7 +179,7 @@ abstract class FabricLikeMinecraftTransformer(
         if (accessWidener != null) {
             val output = MinecraftJar(
                 baseMinecraft,
-                parentPath = provider.parent.getLocalCache().resolve("fabric").createDirectories()
+                parentPath = project.unimined.getLocalCache().resolve("fabric").createDirectories()
             )
             if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
                 if (AccessWidenerMinecraftTransformer.transform(
@@ -197,11 +201,10 @@ abstract class FabricLikeMinecraftTransformer(
         } else baseMinecraft
 
     protected fun getIntermediaryClassPath(envType: EnvType): String {
-        val remapClasspath = provider.parent.getLocalCache().resolve("remapClasspath.txt")
+        val remapClasspath = project.unimined.getLocalCache().resolve("remapClasspath.txt")
         val s = provider.mcLibraries.files.joinToString(":") + ":" +
-                provider.parent.modProvider.modRemapper.internalModRemapperConfiguration(envType).files.joinToString(":") + ":" +
-                provider.getMinecraftWithMapping(envType, "intermediary", "official")
-
+                project.unimined.modProvider.modRemapper.preTransform(envType).joinToString(":") + ":" +
+                provider.getMinecraftWithMapping(envType, prodNamespace, prodNamespace)
         remapClasspath.writeText(s, options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
         return remapClasspath.absolutePathString()
     }
@@ -220,7 +223,7 @@ abstract class FabricLikeMinecraftTransformer(
             val json = JsonParser.parseReader(InputStreamReader(Files.newInputStream(mod))).asJsonObject
 
             Files.createDirectories(fs.getPath("META-INF/jars/"))
-            val includeCache = provider.parent.getLocalCache().resolve("includeCache")
+            val includeCache = project.unimined.getLocalCache().resolve("includeCache")
             Files.createDirectories(includeCache)
             for (dep in include.dependencies) {
                 val path = fs.getPath("META-INF/jars/${dep.name}-${dep.version}.jar")

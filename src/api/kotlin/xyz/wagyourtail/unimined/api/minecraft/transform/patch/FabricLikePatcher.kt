@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.api.minecraft.transform.patch
 
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import java.io.File
 
 /**
@@ -8,11 +9,8 @@ import java.io.File
  */
 interface FabricLikePatcher : MinecraftPatcher {
 
-    override val prodNamespace: String
-        get() = "intermediary"
-
-    override val prodFallbackNamespace: String
-        get() = "intermediary"
+    override val prodNamespace: MappingNamespace
+        get() = MappingNamespace.INTERMEDIARY
 
     /**
      * location of access widener file to apply to the minecraft jar.

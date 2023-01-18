@@ -13,8 +13,11 @@ import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.run.RunConfig
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.mcpconfig.McpConfigData
@@ -35,15 +38,15 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     project, parent.provider, Constants.FORGE_PROVIDER
 ) {
 
-    override val prodNamespace: String = "searge"
+    override val prodNamespace = MappingNamespace.SEARGE
 
-    override var devNamespace: String
+    override var devNamespace: MappingNamespace
         get() = parent.devNamespace
         set(value) {
             parent.devNamespace = value
         }
 
-    override var devFallbackNamespace: String
+    override var devFallbackNamespace: MappingNamespace
         get() = parent.devFallbackNamespace
         set(value) {
             parent.devFallbackNamespace = value
@@ -57,7 +60,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     lateinit var mcpConfig: Dependency
     val mcpConfigData by lazy {
-        val config = provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).getFile(mcpConfig, Regex("zip"))
+        val config = project.mappings.getMappings(EnvType.COMBINED).getFile(mcpConfig, Regex("zip"))
         val configJson = ZipReader.readInputStreamFor("config.json", config.toPath()) {
             JsonParser.parseReader(InputStreamReader(it)).asJsonObject
         }
@@ -82,7 +85,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 //        val installer = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:installer"
 //        forgeInstaller.dependencies.add(project.dependencies.create(installer))
 
-        provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).dependencies.apply {
+        project.mappings.getMappings(EnvType.COMBINED).dependencies.apply {
             val empty = isEmpty()
             mcpConfig = project.dependencies.create("de.oceanlabs.mcp:mcp_config:${provider.minecraft.version}@zip")
             add(mcpConfig)
@@ -195,7 +198,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             parentPath = provider.minecraft.mcVersionFolder(provider.minecraft.version)
                 .resolve("forge"),
             envType = EnvType.COMBINED,
-            mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) "official" else "searge"
+            mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) MappingNamespace.OFFICIAL else MappingNamespace.SEARGE
         )
         createClientExtra(clientjar, serverjar, output.path)
         if (output.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
@@ -306,13 +309,13 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         //   shade in forge jar
         val shadedForge = super.transform(patchedMC)
         return if (userdevCfg["notchObf"]?.asBoolean == true) {
-            provider.mcRemapper.provide(shadedForge, "searge", "searge")
+            provider.mcRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
         } else {
             shadedForge
         }
     }
 
-    val legacyClasspath = provider.parent.getLocalCache().createDirectories().resolve("legacy_classpath.txt")
+    val legacyClasspath = project.unimined.getLocalCache().createDirectories().resolve("legacy_classpath.txt")
 
     private fun getArgValue(config: RunConfig, arg: String): String {
         if (arg.startsWith("{")) {
@@ -474,7 +477,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (baseMinecraft.mappingNamespace == "named") {
+        if (baseMinecraft.mappingNamespace.type == MappingNamespace.Type.NAMED) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",

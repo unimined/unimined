@@ -6,6 +6,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.run.RunConfig
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import java.nio.file.Path
 
@@ -48,8 +49,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     @ApiStatus.Internal
     open fun afterEvaluate() {
-        provider.parent.events.register(::sourceSets)
-        provider.parent.events.register(::applyRunConfigs)
+        project.unimined.events.register(::sourceSets)
+        project.unimined.events.register(::applyRunConfigs)
     }
 
     @ApiStatus.Internal

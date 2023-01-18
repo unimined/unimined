@@ -9,10 +9,13 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.api.tasks.MappingExportTypes
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mappings.MappingExportImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
@@ -22,6 +25,7 @@ import xyz.wagyourtail.unimined.minecraft.patch.forge.fg2.FG2MinecraftTransforme
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.resolve.parseAllLibraries
+import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.getSha1
 import java.io.File
 import java.io.InputStreamReader
@@ -42,7 +46,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     override var mcpVersion: String? = null
     override var mcpChannel: String? = null
 
-    override val prodNamespace: String
+    override val prodNamespace: MappingNamespace
         get() = forgeTransformer.prodNamespace
 
     override var deleteMetaInf: Boolean
@@ -51,11 +55,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
             forgeTransformer.deleteMetaInf = value
         }
 
-    override val prodFallbackNamespace: String
-        get() = forgeTransformer.prodFallbackNamespace
-
-    override var devNamespace: String = "named"
-    override var devFallbackNamespace: String = "searge"
+    override var devNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.NAMED, project.mappings.getAvailableMappings(EnvType.COMBINED)) }
+    override var devFallbackNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.INT, project.mappings.getAvailableMappings(EnvType.COMBINED)) }
 
     override var mixinConfig: List<String> = mutableListOf()
 
@@ -69,7 +70,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     internal var mainClass: String? = null
 
     init {
-        provider.parent.events.register(::applyToTask)
+        project.unimined.events.register(::applyToTask)
     }
 
     override fun aw2at(input: String): File = aw2at(File(input))
@@ -102,30 +103,30 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
 
     @get:ApiStatus.Internal
     val srgToMCPAsSRG: Path by lazy {
-        provider.parent.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.srg").apply {
+        project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.srg").apply {
             val export = MappingExportImpl(EnvType.COMBINED).apply {
                 location = toFile()
                 type = MappingExportTypes.SRG
-                sourceNamespace = "searge"
-                targetNamespace = listOf("named")
+                sourceNamespace = MappingNamespace.SEARGE
+                targetNamespace = listOf(devNamespace)
             }
             export.validate()
-            export.exportFunc(this@ForgeMinecraftTransformer.provider.parent.mappingsProvider.getMappingTree(EnvType.COMBINED))
+            export.exportFunc(project.mappings.getMappingTree(EnvType.COMBINED))
         }
     }
 
     @get:ApiStatus.Internal
     val srgToMCPAsMCP: Path by lazy {
-        provider.parent.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.jar").apply {
+        project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.jar").apply {
             val export = MappingExportImpl(EnvType.COMBINED).apply {
                 location = toFile()
                 type = MappingExportTypes.MCP
-                sourceNamespace = "searge"
+                sourceNamespace = MappingNamespace.SEARGE
                 skipComments = true // the reader forge uses now is too dumb...
-                targetNamespace = listOf("named")
+                targetNamespace = listOf(devNamespace)
             }
             export.validate()
-            export.exportFunc(this@ForgeMinecraftTransformer.provider.parent.mappingsProvider.getMappingTree(EnvType.COMBINED))
+            export.exportFunc(project.mappings.getMappingTree(EnvType.COMBINED))
         }
     }
 
@@ -303,7 +304,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
             project.logger.lifecycle("Using user access transformer $accessTransformer")
             val output = MinecraftJar(
                 baseMinecraft,
-                parentPath = provider.parent.getLocalCache().resolve("forge"),
+                parentPath = project.unimined.getLocalCache().resolve("forge"),
                 awOrAt = "at+${accessTransformer!!.toPath().getSha1()}"
             )
             if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {

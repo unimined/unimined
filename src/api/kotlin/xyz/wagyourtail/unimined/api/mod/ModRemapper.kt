@@ -3,11 +3,10 @@ package xyz.wagyourtail.unimined.api.mod
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import net.fabricmc.tinyremapper.TinyRemapper
-import org.gradle.api.artifacts.Configuration
-import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.util.LazyMutable
+import java.io.File
 
 /**
  * The class responsible for remapping mods.
@@ -23,7 +22,7 @@ abstract class ModRemapper(val provider: ModProvider) {
     /**
      * fallback namespace the mod is currently in. (prodFallback)
      */
-    var fromFallbackNamespace by LazyMutable { provider.parent.minecraftProvider.mcPatcher.prodFallbackNamespace }
+    var fromFallbackNamespace by LazyMutable { provider.parent.minecraftProvider.mcPatcher.prodNamespace }
 
     /**
      * namespace the mod should be remapped to. (dev)
@@ -59,7 +58,5 @@ abstract class ModRemapper(val provider: ModProvider) {
         }
     }
 
-    @ApiStatus.Internal
-    abstract fun internalModRemapperConfiguration(envType: EnvType): Configuration
-
+    abstract fun preTransform(envType: EnvType): List<File>
 }

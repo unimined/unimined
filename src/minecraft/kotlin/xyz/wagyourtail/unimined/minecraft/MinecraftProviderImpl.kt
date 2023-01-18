@@ -19,6 +19,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.UniminedExtension
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
@@ -53,7 +54,7 @@ import kotlin.io.path.writeBytes
 @Suppress("LeakingThis")
 abstract class MinecraftProviderImpl(
     project: Project,
-    val parent: UniminedExtension
+    unimined: UniminedExtension
 ) : MinecraftProvider<MinecraftRemapperImpl, AbstractMinecraftTransformer>(project), ArtifactProvider<ArtifactIdentifier> {
 
     @ApiStatus.Internal
@@ -98,7 +99,7 @@ abstract class MinecraftProviderImpl(
      * please use [jarMod], [forge], or [fabric] instead.
      */
     @get:ApiStatus.Internal
-    public override var mcPatcher: AbstractMinecraftTransformer by ChangeOnce(NoTransformMinecraftTransformer(project, this))
+    override var mcPatcher: AbstractMinecraftTransformer by ChangeOnce(NoTransformMinecraftTransformer(project, this))
 
     init {
         project.repositories.maven {
@@ -108,11 +109,11 @@ abstract class MinecraftProviderImpl(
         GradleRepositoryAdapter.add(
             project.repositories,
             "minecraft-transformer",
-            parent.getLocalCache().toFile(),
+            unimined.getLocalCache().toFile(),
             repo
         )
-        parent.events.register(::afterEvaluate)
-        parent.events.register(::sourceSets)
+        unimined.events.register(::afterEvaluate)
+        unimined.events.register(::sourceSets)
     }
 
 
@@ -215,14 +216,18 @@ abstract class MinecraftProviderImpl(
         }
     }
 
-    private val minecraftMapped = mutableMapOf<EnvType, MutableMap<String, Path>>()
+    private val minecraftMapped = mutableMapOf<EnvType, MutableMap<Pair<MappingNamespace, MappingNamespace>, Path>>()
+
+    override fun isMinecraftJar(path: Path): Boolean {
+        return minecraftMapped.values.any { it.values.contains(path) }
+    }
 
     @ApiStatus.Internal
-    override fun getMinecraftWithMapping(envType: EnvType, namespace: String, fallbackNamespace: String): Path {
+    override fun getMinecraftWithMapping(envType: EnvType, namespace: MappingNamespace, fallbackNamespace: MappingNamespace): Path {
         project.logger.lifecycle("Getting minecraft with mapping $envType:$namespace")
         return minecraftMapped.computeIfAbsent(envType) {
             mutableMapOf()
-        }.computeIfAbsent(namespace) {
+        }.computeIfAbsent(namespace to fallbackNamespace) {
             val mc = if (envType == EnvType.COMBINED) {
                 val client = MinecraftJar(
                     minecraft.mcVersionFolder(minecraft.version),
@@ -230,8 +235,8 @@ abstract class MinecraftProviderImpl(
                     EnvType.CLIENT,
                     minecraft.version,
                     listOf(),
-                    "official",
-                    "official",
+                    MappingNamespace.OFFICIAL,
+                    MappingNamespace.OFFICIAL,
                     null,
                     "jar",
                     minecraft.getMinecraft(EnvType.CLIENT)
@@ -242,8 +247,8 @@ abstract class MinecraftProviderImpl(
                     EnvType.SERVER,
                     minecraft.version,
                     listOf(),
-                    "official",
-                    "official",
+                    MappingNamespace.OFFICIAL,
+                    MappingNamespace.OFFICIAL,
                     null,
                     "jar",
                     minecraft.getMinecraft(EnvType.SERVER)
@@ -259,8 +264,8 @@ abstract class MinecraftProviderImpl(
                     envType,
                     minecraft.version,
                     listOf(),
-                    "official",
-                    "official",
+                    MappingNamespace.OFFICIAL,
+                    MappingNamespace.OFFICIAL,
                     null,
                     "jar",
                     minecraft.getMinecraft(envType)

@@ -4,6 +4,8 @@ import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
@@ -27,15 +29,15 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     Constants.FORGE_PROVIDER
 ) {
 
-    override val prodNamespace: String = "searge"
+    override val prodNamespace = MappingNamespace.SEARGE
 
-    override var devNamespace: String
+    override var devNamespace: MappingNamespace
         get() = parent.devNamespace
         set(value) {
             parent.devNamespace = value
         }
 
-    override var devFallbackNamespace: String
+    override var devFallbackNamespace: MappingNamespace
         get() = parent.devFallbackNamespace
         set(value) {
             parent.devFallbackNamespace = value
@@ -46,7 +48,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         val forgeDep = parent.forge.dependencies.last()
 
         val forgeSrc = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:src@zip"
-        provider.parent.mappingsProvider.getMappings(EnvType.COMBINED).dependencies.apply {
+        project.mappings.getMappings(EnvType.COMBINED).dependencies.apply {
             val empty = isEmpty()
             if (empty) {
                 if (!SemVerUtils.matches(provider.minecraft.version, "<1.7.10")) {
@@ -108,7 +110,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         //   shade in forge jar
         val shadedForge = super.transform(patchedMC)
-        return provider.mcRemapper.provide(shadedForge, "searge", "official")
+        return provider.mcRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
@@ -143,7 +145,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (baseMinecraft.mappingNamespace == "named") {
+        if (baseMinecraft.mappingNamespace.type == MappingNamespace.Type.NAMED) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",

@@ -197,3 +197,9 @@ fun <T> Optional<T>.orElse(invoke: () -> Optional<T>): Optional<T> {
         invoke()
     }
 }
+
+fun getTempFilePath(prefix: String, suffix: String): Path {
+    return Files.createTempFile(prefix, suffix).apply {
+        deleteExisting()
+    }
+}

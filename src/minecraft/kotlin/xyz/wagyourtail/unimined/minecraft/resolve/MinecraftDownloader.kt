@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.Constants.METADATA_URL
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftResolver
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.testSha1
@@ -50,7 +51,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     var client by Delegates.notNull<Boolean>()
     var server by Delegates.notNull<Boolean>()
 
-    private val sourceSets: SourceSetContainer = project.extensions.getByType(SourceSetContainer::class.java)
+    private val sourceSets: SourceSetContainer by lazy { project.extensions.getByType(SourceSetContainer::class.java) }
 
     fun afterEvaluate() {
         // if <=1.2.5 disable combined automagically
@@ -366,7 +367,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     fun mcVersionFolder(version: String): Path {
-        return parent.parent.getGlobalCache()
+        return project.unimined.getGlobalCache()
             .resolve("net")
             .resolve("minecraft")
             .resolve("minecraft")

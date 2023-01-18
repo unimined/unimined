@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.api
 
 import org.gradle.api.Project
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mappings.MappingsProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
@@ -22,6 +23,13 @@ import kotlin.io.path.createDirectories
  * ```
  *
  */
+
+val Project.unimined
+    get() = extensions.getByType(UniminedExtension::class.java)
+
+val Project.sourceSet
+    get() = extensions.getByType(SourceSetContainer::class.java)
+
 abstract class UniminedExtension(val project: Project) {
     @ApiStatus.Internal
     val events = GradleEvents(project)

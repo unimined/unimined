@@ -93,8 +93,8 @@ class MappingExportImpl(envType: EnvType) : MappingExport(envType) {
                 mappingTree.accept(
                     MappingSourceNsSwitch(
                         MappingDstNsFilter(
-                            visitor, targetNamespace ?: mappingTree.dstNamespaces
-                        ), sourceNamespace ?: mappingTree.srcNamespace
+                            visitor, targetNamespace?.map { it.namespace } ?: mappingTree.dstNamespaces
+                        ), sourceNamespace?.namespace ?: mappingTree.srcNamespace
                     )
                 )
                 os.flush()

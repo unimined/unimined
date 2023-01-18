@@ -5,6 +5,8 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
 import xyz.wagyourtail.unimined.api.run.RunConfig
@@ -12,6 +14,7 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.modloader.ModLoaderPatches
+import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.net.URI
@@ -28,8 +31,8 @@ open class JarModMinecraftTransformer(
     project, provider
 ), JarModPatcher {
 
-    override var devNamespace: String = "named"
-    override var devFallbackNamespace: String = "intermediary"
+    override var devNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.NAMED, project.mappings.getAvailableMappings(EnvType.COMBINED)) }
+    override var devFallbackNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.INT, project.mappings.getAvailableMappings(EnvType.COMBINED)) }
     override var deleteMetaInf: Boolean = false
 
     init {
