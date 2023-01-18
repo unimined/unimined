@@ -287,9 +287,9 @@ abstract class MappingsProviderImpl(
 
     private open class Mapping(val to: String?)
     private class ClassMapping(val from: String, to: String) : Mapping(to)
-    private open class MemberMapping(val from: String, val fromDesc: String, to: String) : Mapping(to)
+    private open class MemberMapping(val from: String, val fromDesc: String?, to: String) : Mapping(to)
     private class MethodMapping(from: String, fromDesc: String, to: String) : MemberMapping(from, fromDesc, to)
-    private class FieldMapping(from: String, fromDesc: String, to: String) : MemberMapping(from, fromDesc, to)
+    private class FieldMapping(from: String, fromDesc: String?, to: String) : MemberMapping(from, fromDesc, to)
     private class ArgumentMapping(to: String, val index: Int) : Mapping(to)
     private class LocalVariableMapping(to: String, val lvIndex: Int, val startOpIdx: Int, val lvtRowIndex: Int) : Mapping(to)
 
