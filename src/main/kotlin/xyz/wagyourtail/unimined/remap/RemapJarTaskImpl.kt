@@ -19,6 +19,7 @@ import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import kotlin.io.path.deleteIfExists
 
 abstract class RemapJarTaskImpl : RemapJarTask() {
     private val minecraftProvider = project.extensions.getByType(MinecraftProviderImpl::class.java)
@@ -31,7 +32,15 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
         val devNs = sourceNamespace.getOrElse(minecraftProvider.mcPatcher.devNamespace)!!
         val devFNs = fallbackFromNamespace.getOrElse(minecraftProvider.mcPatcher.devFallbackNamespace)!!
 
-        if (prodNs == devNs && devFNs == prodNs) {
+        val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
+            devNs,
+            devFNs,
+            prodNs,
+            prodNs,
+            project.mappings.getAvailableMappings(envType.get())
+        )
+
+        if (path.isEmpty()) {
             Files.copy(
                 inputFile.get().asFile.toPath(),
                 outputs.files.files.first().toPath(),
@@ -40,13 +49,6 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
             return
         }
 
-        val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
-            devNs,
-            devFNs,
-            prodNs,
-            prodNs,
-            project.mappings.getAvailableMappings(envType.get())
-        )
         val last = path.last()
         project.logger.lifecycle("remapping output ${inputFile.get().asFile.name} from $devNs to $prodNs")
         var prevTarget = inputFile.get().asFile.toPath()
@@ -98,23 +100,29 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
         remapperB.extension(refmapBuilder)
         val remapper = remapperB.build()
         remapper.readClassPathAsync(
-            *sourceSet.get().runtimeClasspath.files.map { it.toPath() }.filter { !minecraftProvider.isMinecraftJar(it) }.toTypedArray()
+            *sourceSet.runtimeClasspath.files.map { it.toPath() }.filter { !minecraftProvider.isMinecraftJar(it) }.toTypedArray()
         )
         remapper.readClassPathAsync(mc)
 
         remapper.readInputsAsync(from)
 
-        OutputConsumerPath.Builder(target).build().use {
-            it.addNonClassFiles(
-                from,
-                remapper,
-                listOf(
-                    AccessWidenerMinecraftTransformer.awRemapper(fromNs.namespace, toNs.namespace),
-                    AccessTransformerMinecraftTransformer.atRemapper(remapATToLegacy.get()),
-                    refmapBuilder
+        try {
+            OutputConsumerPath.Builder(target).build().use {
+                it.addNonClassFiles(
+                    from,
+                    remapper,
+                    true,
+                    listOf(
+                        AccessWidenerMinecraftTransformer.awRemapper(fromNs.namespace, toNs.namespace),
+                        AccessTransformerMinecraftTransformer.atRemapper(remapATToLegacy.get()),
+                        refmapBuilder
+                    )
                 )
-            )
-            remapper.apply(it)
+                remapper.apply(it)
+            }
+        } catch (e: Exception) {
+            target.deleteIfExists()
+            throw e
         }
         remapper.finish()
 

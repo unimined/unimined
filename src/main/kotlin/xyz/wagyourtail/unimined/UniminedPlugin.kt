@@ -2,7 +2,6 @@ package xyz.wagyourtail.unimined
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
@@ -38,13 +37,13 @@ class UniminedPlugin : Plugin<Project> {
     private fun tasks(project: Project, tasks :TaskContainer) {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
-        tasks.withType(JavaExec::class.java) {
-            for (sourceSet in sourceSets) {
-                if (sourceSet.runtimeClasspath.toSet().containsAll(it.classpath.toSet())) {
-                    it.classpath = sourceSet.runtimeClasspath
-                }
-            }
-        }
+//        tasks.withType(JavaExec::class.java) {
+//            for (sourceSet in sourceSets) {
+//                if (sourceSet.runtimeClasspath.toSet().containsAll(it.classpath.toSet())) {
+//                    it.classpath = sourceSet.runtimeClasspath
+//                }
+//            }
+//        }
     }
 
     private fun remapJarTask(project: Project, tasks: TaskContainer) {

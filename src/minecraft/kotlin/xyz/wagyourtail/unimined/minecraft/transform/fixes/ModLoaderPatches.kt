@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft.patch.modloader
+package xyz.wagyourtail.unimined.minecraft.transform.fixes
 
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter

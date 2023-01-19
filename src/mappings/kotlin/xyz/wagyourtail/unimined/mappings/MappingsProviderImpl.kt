@@ -204,8 +204,10 @@ abstract class MappingsProviderImpl(
             if (mappingTree.dstNamespaces.contains("srg")) {
                 project.logger.info("Detected TSRG2 mappings (1.17+) - converting to have the right class names for runtime forge")
                 // read mojmap (possible again, TODO: detect if already there on named)
-                val mojmap = getOfficialMappings()
-                mojmap.accept(mappingTree)
+                if (!mappingTree.dstNamespaces.contains(MappingNamespace.MOJMAP.namespace)) {
+                    val mojmap = getOfficialMappings()
+                    mojmap.accept(mappingTree)
+                }
                 SeargeFromTsrg2.apply("srg", "mojmap", "searge", mappingTree)
             }
             writeToCache(file, mappingTree)
@@ -216,21 +218,6 @@ abstract class MappingsProviderImpl(
             )
         )
 
-        if (envType == EnvType.COMBINED) {
-            mcProvider.combinedSourceSets.forEach {
-                it.runtimeClasspath += getInternalMappingsConfig(envType)
-            }
-        }
-        if (envType == EnvType.CLIENT) {
-            mcProvider.clientSourceSets.forEach {
-                it.runtimeClasspath += getInternalMappingsConfig(envType)
-            }
-        }
-        if (envType == EnvType.SERVER) {
-            mcProvider.serverSourceSets.forEach {
-                it.runtimeClasspath += getInternalMappingsConfig(envType)
-            }
-        }
         project.logger.info(
             "mappings for $envType, srcNamespace: ${mappingTree.srcNamespace} dstNamespaces: ${
                 mappingTree.dstNamespaces.joinToString(
@@ -261,7 +248,7 @@ abstract class MappingsProviderImpl(
         if (outerClassDef != null) {
             val outerFromClassName = outerClassDef.getName(fromId)
             var outerToClassName = outerClassDef.getName(toId)
-            if (outerFromClassName != null && outerFromClassName.contains("$")) {
+            if (outerFromClassName != null && outerFromClassName.contains('$')) {
                 outerToClassName = fixInnerClassName(
                     mappings,
                     fromId,
@@ -279,7 +266,7 @@ abstract class MappingsProviderImpl(
             } ?: fromClassName.substring(fromClassName.lastIndexOf('$'))
             if (outerToClassName != null && (toClassName == null || !toClassName.startsWith(outerToClassName))) {
                 toClassName = "$outerToClassName$$innerClassName"
-                project.logger.warn("Detected missing inner class, replacing with: {} -> {}", fromClassName, toClassName)
+                project.logger.info("Detected missing inner class, replacing with: {} -> {}", fromClassName, toClassName)
             }
         }
         return toClassName
@@ -302,8 +289,8 @@ abstract class MappingsProviderImpl(
     ) : List<Mapping> {
         return mappingCache.computeIfAbsent(remap) {
             val reverse = remap.first.shouldReverse(remap.second)
-            val srcName = remap.first.namespace
-            val dstName = remap.second.namespace
+            val srcName = (if (reverse) remap.second else remap.first).namespace
+            val dstName = (if (reverse) remap.first else remap.second).namespace
 
             val mappingTree = getMappingTree(envType)
             val fromId = mappingTree.getNamespaceId(srcName)
@@ -324,7 +311,7 @@ abstract class MappingsProviderImpl(
                 var toClassName = classDef.getName(toId)
 
                 if (fromClassName == null) {
-                    project.logger.warn("Target class {} has no name in namespace {}", classDef, srcName)
+                    project.logger.info("Target class {} has no name in namespace {}", classDef, srcName)
                     fromClassName = toClassName
                 }
 
@@ -340,12 +327,12 @@ abstract class MappingsProviderImpl(
                 }
 
                 if (toClassName == null) {
-                    project.logger.warn("Target class {} has no name in namespace {}", classDef, dstName)
+                    project.logger.info("Target class {} has no name in namespace {}", classDef, dstName)
                     toClassName = fromClassName
                 }
 
                 if (fromClassName == null) {
-                    project.logger.warn("Class $classDef has no name in either namespace $srcName or $dstName")
+                    project.logger.info("Class $classDef has no name in either namespace $srcName or $dstName")
                     continue
                 }
 
@@ -360,12 +347,12 @@ abstract class MappingsProviderImpl(
                     val toFieldName = fieldDef.getName(toId)
 
                     if (fromFieldName == null) {
-                        project.logger.warn("Target field {} has no name in namespace {}", fieldDef, srcName)
+                        project.logger.info("Target field {} has no name in namespace {}", fieldDef, srcName)
                         continue
                     }
 
                     if (toFieldName == null) {
-                        project.logger.warn("Target field {} has no name in namespace {}", fieldDef, dstName)
+                        project.logger.info("Target field {} has no name in namespace {}", fieldDef, dstName)
                         continue
                     }
 
@@ -381,12 +368,12 @@ abstract class MappingsProviderImpl(
                     val toMethodName = methodDef.getName(toId)
 
                     if (fromMethodName == null) {
-                        project.logger.warn("Target method {} has no name in namespace {}", methodDef, srcName)
+                        project.logger.info("Target method {} has no name in namespace {}", methodDef, srcName)
                         continue
                     }
 
                     if (toMethodName == null) {
-                        project.logger.warn("Target method {} has no name in namespace {}", methodDef, dstName)
+                        project.logger.info("Target method {} has no name in namespace {}", methodDef, dstName)
                         continue
                     }
 

@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.minecraft.patch.jarmod
 
+import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.TaskContainer
@@ -13,12 +14,14 @@ import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.minecraft.patch.modloader.ModLoaderPatches
+import xyz.wagyourtail.unimined.minecraft.transform.fixes.ModLoaderPatches
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.util.deleteRecursively
-import java.net.URI
-import java.nio.file.*
+import java.nio.file.FileSystem
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import java.util.zip.ZipInputStream
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
@@ -41,10 +44,10 @@ open class JarModMinecraftTransformer(
         }
     }
 
-    private val transform = mutableListOf<(FileSystem) -> Unit>(
+    override val transform = (listOf<(FileSystem) -> Unit>(
         ModLoaderPatches::fixURIisNotHierarchicalException,
         ModLoaderPatches::fixLoadingModFromOtherPackages
-    )
+    ) + super.transform).toMutableList()
 
     fun addTransform(pathFilter: (FileSystem) -> Unit) {
         transform.add(pathFilter)
@@ -89,10 +92,9 @@ open class JarModMinecraftTransformer(
                 jarmod.addAll(jarModConfiguration(EnvType.COMBINED).resolve())
             }
 
-            Files.copy(path, target.path, StandardCopyOption.REPLACE_EXISTING)
-            val mc = URI.create("jar:${target.path.toUri()}")
             try {
-                FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
+                Files.copy(path, target.path, StandardCopyOption.REPLACE_EXISTING)
+                ZipReader.openZipFileSystem(target.path, mapOf("mutable" to true)).use { out ->
                     if (out.getPath("META-INF").exists() && deleteMetaInf) {
                         out.getPath("META-INF").deleteRecursively()
                     }

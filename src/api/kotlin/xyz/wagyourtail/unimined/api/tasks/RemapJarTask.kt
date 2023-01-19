@@ -4,6 +4,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.SourceSet
 import org.gradle.jvm.tasks.Jar
@@ -11,6 +12,7 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.sourceSet
+import xyz.wagyourtail.unimined.util.LazyMutable
 
 /**
 * task responsible for transforming your built jar to production.
@@ -21,9 +23,10 @@ abstract class RemapJarTask : Jar() {
     @get:InputFile
     abstract val inputFile: RegularFileProperty
 
-    @get:Input
-    @get:Optional
-    abstract val sourceSet: Property<SourceSet>
+    @get:Internal
+    var sourceSet: SourceSet by LazyMutable {
+        project.sourceSet.getByName("main")
+    }
 
     /**
      * the dev env mappings
@@ -102,6 +105,5 @@ abstract class RemapJarTask : Jar() {
         targetNamespace.convention(null as MappingNamespace?)
         remapATToLegacy.convention(false)
         envType.convention(EnvType.COMBINED)
-        sourceSet.convention(project.sourceSet.getByName("main"))
     }
 }

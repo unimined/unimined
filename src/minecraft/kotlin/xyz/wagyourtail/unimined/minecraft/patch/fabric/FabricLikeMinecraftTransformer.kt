@@ -173,8 +173,6 @@ abstract class FabricLikeMinecraftTransformer(
 
     }
 
-    override fun transform(minecraft: MinecraftJar): MinecraftJar = minecraft
-
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar =
         if (accessWidener != null) {
             val output = MinecraftJar(

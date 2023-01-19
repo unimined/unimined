@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.minecraft.patch
 
+import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
@@ -8,7 +9,13 @@ import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
+import xyz.wagyourtail.unimined.minecraft.transform.fixes.FixParamAnnotations
+import java.nio.file.FileSystem
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.exists
 
 abstract class AbstractMinecraftTransformer protected constructor(
     protected val project: Project,
@@ -20,9 +27,33 @@ abstract class AbstractMinecraftTransformer protected constructor(
         return clientjar
     }
 
-    @ApiStatus.Internal
-    abstract fun transform(minecraft: MinecraftJar): MinecraftJar
+    protected open val transform = listOf<(FileSystem) -> Unit>(
+        FixParamAnnotations::apply
+    )
 
+
+    @ApiStatus.Internal
+    open fun transform(minecraft: MinecraftJar): MinecraftJar {
+        val target = MinecraftJar(
+            minecraft,
+            patches = minecraft.patches + listOf("fixed")
+        )
+
+        if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            return target
+        }
+
+        try {
+            Files.copy(minecraft.path, target.path, StandardCopyOption.REPLACE_EXISTING)
+            ZipReader.openZipFileSystem(target.path, mapOf("mutable" to true)).use { out ->
+                transform.forEach { it(out) }
+            }
+        } catch (e: Exception) {
+            target.path.deleteIfExists()
+            throw e
+        }
+        return target
+    }
     private fun applyRunConfigs(tasks: TaskContainer) {
         if (provider.runs.off) return
         project.logger.lifecycle("Applying run configs")

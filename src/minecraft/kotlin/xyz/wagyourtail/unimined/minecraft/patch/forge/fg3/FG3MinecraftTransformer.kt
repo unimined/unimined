@@ -29,7 +29,6 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
 import java.io.PrintStream
-import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.*
 import kotlin.io.path.*
@@ -488,9 +487,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             }
 
             Files.copy(baseMinecraft.path, target.path, StandardCopyOption.REPLACE_EXISTING)
-            val mc = URI.create("jar:${target.path.toUri()}")
             try {
-                FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
+                ZipReader.openZipFileSystem(target.path, mapOf("mutable" to true)).use { out ->
                     out.getPath("binpatches.pack.lzma").deleteIfExists()
                 }
             } catch (e: Throwable) {
