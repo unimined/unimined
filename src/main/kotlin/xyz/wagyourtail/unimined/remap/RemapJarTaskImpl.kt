@@ -112,7 +112,7 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
                 it.addNonClassFiles(
                     from,
                     remapper,
-                    true,
+                    false,
                     listOf(
                         AccessWidenerMinecraftTransformer.awRemapper(fromNs.namespace, toNs.namespace),
                         AccessTransformerMinecraftTransformer.atRemapper(remapATToLegacy.get()),
