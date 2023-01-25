@@ -105,7 +105,14 @@ class ModRemapperImpl(
         if (count == 0) return
         val configs = mutableMapOf<Configuration, Configuration>()
         for (c in config.configurations) {
-            val newC = project.configurations.detachedConfiguration()
+            val newC = project.configurations.detachedConfiguration().apply {
+                exclude(
+                    mapOf(
+                        "group" to "net.fabricmc",
+                        "module" to "fabric-loader"
+                    )
+                )
+            }
             configs[newC] = c
             // copy out dependencies
             newC.dependencies.addAll(c.dependencies)
@@ -159,8 +166,8 @@ class ModRemapperImpl(
 
     private fun preRemapInternal(remapper: TinyRemapper, deps: Map<ResolvedArtifact, File>): Map<ResolvedArtifact, Pair<InputTag, File>> {
         val output = mutableMapOf<ResolvedArtifact, Pair<InputTag, File>>()
-        val tag = remapper.createInputTag()
         for ((artifact, file) in deps) {
+            val tag = remapper.createInputTag()
             if (file.isDirectory) {
                 throw InvalidUserDataException("Cannot remap directory ${file.absolutePath}")
             } else {

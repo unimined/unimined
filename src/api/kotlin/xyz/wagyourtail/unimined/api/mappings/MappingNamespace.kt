@@ -88,9 +88,9 @@ enum class MappingNamespace(val namespace: String, val validTargets: Set<String>
 fun main(args: Array<String>) {
     println(
         MappingNamespace.calculateShortestRemapPathWithFallbacks(
+            MappingNamespace.getNamespace("yarn"),
             MappingNamespace.getNamespace("intermediary"),
-            MappingNamespace.getNamespace("intermediary"),
-            MappingNamespace.getNamespace("intermediary"),
+            MappingNamespace.getNamespace("yarn"),
             MappingNamespace.getNamespace("yarn"),
             setOf(MappingNamespace.INTERMEDIARY, MappingNamespace.YARN, MappingNamespace.OFFICIAL)
         )

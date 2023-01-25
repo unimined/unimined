@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import kotlin.io.path.deleteIfExists
+import kotlin.io.path.exists
 
 abstract class RemapJarTaskImpl : RemapJarTask() {
     private val minecraftProvider = project.extensions.getByType(MinecraftProviderImpl::class.java)
@@ -40,7 +41,7 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
             project.mappings.getAvailableMappings(envType.get())
         )
 
-        if (path.isEmpty()) {
+        if (devNs == prodNs || path.isEmpty()) {
             Files.copy(
                 inputFile.get().asFile.toPath(),
                 outputs.files.files.first().toPath(),
@@ -100,7 +101,7 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
         remapperB.extension(refmapBuilder)
         val remapper = remapperB.build()
         remapper.readClassPathAsync(
-            *sourceSet.runtimeClasspath.files.map { it.toPath() }.filter { !minecraftProvider.isMinecraftJar(it) }.toTypedArray()
+            *sourceSet.runtimeClasspath.files.map { it.toPath() }.filter { !minecraftProvider.isMinecraftJar(it) }.filter { it.exists() }.toTypedArray()
         )
         remapper.readClassPathAsync(mc)
 

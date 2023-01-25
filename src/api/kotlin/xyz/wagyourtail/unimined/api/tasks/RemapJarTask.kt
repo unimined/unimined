@@ -2,11 +2,7 @@ package xyz.wagyourtail.unimined.api.tasks
 
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.*
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
@@ -45,14 +41,6 @@ abstract class RemapJarTask : Jar() {
     abstract val fallbackFromNamespace: Property<MappingNamespace?>
 
     /**
-     * the prod env fallback mappings
-     */
-    @get:Input
-    @get:Optional
-    @get:ApiStatus.Internal
-    abstract val fallbackTargetNamespace: Property<MappingNamespace?>
-
-    /**
      * the prod env mappings
      */
     @get:Input
@@ -83,10 +71,6 @@ abstract class RemapJarTask : Jar() {
         fallbackFromNamespace.set(MappingNamespace.getNamespace(namespace))
     }
 
-    fun setFallbackTarget(namespace: String) {
-        fallbackTargetNamespace.set(MappingNamespace.getNamespace(namespace))
-    }
-
     fun setTarget(namespace: String) {
         targetNamespace.set(MappingNamespace.getNamespace(namespace))
     }
@@ -101,7 +85,6 @@ abstract class RemapJarTask : Jar() {
     init {
         sourceNamespace.convention(null as MappingNamespace?)
         fallbackFromNamespace.convention(null as MappingNamespace?)
-        fallbackTargetNamespace.convention(null as MappingNamespace?)
         targetNamespace.convention(null as MappingNamespace?)
         remapATToLegacy.convention(false)
         envType.convention(EnvType.COMBINED)
