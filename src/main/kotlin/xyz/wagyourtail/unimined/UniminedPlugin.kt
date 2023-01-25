@@ -65,7 +65,7 @@ class UniminedPlugin : Plugin<Project> {
             if (client != null) {
                 it.archiveClassifier.set("client")
             }
-            it.envType.set(EnvType.CLIENT)
+            it.envType.set(EnvType.COMBINED)
         }
         if (server != null || client != null) {
             val serverJar = tasks.register("serverJar", Jar::class.java) {

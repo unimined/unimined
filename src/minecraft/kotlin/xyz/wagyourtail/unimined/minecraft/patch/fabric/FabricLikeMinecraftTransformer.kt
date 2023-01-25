@@ -14,7 +14,9 @@ import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.tasks.MappingExportTypes
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.mappings.MappingExportImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
@@ -58,6 +60,20 @@ abstract class FabricLikeMinecraftTransformer(
     override val prodNamespace = MappingNamespace.INTERMEDIARY
     override var devNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.NAMED, project.mappings.getAvailableMappings(EnvType.COMBINED)) }
     override var devFallbackNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.INT, project.mappings.getAvailableMappings(EnvType.COMBINED)) }
+
+    private val devMappings: Path by lazy {
+        project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve("intermediary2named.jar").apply {
+            val export = MappingExportImpl(EnvType.COMBINED).apply {
+                location = toFile()
+                type = MappingExportTypes.TINY_V2
+                sourceNamespace = MappingNamespace.OFFICIAL
+                targetNamespace = listOf(prodNamespace, devNamespace)
+                renameNs[devNamespace] = "named"
+            }
+            export.validate()
+            export.exportFunc(project.mappings.getMappingTree(EnvType.COMBINED))
+        }
+    }
 
     init {
         addMavens()
@@ -144,6 +160,7 @@ abstract class FabricLikeMinecraftTransformer(
                 }
             }
         }
+
         val mainClass = json.get("mainClass")?.asJsonObject
         if (client) {
             clientMainClass = mainClass?.get("client")?.asString
@@ -151,6 +168,11 @@ abstract class FabricLikeMinecraftTransformer(
         if (server) {
             serverMainClass = mainClass?.get("server")?.asString
         }
+
+        provider.mcLibraries.dependencies.add(
+            project.dependencies.create(project.files(devMappings))
+        )
+
         super.afterEvaluate()
     }
 

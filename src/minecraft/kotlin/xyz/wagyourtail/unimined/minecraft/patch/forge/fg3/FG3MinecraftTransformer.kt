@@ -294,6 +294,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             if (stoutLevel > LogLevel.INFO) {
                 System.setOut(PrintStream(NullOutputStream()))
             }
+            project.logger.info("Running binpatcher with args: ${args.joinToString(" ")}")
             try {
                 ConsoleTool.main(args)
             } catch (e: Throwable) {

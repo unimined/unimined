@@ -95,6 +95,12 @@ abstract class MappingExport(val envType: EnvType) {
     abstract var exportFunc: (MappingTreeView) -> Unit
 
     /**
+     * rename a namespace in the exported format, if supported.
+     * @since 0.3.9
+     */
+    val renameNs: MutableMap<MappingNamespace, String> = mutableMapOf()
+
+    /**
      * the format to export to. (SRG, TINY_V2, MCP)
      */
     fun setType(type: String) {

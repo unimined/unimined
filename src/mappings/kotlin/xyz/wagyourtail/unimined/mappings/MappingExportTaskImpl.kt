@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.mappings
 
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingWriter
+import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
 import net.fabricmc.mappingio.format.MCPWriter
 import net.fabricmc.mappingio.format.MappingDstNsFilter
@@ -18,6 +19,8 @@ import xyz.wagyourtail.unimined.api.tasks.MappingExportTypes
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.StandardOpenOption
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import kotlin.io.path.outputStream
 
 open class MappingExportTaskImpl : MappingExportTask() {
@@ -77,10 +80,17 @@ class MappingExportImpl(envType: EnvType) : MappingExport(envType) {
             .use { os ->
                 var visitor = when (type) {
                     MappingExportTypes.MCP -> MCPWriter(os, envType.ordinal)
-                    MappingExportTypes.TINY_V2 -> Tiny2Writer2(
-                        OutputStreamWriter(os, StandardCharsets.UTF_8),
-                        false
-                    )
+                    MappingExportTypes.TINY_V2 -> {
+                        val stream = if (location!!.extension == "jar" || location!!.extension == "zip") {
+                            ZipOutputStream(os).apply {
+                                putNextEntry(ZipEntry("mappings/mappings.tiny"))
+                            }
+                        } else os
+                        Tiny2Writer2(
+                            OutputStreamWriter(stream, StandardCharsets.UTF_8),
+                            false
+                        )
+                    }
 
                     MappingExportTypes.SRG -> SrgWriter(OutputStreamWriter(os, StandardCharsets.UTF_8))
                     else -> throw RuntimeException("Unknown export type $type")
@@ -93,9 +103,14 @@ class MappingExportImpl(envType: EnvType) : MappingExport(envType) {
                 mappingTree.accept(
                     MappingSourceNsSwitch(
                         MappingDstNsFilter(
-                            visitor, targetNamespace?.map { it.namespace } ?: mappingTree.dstNamespaces
-                        ), sourceNamespace?.namespace ?: mappingTree.srcNamespace
-                    )
+                            MappingNsRenamer(
+                                    visitor,
+                                    renameNs.mapKeys { it.key.namespace }
+                             ),
+                            targetNamespace?.map { it.namespace } ?: mappingTree.dstNamespaces
+                        ),
+                    sourceNamespace?.namespace ?: mappingTree.srcNamespace
+                    ),
                 )
                 os.flush()
                 visitor.close()
