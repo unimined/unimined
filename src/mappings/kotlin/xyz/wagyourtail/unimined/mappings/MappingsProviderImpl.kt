@@ -225,7 +225,7 @@ abstract class MappingsProviderImpl(
                 )
             }"
         )
-        val available = (mappingTree.dstNamespaces.map { MappingNamespace.getNamespace(it) } + MappingNamespace.OFFICIAL).toSet()
+        val available = (mappingTree.dstNamespaces.filter { it != "srg" }.map { MappingNamespace.getNamespace(it) } + MappingNamespace.OFFICIAL).toSet()
         project.logger.lifecycle("found mappings for $envType: $available")
         return mappingTree
     }
