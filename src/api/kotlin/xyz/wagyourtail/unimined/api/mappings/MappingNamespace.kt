@@ -1,14 +1,16 @@
 package xyz.wagyourtail.unimined.api.mappings
 
-enum class MappingNamespace(val namespace: String, val validTargets: Set<String>, val type: Type) {
-    OFFICIAL("official", setOf("intermediary", "searge", "hashed", "mojmap"), Type.OBF),
-    INTERMEDIARY("intermediary", setOf("yarn", "mojmap", "quilt"), Type.INT),
-    SEARGE("searge", setOf("mcp", "mojmap"), Type.INT),
-    HASHED("hashed", setOf("quilt", "mojmap"), Type.INT),
-    MOJMAP("mojmap", setOf(), Type.NAMED),
-    MCP("mcp", setOf(), Type.NAMED),
-    YARN("yarn", setOf(), Type.NAMED),
-    QUILT("quilt", setOf(), Type.NAMED),
+import kotlin.math.abs
+
+enum class MappingNamespace(val namespace: String, val type: Type) {
+    OFFICIAL("official", Type.OBF),
+    INTERMEDIARY("intermediary", Type.INT),
+    SEARGE("searge", Type.INT),
+    HASHED("hashed", Type.INT),
+    MOJMAP("mojmap", Type.NAMED),
+    MCP("mcp", Type.NAMED),
+    YARN("yarn", Type.NAMED),
+    QUILT("quilt", Type.NAMED),
     ;
 
     enum class Type {
@@ -16,20 +18,15 @@ enum class MappingNamespace(val namespace: String, val validTargets: Set<String>
     }
 
     fun shouldReverse(target: MappingNamespace): Boolean {
-        if (this == target) throw IllegalArgumentException("Same mappings is not a valid target.")
-        if (target.namespace in validTargets) return false
-        if (namespace in target.validTargets) return true
+        val type = target.type
+        if (abs(type.ordinal - this.type.ordinal) == 1) {
+            return type.ordinal > this.type.ordinal
+        }
         throw IllegalArgumentException("Invalid target $target for $this")
     }
 
     companion object {
         val byName: Map<String, MappingNamespace> = values().associateBy { it.namespace }
-        val targetsFor: Map<MappingNamespace, Set<MappingNamespace>> = values().associateWith { ns ->
-            values().filter { ns.validTargets.contains(it.namespace) }.toSet()
-        }
-        val reverseTargetsFor: Map<MappingNamespace, Set<MappingNamespace>> = values().associateWith { ns ->
-            values().filter { ns.namespace in it.validTargets }.toSet()
-        }
         val byType: Map<Type, Set<MappingNamespace>> = values().groupBy { it.type }.mapValues { it.value.toSet() }
 
         fun getNamespace(namespace: String): MappingNamespace {
@@ -39,30 +36,34 @@ enum class MappingNamespace(val namespace: String, val validTargets: Set<String>
         fun calculateShortestRemapPathInternal(from: MappingNamespace, to: MappingNamespace, available: Set<MappingNamespace>, current: MutableList<Pair<Boolean, MappingNamespace>>): MutableList<Pair<Boolean, MappingNamespace>>? {
             val results = mutableListOf<MutableList<Pair<Boolean, MappingNamespace>>>()
 
-            for (target in reverseTargetsFor[from]!!) {
-                if (!available.contains(target)) continue
-                if (current.any { it.second == target }) continue
-                if (target == to) {
-                    current.add(true to target)
-                    return current
+            if (from.type.ordinal != 2) {
+                for (target in Type.values()[from.type.ordinal + 1].let { byType[it] }!!) {
+                    if (!available.contains(target)) continue
+                    if (current.any { it.second == target }) continue
+                    if (target == to) {
+                        current.add(true to target)
+                        return current
+                    }
+                    val newCurrent = current.toMutableList()
+                    newCurrent.add(true to target)
+                    val result = calculateShortestRemapPathInternal(target, to, available, newCurrent)
+                    if (result != null) results.add(result)
                 }
-                val newCurrent = current.toMutableList()
-                newCurrent.add(true to target)
-                val result = calculateShortestRemapPathInternal(target, to, available, newCurrent)
-                if (result != null) results.add(result)
             }
 
-            for (target in targetsFor[from]!!) {
-                if (!available.contains(target)) continue
-                if (current.any { it.second == target }) continue
-                if (target == to) {
-                    current.add(false to target)
-                    return current
+            if (from.type.ordinal != 0) {
+                for (target in Type.values()[from.type.ordinal - 1].let { byType[it] }!!) {
+                    if (!available.contains(target)) continue
+                    if (current.any { it.second == target }) continue
+                    if (target == to) {
+                        current.add(false to target)
+                        return current
+                    }
+                    val newCurrent = current.toMutableList()
+                    newCurrent.add(false to target)
+                    val result = calculateShortestRemapPathInternal(target, to, available, newCurrent)
+                    if (result != null) results.add(result)
                 }
-                val newCurrent = current.toMutableList()
-                newCurrent.add(false to target)
-                val result = calculateShortestRemapPathInternal(target, to, available, newCurrent)
-                if (result != null) results.add(result)
             }
             return results.minByOrNull { it.size }
         }
@@ -90,9 +91,9 @@ fun main(args: Array<String>) {
         MappingNamespace.calculateShortestRemapPathWithFallbacks(
             MappingNamespace.getNamespace("yarn"),
             MappingNamespace.getNamespace("intermediary"),
-            MappingNamespace.getNamespace("yarn"),
-            MappingNamespace.getNamespace("yarn"),
-            setOf(MappingNamespace.INTERMEDIARY, MappingNamespace.YARN, MappingNamespace.OFFICIAL)
+            MappingNamespace.getNamespace("searge"),
+            MappingNamespace.getNamespace("searge"),
+            setOf(MappingNamespace.INTERMEDIARY, MappingNamespace.YARN, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
         )
     )
 }
