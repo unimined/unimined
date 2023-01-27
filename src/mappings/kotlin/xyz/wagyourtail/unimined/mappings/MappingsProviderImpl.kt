@@ -463,6 +463,13 @@ abstract class MappingsProviderImpl(
     }
 
     @ApiStatus.Internal
-    override fun getAvailableMappings(envType: EnvType): Set<MappingNamespace> = (getMappingTree(envType).dstNamespaces.map { MappingNamespace.getNamespace(it) } + MappingNamespace.OFFICIAL).toSet()
+    override fun getAvailableMappings(envType: EnvType): Set<MappingNamespace> = (getMappingTree(envType).dstNamespaces.filter { !internalNS.contains(it) }.mapNotNull {
+            try {
+                MappingNamespace.getNamespace(it)
+            } catch (e: Exception) {
+                project.logger.error("Failed to get namespace value for $it", e)
+                null
+            }
+        } + MappingNamespace.OFFICIAL).toSet()
 
 }
