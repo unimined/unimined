@@ -149,6 +149,9 @@ abstract class MappingsProviderImpl(
         (if (stubs.contains(envType)) project.unimined.getLocalCache() else project.unimined.getGlobalCache()).resolve("mappings")
             .resolve("mappings-${getCombinedNames(envType)}-${envType}.jar")
 
+
+    private val internalNS = setOf("id", "srg")
+
     private fun resolveMappingTree(envType: EnvType): MemoryMappingTree {
         project.logger.lifecycle("Resolving mappings for $envType")
         val hasStub = stubs.contains(envType)
@@ -222,11 +225,16 @@ abstract class MappingsProviderImpl(
             "mappings for $envType, srcNamespace: ${mappingTree.srcNamespace} dstNamespaces: ${
                 mappingTree.dstNamespaces.joinToString(
                     ","
-                )
+                ) 
             }"
         )
-        val available = (mappingTree.dstNamespaces.filter { it != "srg" }.map { MappingNamespace.getNamespace(it) } + MappingNamespace.OFFICIAL).toSet()
-        project.logger.lifecycle("found mappings for $envType: $available")
+        try {
+            val available = (mappingTree.dstNamespaces.filter { !internalNS.contains(it) }.map { MappingNamespace.getNamespace(it) } + MappingNamespace.OFFICIAL).toSet()
+            project.logger.lifecycle("found mappings for $envType: $available")
+        } catch (e: Exception) {
+            project.logger.error("Namespace in ${mappingTree.dstNamespaces} not found.")
+            e.printStackTrace()
+        }
         return mappingTree
     }
 

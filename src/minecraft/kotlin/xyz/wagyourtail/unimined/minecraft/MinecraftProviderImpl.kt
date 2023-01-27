@@ -193,6 +193,13 @@ abstract class MinecraftProviderImpl(
 
     private fun addMcLibraries() {
         addMcLibraries(minecraft.metadata.libraries)
+
+        // add jetbrains annotations
+        mcLibraries.dependencies.add(
+            project.dependencies.create(
+                "org.jetbrains:annotations:24.0.0"
+            )
+        )
     }
 
     @ApiStatus.Internal
