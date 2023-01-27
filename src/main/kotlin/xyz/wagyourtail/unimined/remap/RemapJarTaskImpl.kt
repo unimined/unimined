@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.UniminedExtensionImpl
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
@@ -99,6 +100,7 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
         }
         val refmapBuilder = RefmapBuilder("${project.rootProject.name}.refmap.json", project.gradle.startParameter.logLevel)
         remapperB.extension(refmapBuilder)
+        project.minecraft.mcRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         remapper.readClassPathAsync(
             *sourceSet.runtimeClasspath.files.map { it.toPath() }.filter { !minecraftProvider.isMinecraftJar(it) }.filter { it.exists() }.toTypedArray()
