@@ -18,7 +18,7 @@ class ModProviderImpl(
 
     private fun afterEvaluate() {
         for (envType in EnvType.values()) {
-            if (envType == EnvType.COMBINED && parent.minecraftProvider.disableCombined.get()) continue
+            if (envType == EnvType.COMBINED && (parent.minecraftProvider.disableCombined.get() || parent.minecraftProvider.combinedSourceSets.isEmpty())) continue
             modRemapper.remap(envType)
         }
     }

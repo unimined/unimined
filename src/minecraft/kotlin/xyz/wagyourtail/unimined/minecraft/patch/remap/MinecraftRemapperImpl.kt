@@ -8,6 +8,7 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.reamp.MinecraftRemapper
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
@@ -55,7 +56,7 @@ class MinecraftRemapperImpl(
                 return@consumerApply target
             }
 
-            val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(mappingNamespace, fallbackNamespace, remapFallback, remapTo, mappings.getAvailableMappings(EnvType.COMBINED))
+            val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(mappingNamespace, fallbackNamespace, remapFallback, remapTo, mappings.getAvailableMappings(project.minecraft.defaultEnv))
             val last = path.last()
             project.logger.lifecycle("Remapping minecraft to $remapTo")
             var prevTarget = minecraft.path

@@ -89,6 +89,18 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
         }
     }
 
+    var defaultEnv: EnvType by LazyMutable {
+        if (disableCombined.get() || combinedSourceSets.isEmpty()) {
+            if (clientSourceSets.isEmpty()) {
+                EnvType.SERVER
+            } else {
+                EnvType.CLIENT
+            }
+        } else {
+            EnvType.COMBINED
+        }
+    }
+
     /**
      * disables the combined mc jar
      */
