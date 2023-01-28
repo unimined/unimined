@@ -3,7 +3,11 @@ package xyz.wagyourtail.unimined.api.mod
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import net.fabricmc.tinyremapper.TinyRemapper
+import org.gradle.api.Project
+import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.File
@@ -12,27 +16,41 @@ import java.io.File
  * The class responsible for remapping mods.
  * @since 0.2.3
  */
-abstract class ModRemapper(val provider: ModProvider) {
+abstract class ModRemapper(val project: Project) {
 
     /**
      * namespace the mod is currently in. (prod)
      */
-    var fromNamespace by LazyMutable { provider.parent.minecraftProvider.mcPatcher.prodNamespace }
-
-    /**
-     * fallback namespace the mod is currently in. (prodFallback)
-     */
-    var fromFallbackNamespace by LazyMutable { provider.parent.minecraftProvider.mcPatcher.prodNamespace }
+    @get:ApiStatus.Internal
+    @set:ApiStatus.Internal
+    var fromNamespace by LazyMutable { project.minecraft.mcPatcher.prodNamespace }
 
     /**
      * namespace the mod should be remapped to. (dev)
      */
-    var toNamespace by LazyMutable { provider.parent.minecraftProvider.mcPatcher.devNamespace }
+    @get:ApiStatus.Internal
+    @set:ApiStatus.Internal
+    var toNamespace by LazyMutable { project.minecraft.mcPatcher.devNamespace }
 
     /**
      * fallback namespace the mod should be remapped to. (devFallback)
      */
-    var toFallbackNamespace by LazyMutable { provider.parent.minecraftProvider.mcPatcher.devFallbackNamespace }
+    @get:ApiStatus.Internal
+    @set:ApiStatus.Internal
+    var toFallbackNamespace by LazyMutable { project.minecraft.mcPatcher.devFallbackNamespace }
+
+
+    fun setFromNamespace(namespace: String) {
+        fromNamespace = MappingNamespace.getNamespace(namespace)
+    }
+
+    fun setToNamespace(namespace: String) {
+        toNamespace = MappingNamespace.getNamespace(namespace)
+    }
+
+    fun setToFallbackNamespace(namespace: String) {
+        toFallbackNamespace = MappingNamespace.getNamespace(namespace)
+    }
 
 
     /**
@@ -40,7 +58,8 @@ abstract class ModRemapper(val provider: ModProvider) {
      * it defaults to whatever MinecraftRemapper has set for it.
      * @since 0.3.3
      */
-    abstract var tinyRemapperConf: (TinyRemapper.Builder) -> Unit
+    @set:ApiStatus.Experimental
+    var tinyRemapperConf: (TinyRemapper.Builder) -> Unit by LazyMutable { project.minecraft.mcRemapper.tinyRemapperConf }
 
     /**
      * pass a closure to configure the remapper.

@@ -15,7 +15,7 @@ import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.forge.AccessTransformerMinecraftTransformer
-import xyz.wagyourtail.unimined.refmap.RefmapBuilder
+import xyz.wagyourtail.unimined.refmap.BetterMixinExtension
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.nio.file.Files
 import java.nio.file.Path
@@ -98,9 +98,15 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
         if (classpath != null) {
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
+<<<<<<< Updated upstream
         val refmapBuilder = RefmapBuilder("${project.rootProject.name}.refmap.json", project.gradle.startParameter.logLevel)
         remapperB.extension(refmapBuilder)
         project.minecraft.mcRemapper.tinyRemapperConf(remapperB)
+=======
+        val betterMixinExtension = BetterMixinExtension("${project.rootProject.name}.refmap.json", project.gradle.startParameter.logLevel)
+        remapperB.extension(betterMixinExtension)
+        tinyRemapperConf(remapperB)
+>>>>>>> Stashed changes
         val remapper = remapperB.build()
         remapper.readClassPathAsync(
             *sourceSet.runtimeClasspath.files.map { it.toPath() }.filter { !minecraftProvider.isMinecraftJar(it) }.filter { it.exists() }.toTypedArray()
@@ -117,7 +123,7 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
                     listOf(
                         AccessWidenerMinecraftTransformer.awRemapper(fromNs.namespace, toNs.namespace),
                         AccessTransformerMinecraftTransformer.atRemapper(remapATToLegacy.get()),
-                        refmapBuilder
+                        betterMixinExtension
                     )
                 )
                 remapper.apply(it)
@@ -129,7 +135,7 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
         remapper.finish()
 
         ZipReader.openZipFileSystem(target, mapOf("mutable" to true)).use {
-            refmapBuilder.write(it)
+            betterMixinExtension.write(it)
         }
 
     }

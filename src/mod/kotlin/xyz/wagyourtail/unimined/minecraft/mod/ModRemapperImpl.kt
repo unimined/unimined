@@ -2,21 +2,23 @@ package xyz.wagyourtail.unimined.minecraft.mod
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
-import net.fabricmc.tinyremapper.*
+import net.fabricmc.tinyremapper.InputTag
+import net.fabricmc.tinyremapper.NonClassCopyMode
+import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.OutputConsumerPath.ResourceRemapper
+import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
-import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
+import xyz.wagyourtail.unimined.api.mod.ModProvider
 import xyz.wagyourtail.unimined.api.mod.ModRemapper
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
-import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.io.*
 import java.nio.file.Files
@@ -26,18 +28,12 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.name
 
 class ModRemapperImpl(
-    val project: Project,
-    provider: ModProviderImpl
-) : ModRemapper(provider) {
+    project: Project,
+    val modProvider: ModProvider
+) : ModRemapper(project) {
 
-    private val mcProvider by lazy { provider.parent.minecraftProvider }
-    private val mappings by lazy { provider.parent.mappingsProvider }
-
-    override var tinyRemapperConf by LazyMutable { provider.parent.minecraftProvider.mcRemapper.tinyRemapperConf }
-
-    private val combinedConfig = Configs(project, EnvType.COMBINED, this)
-    private val clientConfig = Configs(project, EnvType.CLIENT, this)
-    private val serverConfig = Configs(project, EnvType.SERVER, this)
+    private val mcProvider by lazy { project.minecraft }
+    private val mappings by lazy { project.mappings }
 
     private val preTransform = mutableMapOf<EnvType, List<File>>()
 
@@ -81,14 +77,14 @@ class ModRemapperImpl(
 
     fun remap(envType: EnvType) {
         val config = when (envType) {
-            EnvType.COMBINED -> combinedConfig
-            EnvType.CLIENT -> clientConfig
-            EnvType.SERVER -> serverConfig
+            EnvType.COMBINED -> modProvider.combinedConfig
+            EnvType.CLIENT -> modProvider.clientConfig
+            EnvType.SERVER -> modProvider.serverConfig
         }
 
-        val prodNamespace = project.minecraft.mcPatcher.prodNamespace
-        val devFallbackNamespace = project.minecraft.mcPatcher.devFallbackNamespace
-        val devNamespace = project.minecraft.mcPatcher.devNamespace
+        val prodNamespace = fromNamespace
+        val devFallbackNamespace = toFallbackNamespace
+        val devNamespace = toNamespace
 
         val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
             prodNamespace,
@@ -211,7 +207,7 @@ class ModRemapperImpl(
     }
 
     private fun modTransformFolder(): Path {
-        return provider.parent.getLocalCache().resolve("modTransform").createDirectories()
+        return project.unimined.getLocalCache().resolve("modTransform").createDirectories()
     }
 
     private val innerJarStripper: ResourceRemapper = object : ResourceRemapper {
@@ -243,113 +239,6 @@ class ModRemapperImpl(
                     )
                 ).use { writer ->
                     GsonBuilder().setPrettyPrinting().create().toJson(json, writer)
-                }
-            }
-        }
-    }
-
-    @Suppress("MemberVisibilityCanBePrivate")
-    data class Configs(val project: Project, val envType: EnvType, val parent: ModRemapperImpl) {
-        val configurations = mutableSetOf<Configuration>()
-        private val envTypeName = envType.classifier?.capitalized() ?: ""
-
-        private fun registerConfiguration(configuration: Configuration): Configuration {
-            configurations += configuration
-            return configuration
-        }
-
-        val modCompileOnly: Configuration = registerConfiguration(
-            project.configurations.maybeCreate("modCompileOnly$envTypeName")
-                .apply {
-                    extendsFrom(project.configurations.getByName("compileOnly"))
-                    exclude(
-                        mapOf(
-                            "group" to "net.fabricmc",
-                            "module" to "fabric-loader"
-                        )
-                    )
-                })
-
-        val modRuntimeOnly: Configuration = registerConfiguration(
-            project.configurations.maybeCreate("modRuntimeOnly$envTypeName")
-                .apply {
-                    extendsFrom(project.configurations.getByName("runtimeOnly"))
-                    exclude(
-                        mapOf(
-                            "group" to "net.fabricmc",
-                            "module" to "fabric-loader"
-                        )
-                    )
-                })
-
-        val localRuntime: Configuration = project.configurations.maybeCreate("localRuntime$envTypeName").apply {
-            extendsFrom(project.configurations.getByName("runtimeOnly"))
-            exclude(
-                mapOf(
-                    "group" to "net.fabricmc",
-                    "module" to "fabric-loader"
-                )
-            )
-        }
-
-        val modLocalRuntime: Configuration = registerConfiguration(
-            project.configurations.maybeCreate("modLocalRuntime" + envTypeName)
-                .apply {
-                    extendsFrom(project.configurations.getByName("localRuntime"))
-                    exclude(
-                        mapOf(
-                            "group" to "net.fabricmc",
-                            "module" to "fabric-loader"
-                        )
-                    )
-                })
-
-        val modImplementation: Configuration = registerConfiguration(
-            project.configurations.maybeCreate("modImplementation" + envTypeName)
-                .apply {
-                    extendsFrom(project.configurations.getByName("implementation"))
-                    exclude(
-                        mapOf(
-                            "group" to "net.fabricmc",
-                            "module" to "fabric-loader"
-                        )
-                    )
-                })
-
-
-        init {
-            parent.provider.parent.events.register(::sourceSets)
-        }
-
-        private fun sourceSets(sourceSets: SourceSetContainer) {
-            when (envType) {
-                EnvType.SERVER -> {
-                    for (sourceSet in parent.provider.parent.minecraftProvider.serverSourceSets){
-                        sourceSet.compileClasspath += modCompileOnly + modImplementation
-                        sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-                    }
-                }
-
-                EnvType.CLIENT -> {
-                    for (sourceSet in parent.provider.parent.minecraftProvider.clientSourceSets){
-                        sourceSet.compileClasspath += modCompileOnly + modImplementation
-                        sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-                    }
-                }
-
-                EnvType.COMBINED -> {
-                    for (sourceSet in parent.provider.parent.minecraftProvider.combinedSourceSets){
-                        sourceSet.compileClasspath += modCompileOnly + modImplementation
-                        sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-                    }
-                    for (sourceSet in parent.provider.parent.minecraftProvider.serverSourceSets){
-                        sourceSet.compileClasspath += modCompileOnly + modImplementation
-                        sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-                    }
-                    for (sourceSet in parent.provider.parent.minecraftProvider.clientSourceSets){
-                        sourceSet.compileClasspath += modCompileOnly + modImplementation
-                        sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
-                    }
                 }
             }
         }

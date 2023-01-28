@@ -1,10 +1,12 @@
 package xyz.wagyourtail.unimined.minecraft.patch
 
 import net.fabricmc.mappingio.format.ZipReader
+import net.fabricmc.stitch.merge.JarMerger
 import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -23,17 +25,31 @@ abstract class AbstractMinecraftTransformer protected constructor(
 ) : MinecraftPatcher {
     @ApiStatus.Internal
     open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
-        //TODO: do this for real
-        return clientjar
+        project.logger.lifecycle("Merging client and server jars")
+        val merged = MinecraftJar(clientjar, envType = EnvType.COMBINED)
+        try {
+            JarMerger(clientjar.path.toFile(), serverjar.path.toFile(), merged.path.toFile()).use {
+                it.merge()
+            }
+            ZipReader.openZipFileSystem(merged.path, mapOf("mutable" to true)).use {
+                FixParamAnnotations.apply(it)
+            }
+        } catch (e: Exception) {
+            project.logger.error("Failed to merge client and server jars", e)
+            merged.path.deleteIfExists()
+            throw e
+        }
+        return merged
     }
 
     protected open val transform = listOf<(FileSystem) -> Unit>(
         FixParamAnnotations::apply
     )
 
-
     @ApiStatus.Internal
     open fun transform(minecraft: MinecraftJar): MinecraftJar {
+        if (minecraft.envType == EnvType.COMBINED) return minecraft
+        ;
         val target = MinecraftJar(
             minecraft,
             patches = minecraft.patches + listOf("fixed")

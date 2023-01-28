@@ -26,8 +26,6 @@ class MinecraftRemapperImpl(
 ) : MinecraftRemapper() {
     private val mappings by lazy { project.mappings }
 
-    override var tinyRemapperConf: (TinyRemapper.Builder) -> Unit = {}
-
     val MC_LV_PATTERN = Regex("\\$\\$\\d+")
 
     val JSR_TO_JETBRAINS = mapOf(
