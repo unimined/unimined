@@ -309,9 +309,11 @@ object OldMCPReader {
                 val side = reader.readCell()!!
                 if (side != "2" && side.toInt() != envType.ordinal) continue
 
-                if (name == notch) continue
-
-                visitLastClass = visitor.visitClass(notch)
+                if (name == notch) {
+                    visitLastClass = visitor.visitClass("$packageName/$notch")
+                } else {
+                    visitLastClass = visitor.visitClass(notch)
+                }
 
                 if (visitLastClass) {
                     visitor.visitDstName(MappedElementKind.CLASS, 0, "$packageName/$name")
