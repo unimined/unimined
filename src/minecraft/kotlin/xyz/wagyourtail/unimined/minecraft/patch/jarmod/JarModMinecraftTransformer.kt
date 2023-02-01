@@ -32,7 +32,7 @@ open class JarModMinecraftTransformer(
     provider: MinecraftProviderImpl,
     private val jarModProvider: String = Constants.JARMOD_PROVIDER,
 ) : AbstractMinecraftTransformer(
-    project, provider
+    project, provider, "jarmod"
 ), JarModPatcher {
 
     override var devNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.NAMED, project.mappings.getAvailableMappings(project.minecraft.defaultEnv)) }

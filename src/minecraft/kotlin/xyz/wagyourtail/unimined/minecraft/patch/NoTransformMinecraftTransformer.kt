@@ -9,7 +9,8 @@ import xyz.wagyourtail.unimined.util.LazyMutable
 
 class NoTransformMinecraftTransformer(project: Project, provider: MinecraftProviderImpl) : AbstractMinecraftTransformer(
     project,
-    provider
+    provider,
+    "none"
 ) {
 
     override var prodNamespace: MappingNamespace = MappingNamespace.OFFICIAL
