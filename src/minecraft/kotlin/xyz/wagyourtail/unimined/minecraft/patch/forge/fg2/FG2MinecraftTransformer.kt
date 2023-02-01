@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.minecraft.patch.forge.fg2
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskContainer
+import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
@@ -11,6 +12,8 @@ import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.SemVerUtils
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.net.URI
@@ -42,6 +45,9 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         set(value) {
             parent.devFallbackNamespace = value
         }
+
+    override val merger: ClassMerger
+        get() = parent.merger
 
     override fun afterEvaluate() {
         // get and add forge-src to mappings

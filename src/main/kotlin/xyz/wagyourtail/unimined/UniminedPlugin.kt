@@ -6,6 +6,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.remap.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.sources.GenSourcesTaskImpl
 
@@ -65,7 +66,7 @@ class UniminedPlugin : Plugin<Project> {
             if (client != null) {
                 it.archiveClassifier.set("client")
             }
-            it.envType.set(EnvType.COMBINED)
+            it.envType.set(project.minecraft.defaultEnv)
         }
         if (server != null || client != null) {
             val serverJar = tasks.register("serverJar", Jar::class.java) {

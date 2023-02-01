@@ -21,6 +21,10 @@ class QuiltMinecraftTransformer(
     "quilt.mod.json",
     "access_widener"
 ) {
+
+    override val ENVIRONMENT: String = "Lnet/fabricmc/api/Environment;"
+    override val ENV_TYPE: String = "Lnet/fabricmc/api/EnvType;"
+
     override fun addMavens() {
         project.repositories.maven {
             it.url = URI.create("https://maven.quiltmc.org/repository/release")

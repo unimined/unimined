@@ -7,6 +7,7 @@ import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import net.fabricmc.tinyremapper.api.TrClass
 import net.fabricmc.tinyremapper.api.TrEnvironment
+import net.fabricmc.tinyremapper.extension.mixin.MixinExtension
 import net.fabricmc.tinyremapper.extension.mixin.common.Logger
 import net.fabricmc.tinyremapper.extension.mixin.common.data.CommonData
 import org.gradle.api.logging.LogLevel
@@ -21,7 +22,7 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.name
 import kotlin.io.path.writeText
 
-class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = LogLevel.WARN) :
+class BetterMixinExtension(val defaultRefmapPath: String, val loggerLevel: LogLevel = LogLevel.WARN, val targets: Set<MixinExtension.AnnotationTarget> = MixinExtension.AnnotationTarget.values().toSet()) :
         TinyRemapper.Extension,
         TinyRemapper.ApplyVisitorProvider,
         TinyRemapper.AnalyzeVisitorProvider,
@@ -51,9 +52,15 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
     private val logger: Logger = Logger(translateLogLevel(loggerLevel))
 
     override fun attach(builder: TinyRemapper.Builder) {
-        builder.extraAnalyzeVisitor(this).extraStateProcessor(this)
-        logger.info("Attaching RefmapBuilder")
-        builder.extraPreApplyVisitor(this)
+
+        if (targets.contains(MixinExtension.AnnotationTarget.HARD)) {
+            builder.extraAnalyzeVisitor(this)
+            builder.extraStateProcessor(this)
+        }
+
+        if (targets.contains(MixinExtension.AnnotationTarget.SOFT)) {
+            builder.extraPreApplyVisitor(this)
+        }
     }
 
     override fun insertApplyVisitor(cls: TrClass, next: ClassVisitor): ClassVisitor {
@@ -158,7 +165,15 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
         input: InputStream,
         remapper: TinyRemapper
     ) {
-        if (mixinCheck(relativePath)) {
+        if (refmapCheck(relativePath)) {
+            try {
+                logger.info("Found refmap: $relativePath")
+                val json = JsonParser.parseReader(input.reader()).asJsonObject
+                existingRefmaps[relativePath.toString()] = json
+            } catch (e: Exception) {
+                logger.error("Error while processing refmap ($relativePath): ${e.message}")
+            }
+        } else if (mixinCheck(relativePath)) {
             try {
                 logger.info("Found mixin config: ${relativePath.name}")
                 val json = JsonParser.parseReader(input.reader()).asJsonObject
@@ -184,14 +199,6 @@ class RefmapBuilder(val defaultRefmapPath: String, val loggerLevel: LogLevel = L
                 )
             } catch (e: Exception) {
                 logger.error("Error while processing mixin config ($relativePath): ${e.message}")
-            }
-        } else if (refmapCheck(relativePath)) {
-            try {
-                logger.info("Found refmap: $relativePath")
-                val json = JsonParser.parseReader(input.reader()).asJsonObject
-                existingRefmaps[relativePath.toString()] = json
-            } catch (e: Exception) {
-                logger.error("Error while processing refmap ($relativePath): ${e.message}")
             }
         } else {
             throw IllegalStateException("Unexpected path: $relativePath")

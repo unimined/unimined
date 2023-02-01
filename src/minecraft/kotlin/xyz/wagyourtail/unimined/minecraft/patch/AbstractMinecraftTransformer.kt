@@ -5,32 +5,111 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.tree.ClassNode
+import xyz.wagyourtail.unimined.api.mappings.mappings
+import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.transform.fixes.FixParamAnnotations
+import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
+import kotlin.io.path.writeBytes
 
 abstract class AbstractMinecraftTransformer protected constructor(
     protected val project: Project,
-    val provider: MinecraftProviderImpl
+    val provider: MinecraftProviderImpl,
+    val providerName: String
 ) : MinecraftPatcher {
-    @ApiStatus.Internal
+
+    open val merger: ClassMerger = ClassMerger()
+
     open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
-        //TODO: do this for real
-        return clientjar
+        val merged = MinecraftJar(
+            clientjar,
+            envType = EnvType.COMBINED,
+            patches = listOf("$providerName-merged") + clientjar.patches + serverjar.patches
+        )
+
+        if (merged.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            return merged
+        }
+
+        merged.path.deleteIfExists()
+        ZipReader.openZipFileSystem(merged.path, mapOf("create" to true, "mutable" to true)).use { merged ->
+            val clientClassEntries = mutableMapOf<String, ClassNode>()
+            ZipReader.forEachInZip(clientjar.path) { path, stream ->
+                if (path.startsWith("META-INF/")) return@forEachInZip
+                if (shouldStrip(path)) return@forEachInZip
+                if (path.endsWith(".class")) {
+                    // add entry
+                    val classReader = ClassReader(stream)
+                    val classNode = ClassNode()
+                    classReader.accept(classNode, 0)
+                    clientClassEntries[path] = classNode
+                } else {
+                    // copy directly
+                    val mergedPath = merged.getPath(path)
+                    mergedPath.parent?.createDirectories()
+                    mergedPath.writeBytes(stream.readBytes())
+                }
+            }
+            val serverClassEntries = mutableMapOf<String, ClassNode>()
+            ZipReader.forEachInZip(serverjar.path) { path, stream ->
+                if (path.startsWith("META-INF/")) return@forEachInZip
+                if (shouldStrip(path)) return@forEachInZip
+                if (path.endsWith(".class")) {
+                    // add entry
+                    val classReader = ClassReader(stream)
+                    val classNode = ClassNode()
+                    classReader.accept(classNode, 0)
+                    serverClassEntries[path] = classNode
+                } else {
+                    // copy directly
+                    val mergedPath = merged.getPath(path)
+                    mergedPath.parent?.createDirectories()
+                    mergedPath.writeBytes(stream.readBytes())
+                }
+            }
+            // merge classes
+            for ((name, node) in clientClassEntries) {
+                val classWriter = ClassWriter(0)
+                val serverNode = serverClassEntries[name]
+                val out = try {
+                    merger.accept(node, serverNode)
+                } catch (e: Exception) {
+                    throw RuntimeException("Error merging class $name", e)
+                }
+                out.accept(classWriter)
+                val path = merged.getPath(name)
+                path.parent?.createDirectories()
+                path.writeBytes(classWriter.toByteArray())
+                serverClassEntries.remove(name)
+            }
+            for ((name, node) in serverClassEntries) {
+                val classWriter = ClassWriter(0)
+                val out = merger.accept(null, node)
+                out.accept(classWriter)
+                val path = merged.getPath(name)
+                path.parent?.createDirectories()
+                path.writeBytes(classWriter.toByteArray())
+            }
+        }
+        return merged
     }
 
     protected open val transform = listOf<(FileSystem) -> Unit>(
         FixParamAnnotations::apply
     )
-
 
     @ApiStatus.Internal
     open fun transform(minecraft: MinecraftJar): MinecraftJar {
@@ -96,5 +175,22 @@ abstract class AbstractMinecraftTransformer protected constructor(
     @ApiStatus.Internal
     open fun afterRemapJarTask(output: Path) {
         // do nothing
+    }
+
+    /*
+     * only accurate on official mappings
+     */
+    open fun shouldStrip(path: String): Boolean {
+        // trim if starts with /
+        if (path.startsWith("/")) return shouldStrip(path.substring(1))
+        // proguard files
+        val parts = path.split("/")
+        if (parts.size == 1) return false
+        // META-INF
+        if (parts[0] == "META-INF") return false
+        // net/minecraft
+        if (parts[0] == "net" && parts[1] == "minecraft") return false
+        // otherwise strip
+        return true
     }
 }

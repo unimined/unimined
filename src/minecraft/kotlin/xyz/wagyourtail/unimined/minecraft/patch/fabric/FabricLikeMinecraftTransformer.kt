@@ -9,6 +9,9 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
@@ -21,6 +24,7 @@ import xyz.wagyourtail.unimined.mappings.MappingExportImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.File
 import java.io.InputStreamReader
@@ -28,20 +32,18 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.writeText
+import kotlin.io.path.*
 
 abstract class FabricLikeMinecraftTransformer(
     project: Project,
     provider: MinecraftProviderImpl,
-    val providerName: String,
+    providerName: String,
     val modJsonName: String,
     val accessWidenerJsonKey: String
 ) : AbstractMinecraftTransformer(
     project,
-    provider
+    provider,
+    providerName
 ), FabricLikePatcher {
     companion object {
         val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
@@ -57,6 +59,32 @@ abstract class FabricLikeMinecraftTransformer(
     protected var clientMainClass: String? = null
     protected var serverMainClass: String? = null
 
+    protected abstract val ENVIRONMENT: String
+    protected abstract val ENV_TYPE: String
+
+    override val merger: ClassMerger = ClassMerger(
+        { node, env ->
+            if (env != EnvType.COMBINED) {
+                val visitor = node.visitAnnotation(ENVIRONMENT, true)
+                visitor.visitEnum("value", ENV_TYPE, env.name)
+                visitor.visitEnd()
+            }
+        },
+        { node, env ->
+            if (env != EnvType.COMBINED) {
+                val visitor = node.visitAnnotation(ENVIRONMENT, true)
+                visitor.visitEnum("value", ENV_TYPE, env.name)
+                visitor.visitEnd()
+            }
+        },
+        { node, env ->
+            if (env != EnvType.COMBINED) {
+                val visitor = node.visitAnnotation(ENVIRONMENT, true)
+                visitor.visitEnum("value", ENV_TYPE, env.name)
+                visitor.visitEnd()
+            }
+        }
+    )
 
     override val prodNamespace = MappingNamespace.INTERMEDIARY
     override var devNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.NAMED, project.mappings.getAvailableMappings(project.minecraft.defaultEnv)) }

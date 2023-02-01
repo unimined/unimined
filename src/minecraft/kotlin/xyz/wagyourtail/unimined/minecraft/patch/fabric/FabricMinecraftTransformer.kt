@@ -23,6 +23,9 @@ class FabricMinecraftTransformer(
     "accessWidener"
 ) {
 
+    override val ENVIRONMENT: String = "Lnet/fabricmc/api/Environment;"
+    override val ENV_TYPE: String = "Lnet/fabricmc/api/EnvType;"
+
     init {
         FabricApiExtension.apply(project)
     }
