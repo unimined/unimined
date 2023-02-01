@@ -16,6 +16,7 @@ import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.io.InputStream
 import java.net.URI
@@ -48,6 +49,9 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     val afterForgeJarModder = JarModMinecraftTransformer(project, provider)
     var resolvedForgeDeps = false
+
+    override val merger: ClassMerger
+        get() = parent.merger
 
     override fun afterEvaluate() {
         // get and add forge-src to mappings

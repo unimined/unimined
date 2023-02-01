@@ -8,6 +8,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
+import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
@@ -26,6 +27,7 @@ import xyz.wagyourtail.unimined.minecraft.patch.forge.fg2.FG2MinecraftTransforme
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.resolve.parseAllLibraries
+import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.getSha1
 import java.io.File
@@ -36,7 +38,7 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 
 class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImpl) :
-        AbstractMinecraftTransformer(project, provider), ForgePatcher {
+        AbstractMinecraftTransformer(project, provider, Constants.FORGE_PROVIDER), ForgePatcher {
 
     val forge: Configuration = project.configurations.maybeCreate(Constants.FORGE_PROVIDER)
 
@@ -60,6 +62,67 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     override var devFallbackNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.INT, project.mappings.getAvailableMappings(project.minecraft.defaultEnv)) }
 
     override var mixinConfig: List<String> = mutableListOf()
+
+
+    private val sideMarkers = mapOf(
+        "net/minecraftforge/fml/relauncher/SideOnly" to Triple("net/minecraftforge/fml/relauncher/Side", "value", mapOf(
+            EnvType.CLIENT to "CLIENT",
+            EnvType.SERVER to "SERVER"
+        )),
+        "cpw/mods/fml/relauncher/SideOnly" to Triple("cpw/mods/fml/relauncher/Side", "value", mapOf(
+            EnvType.CLIENT to "CLIENT",
+            EnvType.SERVER to "SERVER"
+        )),
+        "cpw/mods/fml/common/asm/SideOnly" to Triple("cpw/mods/fml/common/Side", "value", mapOf(
+            EnvType.CLIENT to "CLIENT",
+            EnvType.SERVER to "SERVER"
+        )),
+    )
+
+    private val actualSideMarker by lazy {
+        if (forge.dependencies.isEmpty()) return@lazy null // pre 1.3 - see below
+        val forgeDep = forge.dependencies.last()
+        val forgeUniversal = forge.dependencies.last()
+        val forgeJar = forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+
+        val type = ZipReader.readContents(forgeJar.toPath()).map {
+            it.substringBefore(".class") to sideMarkers[it.substringBefore(".class")]
+        }.filter { it.second != null }.map { it.first to it.second!! }
+        if (type.size > 1) throw IllegalStateException("Found more than one side marker in forge jar: $type")
+        if (type.isEmpty()) {
+            project.logger.warn("No side marker found in forge jar, using default (none)")
+            return@lazy null
+        }
+        type.first()
+    }
+
+    private fun applyAnnotationVisitor(visitor: AnnotationVisitor, env: EnvType) {
+        if (actualSideMarker == null) return
+        visitor.visitEnum(actualSideMarker!!.second.second, "L${actualSideMarker!!.first};", actualSideMarker!!.second.third[env])
+        visitor.visitEnd()
+    }
+
+    override val merger: ClassMerger = ClassMerger(
+        { node, env ->
+            if (env == EnvType.COMBINED) return@ClassMerger
+            if (actualSideMarker == null) return@ClassMerger
+            val visitor = node.visitAnnotation("L${actualSideMarker!!.first};", true)
+            applyAnnotationVisitor(visitor, env)
+        },
+        { node, env ->
+            if (env == EnvType.COMBINED) return@ClassMerger
+            if (actualSideMarker == null) return@ClassMerger
+            val visitor = node.visitAnnotation("L${actualSideMarker!!.first};", true)
+            applyAnnotationVisitor(visitor, env)
+        },
+        { node, env ->
+            if (env == EnvType.COMBINED) return@ClassMerger
+            if (actualSideMarker == null) return@ClassMerger
+            val visitor = node.visitAnnotation("L${actualSideMarker!!.first};", true)
+            applyAnnotationVisitor(visitor, env)
+        }
+    )
+
 
     @ApiStatus.Internal
     var tweakClassClient: String? = null

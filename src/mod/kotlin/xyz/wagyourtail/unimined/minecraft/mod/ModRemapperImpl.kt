@@ -11,6 +11,7 @@ import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
+import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -29,7 +30,8 @@ import kotlin.io.path.name
 
 class ModRemapperImpl(
     project: Project,
-    val modProvider: ModProvider
+    val modProvider: ModProvider,
+    val uniminedExtension: UniminedExtension
 ) : ModRemapper(project) {
 
     private val mcProvider by lazy { project.minecraft }
@@ -207,7 +209,7 @@ class ModRemapperImpl(
     }
 
     private fun modTransformFolder(): Path {
-        return project.unimined.getLocalCache().resolve("modTransform").createDirectories()
+        return uniminedExtension.getLocalCache().resolve("modTransform").createDirectories()
     }
 
     private val innerJarStripper: ResourceRemapper = object : ResourceRemapper {

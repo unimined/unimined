@@ -81,9 +81,6 @@ dependencies {
     // pack200 provided by apache commons-compress
     implementation("org.apache.commons:commons-compress:1.21")
 
-    // merging
-    implementation("net.fabricmc:stitch:0.6.2")
-
     // aw
     implementation("net.fabricmc:access-widener:2.1.0")
 

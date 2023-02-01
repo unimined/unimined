@@ -98,15 +98,9 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
         if (classpath != null) {
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
-<<<<<<< Updated upstream
-        val refmapBuilder = RefmapBuilder("${project.rootProject.name}.refmap.json", project.gradle.startParameter.logLevel)
-        remapperB.extension(refmapBuilder)
-        project.minecraft.mcRemapper.tinyRemapperConf(remapperB)
-=======
         val betterMixinExtension = BetterMixinExtension("${project.rootProject.name}.refmap.json", project.gradle.startParameter.logLevel)
         remapperB.extension(betterMixinExtension)
-        tinyRemapperConf(remapperB)
->>>>>>> Stashed changes
+        project.minecraft.mcRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         remapper.readClassPathAsync(
             *sourceSet.runtimeClasspath.files.map { it.toPath() }.filter { !minecraftProvider.isMinecraftJar(it) }.filter { it.exists() }.toTypedArray()

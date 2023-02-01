@@ -24,6 +24,7 @@ import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.mcpconfig.McpConfigDat
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.getFile
 import java.io.File
 import java.io.IOException
@@ -50,6 +51,9 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         set(value) {
             parent.devFallbackNamespace = value
         }
+
+    override val merger: ClassMerger
+        get() = throw UnsupportedOperationException("ForgeGradle 3 does not support merging with unofficial merger.")
 
     @ApiStatus.Internal
     val forgeUd = project.configurations.detachedConfiguration()

@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
+import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.unimined
@@ -16,7 +17,7 @@ val Project.modProvider
  * The class responsible for providing mod configurations and remapping them.
  * @since 0.2.3
  */
-abstract class ModProvider {
+abstract class ModProvider(val uniminedExtension: UniminedExtension) {
 
     /**
      * mod remapper.
@@ -39,7 +40,7 @@ abstract class ModProvider {
      */
     abstract val serverConfig: Configs
 
-    data class Configs(val project: Project, val envType: EnvType) {
+    data class Configs(val project: Project, val envType: EnvType, val uniminedExtension: UniminedExtension) {
         val configurations = mutableSetOf<Configuration>()
         private val envTypeName = envType.classifier?.capitalized() ?: ""
 
@@ -108,7 +109,7 @@ abstract class ModProvider {
 
 
         init {
-            project.unimined.events.register(::sourceSets)
+            uniminedExtension.events.register(::sourceSets)
         }
 
         private fun sourceSets(sourceSets: SourceSetContainer) {
