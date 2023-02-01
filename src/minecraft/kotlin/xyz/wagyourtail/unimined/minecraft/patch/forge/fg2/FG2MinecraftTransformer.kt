@@ -49,6 +49,12 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override val merger: ClassMerger
         get() = parent.merger
 
+    override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
+        val clientPatched = transformIntern(clientjar)
+        val serverPatched = transformIntern(serverjar)
+        return super.merge(clientPatched, serverPatched)
+    }
+
     override fun afterEvaluate() {
         // get and add forge-src to mappings
         val forgeDep = parent.forge.dependencies.last()
@@ -80,6 +86,11 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
+        val shadedForge = super.transform(if (minecraft.envType == EnvType.COMBINED) minecraft else transformIntern(minecraft))
+        return provider.mcRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
+    }
+
+    private fun transformIntern(minecraft: MinecraftJar): MinecraftJar {
         val forgeUniversal = parent.forge.dependencies.last()
         val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
@@ -113,10 +124,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 if (minecraft.envType == EnvType.SERVER) "server" else "client"
             )
         }
-
-        //   shade in forge jar
-        val shadedForge = super.transform(patchedMC)
-        return provider.mcRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
+        return patchedMC
     }
 
     override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {

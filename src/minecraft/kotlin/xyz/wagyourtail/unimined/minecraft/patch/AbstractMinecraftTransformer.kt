@@ -8,7 +8,6 @@ import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
-import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.run.RunConfig
@@ -33,6 +32,9 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     open val merger: ClassMerger = ClassMerger()
 
+    fun isAnonClass(node: ClassNode): Boolean =
+        node.innerClasses?.firstOrNull { it.name == node.name }.let { it != null && it.innerName == null}
+
     open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         val merged = MinecraftJar(
             clientjar,
@@ -49,8 +51,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
             val clientClassEntries = mutableMapOf<String, ClassNode>()
             ZipReader.forEachInZip(clientjar.path) { path, stream ->
                 if (path.startsWith("META-INF/")) return@forEachInZip
-                if (shouldStrip(path)) return@forEachInZip
                 if (path.endsWith(".class")) {
+                    if (shouldStrip(path)) return@forEachInZip
                     // add entry
                     val classReader = ClassReader(stream)
                     val classNode = ClassNode()
@@ -66,8 +68,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
             val serverClassEntries = mutableMapOf<String, ClassNode>()
             ZipReader.forEachInZip(serverjar.path) { path, stream ->
                 if (path.startsWith("META-INF/")) return@forEachInZip
-                if (shouldStrip(path)) return@forEachInZip
                 if (path.endsWith(".class")) {
+                    if (shouldStrip(path)) return@forEachInZip
                     // add entry
                     val classReader = ClassReader(stream)
                     val classNode = ClassNode()

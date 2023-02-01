@@ -98,7 +98,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
 
     private fun applyAnnotationVisitor(visitor: AnnotationVisitor, env: EnvType) {
         if (actualSideMarker == null) return
-        visitor.visitEnum(actualSideMarker!!.second.second, "L${actualSideMarker!!.first};", actualSideMarker!!.second.third[env])
+        visitor.visitEnum(actualSideMarker!!.second.second, "L${actualSideMarker!!.second.first};", actualSideMarker!!.second.third[env])
         visitor.visitEnd()
     }
 
@@ -106,18 +106,24 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         { node, env ->
             if (env == EnvType.COMBINED) return@ClassMerger
             if (actualSideMarker == null) return@ClassMerger
+            // already has
+            if (node.visibleAnnotations?.any { it.desc == "L${actualSideMarker!!.first};" } == true) return@ClassMerger
+            // anonymous class
+            if (isAnonClass(node)) return@ClassMerger
             val visitor = node.visitAnnotation("L${actualSideMarker!!.first};", true)
             applyAnnotationVisitor(visitor, env)
         },
         { node, env ->
             if (env == EnvType.COMBINED) return@ClassMerger
             if (actualSideMarker == null) return@ClassMerger
+            if (node.visibleAnnotations?.any { it.desc == "L${actualSideMarker!!.first};" } == true) return@ClassMerger
             val visitor = node.visitAnnotation("L${actualSideMarker!!.first};", true)
             applyAnnotationVisitor(visitor, env)
         },
         { node, env ->
             if (env == EnvType.COMBINED) return@ClassMerger
             if (actualSideMarker == null) return@ClassMerger
+            if (node.visibleAnnotations?.any { it.desc == "L${actualSideMarker!!.first};" } == true) return@ClassMerger
             val visitor = node.visitAnnotation("L${actualSideMarker!!.first};", true)
             applyAnnotationVisitor(visitor, env)
         }
