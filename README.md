@@ -11,12 +11,13 @@ unified minecraft modding environment.
 
 ## TODO
 
-* Refactor, refactor, refactor
+* ~~Refactor, refactor, refactor~~
 * ~~FG3+ support (>1.12.2)~~
 * ~~test user AT support~~
 * ~~fix fg3 versions of 1.12.2~~
 * ~~fabric aw support~~
-* combined jar support : forge 1.13+ does this, do with the rest - also fix split jars on fg3
+* ~~combined jar support : forge 1.13+ does this, do with the rest~~
+* fix split jars on fg3
 * ~~figure out how to get forge to recognise resources as part of the dev mod~~
 * split fg2+ out of the mc jar
 * figure out how to do automated testing
