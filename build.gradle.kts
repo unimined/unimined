@@ -64,7 +64,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.9.0")
 
     // artifact transformer
-    implementation("net.minecraftforge:artifactural:3.0.8")
+    implementation("net.minecraftforge:artifactural:3.0.10")
 
     // remapper
     implementation("net.fabricmc:tiny-remapper:0.8.6")

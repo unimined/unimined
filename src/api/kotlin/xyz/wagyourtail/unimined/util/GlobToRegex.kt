@@ -34,8 +34,6 @@ object GlobToRegex {
             globToRegex[it.value]!!
         } + "$"
     }
-
-
 }
 
 fun main(vararg args: String) {
