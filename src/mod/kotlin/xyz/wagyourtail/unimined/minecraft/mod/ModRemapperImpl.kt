@@ -18,7 +18,6 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.mod.ModProvider
 import xyz.wagyourtail.unimined.api.mod.ModRemapper
-import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.io.*
@@ -199,7 +198,7 @@ class ModRemapperImpl(
                 listOf(
                     AccessWidenerMinecraftTransformer.awRemapper(
                         remap.first.namespace,
-                        remap.second.namespace
+                        "named"
                     ), innerJarStripper
                 ) + NonClassCopyMode.FIX_META_INF.remappers
             )

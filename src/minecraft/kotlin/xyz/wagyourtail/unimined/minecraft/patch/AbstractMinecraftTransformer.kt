@@ -15,6 +15,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.transform.fixes.FixParamAnnotations
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.util.GlobToRegex
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
@@ -52,7 +53,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
             ZipReader.forEachInZip(clientjar.path) { path, stream ->
                 if (path.startsWith("META-INF/")) return@forEachInZip
                 if (path.endsWith(".class")) {
-                    if (shouldStrip(path)) return@forEachInZip
+                    if (shouldStripClass(path)) return@forEachInZip
                     // add entry
                     val classReader = ClassReader(stream)
                     val classNode = ClassNode()
@@ -69,7 +70,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
             ZipReader.forEachInZip(serverjar.path) { path, stream ->
                 if (path.startsWith("META-INF/")) return@forEachInZip
                 if (path.endsWith(".class")) {
-                    if (shouldStrip(path)) return@forEachInZip
+                    if (shouldStripClass(path)) return@forEachInZip
                     // add entry
                     val classReader = ClassReader(stream)
                     val classNode = ClassNode()
@@ -179,19 +180,21 @@ abstract class AbstractMinecraftTransformer protected constructor(
         // do nothing
     }
 
+    private val includeGlobs = listOf(
+        "*",
+        "META-INF/**",
+        "net/minecraft/**",
+        "com/mojang/blaze3d/**"
+    ).map { Regex(GlobToRegex.apply(it)) }
+
     /*
      * only accurate on official mappings
      */
-    open fun shouldStrip(path: String): Boolean {
-        // trim if starts with /
-        if (path.startsWith("/")) return shouldStrip(path.substring(1))
-        // proguard files
-        val parts = path.split("/")
-        if (parts.size == 1) return false
-        // META-INF
-        if (parts[0] == "META-INF") return false
-        // net/minecraft
-        if (parts[0] == "net" && parts[1] == "minecraft") return false
+    open fun shouldStripClass(path: String): Boolean {
+        // check if in include globs
+        for (glob in includeGlobs) {
+            if (glob.matches(path)) return false
+        }
         // otherwise strip
         return true
     }
