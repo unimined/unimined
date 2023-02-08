@@ -39,6 +39,11 @@ abstract class ModRemapper(val project: Project) {
     @set:ApiStatus.Internal
     var toFallbackNamespace by LazyMutable { project.minecraft.mcPatcher.devFallbackNamespace }
 
+    /**
+     * @since 0.4.0
+     */
+    val remapAtToLegacy: Boolean = false
+
 
     fun setFromNamespace(namespace: String) {
         fromNamespace = MappingNamespace.getNamespace(namespace)

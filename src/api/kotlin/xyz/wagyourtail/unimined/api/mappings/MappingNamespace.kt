@@ -13,8 +13,10 @@ enum class MappingNamespace(val namespace: String, val type: Type) {
     QUILT("quilt", Type.NAMED),
     ;
 
-    enum class Type {
-        NAMED, INT, OBF
+    enum class Type(val id: String) {
+        NAMED("named"),
+        INT("intermediary"),
+        OBF("official")
     }
 
     fun shouldReverse(target: MappingNamespace): Boolean {
