@@ -102,7 +102,7 @@ class BetterMixinExtension(val defaultRefmapPath: String, val loggerLevel: LogLe
             object : ClassVisitor(Constant.ASM_VERSION, next) {
                 override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor {
                     if (Annotation.MIXIN == descriptor) {
-                        logger.warn("Found mixin class: ${cls.name}, but it is not in a mixin json file! This will cause issues and the mixin will not be remapped!")
+                        logger.error("Found mixin class: ${cls.name}, but it is not in a mixin json file! This will cause issues and the mixin will not be remapped!")
                     }
                     return super.visitAnnotation(descriptor, visible)
                 }
