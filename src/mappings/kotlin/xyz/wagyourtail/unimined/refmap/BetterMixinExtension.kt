@@ -9,8 +9,11 @@ import net.fabricmc.tinyremapper.api.TrClass
 import net.fabricmc.tinyremapper.api.TrEnvironment
 import net.fabricmc.tinyremapper.extension.mixin.MixinExtension
 import net.fabricmc.tinyremapper.extension.mixin.common.Logger
+import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import net.fabricmc.tinyremapper.extension.mixin.common.data.CommonData
+import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.gradle.api.logging.LogLevel
+import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
@@ -65,7 +68,7 @@ class BetterMixinExtension(val defaultRefmapPath: String, val loggerLevel: LogLe
 
     override fun insertApplyVisitor(cls: TrClass, next: ClassVisitor): ClassVisitor {
         // detect if class in class lists
-        if (classesToRefmap.containsKey(cls.name.replace("/", "."))) {
+        return if (classesToRefmap.containsKey(cls.name.replace("/", "."))) {
             logger.info("Found mixin class: ${cls.name}")
             val refmapNames = classesToRefmap[cls.name.replace("/", ".")]
             val target = JsonObject()
@@ -83,7 +86,7 @@ class BetterMixinExtension(val defaultRefmapPath: String, val loggerLevel: LogLe
                     combinedMappings[key] = value.asString
                 }
             }
-            return MixinClassVisitorRefmapBuilder(CommonData(cls.environment, logger), cls.name, target, next, combinedMappings) {
+            MixinClassVisitorRefmapBuilder(CommonData(cls.environment, logger), cls.name, target, next, combinedMappings) {
                 if (target.size() > 0) {
                     val refmaps = refmapNames.map { refmaps[it]!! }
                     for (refmap in refmaps) {
@@ -95,8 +98,16 @@ class BetterMixinExtension(val defaultRefmapPath: String, val loggerLevel: LogLe
                     }
                 }
             }
+        } else {
+            object : ClassVisitor(Constant.ASM_VERSION, next) {
+                override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor {
+                    if (Annotation.MIXIN == descriptor) {
+                        logger.warn("Found mixin class: ${cls.name}, but it is not in a mixin json file! This will cause issues and the mixin will not be remapped!")
+                    }
+                    return super.visitAnnotation(descriptor, visible)
+                }
+            }
         }
-        return next
     }
 
 
