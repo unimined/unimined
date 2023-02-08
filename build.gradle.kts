@@ -65,6 +65,7 @@ dependencies {
 
     // artifact transformer
     implementation("net.minecraftforge:artifactural:3.0.10")
+    implementation("net.minecraftforge:unsafe:0.2.0")
 
     // remapper
     implementation("net.fabricmc:tiny-remapper:0.8.6")
