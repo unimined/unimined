@@ -2,11 +2,15 @@ package xyz.wagyourtail.unimined.minecraft.mod
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
+import net.fabricmc.loom.util.kotlin.KotlinClasspathService
+import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader
+import net.fabricmc.mappingio.format.ZipReader
 import net.fabricmc.tinyremapper.InputTag
 import net.fabricmc.tinyremapper.NonClassCopyMode
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.OutputConsumerPath.ResourceRemapper
 import net.fabricmc.tinyremapper.TinyRemapper
+import net.fabricmc.tinyremapper.extension.mixin.MixinExtension
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -20,6 +24,7 @@ import xyz.wagyourtail.unimined.api.mod.ModProvider
 import xyz.wagyourtail.unimined.api.mod.ModRemapper
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.forge.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.refmap.BetterMixinExtension
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.io.*
 import java.nio.file.Files
@@ -56,7 +61,7 @@ class ModRemapperImpl(
         }
     }
 
-    private fun constructRemapper(envType: EnvType, fromNs: MappingNamespace, toNs: MappingNamespace, mc: Path): TinyRemapper {
+    private fun constructRemapper(envType: EnvType, fromNs: MappingNamespace, toNs: MappingNamespace, mc: Path): Pair<TinyRemapper, BetterMixinExtension?> {
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(
                 project.mappings.getMappingsProvider(
@@ -68,13 +73,29 @@ class ModRemapperImpl(
             .skipLocalVariableMapping(true)
             .ignoreConflicts(true)
             .threads(Runtime.getRuntime().availableProcessors())
+        val classpath = KotlinClasspathService.getOrCreateIfRequired(project)
+        if (classpath != null) {
+            remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
+        }
+        val mixinExtension = if (remapMixins == MixinRemap.UNIMINED) {
+            val mixin = BetterMixinExtension("error.mixin.refmap.json", project.gradle.startParameter.logLevel)
+            remapperB.extension(mixin)
+            mixin
+        } else null
+        if (remapMixins != MixinRemap.NONE) {
+            remapperB.extension(MixinExtension(when (remapMixins) {
+                MixinRemap.TINY_HARD -> setOf(MixinExtension.AnnotationTarget.HARD)
+                MixinRemap.TINY_HARDSOFT -> setOf(MixinExtension.AnnotationTarget.HARD, MixinExtension.AnnotationTarget.SOFT)
+                else -> throw InvalidUserDataException("Invalid MixinRemap value: $remapMixins")
+            }))
+        }
         tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         remapper.readClassPathAsync(
             *project.minecraft.mcLibraries.resolve().map { it.toPath() }.toTypedArray()
         )
         remapper.readClassPathAsync(mc)
-        return remapper
+        return remapper to mixinExtension
     }
 
     fun remap(envType: EnvType) {
@@ -141,7 +162,7 @@ class ModRemapperImpl(
                 mcFallbackNamespace
             )
             val remapper = constructRemapper(envType, prevNamespace, step.second, mc)
-            val tags = preRemapInternal(remapper, mods)
+            val tags = preRemapInternal(remapper.first, mods)
             mods.clear()
             mods.putAll(remapInternal(remapper, envType, tags, step == last, prevNamespace to step.second))
             prevNamespace = step.second
@@ -176,34 +197,48 @@ class ModRemapperImpl(
         return output
     }
 
-    private fun remapInternal(remapper: TinyRemapper, envType: EnvType, deps: Map<ResolvedArtifact, Pair<InputTag, File>>, final: Boolean, remap: Pair<MappingNamespace, MappingNamespace>): Map<ResolvedArtifact, File> {
+    private fun remapInternal(remapper: Pair<TinyRemapper, BetterMixinExtension?>, envType: EnvType, deps: Map<ResolvedArtifact, Pair<InputTag, File>>, final: Boolean, remap: Pair<MappingNamespace, MappingNamespace>): Map<ResolvedArtifact, File> {
         val output = mutableMapOf<ResolvedArtifact, File>()
         for ((artifact, tag) in deps) {
             output[artifact] = remapModInternal(remapper, envType, artifact, tag, final, remap).toFile()
         }
-        remapper.finish()
+        remapper.first.finish()
         return output
     }
 
-    private fun remapModInternal(remapper: TinyRemapper, envType: EnvType, dep: ResolvedArtifact, input: Pair<InputTag, File>, final: Boolean, remap: Pair<MappingNamespace, MappingNamespace>): Path {
+    private fun remapModInternal(remapper: Pair<TinyRemapper, BetterMixinExtension?>, envType: EnvType, dep: ResolvedArtifact, input: Pair<InputTag, File>, final: Boolean, remap: Pair<MappingNamespace, MappingNamespace>): Path {
         val combinedNames = mappings.getCombinedNames(envType)
         val target = if (final) {
             modTransformFolder().resolve("${dep.file.nameWithoutExtension}-mapped-${combinedNames}-${mcProvider.mcPatcher.devNamespace}.${dep.file.extension}")
         } else {
             getTempFilePath(dep.file.nameWithoutExtension, ".jar")
         }
+        if (remapper.second != null) {
+            remapper.second!!.reset(dep.name + ".mixin-refmap.json")
+        }
         OutputConsumerPath.Builder(target).build().use {
             it.addNonClassFiles(
                 input.second.toPath(),
-                remapper,
+                remapper.first,
                 listOf(
                     AccessWidenerMinecraftTransformer.awRemapper(
                         remap.first.type.id,
                         remap.second.type.id
                     ), innerJarStripper, AccessTransformerMinecraftTransformer.atRemapper(remapAtToLegacy)
-                ) + NonClassCopyMode.FIX_META_INF.remappers
+                ) + NonClassCopyMode.FIX_META_INF.remappers + (
+                    if (remapper.second != null) {
+                        listOf(remapper.second!!)
+                    } else {
+                        emptyList()
+                    }
+                )
             )
-            remapper.apply(it, input.first)
+            remapper.first.apply(it, input.first)
+        }
+        if (remapper.second != null) {
+            ZipReader.openZipFileSystem(target, mapOf("mutable" to true)).use {
+                remapper.second!!.write(it)
+            }
         }
         return target
     }

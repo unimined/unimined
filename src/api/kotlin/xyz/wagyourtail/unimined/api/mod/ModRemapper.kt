@@ -42,8 +42,17 @@ abstract class ModRemapper(val project: Project) {
     /**
      * @since 0.4.0
      */
-    val remapAtToLegacy: Boolean = false
+    var remapAtToLegacy: Boolean = false
 
+    /**
+     * @since 0.4.0
+     */
+     @set:ApiStatus.Internal
+    var remapMixins: MixinRemap = MixinRemap.NONE
+
+    fun setRemapMixins(remap: String) {
+        remapMixins = MixinRemap.valueOf(remap.uppercase())
+    }
 
     fun setFromNamespace(namespace: String) {
         fromNamespace = MappingNamespace.getNamespace(namespace)
@@ -83,4 +92,11 @@ abstract class ModRemapper(val project: Project) {
     }
 
     abstract fun preTransform(envType: EnvType): List<File>
+
+    enum class MixinRemap {
+        NONE,
+        TINY_HARD,
+        TINY_HARDSOFT,
+        UNIMINED
+    }
 }

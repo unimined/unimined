@@ -25,7 +25,7 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.name
 import kotlin.io.path.writeText
 
-class BetterMixinExtension(val defaultRefmapPath: String, val loggerLevel: LogLevel = LogLevel.WARN, val targets: Set<MixinExtension.AnnotationTarget> = MixinExtension.AnnotationTarget.values().toSet()) :
+class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLevel = LogLevel.WARN, val targets: Set<MixinExtension.AnnotationTarget> = MixinExtension.AnnotationTarget.values().toSet()) :
         TinyRemapper.Extension,
         TinyRemapper.ApplyVisitorProvider,
         TinyRemapper.AnalyzeVisitorProvider,
@@ -46,11 +46,21 @@ class BetterMixinExtension(val defaultRefmapPath: String, val loggerLevel: LogLe
         }
     }
 
-    val defaultRefmap = JsonObject()
+    var defaultRefmap = JsonObject()
     val refmaps = mutableMapOf(defaultRefmapPath to defaultRefmap)
     val classesToRefmap = mutableMapOf<String, MutableSet<String>>()
-
     val existingRefmaps = mutableMapOf<String, JsonObject>()
+
+
+    fun reset(defaultRefmapPath: String) {
+        this.defaultRefmapPath = defaultRefmapPath
+        tasks.clear()
+        defaultRefmap = JsonObject()
+        refmaps.clear()
+        refmaps[defaultRefmapPath] = defaultRefmap
+        classesToRefmap.clear()
+        existingRefmaps.clear()
+    }
 
     private val logger: Logger = Logger(translateLogLevel(loggerLevel))
 
