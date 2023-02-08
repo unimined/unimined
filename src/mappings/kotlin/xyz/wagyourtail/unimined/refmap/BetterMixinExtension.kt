@@ -25,7 +25,7 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.name
 import kotlin.io.path.writeText
 
-class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLevel = LogLevel.WARN, val targets: Set<MixinExtension.AnnotationTarget> = MixinExtension.AnnotationTarget.values().toSet()) :
+class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLevel = LogLevel.WARN, val targets: Set<MixinExtension.AnnotationTarget> = MixinExtension.AnnotationTarget.values().toSet(), val fallbackWhenNotInJson: Boolean = false) :
         TinyRemapper.Extension,
         TinyRemapper.ApplyVisitorProvider,
         TinyRemapper.AnalyzeVisitorProvider,
@@ -45,6 +45,8 @@ class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLe
             else -> Logger.Level.WARN
         }
     }
+
+    val fallback = MixinExtension()
 
     var defaultRefmap = JsonObject()
     val refmaps = mutableMapOf(defaultRefmapPath to defaultRefmap)
@@ -108,6 +110,8 @@ class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLe
                     }
                 }
             }
+        } else if (fallbackWhenNotInJson) {
+            fallback.preApplyVisitor(cls, next)
         } else {
             object : ClassVisitor(Constant.ASM_VERSION, next) {
                 override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor {
@@ -141,6 +145,10 @@ class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLe
                 }
             }
             return HarderTargetMixinClassVisitor(tasks[mrjVersion]!!, next, combinedMappings)
+        } else if (fallbackWhenNotInJson) {
+            val fallbackFn = fallback::class.java.getDeclaredMethod("analyzeVisitor", Int::class.java, String::class.java, ClassVisitor::class.java)
+            fallbackFn.isAccessible = true
+            return fallbackFn(fallback, mrjVersion, className, next) as ClassVisitor?
         }
         return next
     }
@@ -154,6 +162,11 @@ class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLe
             } catch (e: RuntimeException) {
                 logger.error(e.message)
             }
+        }
+        if (fallbackWhenNotInJson) {
+            val fallbackFn = fallback::class.java.getDeclaredMethod("stateProcessor", TrEnvironment::class.java)
+            fallbackFn.isAccessible = true
+            fallbackFn(fallback, environment)
         }
     }
 

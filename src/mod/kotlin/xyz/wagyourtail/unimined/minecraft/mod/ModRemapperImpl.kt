@@ -78,7 +78,7 @@ class ModRemapperImpl(
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
         val mixinExtension = if (remapMixins == MixinRemap.UNIMINED) {
-            val mixin = BetterMixinExtension("error.mixin.refmap.json", project.gradle.startParameter.logLevel)
+            val mixin = BetterMixinExtension("error.mixin.refmap.json", project.gradle.startParameter.logLevel, fallbackWhenNotInJson = true)
             remapperB.extension(mixin)
             mixin
         } else null
