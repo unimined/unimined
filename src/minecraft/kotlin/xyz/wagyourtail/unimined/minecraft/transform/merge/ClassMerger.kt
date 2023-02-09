@@ -23,9 +23,10 @@ class ClassMerger(
         if (!areClassMetadataEqual(client, server)) {
             throw IllegalArgumentException("Class metadata is not equal!")
         }
+        // weaker access
         val merged = ClassNode()
         merged.version = client.version
-        merged.access = client.access
+        merged.access = selectWeakerAccess(client.access, server.access)
         merged.name = client.name
         merged.signature = client.signature
         merged.superName = client.superName
@@ -360,13 +361,9 @@ class ClassMerger(
             if (a and public != 0 && b and public != 0) {
                 access = access or Opcodes.ACC_PUBLIC
             }
-//            // static must be same
-//            if (a and Opcodes.ACC_STATIC xor b and Opcodes.ACC_STATIC != 0) {
-//                throw IllegalStateException("Static access is not the same: $a != $b")
-//            }
             // all other flags must be the same
             val other = (Opcodes.ACC_FINAL or Opcodes.ACC_PUBLIC or Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE).inv()
-            if ((a and other) xor (b and other) != 0) {
+            if ((a and other) != (b and other)) {
                 throw IllegalStateException("Other access is not the same: $a != $b")
             }
             return access
@@ -374,7 +371,8 @@ class ClassMerger(
 
         fun areClassMetadataEqual(a: ClassNode, b: ClassNode): Boolean {
             if (a.version != b.version) return false
-            if (a.access != b.access) return false
+            // require equal static
+            if (a.access and Opcodes.ACC_STATIC != b.access and Opcodes.ACC_STATIC) return false
             if (a.name != b.name) return false
             if (a.signature != b.signature) return false
             if (a.superName != b.superName) return false
