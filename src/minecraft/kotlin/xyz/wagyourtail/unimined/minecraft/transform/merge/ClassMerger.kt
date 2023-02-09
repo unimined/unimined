@@ -25,7 +25,7 @@ class ClassMerger(
         }
         // weaker access
         val merged = ClassNode()
-        merged.version = client.version
+        merged.version = client.version.coerceAtLeast(server.version)
         merged.access = selectWeakerAccess(client.access, server.access)
         merged.name = client.name
         merged.signature = client.signature
@@ -370,14 +370,11 @@ class ClassMerger(
         }
 
         fun areClassMetadataEqual(a: ClassNode, b: ClassNode): Boolean {
-            if (a.version != b.version) return false
             // require equal static
             if (a.access and Opcodes.ACC_STATIC != b.access and Opcodes.ACC_STATIC) return false
             if (a.name != b.name) return false
             if (a.signature != b.signature) return false
             if (a.superName != b.superName) return false
-            if (a.sourceFile != b.sourceFile) return false
-            if (a.sourceDebug != b.sourceDebug) return false
             if (a.outerClass != b.outerClass) return false
             if (a.outerMethod != b.outerMethod) return false
             if (a.outerMethodDesc != b.outerMethodDesc) return false
