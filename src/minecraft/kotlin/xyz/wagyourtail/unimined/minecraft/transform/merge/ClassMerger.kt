@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.minecraft.transform.merge
 
 import org.objectweb.asm.Attribute
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 
@@ -97,6 +98,7 @@ class ClassMerger(
             for (f in fields) {
                 if (areFieldNodesEqual(f.first, field)) {
                     fields.remove(f)
+                    field.access = selectWeakerAccess(f.first.access, field.access)
                     fields.add(field to EnvType.COMBINED)
                     continue@outer
                 }
@@ -115,6 +117,7 @@ class ClassMerger(
             for (m in methods) {
                 if (areMethodNodesEqual(m.first, method)) {
                     methods.remove(m)
+                    method.access = selectWeakerAccess(m.first.access, method.access)
                     methods.add(method to EnvType.COMBINED)
                     continue@outer
                 }
@@ -132,11 +135,12 @@ class ClassMerger(
 
     companion object {
         fun areFieldNodesEqual(a: FieldNode, b: FieldNode): Boolean {
-            if (a.access != b.access) return false
             if (a.name != b.name) return false
             if (a.desc != b.desc) return false
             if (a.signature != b.signature) return false
             if (a.value != b.value) return false
+            // check static part of access
+            if (a.access and Opcodes.ACC_STATIC != b.access and Opcodes.ACC_STATIC) return false
             val aVisibleAnnotations = a.visibleAnnotations?.toMutableList() ?: mutableListOf()
             val bVisibleAnnotations = b.visibleAnnotations?.toMutableList() ?: mutableListOf()
             if (aVisibleAnnotations.size != bVisibleAnnotations.size) return false
@@ -216,10 +220,11 @@ class ClassMerger(
         }
 
         fun areMethodNodesEqual(a: MethodNode, b: MethodNode): Boolean {
-            if (a.access != b.access) return false
             if (a.name != b.name) return false
             if (a.desc != b.desc) return false
             if (a.signature != b.signature) return false
+            // check static part of access
+            if (a.access and Opcodes.ACC_STATIC != b.access and Opcodes.ACC_STATIC) return false
 //            val aParameters = a.parameters?.toMutableList() ?: mutableListOf()
 //            val bParameters = b.parameters?.toMutableList() ?: mutableListOf()
 //            if (aParameters.size != bParameters.size) return false
@@ -324,14 +329,47 @@ class ClassMerger(
             return a.type == b.type // TODO: check values, maybe?
         }
 
-        fun areParamsEqual(a: ParameterNode, b: ParameterNode): Boolean {
-            return a.name == b.name && a.access == b.access // TODO: check values, maybe?
-        }
-
         fun areInstructionsEqual(a: AbstractInsnNode, b: AbstractInsnNode): Boolean {
             if (a.opcode != b.opcode) return false
             if (a.type != b.type) return false
             return true // TODO: contents of instructions
+        }
+
+        fun selectWeakerAccess(a: Int, b: Int): Int {
+            var access = a
+            if (a == b) return a
+            // should be final
+            access = a and Opcodes.ACC_FINAL.inv()
+            if (a and Opcodes.ACC_FINAL != 0 && b and Opcodes.ACC_FINAL != 0) {
+                access = access or Opcodes.ACC_FINAL
+            }
+            // should be private
+            access = a and Opcodes.ACC_PRIVATE.inv()
+            if (a and Opcodes.ACC_PRIVATE != 0 && b and Opcodes.ACC_PRIVATE != 0) {
+                access = access or Opcodes.ACC_PRIVATE
+            }
+            // should be protected
+            access = a and Opcodes.ACC_PROTECTED.inv()
+            val protected = Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE
+            if (a and protected != 0 && b and protected != 0) {
+                access = access or Opcodes.ACC_PROTECTED
+            }
+            // should be public
+            access = a and Opcodes.ACC_PUBLIC.inv()
+            val public = Opcodes.ACC_PUBLIC or Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE
+            if (a and public != 0 && b and public != 0) {
+                access = access or Opcodes.ACC_PUBLIC
+            }
+//            // static must be same
+//            if (a and Opcodes.ACC_STATIC xor b and Opcodes.ACC_STATIC != 0) {
+//                throw IllegalStateException("Static access is not the same: $a != $b")
+//            }
+            // all other flags must be the same
+            val other = (Opcodes.ACC_FINAL or Opcodes.ACC_PUBLIC or Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE).inv()
+            if ((a and other) xor (b and other) != 0) {
+                throw IllegalStateException("Other access is not the same: $a != $b")
+            }
+            return access
         }
 
         fun areClassMetadataEqual(a: ClassNode, b: ClassNode): Boolean {
