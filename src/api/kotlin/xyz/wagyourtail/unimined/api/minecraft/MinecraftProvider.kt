@@ -119,7 +119,7 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
         clientWorkingDirectory.convention(project.projectDir.resolve("run").resolve("client")).finalizeValueOnRead()
         serverWorkingDirectory.convention(project.projectDir.resolve("run").resolve("server")).finalizeValueOnRead()
 
-        disableCombined.convention(false).finalizeValueOnRead()
+        disableCombined.convention(false)
 
         alphaServerVersionOverride.convention(null as String?).finalizeValueOnRead()
     }
