@@ -61,7 +61,7 @@ abstract class RemapJarTask : Jar() {
     @get:Input
     @get:Optional
     @get:ApiStatus.Internal
-    abstract val envType: Property<EnvType>
+    abstract val envType: Property<EnvType?>
 
     fun setSource(namespace: String) {
         sourceNamespace.set(MappingNamespace.getNamespace(namespace))
@@ -87,6 +87,6 @@ abstract class RemapJarTask : Jar() {
         fallbackFromNamespace.convention(null as MappingNamespace?)
         targetNamespace.convention(null as MappingNamespace?)
         remapATToLegacy.convention(false)
-        envType.convention(EnvType.COMBINED)
+        envType.convention(null as EnvType?)
     }
 }

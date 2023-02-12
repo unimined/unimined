@@ -28,30 +28,75 @@ repositories {
     }
 }
 
+fun SourceSet.inputOf(sourceSet: SourceSet) {
+    compileClasspath += sourceSet.compileClasspath
+    runtimeClasspath += sourceSet.runtimeClasspath
+}
+
+fun SourceSet.inputOf(vararg sourceSets: SourceSet) {
+    for (sourceSet in sourceSets) {
+        inputOf(sourceSet)
+    }
+}
+
+fun SourceSet.outputOf(sourceSet: SourceSet) {
+    compileClasspath += sourceSet.output
+    runtimeClasspath += sourceSet.output
+}
+
+fun SourceSet.outputOf(vararg sourceSets: SourceSet) {
+    for (sourceSet in sourceSets) {
+        outputOf(sourceSet)
+    }
+}
+
 sourceSets {
     create("api") {
-        compileClasspath += main.get().compileClasspath
-        runtimeClasspath += main.get().runtimeClasspath
+        inputOf(main.get())
     }
     create("mappings") {
-        compileClasspath += main.get().compileClasspath + sourceSets["api"].output
-        runtimeClasspath += main.get().runtimeClasspath + sourceSets["api"].output
+        inputOf(main.get())
+        outputOf(
+            sourceSets["api"]
+        )
+    }
+    create("launcher") {
+        inputOf(main.get())
+        outputOf(
+            sourceSets["api"]
+        )
     }
     create("minecraft") {
-        compileClasspath += main.get().compileClasspath + sourceSets["mappings"].output + sourceSets["api"].output
-        runtimeClasspath += main.get().runtimeClasspath + sourceSets["mappings"].output + sourceSets["api"].output
+        inputOf(main.get())
+        outputOf(
+            sourceSets["api"],
+            sourceSets["mappings"]
+        )
     }
     create("mod") {
-        compileClasspath += main.get().compileClasspath + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
-        runtimeClasspath += main.get().runtimeClasspath + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
+        inputOf(main.get())
+        outputOf(
+            sourceSets["api"],
+            sourceSets["mappings"],
+            sourceSets["minecraft"]
+        )
     }
     create("sources") {
-        compileClasspath += main.get().compileClasspath + sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["api"].output
-        runtimeClasspath += main.get().runtimeClasspath + sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["api"].output
+        inputOf(main.get())
+        outputOf(
+            sourceSets["api"],
+            sourceSets["minecraft"],
+            sourceSets["mod"]
+        )
     }
     main {
-        compileClasspath += sourceSets["sources"].output + sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
-        runtimeClasspath += sourceSets["sources"].output + sourceSets["mod"].output + sourceSets["minecraft"].output + sourceSets["mappings"].output + sourceSets["api"].output
+        outputOf(
+            sourceSets["api"],
+            sourceSets["mappings"],
+            sourceSets["minecraft"],
+            sourceSets["mod"],
+            sourceSets["sources"]
+        )
     }
 }
 
@@ -94,7 +139,14 @@ dependencies {
 }
 
 tasks.jar {
-    from(sourceSets["api"].output, sourceSets["mappings"].output, sourceSets["minecraft"].output, sourceSets["mod"].output, sourceSets["main"].output, sourceSets["sources"].output)
+    from(
+        sourceSets["api"].output,
+        sourceSets["mappings"].output,
+        sourceSets["minecraft"].output,
+        sourceSets["mod"].output,
+        sourceSets["sources"].output,
+        sourceSets["main"].output
+    )
 
     manifest {
         attributes.putAll(
