@@ -34,7 +34,7 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
         val devNs = sourceNamespace.getOrElse(minecraftProvider.mcPatcher.devNamespace)!!
         val devFNs = fallbackFromNamespace.getOrElse(minecraftProvider.mcPatcher.devFallbackNamespace)!!
 
-        val env = envType.get() ?: project.minecraft.defaultEnv
+        val env = envType.getOrElse(project.minecraft.defaultEnv)!!
 
         val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
             devNs,
