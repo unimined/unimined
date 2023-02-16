@@ -343,27 +343,16 @@ class ClassMerger(
             if (a and Opcodes.ACC_FINAL != 0 && b and Opcodes.ACC_FINAL != 0) {
                 access = access or Opcodes.ACC_FINAL
             }
-            // should be private
-            access = access and Opcodes.ACC_PRIVATE.inv()
-            if (a and Opcodes.ACC_PRIVATE != 0 && b and Opcodes.ACC_PRIVATE != 0) {
-                access = access or Opcodes.ACC_PRIVATE
-            }
-            // should be protected
-            access = access and Opcodes.ACC_PROTECTED.inv()
-            val protected = Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE
-            if (a and protected != 0 && b and protected != 0) {
-                access = access or Opcodes.ACC_PROTECTED
-            }
-            // should be public
-            access = access and Opcodes.ACC_PUBLIC.inv()
-            val public = Opcodes.ACC_PUBLIC or Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE
-            if (a and public != 0 && b and public != 0) {
-                access = access or Opcodes.ACC_PUBLIC
-            }
+
+            val aAccess = Access.from(a)
+            val bAccess = Access.from(b)
+            access = access and (Opcodes.ACC_PUBLIC or Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE).inv()
+            access = access or Access.max(aAccess, bAccess).value
+
             // all other flags must be the same
             val other = (Opcodes.ACC_FINAL or Opcodes.ACC_PUBLIC or Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE).inv()
             if ((a and other) != (b and other)) {
-                throw IllegalStateException("Other access is not the same: $a != $b")
+                throw IllegalStateException("Other access is not the same: ${a.toString(16)} != ${b.toString(16)}")
             }
             return access
         }
@@ -470,6 +459,31 @@ class ClassMerger(
             if (bAttributes.isNotEmpty()) return false
             return true
         }
+    }
+
+
+    private enum class Access(val value: Int) {
+        PRIVATE(Opcodes.ACC_PRIVATE),
+        PACKAGE_PRIVATE(0),
+        PROTECTED(Opcodes.ACC_PROTECTED),
+        PUBLIC(Opcodes.ACC_PUBLIC),
+        ;
+
+        companion object {
+            fun from(access: Int): Access {
+                return when (access and (Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED or Opcodes.ACC_PUBLIC)) {
+                    Opcodes.ACC_PRIVATE -> PRIVATE
+                    Opcodes.ACC_PROTECTED -> PROTECTED
+                    Opcodes.ACC_PUBLIC -> PUBLIC
+                    else -> PACKAGE_PRIVATE
+                }
+            }
+
+            fun max(a: Access, b: Access): Access {
+                return values().last { it == a || it == b }
+            }
+        }
+
     }
 
 }
