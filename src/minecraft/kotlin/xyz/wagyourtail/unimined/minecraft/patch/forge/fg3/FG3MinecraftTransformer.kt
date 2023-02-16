@@ -16,7 +16,7 @@ import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.run.RunConfig
+import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
@@ -321,7 +321,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     val legacyClasspath = project.unimined.getLocalCache().createDirectories().resolve("legacy_classpath.txt")
 
-    private fun getArgValue(config: RunConfig, arg: String): String {
+    private fun getArgValue(config: LaunchConfig, arg: String): String {
         if (arg.startsWith("{")) {
             return when (arg) {
                 "{minecraft_classpath_file}" -> {
@@ -396,7 +396,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         )
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         createLegacyClasspath()
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
             val mainClass = get("main").asString
@@ -434,7 +434,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyServerRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         userdevCfg.get("runs").asJsonObject.get("server").asJsonObject.apply {
             val mainClass = get("main").asString
 

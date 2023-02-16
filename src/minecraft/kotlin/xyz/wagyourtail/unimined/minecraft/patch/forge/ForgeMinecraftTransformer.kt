@@ -15,7 +15,7 @@ import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.run.RunConfig
+import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.tasks.MappingExportTypes
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mappings.MappingExportImpl
@@ -394,7 +394,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         }
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         project.logger.info("[fg3] Applying client run config")
         forgeTransformer.applyClientRunConfig(tasks) {
             project.logger.info("Adding mixin config $mixinConfig to run config")
@@ -405,7 +405,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         }
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyServerRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         project.logger.info("[fg3] Applying server run config")
         forgeTransformer.applyServerRunConfig(tasks) {
             project.logger.info("Adding mixin config $mixinConfig to run config")

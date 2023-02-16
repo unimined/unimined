@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.run
+package xyz.wagyourtail.unimined.api.launch
 
 import com.ibm.icu.impl.ICUDebug
 import org.gradle.api.Project
@@ -18,7 +18,7 @@ import kotlin.io.path.relativeTo
  * @since 0.2.3
  */
 @ApiStatus.Internal
-data class RunConfig(
+data class LaunchConfig(
     val project: Project,
     val taskName: String,
     var description: String,

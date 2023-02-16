@@ -7,8 +7,8 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.fabric.FabricApiExtension
+import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.run.RunConfig
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import java.net.URI
 
@@ -47,7 +47,7 @@ class FabricMinecraftTransformer(
         })
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         provider.provideVanillaRunClientTask(tasks) { task ->
             clientMainClass?.let { task.mainClass = it }
             task.jvmArgs += listOf(
@@ -58,7 +58,7 @@ class FabricMinecraftTransformer(
         }
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyServerRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         provider.provideVanillaRunServerTask(tasks) { task ->
             serverMainClass?.let { task.mainClass = it }
             task.jvmArgs += listOf(

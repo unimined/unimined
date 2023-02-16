@@ -11,7 +11,7 @@ import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
-import xyz.wagyourtail.unimined.api.run.RunConfig
+import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
@@ -130,7 +130,7 @@ open class JarModMinecraftTransformer(
         })
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         provider.provideVanillaRunClientTask(tasks) {
             if (clientMainClass != null) {
                 it.mainClass = clientMainClass as String
@@ -139,7 +139,7 @@ open class JarModMinecraftTransformer(
         }
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyServerRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         provider.provideVanillaRunServerTask(tasks) {
             if (serverMainClass != null) {
                 it.mainClass = serverMainClass as String

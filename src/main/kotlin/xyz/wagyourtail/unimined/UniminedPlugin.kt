@@ -88,7 +88,7 @@ class UniminedPlugin : Plugin<Project> {
         val genIntellijRuns = tasks.register("genIntellijRuns") {
             it.group = "unimined"
             it.doLast {
-                for (config in ext.minecraftProvider.runConfigs) {
+                for (config in ext.minecraftProvider.launchConfigs) {
                     config.createIdeaRunConfig()
                 }
             }

@@ -12,7 +12,7 @@ import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.run.RunConfig
+import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
@@ -224,7 +224,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         provider.provideVanillaRunClientTask(tasks) {
             it.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${it.workingDir.absolutePath}\"")
             if (parent.mainClass != null) it.mainClass = parent.mainClass!!

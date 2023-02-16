@@ -8,13 +8,13 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.launch.LaunchTransformer
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.reamp.MinecraftRemapper
-import xyz.wagyourtail.unimined.api.run.Runs
 import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.File
 import java.nio.file.Path
@@ -47,7 +47,15 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
     @set:ApiStatus.Internal
     abstract var mcPatcher: U
 
-    val runs = Runs()
+    /**
+     * allows for transforming the dev launches.
+     * @since 0.4.0
+     */
+    val launches = LaunchTransformer()
+
+    @Deprecated("use launches instead", ReplaceWith("launches"))
+    val runs
+        get() = launches
 
     abstract val clientWorkingDirectory: Property<File>
     abstract val serverWorkingDirectory: Property<File>

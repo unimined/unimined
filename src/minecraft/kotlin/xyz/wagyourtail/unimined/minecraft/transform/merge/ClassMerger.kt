@@ -337,26 +337,25 @@ class ClassMerger(
         }
 
         fun selectWeakerAccess(a: Int, b: Int): Int {
-            var access = a
             if (a == b) return a
             // should be final
-            access = a and Opcodes.ACC_FINAL.inv()
+            var access = a and Opcodes.ACC_FINAL.inv()
             if (a and Opcodes.ACC_FINAL != 0 && b and Opcodes.ACC_FINAL != 0) {
                 access = access or Opcodes.ACC_FINAL
             }
             // should be private
-            access = a and Opcodes.ACC_PRIVATE.inv()
+            access = access and Opcodes.ACC_PRIVATE.inv()
             if (a and Opcodes.ACC_PRIVATE != 0 && b and Opcodes.ACC_PRIVATE != 0) {
                 access = access or Opcodes.ACC_PRIVATE
             }
             // should be protected
-            access = a and Opcodes.ACC_PROTECTED.inv()
+            access = access and Opcodes.ACC_PROTECTED.inv()
             val protected = Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE
             if (a and protected != 0 && b and protected != 0) {
                 access = access or Opcodes.ACC_PROTECTED
             }
             // should be public
-            access = a and Opcodes.ACC_PUBLIC.inv()
+            access = access and Opcodes.ACC_PUBLIC.inv()
             val public = Opcodes.ACC_PUBLIC or Opcodes.ACC_PROTECTED or Opcodes.ACC_PRIVATE
             if (a and public != 0 && b and public != 0) {
                 access = access or Opcodes.ACC_PUBLIC

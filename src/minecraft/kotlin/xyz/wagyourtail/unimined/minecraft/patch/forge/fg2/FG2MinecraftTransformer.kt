@@ -3,17 +3,15 @@ package xyz.wagyourtail.unimined.minecraft.patch.forge.fg2
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskContainer
-import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.run.RunConfig
+import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
-import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.SemVerUtils
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.net.URI
@@ -127,7 +125,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return patchedMC
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         provider.provideVanillaRunClientTask(tasks) {
             if (parent.mainClass != null) it.mainClass = parent.mainClass!!
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
@@ -138,7 +136,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer, action: (RunConfig) -> Unit) {
+    override fun applyServerRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
         provider.provideVanillaRunServerTask(tasks) {
             if (parent.mainClass != null) it.mainClass = parent.mainClass!!
             it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
