@@ -18,8 +18,7 @@ object AccessTransformerMinecraftTransformer {
         object : OutputConsumerPath.ResourceRemapper {
             override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
                 return relativePath.name == "accesstransformer.cfg" ||
-                        relativePath.name == "fml_at.cfg" ||
-                        relativePath.name == "forge_at.cfg"
+                        relativePath.name.endsWith("_at.cfg")
             }
 
             override fun transform(
