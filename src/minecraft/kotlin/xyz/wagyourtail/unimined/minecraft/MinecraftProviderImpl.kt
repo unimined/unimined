@@ -156,7 +156,7 @@ abstract class MinecraftProviderImpl(
         action(mcPatcher as ForgeMinecraftTransformer)
     }
 
-    private fun sourceSets(sourceSets: SourceSetContainer) {
+    private fun sourceSets(@Suppress("UNUSED_PARAMETER") sourceSets: SourceSetContainer) {
 
         for (sourceSet in clientSourceSets) {
             sourceSet.compileClasspath += client + mcLibraries

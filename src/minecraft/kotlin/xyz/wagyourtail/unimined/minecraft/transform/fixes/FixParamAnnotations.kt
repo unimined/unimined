@@ -70,7 +70,7 @@ object FixParamAnnotations {
         ): MethodVisitor {
             val visitor = super.visitMethod(access, name, descriptor, signature, exceptions)
             return if (name == "<init>") {
-                MethodParameterAnnotationVisitor(visitor, descriptor, expectedSynthetic!!)
+                MethodParameterAnnotationVisitor(visitor, descriptor, expectedSynthetic)
             } else {
                 visitor
             }

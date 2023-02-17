@@ -48,7 +48,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
         }
 
         merged.path.deleteIfExists()
-        ZipReader.openZipFileSystem(merged.path, mapOf("create" to true, "mutable" to true)).use { merged ->
+        ZipReader.openZipFileSystem(merged.path, mapOf("create" to true, "mutable" to true)).use { mergedFS ->
             val clientClassEntries = mutableMapOf<String, ClassNode>()
             ZipReader.forEachInZip(clientjar.path) { path, stream ->
                 if (path.startsWith("META-INF/")) return@forEachInZip
@@ -61,7 +61,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
                     clientClassEntries[path] = classNode
                 } else {
                     // copy directly
-                    val mergedPath = merged.getPath(path)
+                    val mergedPath = mergedFS.getPath(path)
                     mergedPath.parent?.createDirectories()
                     mergedPath.writeBytes(stream.readBytes())
                 }
@@ -78,7 +78,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
                     serverClassEntries[path] = classNode
                 } else {
                     // copy directly
-                    val mergedPath = merged.getPath(path)
+                    val mergedPath = mergedFS.getPath(path)
                     mergedPath.parent?.createDirectories()
                     mergedPath.writeBytes(stream.readBytes())
                 }
@@ -93,7 +93,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
                     throw RuntimeException("Error merging class $name", e)
                 }
                 out.accept(classWriter)
-                val path = merged.getPath(name)
+                val path = mergedFS.getPath(name)
                 path.parent?.createDirectories()
                 path.writeBytes(classWriter.toByteArray())
                 serverClassEntries.remove(name)
@@ -102,7 +102,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
                 val classWriter = ClassWriter(0)
                 val out = merger.accept(null, node)
                 out.accept(classWriter)
-                val path = merged.getPath(name)
+                val path = mergedFS.getPath(name)
                 path.parent?.createDirectories()
                 path.writeBytes(classWriter.toByteArray())
             }
@@ -137,7 +137,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
         return target
     }
     private fun applyLaunches(tasks: TaskContainer) {
-        if (provider.runs.off) return
+        if (provider.launches.off) return
         project.logger.lifecycle("Applying run configs")
         project.logger.info("client: ${provider.client}, server: ${provider.server}")
         if (provider.minecraft.client) {

@@ -216,7 +216,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun createClientExtra(
-        baseMinecraftClient: MinecraftJar, baseMinecraftServer: MinecraftJar, patchedMinecraft: Path
+        baseMinecraftClient: MinecraftJar, @Suppress("UNUSED_PARAMETER") baseMinecraftServer: MinecraftJar, patchedMinecraft: Path
     ) {
         val clientExtra = patchedMinecraft.parent.createDirectories()
             .resolve("client-extra-${provider.minecraft.version}.jar")

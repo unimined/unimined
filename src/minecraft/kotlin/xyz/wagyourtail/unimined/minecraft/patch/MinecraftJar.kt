@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.minecraft.patch
 
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.util.plusAssign
 import java.nio.file.Path
 
 data class MinecraftJar(
@@ -15,19 +16,19 @@ data class MinecraftJar(
     val awOrAt: String?,
     val extension: String = "jar",
     val path: Path = parentPath.let {
-        var path = name
+        val pathBuilder = StringBuilder(name)
         for (part in JarNameParts.values()) {
             when (part) {
-                JarNameParts.ENV -> if (envType.classifier != null) path += "-${envType.classifier}"
-                JarNameParts.PATCHES -> if (patches.isNotEmpty()) path += "-${patches.joinToString("+")}"
-                JarNameParts.VERSION -> path += "-$version"
-                JarNameParts.MAPPING -> path += if (mappingNamespace != fallbackNamespace) "-${mappingNamespace.name}+${fallbackNamespace.name}" else "-${mappingNamespace.name}"
-                JarNameParts.AW_AT -> if (awOrAt != null) path += "-$awOrAt"
-                JarNameParts.EXTENSION -> path += ".$extension"
+                JarNameParts.ENV -> if (envType.classifier != null) pathBuilder += "-${envType.classifier}"
+                JarNameParts.PATCHES -> if (patches.isNotEmpty()) pathBuilder += "-${patches.joinToString("+")}"
+                JarNameParts.VERSION -> pathBuilder += "-$version"
+                JarNameParts.MAPPING -> pathBuilder += if (mappingNamespace != fallbackNamespace) "-${mappingNamespace.name}+${fallbackNamespace.name}" else "-${mappingNamespace.name}"
+                JarNameParts.AW_AT -> if (awOrAt != null) pathBuilder += "-$awOrAt"
+                JarNameParts.EXTENSION -> pathBuilder += ".$extension"
                 else -> {}
             }
         }
-        it.resolve(path)
+        it.resolve(pathBuilder.toString())
     }
 ) {
 

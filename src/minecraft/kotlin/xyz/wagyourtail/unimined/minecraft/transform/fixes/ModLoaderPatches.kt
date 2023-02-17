@@ -74,11 +74,11 @@ object ModLoaderPatches {
         var slice = false
 
         while (iterator.hasNext()) {
-            val insn = iterator.next()
+            val firstInsn = iterator.next()
 
-            if (insn is TypeInsnNode && insn.desc == "java/io/File" && insn.opcode == Opcodes.NEW) {
-                val hold = mutableListOf<AbstractInsnNode>(insn)
-                var next: AbstractInsnNode = insn
+            if (firstInsn is TypeInsnNode && firstInsn.desc == "java/io/File" && firstInsn.opcode == Opcodes.NEW) {
+                val hold = mutableListOf<AbstractInsnNode>(firstInsn)
+                var next: AbstractInsnNode = firstInsn
                 while (next !is VarInsnNode && iterator.hasNext()) {
                     next = iterator.next()
                     hold.add(next)
@@ -231,7 +231,7 @@ object ModLoaderPatches {
                 newInstructions.add(endLbl)
                 slice = false
             } else {
-                newInstructions.add(insn)
+                newInstructions.add(firstInsn)
             }
         }
         method.instructions = newInstructions
@@ -256,9 +256,9 @@ object ModLoaderPatches {
         val preFoundFile = InsnList()
         val clonedLabels = mutableMapOf<LabelNode, LabelNode>()
         while (iter.hasNext()) {
-            val insn = iter.next()
+            val firstInsn = iter.next()
             // remove new file insns
-            if (!foundFile && insn is TypeInsnNode && insn.desc == "java/io/File") {
+            if (!foundFile && firstInsn is TypeInsnNode && firstInsn.desc == "java/io/File") {
                 // skip
                 while (iter.hasNext()) {
                     val insn = iter.next()
@@ -270,15 +270,15 @@ object ModLoaderPatches {
                 continue
             }
             if (!foundFile) {
-                if (insn is LabelNode) {
-                    newInstructions.add(insn)
-                    clonedLabels[insn] = LabelNode()
-                    preFoundFile.add(clonedLabels[insn])
+                if (firstInsn is LabelNode) {
+                    newInstructions.add(firstInsn)
+                    clonedLabels[firstInsn] = LabelNode()
+                    preFoundFile.add(clonedLabels[firstInsn])
                 } else {
-                    preFoundFile.add(insn.clone(clonedLabels))
+                    preFoundFile.add(firstInsn.clone(clonedLabels))
                 }
             } else {
-                newInstructions.add(insn)
+                newInstructions.add(firstInsn)
             }
         }
         if (!foundFile) {
@@ -371,7 +371,7 @@ object ModLoaderPatches {
         var foundFileArr = false
 
         while (iterator.hasNext()) {
-            var insn = iterator.next()
+            val insn = iterator.next()
             if (insn is MethodInsnNode && insn.name == "listFiles" && insn.owner == "java/io/File") {
                 slice = true
             }
@@ -610,7 +610,7 @@ object ModLoaderPatches {
                 // one of the classes was not found, so we now need to calculate it
                 val it1 = buildInheritanceTree(type1)
                 val it2 = buildInheritanceTree(type2)
-                val common = it1.intersect(it2)
+                val common = it1.intersect(it2.toSet())
                 return common.first()
             }
         }
@@ -621,11 +621,11 @@ object ModLoaderPatches {
             while (current != "java/lang/Object") {
                 tree.add(current)
                 val currentClassFile = fileSystem.getPath("/${current}.class")
-                if (!currentClassFile.exists()) {
-                    current = "java/lang/Object"
+                current = if (!currentClassFile.exists()) {
+                    "java/lang/Object"
                 } else {
                     val classReader = ClassReader(currentClassFile.readBytes())
-                    current = classReader.superName
+                    classReader.superName
                 }
             }
             tree.add("java/lang/Object")

@@ -10,12 +10,12 @@ import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.tasks.MappingExportTypes
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mappings.MappingExportImpl
@@ -81,7 +81,6 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
 
     private val actualSideMarker by lazy {
         if (forge.dependencies.isEmpty()) return@lazy null // pre 1.3 - see below
-        val forgeDep = forge.dependencies.last()
         val forgeUniversal = forge.dependencies.last()
         val forgeJar = forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 

@@ -203,3 +203,7 @@ fun getTempFilePath(prefix: String, suffix: String): Path {
         deleteExisting()
     }
 }
+
+operator fun StringBuilder.plusAssign(other: String) {
+    append(other)
+}

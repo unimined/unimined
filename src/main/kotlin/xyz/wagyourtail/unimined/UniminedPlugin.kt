@@ -2,7 +2,6 @@ package xyz.wagyourtail.unimined
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -27,27 +26,11 @@ class UniminedPlugin : Plugin<Project> {
 
         ext = project.extensions.create("unimined", UniminedExtensionImpl::class.java, project)
         remapJarTask(project, project.tasks)
-        genIntellijRunsTask(project, project.tasks)
-        genSourcesTask(project, project.tasks)
-        ext.events.register { taskContainer: TaskContainer ->
-            tasks(project, taskContainer)
-        }
-    }
-
-    private fun tasks(project: Project, tasks :TaskContainer) {
-        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-
-//        tasks.withType(JavaExec::class.java) {
-//            for (sourceSet in sourceSets) {
-//                if (sourceSet.runtimeClasspath.toSet().containsAll(it.classpath.toSet())) {
-//                    it.classpath = sourceSet.runtimeClasspath
-//                }
-//            }
-//        }
+        genIntellijRunsTask(project.tasks)
+        genSourcesTask(project.tasks)
     }
 
     private fun remapJarTask(project: Project, tasks: TaskContainer) {
-        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
         val jarTask = tasks.getByName("jar") as Jar
         val client = ext.minecraftProvider.clientSourceSets.firstOrNull()
         val server = ext.minecraftProvider.serverSourceSets.firstOrNull()
@@ -84,7 +67,7 @@ class UniminedPlugin : Plugin<Project> {
         build.dependsOn(remapJar)
     }
 
-    private fun genIntellijRunsTask(project: Project, tasks: TaskContainer) {
+    private fun genIntellijRunsTask(tasks: TaskContainer) {
         val genIntellijRuns = tasks.register("genIntellijRuns") {
             it.group = "unimined"
             it.doLast {
@@ -96,8 +79,8 @@ class UniminedPlugin : Plugin<Project> {
         tasks.findByName("idea")?.dependsOn(genIntellijRuns)
     }
 
-    private fun genSourcesTask(project: Project, tasks: TaskContainer) {
-        val genSources = tasks.register("genSources", GenSourcesTaskImpl::class.java) {
+    private fun genSourcesTask(tasks: TaskContainer) {
+        tasks.register("genSources", GenSourcesTaskImpl::class.java) {
             it.group = "unimined"
         }
     }
