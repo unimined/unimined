@@ -189,9 +189,13 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
     val metadata: VersionData by lazy {
         val version = version
+        resolveMetadata(version)
+    }
+
+    fun resolveMetadata(version: String): VersionData {
         val path = versionJsonDownloadPath(version)
         if (path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
-            return@lazy parseVersionData(
+            return parseVersionData(
                 InputStreamReader(path.inputStream()).use { reader ->
                     JsonParser.parseReader(reader).asJsonObject
                 }
@@ -230,7 +234,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
             }
 
-            parseVersionData(
+            return parseVersionData(
                 InputStreamReader(path.inputStream()).use { reader ->
                     JsonParser.parseReader(reader).asJsonObject
                 }
