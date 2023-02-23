@@ -64,7 +64,7 @@ abstract class FabricLikeMinecraftTransformer(
 
     override val merger: ClassMerger = ClassMerger(
         { node, env ->
-            if (env != EnvType.COMBINED) return@ClassMerger
+            if (env == EnvType.COMBINED) return@ClassMerger
             if (isAnonClass(node)) return@ClassMerger
             val visitor = node.visitAnnotation(ENVIRONMENT, true)
             visitor.visitEnum("value", ENV_TYPE, env.name)
