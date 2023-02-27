@@ -1,9 +1,17 @@
 package xyz.wagyourtail.unimined.minecraft.patch.forge
 
 import net.fabricmc.accesswidener.AccessWidenerReader
+import net.fabricmc.accesswidener.AccessWidenerWriter
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
+import net.minecraftforge.accesstransformer.AccessTransformer
+import net.minecraftforge.accesstransformer.AccessTransformer.Modifier
+import net.minecraftforge.accesstransformer.FieldTarget
+import net.minecraftforge.accesstransformer.MethodTarget
+import net.minecraftforge.accesstransformer.Target
+import net.minecraftforge.accesstransformer.TargetType
 import net.minecraftforge.accesstransformer.TransformerProcessor
+import net.minecraftforge.accesstransformer.parser.AccessTransformerList
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import java.io.*
 import java.nio.charset.StandardCharsets
@@ -315,6 +323,98 @@ object AccessTransformerMinecraftTransformer {
         AccessTransformerWriter(writer.buffered()).use {
             AccessWidenerReader(it).read(aw.bufferedReader())
         }
+        return output
+    }
+
+    fun at2aw(at: Path, output: Path, legacy: Boolean, namespace: String): Path {
+        val inReader = at.bufferedReader(
+            StandardCharsets.UTF_8,
+            1024,
+            StandardOpenOption.READ
+        )
+
+        val reader = if (legacy) transformFromLegacyTransformer(inReader) else inReader
+        val temp = at.resolveSibling(at.name + ".temp")
+        val tempWriter = temp.bufferedWriter(
+            StandardCharsets.UTF_8,
+            1024,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING
+        )
+        reader.copyTo(tempWriter)
+
+        val masterList = AccessTransformerList()
+        masterList.loadFromPath(temp, at.name)
+        temp.deleteIfExists()
+        val awWriter = AccessWidenerWriter()
+        awWriter.visitHeader(namespace)
+
+        val targetAccess = AccessTransformer::class.java.getField("targetAccess")
+        val targetFinalState = AccessTransformer::class.java.getField("targetFinalState")
+        val targetMember = AccessTransformer::class.java.getField("memberTarget")
+
+        masterList.accessTransformers.forEach { name, transformers ->
+            transformers.forEach {
+                val tAccess = targetAccess.get(it) as Modifier
+                val tFinal = targetFinalState.get(it) as AccessTransformer.FinalState
+                val member = targetMember.get(it) as Target<*>
+
+                when (member.type) {
+                    TargetType.FIELD -> {
+                        when (tAccess) {
+                            Modifier.PUBLIC -> TODO()
+                            Modifier.PROTECTED -> TODO()
+                            Modifier.DEFAULT -> TODO()
+                            Modifier.PRIVATE -> TODO()
+                        }
+
+//                        when (tFinal) {}
+                    }
+                    TargetType.METHOD -> {
+                        val parts = (member as MethodTarget).targetName().split("(").toMutableList();
+                        parts[1] = "(" + parts[1]
+                        when (tAccess) {
+                            Modifier.PUBLIC -> {
+                                awWriter.visitMethod(member.className, parts[0], parts[1], AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                            }
+                            Modifier.PROTECTED -> TODO()
+                            Modifier.DEFAULT -> TODO()
+                            Modifier.PRIVATE -> TODO()
+                        }
+
+                        when (tFinal) {
+                            AccessTransformer.FinalState.LEAVE -> {}
+                            AccessTransformer.FinalState.MAKEFINAL -> TODO()
+                            AccessTransformer.FinalState.REMOVEFINAL -> awWriter.visitMethod(member.className, parts[0], parts[1], AccessWidenerReader.AccessType.EXTENDABLE, false)
+                            AccessTransformer.FinalState.CONFLICT -> TODO()
+                        }
+                    }
+                    TargetType.CLASS -> {
+                        when (tAccess) {
+                            Modifier.PUBLIC -> awWriter.visitClass(member.className, AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                            Modifier.PROTECTED -> TODO()
+                            Modifier.DEFAULT -> TODO()
+                            Modifier.PRIVATE -> TODO()
+                        }
+
+                        when (tFinal) {
+                            AccessTransformer.FinalState.LEAVE -> {}
+                            AccessTransformer.FinalState.MAKEFINAL -> TODO()
+                            AccessTransformer.FinalState.REMOVEFINAL -> awWriter.visitClass(member.className, AccessWidenerReader.AccessType.EXTENDABLE, false)
+                            AccessTransformer.FinalState.CONFLICT -> TODO()
+                        }
+                    }
+                }
+            }
+        }
+
+        output.bufferedWriter(
+            StandardCharsets.UTF_8,
+            1024,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING
+        ).write(awWriter.writeString())
+
         return output
     }
 }
