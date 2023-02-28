@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.minecraft.patch.forge
 
 import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerWriter
+import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import net.minecraftforge.accesstransformer.AccessTransformer
@@ -328,7 +329,7 @@ object AccessTransformerMinecraftTransformer {
         return output
     }
 
-    fun at2aw(at: Path, output: Path, legacy: Boolean, namespace: String): Path {
+    fun at2aw(at: Path, output: Path, legacy: Boolean, namespace: String, mappings: MappingTreeView): Path {
         val inReader = at.bufferedReader(
             StandardCharsets.UTF_8,
             1024,
@@ -355,15 +356,50 @@ object AccessTransformerMinecraftTransformer {
         val targetFinalState = AccessTransformer::class.java.getField("targetFinalState")
         val targetMember = AccessTransformer::class.java.getField("memberTarget")
 
-        masterList.accessTransformers.forEach { name, transformers ->
-            transformers.forEach {
+        var namespaceId = mappings.getNamespaceId(namespace)
+
+        masterList.accessTransformers.forEach { (_, transformers) ->
+            transformers.forEach { it ->
                 val tAccess = targetAccess.get(it) as Modifier
                 val tFinal = targetFinalState.get(it) as AccessTransformer.FinalState
                 val member = targetMember.get(it) as Target<*>
 
                 when (member.type) {
                     TargetType.FIELD -> {
-                        TODO("Needs access to the field type.")
+                        val fieldName = member.targetName()
+
+                        val fieldDesc = mappings.getClass(member.className, namespaceId).fields.first { fieldView ->
+                            fieldView.getName(namespaceId) == fieldName
+                        }.getDesc(namespaceId)
+
+                        when (tAccess) {
+                            Modifier.PUBLIC -> {
+                                awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                            }
+                            Modifier.PROTECTED -> {
+                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'protected' but AW don't support doing this\nmaking the field public instead.")
+                                awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                            }
+                            Modifier.DEFAULT -> {
+                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
+                            }
+                            Modifier.PRIVATE -> {
+                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
+                            }
+                        }
+
+                        when (tFinal) {
+                            AccessTransformer.FinalState.LEAVE -> {}
+                            AccessTransformer.FinalState.MAKEFINAL -> {
+                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'final' but AW don't support doing this.")
+                            }
+                            AccessTransformer.FinalState.REMOVEFINAL -> {
+                                awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.MUTABLE, false)
+                            }
+                            AccessTransformer.FinalState.CONFLICT -> {
+                                println("FINAL-STATE CONFLICT FOR ${member.className}.${fieldName} $fieldDesc!")
+                            }
+                        }
                     }
                     TargetType.METHOD -> {
                         val parts = (member as MethodTarget).targetName().split("(").toMutableList();
@@ -443,7 +479,76 @@ object AccessTransformerMinecraftTransformer {
                                 }
                             }
                         } else {
-                            TODO("WildcardTarget not supported yet, will need access to the list of members of the class.")
+                            when (member.targetName()) {
+                                "*METHOD*" -> {
+                                    mappings.getClass(member.className, namespaceId).methods.forEach { methodView ->
+                                        val methodName = methodView.getName(namespaceId)
+                                        val methodDesc = methodView.getDesc(namespaceId)
+
+                                        when (tAccess) {
+                                            Modifier.PUBLIC -> {
+                                                awWriter.visitMethod(member.className, methodName, methodDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                                            }
+                                            Modifier.PROTECTED -> {
+                                                println("Tried to make ${member.className}.${methodName}${methodDesc} 'protected' but AW don't support doing this\nmaking the function public instead.")
+                                                awWriter.visitMethod(member.className, methodName, methodDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                                            }
+                                            Modifier.DEFAULT -> {
+                                                println("Tried to make ${member.className}.${methodName}${methodDesc} 'default' but AW don't support doing this.")
+                                            }
+                                            Modifier.PRIVATE -> {
+                                                println("Tried to make ${member.className}.${methodName}${methodDesc} 'private' but AW don't support doing this.")
+                                            }
+                                        }
+
+                                        when (tFinal) {
+                                            AccessTransformer.FinalState.LEAVE -> {}
+                                            AccessTransformer.FinalState.MAKEFINAL -> {
+                                                println("Tried to make ${member.className}.${methodName}${methodDesc} 'final' but AW don't support doing this.")
+                                            }
+                                            AccessTransformer.FinalState.REMOVEFINAL -> awWriter.visitMethod(member.className, methodName, methodDesc, AccessWidenerReader.AccessType.EXTENDABLE, false)
+                                            AccessTransformer.FinalState.CONFLICT -> {
+                                                println("FINAL-STATE CONFLICT FOR ${member.className}.${methodName}${methodDesc}!")
+                                            }
+                                        }
+                                    }
+                                }
+                                else -> {
+                                    mappings.getClass(member.className, namespaceId).fields.forEach { fieldView ->
+                                        val fieldName = fieldView.getName(namespaceId)
+                                        val fieldDesc = fieldView.getDesc(namespaceId)
+
+                                        when (tAccess) {
+                                            Modifier.PUBLIC -> {
+                                                awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                                            }
+                                            Modifier.PROTECTED -> {
+                                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'protected' but AW don't support doing this\nmaking the field public instead.")
+                                                awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                                            }
+                                            Modifier.DEFAULT -> {
+                                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
+                                            }
+                                            Modifier.PRIVATE -> {
+                                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
+                                            }
+                                        }
+
+                                        when (tFinal) {
+                                            AccessTransformer.FinalState.LEAVE -> {}
+                                            AccessTransformer.FinalState.MAKEFINAL -> {
+                                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'final' but AW don't support doing this.")
+                                            }
+                                            AccessTransformer.FinalState.REMOVEFINAL -> {
+                                                awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.MUTABLE, false)
+                                            }
+                                            AccessTransformer.FinalState.CONFLICT -> {
+                                                println("FINAL-STATE CONFLICT FOR ${member.className}.${fieldName} $fieldDesc!")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
