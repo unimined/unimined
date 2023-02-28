@@ -55,6 +55,12 @@ class MinecraftRemapperImpl(
             }
 
             val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(mappingNamespace, fallbackNamespace, remapFallback, remapTo, mappings.getAvailableMappings(project.minecraft.defaultEnv))
+            if (path.isEmpty()) {
+                if (minecraft.path != target.path) {
+                    minecraft.path.copyTo(target.path, overwrite = true)
+                    return@consumerApply target
+                }
+            }
             val last = path.last()
             project.logger.lifecycle("Remapping minecraft to $remapTo")
             var prevTarget = minecraft.path
