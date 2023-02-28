@@ -170,6 +170,38 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         return AccessTransformerMinecraftTransformer.aw2at(input.toPath(), output.toPath(), true).toFile()
     }
 
+    override fun at2aw(input: String, output: String, namespace: MappingNamespace) = at2aw(File(input), File(output), namespace)
+    override fun at2aw(input: String, namespace: MappingNamespace) = at2aw(File(input), namespace)
+    override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
+    override fun at2aw(input: String) = at2aw(File(input))
+    override fun at2aw(input: File) = at2aw(input, devNamespace)
+    override fun at2aw(input: File, namespace: MappingNamespace) = at2aw(
+        input,
+        project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
+            .resolve("${project.name}.accesswidener"),
+        namespace
+    )
+    override fun at2aw(input: File, output: File) = at2aw(input, output, devNamespace)
+    override fun at2aw(input: File, output: File, namespace: MappingNamespace) : File {
+        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), false, namespace.namespace, provider.mcRemapper.mappings.getMappingTree(EnvType.COMBINED)).toFile()
+    }
+
+    override fun atLegacy2aw(input: String, output: String, namespace: MappingNamespace) = atLegacy2aw(File(input), File(output), namespace)
+    override fun atLegacy2aw(input: String, namespace: MappingNamespace) = atLegacy2aw(File(input), namespace)
+    override fun atLegacy2aw(input: String, output: String) = atLegacy2aw(File(input), File(output))
+    override fun atLegacy2aw(input: String) = atLegacy2aw(File(input))
+    override fun atLegacy2aw(input: File) = atLegacy2aw(input, devNamespace)
+    override fun atLegacy2aw(input: File, namespace: MappingNamespace) = atLegacy2aw(
+        input,
+        project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
+            .resolve("${project.name}.accesswidener"),
+        namespace
+    )
+    override fun atLegacy2aw(input: File, output: File) = atLegacy2aw(input, output, devNamespace)
+    override fun atLegacy2aw(input: File, output: File, namespace: MappingNamespace) : File {
+        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), true, namespace.namespace, provider.mcRemapper.mappings.getMappingTree(EnvType.COMBINED)).toFile()
+    }
+
     @get:ApiStatus.Internal
     val srgToMCPAsSRG: Path by lazy {
         project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.srg").apply {

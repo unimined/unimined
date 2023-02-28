@@ -431,7 +431,7 @@ object AccessTransformerMinecraftTransformer {
                             }
                         }
                     }
-                    TargetType.CLASS -> {
+                    else -> {
                         val className = if (member is InnerClassTarget) {
                             member.className + "$" +  member.targetName()
                         } else member.className
