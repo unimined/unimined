@@ -356,7 +356,7 @@ object AccessTransformerMinecraftTransformer {
         val targetFinalState = AccessTransformer::class.java.getField("targetFinalState")
         val targetMember = AccessTransformer::class.java.getField("memberTarget")
 
-        var namespaceId = mappings.getNamespaceId(namespace)
+        val namespaceId = mappings.getNamespaceId(namespace)
 
         masterList.accessTransformers.forEach { (_, transformers) ->
             transformers.forEach { it ->
