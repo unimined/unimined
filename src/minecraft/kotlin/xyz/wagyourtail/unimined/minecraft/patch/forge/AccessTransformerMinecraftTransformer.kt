@@ -6,7 +6,9 @@ import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import net.minecraftforge.accesstransformer.AccessTransformer
 import net.minecraftforge.accesstransformer.AccessTransformer.Modifier
+import net.minecraftforge.accesstransformer.ClassTarget
 import net.minecraftforge.accesstransformer.FieldTarget
+import net.minecraftforge.accesstransformer.InnerClassTarget
 import net.minecraftforge.accesstransformer.MethodTarget
 import net.minecraftforge.accesstransformer.Target
 import net.minecraftforge.accesstransformer.TargetType
@@ -361,14 +363,7 @@ object AccessTransformerMinecraftTransformer {
 
                 when (member.type) {
                     TargetType.FIELD -> {
-                        when (tAccess) {
-                            Modifier.PUBLIC -> TODO()
-                            Modifier.PROTECTED -> TODO()
-                            Modifier.DEFAULT -> TODO()
-                            Modifier.PRIVATE -> TODO()
-                        }
-
-//                        when (tFinal) {}
+                        TODO("Needs access to the field type.")
                     }
                     TargetType.METHOD -> {
                         val parts = (member as MethodTarget).targetName().split("(").toMutableList();
@@ -377,31 +372,78 @@ object AccessTransformerMinecraftTransformer {
                             Modifier.PUBLIC -> {
                                 awWriter.visitMethod(member.className, parts[0], parts[1], AccessWidenerReader.AccessType.ACCESSIBLE, false)
                             }
-                            Modifier.PROTECTED -> TODO()
-                            Modifier.DEFAULT -> TODO()
-                            Modifier.PRIVATE -> TODO()
+                            Modifier.PROTECTED -> {
+                                println("Tried to make ${member.className}.${parts[0]}${parts[1]} 'protected' but AW don't support doing this\nmaking the function public instead.")
+                                awWriter.visitMethod(member.className, parts[0], parts[1], AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                            }
+                            Modifier.DEFAULT -> {
+                                println("Tried to make ${member.className}.${parts[0]}${parts[1]} 'default' but AW don't support doing this.")
+                            }
+                            Modifier.PRIVATE -> {
+                                println("Tried to make ${member.className}.${parts[0]}${parts[1]} 'private' but AW don't support doing this.")
+                            }
                         }
 
                         when (tFinal) {
                             AccessTransformer.FinalState.LEAVE -> {}
-                            AccessTransformer.FinalState.MAKEFINAL -> TODO()
+                            AccessTransformer.FinalState.MAKEFINAL -> {
+                                println("Tried to make ${member.className}.${parts[0]}${parts[1]} 'final' but AW don't support doing this.")
+                            }
                             AccessTransformer.FinalState.REMOVEFINAL -> awWriter.visitMethod(member.className, parts[0], parts[1], AccessWidenerReader.AccessType.EXTENDABLE, false)
-                            AccessTransformer.FinalState.CONFLICT -> TODO()
+                            AccessTransformer.FinalState.CONFLICT -> {
+                                println("FINAL-STATE CONFLICT FOR ${member.className}.${parts[0]}${parts[1]}!")
+                            }
                         }
                     }
                     TargetType.CLASS -> {
-                        when (tAccess) {
-                            Modifier.PUBLIC -> awWriter.visitClass(member.className, AccessWidenerReader.AccessType.ACCESSIBLE, false)
-                            Modifier.PROTECTED -> TODO()
-                            Modifier.DEFAULT -> TODO()
-                            Modifier.PRIVATE -> TODO()
-                        }
+                        val className = if (member is InnerClassTarget) {
+                            member.className + "$" +  member.targetName()
+                        } else member.className
 
-                        when (tFinal) {
-                            AccessTransformer.FinalState.LEAVE -> {}
-                            AccessTransformer.FinalState.MAKEFINAL -> TODO()
-                            AccessTransformer.FinalState.REMOVEFINAL -> awWriter.visitClass(member.className, AccessWidenerReader.AccessType.EXTENDABLE, false)
-                            AccessTransformer.FinalState.CONFLICT -> TODO()
+                        if (member is ClassTarget || member is InnerClassTarget) {
+                            when (tAccess) {
+                                Modifier.PUBLIC -> awWriter.visitClass(
+                                    className,
+                                    AccessWidenerReader.AccessType.ACCESSIBLE,
+                                    false
+                                )
+
+                                Modifier.PROTECTED -> {
+                                    println("Tried to make $className 'protected' but AW don't support doing this\nmaking the class public instead.")
+                                    awWriter.visitClass(
+                                        className,
+                                        AccessWidenerReader.AccessType.ACCESSIBLE,
+                                        false
+                                    )
+                                }
+
+                                Modifier.DEFAULT -> {
+                                    println("Tried to make $className 'default' but AW don't support doing this.")
+                                }
+
+                                Modifier.PRIVATE -> {
+                                    println("Tried to make $className 'private' but AW don't support doing this.")
+                                }
+                            }
+
+                            when (tFinal) {
+                                AccessTransformer.FinalState.LEAVE -> {}
+                                AccessTransformer.FinalState.MAKEFINAL -> {
+                                    println("Tried to make $className 'final' but AW don't support doing this.")
+                                }
+
+                                AccessTransformer.FinalState.REMOVEFINAL -> awWriter.visitClass(
+                                    className,
+                                    AccessWidenerReader.AccessType.EXTENDABLE,
+                                    false
+                                )
+
+                                AccessTransformer.FinalState.CONFLICT -> {
+                                    println("FINAL-STATE CONFLICT FOR $className!")
+                                }
+                            }
+                        } else {
+                            TODO("WildcardTarget not supported yet, will need access to the list of members of the class.")
                         }
                     }
                 }
