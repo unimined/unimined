@@ -58,8 +58,8 @@ class MinecraftRemapperImpl(
             if (path.isEmpty()) {
                 if (minecraft.path != target.path) {
                     minecraft.path.copyTo(target.path, overwrite = true)
-                    return@consumerApply target
                 }
+                return@consumerApply target
             }
             val last = path.last()
             project.logger.lifecycle("Remapping minecraft to $remapTo")
