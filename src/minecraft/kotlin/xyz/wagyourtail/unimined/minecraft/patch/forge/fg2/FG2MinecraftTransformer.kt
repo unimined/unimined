@@ -2,12 +2,11 @@ package xyz.wagyourtail.unimined.minecraft.patch.forge.fg2
 
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
-import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
@@ -125,26 +124,20 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return patchedMC
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
-        provider.provideVanillaRunClientTask(tasks) {
-            if (parent.mainClass != null) it.mainClass = parent.mainClass!!
-            it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
-            it.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
-            it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-            it.args += "--tweakClass ${parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
-            action(it)
-        }
+    override fun applyClientRunTransform(config: LaunchConfig) {
+        config.mainClass = parent.mainClass ?: config.mainClass
+        config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
+        config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
+        config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
+        config.args += "--tweakClass ${parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
-        provider.provideVanillaRunServerTask(tasks) {
-            if (parent.mainClass != null) it.mainClass = parent.mainClass!!
-            it.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
-            it.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
-            it.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-            it.args += "--tweakClass ${parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLServerTweaker"}"
-            action(it)
-        }
+    override fun applyServerRunTransform(config: LaunchConfig) {
+        config.mainClass = parent.mainClass ?: config.mainClass
+        config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
+        config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
+        config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
+        config.args += "--tweakClass ${parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLServerTweaker"}"
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {

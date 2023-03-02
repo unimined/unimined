@@ -48,8 +48,12 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
     }
 
-    var client by Delegates.notNull<Boolean>()
-    var server by Delegates.notNull<Boolean>()
+    val client by lazy {
+        parent.clientSourceSets.isNotEmpty() || parent.combinedSourceSets.isNotEmpty()
+    }
+    val server by lazy {
+        parent.serverSourceSets.isNotEmpty() || parent.combinedSourceSets.isNotEmpty()
+    }
 
     private val sourceSets: SourceSetContainer by lazy { project.extensions.getByType(SourceSetContainer::class.java) }
 
@@ -60,9 +64,6 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
 
         project.logger.info("Disable combined: ${parent.disableCombined.get()}")
-
-        client = parent.clientSourceSets.isNotEmpty() || parent.combinedSourceSets.isNotEmpty()
-        server = parent.serverSourceSets.isNotEmpty() || parent.combinedSourceSets.isNotEmpty()
 
         if (client) {
             if (parent.disableCombined.get()) {

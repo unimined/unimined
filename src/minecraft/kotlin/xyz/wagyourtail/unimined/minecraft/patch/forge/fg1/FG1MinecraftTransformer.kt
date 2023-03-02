@@ -4,15 +4,14 @@ import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.tasks.TaskContainer
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
@@ -224,12 +223,9 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
-        provider.provideVanillaRunClientTask(tasks) {
-            it.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${it.workingDir.absolutePath}\"")
-            if (parent.mainClass != null) it.mainClass = parent.mainClass!!
-            action(it)
-        }
+    override fun applyClientRunTransform(config: LaunchConfig) {
+        config.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${config.workingDir.absolutePath}\"")
+        if (parent.mainClass != null) config.mainClass = parent.mainClass!!
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {

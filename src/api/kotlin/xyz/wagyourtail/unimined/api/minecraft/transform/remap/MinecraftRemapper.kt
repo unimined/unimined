@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.minecraft.transform.reamp
+package xyz.wagyourtail.unimined.api.minecraft.transform.remap
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo

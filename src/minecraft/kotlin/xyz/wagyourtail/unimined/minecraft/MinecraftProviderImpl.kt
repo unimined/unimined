@@ -10,22 +10,22 @@ import net.minecraftforge.artifactural.base.artifact.StreamableArtifact
 import net.minecraftforge.artifactural.base.repository.ArtifactProviderBuilder
 import net.minecraftforge.artifactural.base.repository.SimpleRepository
 import net.minecraftforge.artifactural.gradle.GradleRepositoryAdapter
-import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
+import xyz.wagyourtail.unimined.api.launch.LauncherProvider
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
+import xyz.wagyourtail.unimined.launch.LauncherProvierImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.NoTransformMinecraftTransformer
@@ -72,9 +72,6 @@ abstract class MinecraftProviderImpl(
     }
 
     @ApiStatus.Internal
-    val launchConfigs = mutableListOf<LaunchConfig>()
-
-    @ApiStatus.Internal
     override val minecraft: MinecraftDownloader = MinecraftDownloader(project, this)
 
     @ApiStatus.Internal
@@ -82,6 +79,8 @@ abstract class MinecraftProviderImpl(
         project,
         this
     )
+
+    override val launcher: LauncherProvider = LauncherProvierImpl(project, unimined)
 
     @ApiStatus.Internal
     private val repo: Repository = SimpleRepository.of(
@@ -134,6 +133,13 @@ abstract class MinecraftProviderImpl(
         minecraft.afterEvaluate()
         addMcLibraries()
         mcPatcher.afterEvaluate()
+
+        if (minecraft.client) {
+            launcher.addTarget(provideVanillaRunClientTask())
+        }
+        if (minecraft.server) {
+            launcher.addTarget(provideVanillaRunServerTask())
+        }
     }
 
     override fun fabric(action: (FabricLikePatcher) -> Unit) {
@@ -372,7 +378,7 @@ abstract class MinecraftProviderImpl(
     }
 
     @ApiStatus.Internal
-    fun provideVanillaRunClientTask(tasks: TaskContainer, overrides: (LaunchConfig) -> Unit = { }) {
+    fun provideVanillaRunClientTask(): LaunchConfig {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
         val nativeDir = clientWorkingDirectory.get().resolve("natives")
@@ -424,8 +430,9 @@ abstract class MinecraftProviderImpl(
         val assetsDir = assetsDownloader.assetsDir()
 
         @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
-        val launchConfig = LaunchConfig(
+        return LaunchConfig(
             project,
+                "client",
             "runClient",
             "Minecraft Client",
             combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
@@ -445,21 +452,10 @@ abstract class MinecraftProviderImpl(
             assetsDir,
             mutableListOf(preRunClient)
         )
-
-        overrides(launchConfig)
-
-        val task = launchConfig.createGradleTask(tasks, "Unimined")
-        task.doFirst {
-            if (!JavaVersion.current().equals(minecraft.metadata.javaVersion)) {
-                project.logger.error("Java version is ${JavaVersion.current()}, expected ${minecraft.metadata.javaVersion}, Minecraft may not launch properly")
-            }
-        }
-
-        launchConfigs.add(launchConfig)
     }
 
     @ApiStatus.Internal
-    fun provideVanillaRunServerTask(tasks: TaskContainer, overrides: (LaunchConfig) -> Unit = { }) {
+    fun provideVanillaRunServerTask(): LaunchConfig {
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 
         var mainClass: String? = null
@@ -473,8 +469,9 @@ abstract class MinecraftProviderImpl(
         }
 
         @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
-        val launchConfig = LaunchConfig(
+        return LaunchConfig(
             project,
+            "server",
             "runServer",
             "Minecraft Server",
             combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
@@ -486,11 +483,6 @@ abstract class MinecraftProviderImpl(
             mutableMapOf(),
             project.projectDir.resolve("run").resolve("server").toPath()
         )
-
-        overrides(launchConfig)
-
-        launchConfig.createGradleTask(tasks, "Unimined")
-        launchConfigs.add(launchConfig)
     }
 
 }

@@ -26,7 +26,6 @@ class UniminedPlugin : Plugin<Project> {
 
         ext = project.extensions.create("unimined", UniminedExtensionImpl::class.java, project)
         remapJarTask(project, project.tasks)
-        genIntellijRunsTask(project.tasks)
         genSourcesTask(project.tasks)
     }
 
@@ -65,18 +64,6 @@ class UniminedPlugin : Plugin<Project> {
             build.dependsOn(serverRemapJar)
         }
         build.dependsOn(remapJar)
-    }
-
-    private fun genIntellijRunsTask(tasks: TaskContainer) {
-        val genIntellijRuns = tasks.register("genIntellijRuns") {
-            it.group = "unimined"
-            it.doLast {
-                for (config in ext.minecraftProvider.launchConfigs) {
-                    config.createIdeaRunConfig()
-                }
-            }
-        }
-        tasks.findByName("idea")?.dependsOn(genIntellijRuns)
     }
 
     private fun genSourcesTask(tasks: TaskContainer) {

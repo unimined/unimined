@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.launch.LauncherProvider
 import xyz.wagyourtail.unimined.api.mappings.MappingsProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.mod.ModProvider
@@ -68,5 +69,4 @@ abstract class UniminedExtension(val project: Project) {
         @Suppress("LeakingThis")
         useGlobalCache.convention(true).finalizeValueOnRead()
     }
-
 }

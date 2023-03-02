@@ -393,25 +393,24 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         }
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
-        project.logger.info("[fg3] Applying client run config")
-        forgeTransformer.applyClientRunConfig(tasks) {
-            project.logger.info("Adding mixin config $mixinConfig to run config")
-            for (config in mixinConfig) {
-                it.args += listOf("-mixin.config", config)
-            }
-            action(it)
+    override fun applyLaunches() {
+        super.applyLaunches()
+        //TODO: figure out datagen
+    }
+
+    override fun applyClientRunTransform(config: LaunchConfig) {
+        project.logger.info("Adding mixin config $mixinConfig to client run config")
+        forgeTransformer.applyClientRunTransform(config)
+        for (mixin in mixinConfig) {
+            config.args += listOf("--mixin", mixin)
         }
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
-        project.logger.info("[fg3] Applying server run config")
-        forgeTransformer.applyServerRunConfig(tasks) {
-            project.logger.info("Adding mixin config $mixinConfig to run config")
-            for (config in mixinConfig) {
-                it.args += listOf("-mixin.config", config)
-            }
-            action(it)
+    override fun applyServerRunTransform(config: LaunchConfig) {
+        project.logger.info("Adding mixin config $mixinConfig to server run config")
+        forgeTransformer.applyServerRunTransform(config)
+        for (mixin in mixinConfig) {
+            config.args += listOf("--mixin", mixin)
         }
     }
 

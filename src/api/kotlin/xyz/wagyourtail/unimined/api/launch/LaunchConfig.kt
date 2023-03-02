@@ -20,18 +20,37 @@ import kotlin.io.path.relativeTo
 @ApiStatus.Internal
 data class LaunchConfig(
     val project: Project,
+    val name: String,
     val taskName: String,
     var description: String,
-    val commonClasspath: SourceSet,
-    val launchClasspath: SourceSet,
+    var commonClasspath: SourceSet,
+    var launchClasspath: SourceSet,
     var mainClass: String,
     val args: MutableList<String>,
     val jvmArgs: MutableList<String>,
-    val workingDir: File,
+    var workingDir: File,
     val env: MutableMap<String, String>,
-    val assetsDir: Path,
+    var assetsDir: Path,
     val runFirst: MutableList<Task> = mutableListOf(),
 ) {
+
+    fun copy(): LaunchConfig {
+        return LaunchConfig(
+            project,
+            name,
+            taskName,
+            description,
+            commonClasspath,
+            launchClasspath,
+            mainClass,
+            args.toMutableList(),
+            jvmArgs.toMutableList(),
+            workingDir,
+            env.toMutableMap(),
+            assetsDir,
+            runFirst.toMutableList(),
+        )
+    }
 
     fun createIdeaRunConfig() {
         val file = project.rootDir.resolve(".idea")
@@ -116,6 +135,8 @@ data class LaunchConfig(
         )
     }
 
+    //TODO: add eclipse run configs
+
     fun createGradleTask(tasks: TaskContainer, group: String): Task {
         return tasks.create(taskName, JavaExec::class.java) {
             it.group = group
@@ -137,4 +158,36 @@ data class LaunchConfig(
             }
         }
     }
+
+//    fun copy(
+//        project: Project = this.project,
+//        name: String = this.name,
+//        taskName: String = this.taskName,
+//        description: String = this.description,
+//        commonClasspath: SourceSet = this.commonClasspath,
+//        launchClasspath: SourceSet = this.launchClasspath,
+//        mainClass: String = this.mainClass,
+//        args: MutableList<String> = this.args.toMutableList(),
+//        jvmArgs: MutableList<String> = this.jvmArgs.toMutableList(),
+//        workingDir: File = this.workingDir,
+//        env: MutableMap<String, String> = this.env.toMutableMap(),
+//        assetsDir: Path = this.assetsDir,
+//        runFirst: MutableList<Task> = this.runFirst.toMutableList(),
+//    ): LaunchConfig {
+//        return LaunchConfig(
+//            project,
+//            name,
+//            taskName,
+//            description,
+//            commonClasspath,
+//            launchClasspath,
+//            mainClass,
+//            args,
+//            jvmArgs,
+//            workingDir,
+//            env,
+//            assetsDir,
+//            runFirst,
+//        )
+//    }
 }

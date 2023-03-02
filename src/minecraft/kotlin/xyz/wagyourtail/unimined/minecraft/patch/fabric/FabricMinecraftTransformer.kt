@@ -4,7 +4,6 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
-import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.fabric.FabricApiExtension
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
@@ -47,25 +46,24 @@ class FabricMinecraftTransformer(
         })
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
-        provider.provideVanillaRunClientTask(tasks) { task ->
-            clientMainClass?.let { task.mainClass = it }
-            task.jvmArgs += listOf(
-                "-Dfabric.development=true",
-                "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.CLIENT)}\""
-            )
-            action(task)
-        }
+    override fun applyLaunches() {
+        super.applyLaunches()
+        //TODO: figure out datagen
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
-        provider.provideVanillaRunServerTask(tasks) { task ->
-            serverMainClass?.let { task.mainClass = it }
-            task.jvmArgs += listOf(
-                "-Dfabric.development=true",
-                "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.SERVER)}\""
-            )
-            action(task)
-        }
+    override fun applyClientRunTransform(config: LaunchConfig) {
+        config.mainClass = clientMainClass ?: config.mainClass
+        config.jvmArgs += listOf(
+            "-Dfabric.development=true",
+            "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.CLIENT)}\""
+        )
+    }
+
+    override fun applyServerRunTransform(config: LaunchConfig) {
+        config.mainClass = serverMainClass ?: config.mainClass
+        config.jvmArgs += listOf(
+            "-Dfabric.development=true",
+            "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.SERVER)}\""
+        )
     }
 }

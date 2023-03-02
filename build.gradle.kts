@@ -70,7 +70,8 @@ sourceSets {
         inputOf(main.get())
         outputOf(
             sourceSets["api"],
-            sourceSets["mappings"]
+            sourceSets["mappings"],
+            sourceSets["launcher"]
         )
     }
     create("mod") {
@@ -93,6 +94,7 @@ sourceSets {
         outputOf(
             sourceSets["api"],
             sourceSets["mappings"],
+            sourceSets["launcher"],
             sourceSets["minecraft"],
             sourceSets["mod"],
             sourceSets["sources"]
@@ -143,6 +145,7 @@ tasks.jar {
         sourceSets["api"].output,
         sourceSets["mappings"].output,
         sourceSets["minecraft"].output,
+        sourceSets["launcher"].output,
         sourceSets["mod"].output,
         sourceSets["sources"].output,
         sourceSets["main"].output

@@ -3,15 +3,14 @@ package xyz.wagyourtail.unimined.minecraft.patch.jarmod
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.tasks.TaskContainer
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.Constants
+import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
-import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
@@ -130,21 +129,11 @@ open class JarModMinecraftTransformer(
         })
     }
 
-    override fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
-        provider.provideVanillaRunClientTask(tasks) {
-            if (clientMainClass != null) {
-                it.mainClass = clientMainClass as String
-            }
-            action(it)
-        }
+    override fun applyClientRunTransform(config: LaunchConfig) {
+        config.mainClass = clientMainClass ?: config.mainClass
     }
 
-    override fun applyServerRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit) {
-        provider.provideVanillaRunServerTask(tasks) {
-            if (serverMainClass != null) {
-                it.mainClass = serverMainClass as String
-            }
-            action(it)
-        }
+    override fun applyServerRunTransform(config: LaunchConfig) {
+        config.mainClass = serverMainClass ?: config.mainClass
     }
 }

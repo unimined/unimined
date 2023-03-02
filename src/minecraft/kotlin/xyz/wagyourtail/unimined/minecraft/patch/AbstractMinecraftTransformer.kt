@@ -3,7 +3,6 @@ package xyz.wagyourtail.unimined.minecraft.patch
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.api.tasks.TaskContainer
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
@@ -136,46 +135,33 @@ abstract class AbstractMinecraftTransformer protected constructor(
         }
         return target
     }
-    private fun applyLaunches(tasks: TaskContainer) {
-        if (provider.launches.off) return
+    protected open fun applyLaunches() {
         project.logger.lifecycle("Applying run configs")
         project.logger.info("client: ${provider.client}, server: ${provider.server}")
         if (provider.minecraft.client) {
             project.logger.info("client config")
-            applyClientRunConfig(tasks) {
-                provider.launches.transform("client", it)
-            }
+            provider.launcher.config("client", ::applyClientRunTransform)
         }
         if (provider.minecraft.server) {
             project.logger.info("server config")
-            applyServerRunConfig(tasks) {
-                provider.launches.transform("server", it)
-            }
-        }
-        //TODO: add data run config, make dynamic
-        val available =
-            (if (provider.minecraft.client) setOf("client") else setOf()) +
-            (if (provider.minecraft.server) setOf("server") else setOf())
-        val unused = (provider.launches.getRegisteredTargets() - available)
-        if (unused.isNotEmpty()) {
-            project.logger.warn("Unused run config transform targets: $unused")
+            provider.launcher.config("server", ::applyServerRunTransform)
         }
     }
 
     @ApiStatus.Internal
-    open fun applyClientRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit = {}) {
-        provider.provideVanillaRunClientTask(tasks, action)
+    open fun applyClientRunTransform(config: LaunchConfig) {
+
     }
 
     @ApiStatus.Internal
-    open fun applyServerRunConfig(tasks: TaskContainer, action: (LaunchConfig) -> Unit = {}) {
-        provider.provideVanillaRunServerTask(tasks, action)
+    open fun applyServerRunTransform(config: LaunchConfig) {
+
     }
 
     @ApiStatus.Internal
     open fun afterEvaluate() {
         project.unimined.events.register(::sourceSets)
-        project.unimined.events.register(::applyLaunches)
+        applyLaunches()
     }
 
     @ApiStatus.Internal
