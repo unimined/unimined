@@ -6,18 +6,20 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.fabric.FabricApiExtension
+import xyz.wagyourtail.unimined.api.fabric.LegacyFabricApiExtension
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import java.net.URI
 
-class FabricMinecraftTransformer(
+open class FabricMinecraftTransformer(
     project: Project,
-    provider: MinecraftProviderImpl
+    provider: MinecraftProviderImpl,
+    providerName: String
 ) : FabricLikeMinecraftTransformer(
     project,
     provider,
-    Constants.FABRIC_PROVIDER,
+    providerName,
     "fabric.mod.json",
     "accessWidener"
 ) {
@@ -26,6 +28,10 @@ class FabricMinecraftTransformer(
     override val ENV_TYPE: String = "Lnet/fabricmc/api/EnvType;"
 
     init {
+        setupApiExtension()
+    }
+
+    open fun setupApiExtension() {
         FabricApiExtension.apply(project)
     }
 

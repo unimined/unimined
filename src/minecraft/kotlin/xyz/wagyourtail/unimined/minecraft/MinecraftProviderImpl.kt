@@ -29,9 +29,7 @@ import xyz.wagyourtail.unimined.launch.LauncherProvierImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.NoTransformMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.fabric.FabricLikeMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.fabric.FabricMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.fabric.QuiltMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.*
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.remap.MinecraftRemapperImpl
@@ -143,7 +141,12 @@ abstract class MinecraftProviderImpl(
     }
 
     override fun fabric(action: (FabricLikePatcher) -> Unit) {
-        mcPatcher = FabricMinecraftTransformer(project, this)
+        mcPatcher = OfficialFabricMinecraftTransformer(project, this)
+        action(mcPatcher as FabricLikeMinecraftTransformer)
+    }
+
+    override fun legacyFabric(action: (FabricLikePatcher) -> Unit) {
+        mcPatcher = LegacyFabricMinecraftTransformer(project, this)
         action(mcPatcher as FabricLikeMinecraftTransformer)
     }
 

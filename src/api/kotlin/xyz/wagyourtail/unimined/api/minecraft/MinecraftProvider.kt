@@ -165,6 +165,40 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
         fabric {}
     }
 
+
+    /**
+     * enables the fabric patcher.
+     * @param action the action to configure the patcher.
+     * @since 0.1.0
+     */
+    abstract fun legacyFabric(action: (FabricLikePatcher) -> Unit)
+
+    /**
+     * enables the fabric patcher.
+     * @param action the action to perform on the patcher.
+     * @since 0.1.0
+     */
+    fun legacyFabric(
+        @DelegatesTo(
+            value = FabricLikePatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        legacyFabric {
+            action.delegate = it
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the fabric patcher.
+     * @since 0.1.0
+     */
+    fun legacyFabric() {
+        legacyFabric {}
+    }
+
     /**
      * enables the quilt patcher.
      * @param action the action to configure the patcher.
