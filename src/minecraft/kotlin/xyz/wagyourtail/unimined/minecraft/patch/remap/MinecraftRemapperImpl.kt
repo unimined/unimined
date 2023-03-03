@@ -24,7 +24,7 @@ class MinecraftRemapperImpl(
     val project: Project,
     val provider: MinecraftProviderImpl,
 ) : MinecraftRemapper() {
-    val mappings by lazy { project.mappings }
+    private val mappings by lazy { project.mappings }
 
     val MC_LV_PATTERN = Regex("\\$\\$\\d+")
 

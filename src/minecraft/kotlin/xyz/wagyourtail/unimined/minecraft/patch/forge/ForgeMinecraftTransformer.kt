@@ -183,7 +183,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     )
     override fun at2aw(input: File, output: File) = at2aw(input, output, devNamespace)
     override fun at2aw(input: File, output: File, namespace: MappingNamespace) : File {
-        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), false, namespace.namespace, provider.mcRemapper.mappings.getMappingTree(EnvType.COMBINED)).toFile()
+        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), false, namespace.namespace, project.mappings.getMappingTree(EnvType.COMBINED)).toFile()
     }
 
     override fun atLegacy2aw(input: String, output: String, namespace: MappingNamespace) = atLegacy2aw(File(input), File(output), namespace)
@@ -199,7 +199,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     )
     override fun atLegacy2aw(input: File, output: File) = atLegacy2aw(input, output, devNamespace)
     override fun atLegacy2aw(input: File, output: File, namespace: MappingNamespace) : File {
-        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), true, namespace.namespace, provider.mcRemapper.mappings.getMappingTree(EnvType.COMBINED)).toFile()
+        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), true, namespace.namespace, project.mappings.getMappingTree(EnvType.COMBINED)).toFile()
     }
 
     @get:ApiStatus.Internal
