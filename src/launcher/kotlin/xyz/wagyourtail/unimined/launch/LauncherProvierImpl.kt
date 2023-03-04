@@ -7,7 +7,7 @@ import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.launch.LauncherProvider
 import xyz.wagyourtail.unimined.api.unimined
 
-class LauncherProvierImpl(project: Project, unimined: UniminedExtension) : LauncherProvider() {
+class LauncherProvierImpl(val project: Project, unimined: UniminedExtension) : LauncherProvider() {
 
     private var lock = false
 
@@ -57,6 +57,8 @@ class LauncherProvierImpl(project: Project, unimined: UniminedExtension) : Launc
                 }
             }
         }
+
+        project.tasks.named("idea").configure { it.finalizedBy(genIntellijRuns) }
     }
 
     private fun createGradleRuns(tasks: TaskContainer) {
