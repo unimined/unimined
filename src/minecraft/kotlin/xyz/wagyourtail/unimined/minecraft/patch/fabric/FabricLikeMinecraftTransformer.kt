@@ -8,6 +8,7 @@ import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
@@ -155,36 +156,36 @@ abstract class FabricLikeMinecraftTransformer(
         if (libraries != null) {
             libraries.get("common")?.asJsonArray?.forEach {
                 if (client) {
-                    provider.mcLibraries.dependencies.add(
-                        project.dependencies.create(
-                            it.asJsonObject.get("name").asString
-                        )
-                    )
+                    val dep: ModuleDependency = project.dependencies.create(
+                        it.asJsonObject.get("name").asString
+                    ) as ModuleDependency
+                    dep.isTransitive = false
+                    provider.mcLibraries.dependencies.add(dep)
                 }
                 if (server) {
-                    provider.mcLibraries.dependencies.add(
-                        project.dependencies.create(
-                            it.asJsonObject.get("name").asString
-                        )
-                    )
+                    val dep: ModuleDependency = project.dependencies.create(
+                        it.asJsonObject.get("name").asString
+                    ) as ModuleDependency
+                    dep.isTransitive = false
+                    provider.mcLibraries.dependencies.add(dep)
                 }
             }
             if (client) {
                 libraries.get("client")?.asJsonArray?.forEach {
-                    provider.mcLibraries.dependencies.add(
-                        project.dependencies.create(
-                            it.asJsonObject.get("name").asString
-                        )
-                    )
+                    val dep: ModuleDependency = project.dependencies.create(
+                        it.asJsonObject.get("name").asString
+                    ) as ModuleDependency
+                    dep.isTransitive = false
+                    provider.mcLibraries.dependencies.add(dep)
                 }
             }
             if (server) {
                 libraries.get("server")?.asJsonArray?.forEach {
-                    provider.mcLibraries.dependencies.add(
-                        project.dependencies.create(
-                            it.asJsonObject.get("name").asString
-                        )
-                    )
+                    val dep: ModuleDependency = project.dependencies.create(
+                        it.asJsonObject.get("name").asString
+                    ) as ModuleDependency
+                    dep.isTransitive = false
+                    provider.mcLibraries.dependencies.add(dep)
                 }
             }
         }
