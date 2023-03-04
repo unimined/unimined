@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.minecraft.patch.fabric
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.format.ZipReader
@@ -156,36 +157,20 @@ abstract class FabricLikeMinecraftTransformer(
         if (libraries != null) {
             libraries.get("common")?.asJsonArray?.forEach {
                 if (client) {
-                    val dep: ModuleDependency = project.dependencies.create(
-                        it.asJsonObject.get("name").asString
-                    ) as ModuleDependency
-                    dep.isTransitive = false
-                    provider.mcLibraries.dependencies.add(dep)
+                    createFabricLoaderDependency(it)
                 }
                 if (server) {
-                    val dep: ModuleDependency = project.dependencies.create(
-                        it.asJsonObject.get("name").asString
-                    ) as ModuleDependency
-                    dep.isTransitive = false
-                    provider.mcLibraries.dependencies.add(dep)
+                    createFabricLoaderDependency(it)
                 }
             }
             if (client) {
                 libraries.get("client")?.asJsonArray?.forEach {
-                    val dep: ModuleDependency = project.dependencies.create(
-                        it.asJsonObject.get("name").asString
-                    ) as ModuleDependency
-                    dep.isTransitive = false
-                    provider.mcLibraries.dependencies.add(dep)
+                    createFabricLoaderDependency(it)
                 }
             }
             if (server) {
                 libraries.get("server")?.asJsonArray?.forEach {
-                    val dep: ModuleDependency = project.dependencies.create(
-                        it.asJsonObject.get("name").asString
-                    ) as ModuleDependency
-                    dep.isTransitive = false
-                    provider.mcLibraries.dependencies.add(dep)
+                    createFabricLoaderDependency(it)
                 }
             }
         }
@@ -203,6 +188,14 @@ abstract class FabricLikeMinecraftTransformer(
         )
 
         super.afterEvaluate()
+    }
+
+    private fun createFabricLoaderDependency(it: JsonElement) {
+        val dep: ModuleDependency = project.dependencies.create(
+            it.asJsonObject.get("name").asString
+        ) as ModuleDependency
+        dep.isTransitive = false
+        provider.mcLibraries.dependencies.add(dep)
     }
 
     override fun sourceSets(sourceSets: SourceSetContainer) {
