@@ -127,9 +127,6 @@ class AccessWidenerMerger(private val namespace: String) : AccessWidenerVisitor 
         access: AccessWidenerReader.AccessType,
         defaultAccess: Access
     ) {
-        if (entry == null || access == null) {
-            throw RuntimeException("Input entry or access is null")
-        }
         map[entry] = applyAccess(access, map.getOrDefault(entry, defaultAccess), entry)
     }
 
