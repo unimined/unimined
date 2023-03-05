@@ -104,9 +104,7 @@ object AccessWidenerMinecraftTransformer {
             1024,
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING
-        )
-
-        output.writeText(merger.writeToAccessWidenerWriter().writeString())
+        ).write(merger.writeToAccessWidenerWriter().writeString())
 
         return output
     }

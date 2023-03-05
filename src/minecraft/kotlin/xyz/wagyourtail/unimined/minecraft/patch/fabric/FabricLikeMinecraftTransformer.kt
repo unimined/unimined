@@ -336,4 +336,27 @@ abstract class FabricLikeMinecraftTransformer(
             }
         }
     }
+
+    override fun mergeAws(inputs: List<File>): File {
+        return mergeAws(
+            devNamespace,
+            inputs
+        )
+    }
+
+    override fun mergeAws(namespace: MappingNamespace, inputs: List<File>): File {
+        return mergeAws(
+            project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
+                .resolve("${project.name}.accesswidener"),
+            namespace, inputs
+        )
+    }
+
+    override fun mergeAws(output: File, inputs: List<File>): File {
+        return mergeAws(output, devNamespace, inputs)
+    }
+
+    override fun mergeAws(output: File, namespace: MappingNamespace, inputs: List<File>): File {
+        return AccessWidenerMinecraftTransformer.mergeAws(inputs.map { it.toPath() }, output.toPath(), namespace, project.mappings).toFile()
+    }
 }
