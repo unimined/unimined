@@ -329,14 +329,14 @@ object AccessTransformerMinecraftTransformer {
         return output
     }
 
-    fun at2aw(at: Path, output: Path, legacy: Boolean, namespace: String, mappings: MappingTreeView): Path {
+    fun at2aw(at: Path, output: Path, namespace: String, mappings: MappingTreeView): Path {
         val inReader = at.bufferedReader(
             StandardCharsets.UTF_8,
             1024,
             StandardOpenOption.READ
         )
 
-        val reader = if (legacy) transformFromLegacyTransformer(inReader) else inReader
+        val reader = transformFromLegacyTransformer(inReader)
         val temp = at.resolveSibling(at.name + ".temp")
         val tempWriter = temp.bufferedWriter(
             StandardCharsets.UTF_8,
