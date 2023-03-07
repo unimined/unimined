@@ -357,6 +357,6 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     override fun mergeAws(output: File, namespace: MappingNamespace, inputs: List<File>): File {
-        return AccessWidenerMinecraftTransformer.mergeAws(inputs.map { it.toPath() }, output.toPath(), namespace, project.mappings).toFile()
+        return AccessWidenerMinecraftTransformer.mergeAws(inputs.map { it.toPath() }, output.toPath(), namespace, project.mappings, provider).toFile()
     }
 }

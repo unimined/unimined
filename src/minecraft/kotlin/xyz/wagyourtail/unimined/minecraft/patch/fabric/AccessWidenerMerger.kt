@@ -4,13 +4,11 @@ import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor
 import net.fabricmc.accesswidener.AccessWidenerWriter
 import net.fabricmc.tinyremapper.TinyRemapper
-import org.gradle.api.internal.provider.MappingProvider
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.commons.Remapper
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.MappingsProvider
-import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 
 class AccessWidenerMerger(private val namespace: String) : AccessWidenerVisitor {
     // Contains the actual transforms. Class names are as class-file internal binary names (forward slash is used
@@ -195,7 +193,8 @@ class AccessWidenerBetterRemapper
  */(
     private val delegate: AccessWidenerVisitor,
     private val mappingsProvider: MappingsProvider,
-    private val toNamespace: String
+    private val toNamespace: String,
+    private val mcProvider: MinecraftProvider<*, *>
 ) : AccessWidenerVisitor {
     private var remapper: TinyRemapper
 
@@ -208,6 +207,9 @@ class AccessWidenerBetterRemapper
                     false
                 )
             ).build()
+
+        remapper.readClassPathAsync(*mcProvider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
+        remapper.readClassPathAsync(mcProvider.getMinecraftWithMapping(EnvType.COMBINED, MappingNamespace.OFFICIAL, MappingNamespace.getNamespace(toNamespace)))
     }
     override fun visitHeader(namespace: String) {
         remapper = TinyRemapper.newRemapper()
@@ -218,6 +220,9 @@ class AccessWidenerBetterRemapper
                     false
                 )
             ).build()
+
+        remapper.readClassPathAsync(*mcProvider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
+        remapper.readClassPathAsync(mcProvider.getMinecraftWithMapping(EnvType.COMBINED, MappingNamespace.getNamespace(namespace), MappingNamespace.getNamespace(toNamespace)))
 
         delegate.visitHeader(toNamespace)
     }

@@ -10,6 +10,7 @@ import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.MappingsProvider
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -92,11 +93,11 @@ object AccessWidenerMinecraftTransformer {
         return false
     }
 
-    fun mergeAws(inputs: List<Path>, output: Path, targetNamespace: MappingNamespace, mappingsProvider: MappingsProvider): Path {
+    fun mergeAws(inputs: List<Path>, output: Path, targetNamespace: MappingNamespace, mappingsProvider: MappingsProvider, mcProvider: MinecraftProvider<*, *>): Path {
         val merger = AccessWidenerMerger(targetNamespace.namespace)
 
         inputs.forEach {
-            createVisitors(merger, mappingsProvider, targetNamespace.namespace, it.inputStream())
+            createVisitors(merger, mappingsProvider, targetNamespace.namespace, it.inputStream(), mcProvider)
         }
 
         output.bufferedWriter(
@@ -109,8 +110,8 @@ object AccessWidenerMinecraftTransformer {
         return output
     }
 
-    private fun createVisitors(awm: AccessWidenerMerger, mappingsProvider: MappingsProvider, target: String, input: InputStream) {
-        AccessWidenerReader(AccessWidenerBetterRemapper(awm, mappingsProvider, target)).read(
+    private fun createVisitors(awm: AccessWidenerMerger, mappingsProvider: MappingsProvider, target: String, input: InputStream, mcProvider: MinecraftProvider<*, *>) {
+        AccessWidenerReader(AccessWidenerBetterRemapper(awm, mappingsProvider, target, mcProvider)).read(
             BufferedReader(InputStreamReader(input))
         )
     }
