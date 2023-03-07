@@ -4,7 +4,6 @@ import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor
 import net.fabricmc.accesswidener.AccessWidenerWriter
 import net.fabricmc.tinyremapper.TinyRemapper
-import org.objectweb.asm.Opcodes
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.MappingsProvider
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -80,7 +79,7 @@ class AccessWidenerMerger(private val namespace: String) : AccessWidenerVisitor 
     }
 
     override fun visitHeader(namespace: String) {
-        if (this.namespace != null && this.namespace != namespace) {
+        if (this.namespace != namespace) {
             throw RuntimeException(String.format("Namespace mismatch, expected %s got %s", this.namespace, namespace))
         }
     }
@@ -128,7 +127,7 @@ class AccessWidenerMerger(private val namespace: String) : AccessWidenerVisitor 
         map[entry] = applyAccess(access, map.getOrDefault(entry, defaultAccess), entry)
     }
 
-    fun applyAccess(
+    private fun applyAccess(
         input: AccessWidenerReader.AccessType,
         access: Access,
         entryTriple: EntryTriple?
@@ -151,38 +150,20 @@ class AccessWidenerMerger(private val namespace: String) : AccessWidenerVisitor 
 
     private fun makeClassAccessible(entryTriple: EntryTriple?) {
         if (entryTriple == null) return
-        classAccess.put(
-            entryTriple.owner,
-            applyAccess(
-                AccessWidenerReader.AccessType.ACCESSIBLE,
-                classAccess.getOrDefault(entryTriple.owner, ClassAccess.DEFAULT),
-                null
-            )
+        classAccess[entryTriple.owner] = applyAccess(
+            AccessWidenerReader.AccessType.ACCESSIBLE,
+            classAccess.getOrDefault(entryTriple.owner, ClassAccess.DEFAULT),
+            null
         )
     }
 
     private fun makeClassExtendable(entryTriple: EntryTriple?) {
         if (entryTriple == null) return
-        classAccess.put(
-            entryTriple.owner,
-            applyAccess(
-                AccessWidenerReader.AccessType.EXTENDABLE,
-                classAccess.getOrDefault(entryTriple.owner, ClassAccess.DEFAULT),
-                null
-            )
+        classAccess[entryTriple.owner] = applyAccess(
+            AccessWidenerReader.AccessType.EXTENDABLE,
+            classAccess.getOrDefault(entryTriple.owner, ClassAccess.DEFAULT),
+            null
         )
-    }
-
-    fun getClassAccess(className: String): Access {
-        return classAccess.getOrDefault(className, ClassAccess.DEFAULT)
-    }
-
-    fun getFieldAccess(entryTriple: EntryTriple): Access {
-        return fieldAccess.getOrDefault(entryTriple, FieldAccess.DEFAULT)
-    }
-
-    fun getMethodAccess(entryTriple: EntryTriple): Access {
-        return methodAccess.getOrDefault(entryTriple, MethodAccess.DEFAULT)
     }
 }
 
@@ -264,36 +245,6 @@ class AccessWidenerBetterRemapper
     }
 }
 
-fun makePublic(i: Int): Int {
-    return i and (Opcodes.ACC_PRIVATE or Opcodes.ACC_PROTECTED).inv() or Opcodes.ACC_PUBLIC
-}
-
-fun makeProtected(i: Int): Int {
-    return if (i and Opcodes.ACC_PUBLIC != 0) {
-        //Return i if public
-        i
-    } else i and Opcodes.ACC_PRIVATE.inv() or Opcodes.ACC_PROTECTED
-}
-
-fun makeFinalIfPrivate(access: Int, name: String, ownerAccess: Int): Int {
-    // Dont make constructors final
-    if (name == "<init>") {
-        return access
-    }
-
-    // Skip interface and static methods
-    if (ownerAccess and Opcodes.ACC_INTERFACE != 0 || access and Opcodes.ACC_STATIC != 0) {
-        return access
-    }
-    return if (access and Opcodes.ACC_PRIVATE != 0) {
-        access or Opcodes.ACC_FINAL
-    } else access
-}
-
-fun removeFinal(i: Int): Int {
-    return i and Opcodes.ACC_FINAL.inv()
-}
-
 class EntryTriple(val owner: String, val name: String, val desc: String) {
     override fun toString(): String {
         return "EntryTriple{owner=$owner,name=$name,desc=$desc}"
@@ -317,31 +268,17 @@ class EntryTriple(val owner: String, val name: String, val desc: String) {
     }
 }
 
-interface Access : AccessOperator {
+interface Access {
     fun makeAccessible(): Access
     fun makeExtendable(): Access
     fun makeMutable(): Access
 }
 
-enum class ClassAccess(private val operator: AccessOperator) : Access {
-    DEFAULT(AccessOperator { access: Int, name: String, ownerAccess: Int -> access }), ACCESSIBLE(
-        AccessOperator { access: Int, name: String, ownerAccess: Int ->
-            makePublic(
-                access
-            )
-        }),
-    EXTENDABLE(
-        AccessOperator { access: Int, name: String, ownerAccess: Int ->
-            makePublic(
-                removeFinal(access)
-            )
-        }),
-    ACCESSIBLE_EXTENDABLE(
-        AccessOperator { access: Int, name: String, ownerAccess: Int ->
-            makePublic(
-                removeFinal(access)
-            )
-        });
+enum class ClassAccess : Access {
+    DEFAULT,
+    ACCESSIBLE,
+    EXTENDABLE,
+    ACCESSIBLE_EXTENDABLE;
 
     override fun makeAccessible(): Access {
         return if (this == EXTENDABLE || this == ACCESSIBLE_EXTENDABLE) {
@@ -358,31 +295,13 @@ enum class ClassAccess(private val operator: AccessOperator) : Access {
     override fun makeMutable(): Access {
         throw UnsupportedOperationException("Classes cannot be made mutable")
     }
-
-    override fun apply(access: Int, targetName: String, ownerAccess: Int): Int {
-        return operator.apply(access, targetName, ownerAccess)
-    }
 }
 
-enum class MethodAccess(private val operator: AccessOperator) : Access {
-    DEFAULT(AccessOperator { access: Int, name: String, ownerAccess: Int -> access }), ACCESSIBLE(
-        AccessOperator { access: Int, name: String, ownerAccess: Int ->
-            makePublic(
-                makeFinalIfPrivate(access, name, ownerAccess)
-            )
-        }),
-    EXTENDABLE(
-        AccessOperator { access: Int, name: String, ownerAccess: Int ->
-            makeProtected(
-                removeFinal(access)
-            )
-        }),
-    ACCESSIBLE_EXTENDABLE(
-        AccessOperator { access: Int, name: String, owner: Int ->
-            makePublic(
-                removeFinal(access)
-            )
-        });
+enum class MethodAccess : Access {
+    DEFAULT,
+    ACCESSIBLE,
+    EXTENDABLE,
+    ACCESSIBLE_EXTENDABLE;
 
     override fun makeAccessible(): Access {
         return if (this == EXTENDABLE || this == ACCESSIBLE_EXTENDABLE) {
@@ -399,34 +318,13 @@ enum class MethodAccess(private val operator: AccessOperator) : Access {
     override fun makeMutable(): Access {
         throw UnsupportedOperationException("Methods cannot be made mutable")
     }
-
-    override fun apply(access: Int, targetName: String, ownerAccess: Int): Int {
-        return operator.apply(access, targetName, ownerAccess)
-    }
 }
 
-enum class FieldAccess(private val operator: AccessOperator) : Access {
-    DEFAULT(AccessOperator { access: Int, name: String, ownerAccess: Int -> access }), ACCESSIBLE(
-        AccessOperator { access: Int, name: String, ownerAccess: Int ->
-            makePublic(
-                access
-            )
-        }),
-    MUTABLE(
-        AccessOperator { access: Int, name: String, ownerAccess: Int ->
-            if (ownerAccess and Opcodes.ACC_INTERFACE != 0 && access and Opcodes.ACC_STATIC != 0) {
-                // Don't make static interface fields mutable.
-                return@AccessOperator access
-            }
-            removeFinal(access)
-        }),
-    ACCESSIBLE_MUTABLE(AccessOperator { access: Int, name: String, ownerAccess: Int ->
-        if (ownerAccess and Opcodes.ACC_INTERFACE != 0 && access and Opcodes.ACC_STATIC != 0) {
-            // Don't make static interface fields mutable.
-            return@AccessOperator makePublic(access)
-        }
-        makePublic(removeFinal(access))
-    });
+enum class FieldAccess : Access {
+    DEFAULT,
+    ACCESSIBLE,
+    MUTABLE,
+    ACCESSIBLE_MUTABLE;
 
     override fun makeAccessible(): Access {
         return if (this == MUTABLE || this == ACCESSIBLE_MUTABLE) {
@@ -443,12 +341,4 @@ enum class FieldAccess(private val operator: AccessOperator) : Access {
             ACCESSIBLE_MUTABLE
         } else MUTABLE
     }
-
-    override fun apply(access: Int, targetName: String, ownerAccess: Int): Int {
-        return operator.apply(access, targetName, ownerAccess)
-    }
-}
-
-fun interface AccessOperator {
-    fun apply(access: Int, targetName: String, ownerAccess: Int): Int
 }
