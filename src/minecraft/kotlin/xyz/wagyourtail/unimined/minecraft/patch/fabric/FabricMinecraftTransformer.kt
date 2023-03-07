@@ -14,12 +14,11 @@ import java.net.URI
 
 open class FabricMinecraftTransformer(
     project: Project,
-    provider: MinecraftProviderImpl,
-    providerName: String
+    provider: MinecraftProviderImpl
 ) : FabricLikeMinecraftTransformer(
     project,
     provider,
-    providerName,
+    Constants.FABRIC_PROVIDER,
     "fabric.mod.json",
     "accessWidener"
 ) {
