@@ -26,8 +26,6 @@ object Constants {
 
     const val FABRIC_PROVIDER = "fabric"
 
-    const val LEGACY_FABRIC_PROVIDER = "legacyFabric"
-
     const val QUILT_PROVIDER = "quilt"
 
     const val FORGE_PROVIDER = "forge"
