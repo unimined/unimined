@@ -194,7 +194,7 @@ class AccessWidenerBetterRemapper
             remapper?.readClassPathAsync(
                 mcProvider.getMinecraftWithMapping(
                     EnvType.COMBINED,
-                    MappingNamespace.getNamespace(toNamespace),
+                    MappingNamespace.getNamespace(namespace),
                     MappingNamespace.getNamespace(namespace)
                 )
             )
