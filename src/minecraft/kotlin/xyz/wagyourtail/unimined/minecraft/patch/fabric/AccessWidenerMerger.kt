@@ -177,39 +177,34 @@ class AccessWidenerBetterRemapper
     private val toNamespace: String,
     private val mcProvider: MinecraftProvider<*, *>
 ) : AccessWidenerVisitor {
-    private var remapper: TinyRemapper
+    private var remapper: TinyRemapper? = null
 
-    init {
-        remapper = TinyRemapper.newRemapper()
-            .withMappings(
-                mappingsProvider.getMappingsProvider(
-                    EnvType.COMBINED,
-                    MappingNamespace.OFFICIAL to MappingNamespace.getNamespace(toNamespace),
-                    false
-                )
-            ).build()
-
-        remapper.readClassPathAsync(*mcProvider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
-        remapper.readClassPathAsync(mcProvider.getMinecraftWithMapping(EnvType.COMBINED, MappingNamespace.OFFICIAL, MappingNamespace.getNamespace(toNamespace)))
-    }
     override fun visitHeader(namespace: String) {
-        remapper = TinyRemapper.newRemapper()
-            .withMappings(
-                mappingsProvider.getMappingsProvider(
-                    EnvType.COMBINED,
-                    MappingNamespace.getNamespace(namespace) to MappingNamespace.getNamespace(toNamespace),
-                    false
-                )
-            ).build()
+        if (namespace != toNamespace) {
+            remapper = TinyRemapper.newRemapper()
+                .withMappings(
+                    mappingsProvider.getMappingsProvider(
+                        EnvType.COMBINED,
+                        MappingNamespace.getNamespace(namespace) to MappingNamespace.getNamespace(toNamespace),
+                        false
+                    )
+                ).build()
 
-        remapper.readClassPathAsync(*mcProvider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
-        remapper.readClassPathAsync(mcProvider.getMinecraftWithMapping(EnvType.COMBINED, MappingNamespace.getNamespace(namespace), MappingNamespace.getNamespace(toNamespace)))
+            remapper?.readClassPathAsync(*mcProvider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
+            remapper?.readClassPathAsync(
+                mcProvider.getMinecraftWithMapping(
+                    EnvType.COMBINED,
+                    MappingNamespace.getNamespace(namespace),
+                    MappingNamespace.getNamespace(toNamespace)
+                )
+            )
+        }
 
         delegate.visitHeader(toNamespace)
     }
 
     override fun visitClass(name: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
-        delegate.visitClass(remapper.environment.remapper.map(name), access, transitive)
+        delegate.visitClass(if (remapper != null) remapper!!.environment.remapper.map(name) else name, access, transitive)
     }
 
     override fun visitMethod(
@@ -220,9 +215,9 @@ class AccessWidenerBetterRemapper
         transitive: Boolean
     ) {
         delegate.visitMethod(
-            remapper.environment.remapper.map(owner),
-            remapper.environment.remapper.mapMethodName(owner, name, descriptor),
-            remapper.environment.remapper.mapDesc(descriptor),
+            if (remapper != null) remapper!!.environment.remapper.map(owner) else owner,
+            if (remapper != null) remapper!!.environment.remapper.mapMethodName(owner, name, descriptor) else name,
+            if (remapper != null) remapper!!.environment.remapper.mapDesc(descriptor) else descriptor,
             access,
             transitive
         )
@@ -236,9 +231,9 @@ class AccessWidenerBetterRemapper
         transitive: Boolean
     ) {
         delegate.visitField(
-            remapper.environment.remapper.map(owner),
-            remapper.environment.remapper.mapFieldName(owner, name, descriptor),
-            remapper.environment.remapper.mapDesc(descriptor),
+            if (remapper != null) remapper!!.environment.remapper.map(owner) else owner,
+            if (remapper != null) remapper!!.environment.remapper.mapFieldName(owner, name, descriptor) else name,
+            if (remapper != null) remapper!!.environment.remapper.mapDesc(descriptor) else descriptor,
             access,
             transitive
         )
