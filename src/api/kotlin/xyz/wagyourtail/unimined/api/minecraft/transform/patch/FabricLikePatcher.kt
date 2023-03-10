@@ -23,4 +23,9 @@ interface FabricLikePatcher : MinecraftPatcher {
     fun setAccessWidener(file: String) {
         accessWidener = File(file)
     }
+
+    fun mergeAws(inputs: List<File>): File
+    fun mergeAws(namespace: MappingNamespace, inputs: List<File>): File
+    fun mergeAws(output: File, inputs: List<File>): File
+    fun mergeAws(output: File, namespace: MappingNamespace, inputs: List<File>): File
 }
