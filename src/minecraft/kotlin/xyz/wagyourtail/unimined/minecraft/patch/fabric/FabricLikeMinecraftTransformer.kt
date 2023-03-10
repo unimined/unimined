@@ -23,6 +23,7 @@ import xyz.wagyourtail.unimined.mappings.MappingExportImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.minecraft.patch.forge.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.File
@@ -335,6 +336,23 @@ abstract class FabricLikeMinecraftTransformer(
                 Files.write(mod, GSON.toJson(json).toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
             }
         }
+    }
+
+
+    override fun at2aw(input: String, output: String, namespace: MappingNamespace) = at2aw(File(input), File(output), namespace)
+    override fun at2aw(input: String, namespace: MappingNamespace) = at2aw(File(input), namespace)
+    override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
+    override fun at2aw(input: String) = at2aw(File(input))
+    override fun at2aw(input: File) = at2aw(input, devNamespace)
+    override fun at2aw(input: File, namespace: MappingNamespace) = at2aw(
+        input,
+        project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
+            .resolve("${project.name}.accesswidener"),
+        namespace
+    )
+    override fun at2aw(input: File, output: File) = at2aw(input, output, devNamespace)
+    override fun at2aw(input: File, output: File, namespace: MappingNamespace) : File {
+        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), namespace.namespace, project.mappings.getMappingTree(EnvType.COMBINED)).toFile()
     }
 
     override fun mergeAws(inputs: List<File>): File {
