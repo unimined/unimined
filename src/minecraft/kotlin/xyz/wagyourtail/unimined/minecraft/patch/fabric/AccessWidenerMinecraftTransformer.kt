@@ -9,17 +9,17 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mappings.MappingsProvider
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.createDirectories
-import kotlin.io.path.extension
-import kotlin.io.path.inputStream
-import kotlin.io.path.reader
+import kotlin.io.path.*
 
 object AccessWidenerMinecraftTransformer {
 
@@ -93,4 +93,26 @@ object AccessWidenerMinecraftTransformer {
         return false
     }
 
+    fun mergeAws(inputs: List<Path>, output: Path, targetNamespace: MappingNamespace, mappingsProvider: MappingsProvider, mcProvider: MinecraftProvider<*, *>): Path {
+        val merger = AccessWidenerMerger(targetNamespace.namespace)
+
+        inputs.forEach {
+            createVisitors(merger, mappingsProvider, targetNamespace.namespace, it.inputStream(), mcProvider)
+        }
+
+        output.bufferedWriter(
+            StandardCharsets.UTF_8,
+            1024,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING
+        ).write(merger.writeToAccessWidenerWriter().writeString())
+
+        return output
+    }
+
+    private fun createVisitors(awm: AccessWidenerMerger, mappingsProvider: MappingsProvider, target: String, input: InputStream, mcProvider: MinecraftProvider<*, *>) {
+        AccessWidenerReader(AccessWidenerBetterRemapper(awm, mappingsProvider, target, mcProvider)).read(
+            BufferedReader(InputStreamReader(input))
+        )
+    }
 }

@@ -338,6 +338,7 @@ abstract class FabricLikeMinecraftTransformer(
         }
     }
 
+
     override fun at2aw(input: String, output: String, namespace: MappingNamespace) = at2aw(File(input), File(output), namespace)
     override fun at2aw(input: String, namespace: MappingNamespace) = at2aw(File(input), namespace)
     override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
@@ -352,5 +353,28 @@ abstract class FabricLikeMinecraftTransformer(
     override fun at2aw(input: File, output: File) = at2aw(input, output, devNamespace)
     override fun at2aw(input: File, output: File, namespace: MappingNamespace) : File {
         return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), namespace.namespace, project.mappings.getMappingTree(EnvType.COMBINED)).toFile()
+    }
+
+    override fun mergeAws(inputs: List<File>): File {
+        return mergeAws(
+            devNamespace,
+            inputs
+        )
+    }
+
+    override fun mergeAws(namespace: MappingNamespace, inputs: List<File>): File {
+        return mergeAws(
+            project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
+                .resolve("${project.name}.accesswidener"),
+            namespace, inputs
+        )
+    }
+
+    override fun mergeAws(output: File, inputs: List<File>): File {
+        return mergeAws(output, devNamespace, inputs)
+    }
+
+    override fun mergeAws(output: File, namespace: MappingNamespace, inputs: List<File>): File {
+        return AccessWidenerMinecraftTransformer.mergeAws(inputs.map { it.toPath() }, output.toPath(), namespace, project.mappings, provider).toFile()
     }
 }

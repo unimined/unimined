@@ -9,7 +9,7 @@ import java.net.URI
 class LegacyFabricMinecraftTransformer(
     project: Project,
     provider: MinecraftProviderImpl
-) : FabricMinecraftTransformer(project, provider, Constants.LEGACY_FABRIC_PROVIDER) {
+) : FabricMinecraftTransformer(project, provider) {
     override fun setupApiExtension() {
         LegacyFabricApiExtension.apply(project)
     }
