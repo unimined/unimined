@@ -319,12 +319,16 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 val serverVersion = getServerVersionOverrides().getOrDefault(version, version)
 
 
-                val uriPart = if (version.startsWith("b")) "beta/${parent.serverVersionOverride.get() ?: serverVersion}" else if (version.startsWith(
-                        "a"
-                    )
-                ) "alpha/${
-                    parent.serverVersionOverride.get() ?: serverVersion
-                }" else "release/$serverVersion/$serverVersion"
+                val uriPart = if (version.startsWith("b")) {
+                    "beta/${parent.serverVersionOverride.getOrElse(serverVersion)}"
+                } else if (version.startsWith("a")) {
+                    "alpha/${
+                        parent.serverVersionOverride.getOrElse(serverVersion)
+                    }"
+                } else {
+                    val folder = version.split(".").subList(0, 2).joinToString(".")
+                    "release/$folder/${parent.serverVersionOverride.getOrElse(serverVersion)}"
+                }
                 serverJar = Download("", -1, URI.create("http://files.betacraft.uk/server-archive/$uriPart.jar"))
             }
 
