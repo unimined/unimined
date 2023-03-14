@@ -24,9 +24,9 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util.zip.ZipInputStream
 import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
-import kotlin.properties.Delegates
 
 @Suppress("MemberVisibilityCanBePrivate")
 class MinecraftDownloader(val project: Project, private val parent: MinecraftProviderImpl) : MinecraftResolver() {
@@ -271,6 +271,39 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         }
     }
 
+    private fun getServerVersionOverrides(): Map<String, String> {
+        val versionOverrides = mutableMapOf<String, String>()
+        val versionOverridesFile = project.unimined.getGlobalCache().resolve("server-version-overrides.json")
+
+        if (!versionOverridesFile.exists()) {
+            try {
+                URI.create("https://maven.wagyourtail.xyz/releases/mc-c2s.json").toURL().openStream().use {
+                    Files.write(
+                        versionOverridesFile,
+                        it.readBytes(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING
+                    )
+                }
+            } catch (e: Exception) {
+                versionOverridesFile.deleteIfExists()
+                e.printStackTrace()
+            }
+        }
+
+        // read file into json
+        if (versionOverridesFile.exists()) {
+            InputStreamReader(versionOverridesFile.inputStream()).use {
+                val json = JsonParser.parseReader(it).asJsonObject
+                for (entry in json.entrySet()) {
+                    versionOverrides[entry.key] = entry.value.asString
+                }
+            }
+        }
+
+        return versionOverrides
+    }
+
     private val minecraftServer: Path by lazy {
         val version = version
 
@@ -283,15 +316,15 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
             if (serverJar == null) {
                 // attempt to get off betacraft
-                val uriPart = if (version.startsWith("b")) "beta/${parent.alphaServerVersionOverride.get() ?: version}" else if (version.startsWith(
+                val serverVersion = getServerVersionOverrides().getOrDefault(version, version)
+
+
+                val uriPart = if (version.startsWith("b")) "beta/${parent.serverVersionOverride.get() ?: serverVersion}" else if (version.startsWith(
                         "a"
                     )
                 ) "alpha/${
-                    parent.alphaServerVersionOverride.get() ?: version.replaceFirst(
-                        "1",
-                        "0"
-                    )
-                }" else "release/$version/$version"
+                    parent.serverVersionOverride.get() ?: serverVersion
+                }" else "release/$serverVersion/$serverVersion"
                 serverJar = Download("", -1, URI.create("http://files.betacraft.uk/server-archive/$uriPart.jar"))
             }
 
@@ -385,7 +418,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
     fun serverJarDownloadPath(version: String): Path {
         val versionF = if (version.startsWith("a")) {
-            parent.alphaServerVersionOverride.get() ?: version.replaceFirst("1", "0")
+            parent.serverVersionOverride.get() ?: version.replaceFirst("1", "0")
         } else version
         return mcVersionFolder(version).resolve("minecraft-$versionF-server.jar")
     }

@@ -118,7 +118,7 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
     /**
      * set the mc version for server seperately from client.
      */
-    abstract val alphaServerVersionOverride: Property<String?>
+    abstract val serverVersionOverride: Property<String?>
 
     @get:ApiStatus.Internal
     abstract val mcLibraries: Configuration
@@ -129,7 +129,7 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
 
         disableCombined.convention(false).finalizeValueOnRead()
 
-        alphaServerVersionOverride.convention(null as String?).finalizeValueOnRead()
+        serverVersionOverride.convention(null as String?).finalizeValueOnRead()
     }
 
     /**
