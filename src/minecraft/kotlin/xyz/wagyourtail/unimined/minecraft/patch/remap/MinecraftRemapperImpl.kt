@@ -111,7 +111,7 @@ class MinecraftRemapperImpl(
             OutputConsumerPath.Builder(target).build().use {
                 it.addNonClassFiles(
                     from, remapper,
-                    listOf(AccessTransformerMinecraftTransformer.atRemapper()) + NonClassCopyMode.FIX_META_INF.remappers
+                    listOf(AccessTransformerMinecraftTransformer.atRemapper(project.logger)) + NonClassCopyMode.FIX_META_INF.remappers
                 )
                 remapper.apply(it)
             }

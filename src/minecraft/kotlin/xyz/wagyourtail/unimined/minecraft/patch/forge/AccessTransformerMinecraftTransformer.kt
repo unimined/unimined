@@ -5,16 +5,11 @@ import net.fabricmc.accesswidener.AccessWidenerWriter
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
-import net.minecraftforge.accesstransformer.AccessTransformer
+import net.minecraftforge.accesstransformer.*
 import net.minecraftforge.accesstransformer.AccessTransformer.Modifier
-import net.minecraftforge.accesstransformer.ClassTarget
-import net.minecraftforge.accesstransformer.FieldTarget
-import net.minecraftforge.accesstransformer.InnerClassTarget
-import net.minecraftforge.accesstransformer.MethodTarget
 import net.minecraftforge.accesstransformer.Target
-import net.minecraftforge.accesstransformer.TargetType
-import net.minecraftforge.accesstransformer.TransformerProcessor
 import net.minecraftforge.accesstransformer.parser.AccessTransformerList
+import org.gradle.api.logging.Logger
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import java.io.*
 import java.nio.charset.StandardCharsets
@@ -25,7 +20,7 @@ import kotlin.io.path.*
 
 object AccessTransformerMinecraftTransformer {
 
-    fun atRemapper(remapToLegacy: Boolean = false): OutputConsumerPath.ResourceRemapper =
+    fun atRemapper(logger: Logger, remapToLegacy: Boolean = false): OutputConsumerPath.ResourceRemapper =
         object : OutputConsumerPath.ResourceRemapper {
             override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
                 return relativePath.name == "accesstransformer.cfg" ||
@@ -42,7 +37,7 @@ object AccessTransformerMinecraftTransformer {
                 output.parent.createDirectories()
                 BufferedReader(input.reader()).use { reader ->
                     transformFromLegacyTransformer(reader).use { fromLegacy ->
-                        remapModernTransformer(fromLegacy.buffered(), remapper).use { remapped ->
+                        remapModernTransformer(fromLegacy.buffered(), remapper, logger).use { remapped ->
                             Files.newBufferedWriter(
                                 output,
                                 StandardCharsets.UTF_8,
@@ -215,7 +210,7 @@ object AccessTransformerMinecraftTransformer {
         return line
     }
 
-    private fun remapModernTransformer(reader: BufferedReader, remapper: TinyRemapper): Reader = object : Reader() {
+    private fun remapModernTransformer(reader: BufferedReader, remapper: TinyRemapper, logger: Logger): Reader = object : Reader() {
         var line: String? = null
         var closed = false
 
@@ -241,7 +236,7 @@ object AccessTransformerMinecraftTransformer {
             if (line == null) {
                 return -1
             }
-            line = remapModernTransformer(line!!, remapper) + "\n"
+            line = remapModernTransformer(line!!, remapper, logger) + "\n"
             return read(cbuf, off, len)
         }
 
@@ -258,7 +253,7 @@ object AccessTransformerMinecraftTransformer {
         }
     }
 
-    private fun remapModernTransformer(line: String, tremapper: TinyRemapper): String {
+    private fun remapModernTransformer(line: String, tremapper: TinyRemapper, logger: Logger): String {
         try {
             val remapper = tremapper.environment.remapper
             val classMatch = modernClass.matchEntire(line)
@@ -293,7 +288,7 @@ object AccessTransformerMinecraftTransformer {
                 val remappedName = remapper.mapFieldName(owner.replace(".", "/"), name, null)
                 return "$access $remappedOwner $remappedName $comment"
             }
-            println("Failed to match: $line")
+            logger.info("Failed to match: $line")
             return line
         } catch (e: Exception) {
             e.printStackTrace()
@@ -329,7 +324,7 @@ object AccessTransformerMinecraftTransformer {
         return output
     }
 
-    fun at2aw(at: Path, output: Path, namespace: String, mappings: MappingTreeView): Path {
+    fun at2aw(at: Path, output: Path, namespace: String, mappings: MappingTreeView, logger: Logger): Path {
         val inReader = at.bufferedReader(
             StandardCharsets.UTF_8,
             1024,
@@ -377,27 +372,27 @@ object AccessTransformerMinecraftTransformer {
                                 awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
                             }
                             Modifier.PROTECTED -> {
-                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'protected' but AW don't support doing this\nmaking the field public instead.")
+                                logger.warn("Tried to make ${member.className}.${fieldName} $fieldDesc 'protected' but AW don't support doing this\nmaking the field public instead.")
                                 awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
                             }
                             Modifier.DEFAULT -> {
-                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
+                                logger.warn("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
                             }
                             Modifier.PRIVATE -> {
-                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
+                                logger.warn("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
                             }
                         }
 
                         when (tFinal) {
                             AccessTransformer.FinalState.LEAVE -> {}
                             AccessTransformer.FinalState.MAKEFINAL -> {
-                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'final' but AW don't support doing this.")
+                                logger.warn("Tried to make ${member.className}.${fieldName} $fieldDesc 'final' but AW don't support doing this.")
                             }
                             AccessTransformer.FinalState.REMOVEFINAL -> {
                                 awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.MUTABLE, false)
                             }
                             AccessTransformer.FinalState.CONFLICT -> {
-                                println("FINAL-STATE CONFLICT FOR ${member.className}.${fieldName} $fieldDesc!")
+                                logger.warn("FINAL-STATE CONFLICT FOR ${member.className}.${fieldName} $fieldDesc!")
                             }
                         }
                     }
@@ -409,25 +404,25 @@ object AccessTransformerMinecraftTransformer {
                                 awWriter.visitMethod(member.className, parts[0], parts[1], AccessWidenerReader.AccessType.ACCESSIBLE, false)
                             }
                             Modifier.PROTECTED -> {
-                                println("Tried to make ${member.className}.${parts[0]}${parts[1]} 'protected' but AW don't support doing this\nmaking the function public instead.")
+                                logger.warn("Tried to make ${member.className}.${parts[0]}${parts[1]} 'protected' but AW don't support doing this\nmaking the function public instead.")
                                 awWriter.visitMethod(member.className, parts[0], parts[1], AccessWidenerReader.AccessType.ACCESSIBLE, false)
                             }
                             Modifier.DEFAULT -> {
-                                println("Tried to make ${member.className}.${parts[0]}${parts[1]} 'default' but AW don't support doing this.")
+                                logger.warn("Tried to make ${member.className}.${parts[0]}${parts[1]} 'default' but AW don't support doing this.")
                             }
                             Modifier.PRIVATE -> {
-                                println("Tried to make ${member.className}.${parts[0]}${parts[1]} 'private' but AW don't support doing this.")
+                                logger.warn("Tried to make ${member.className}.${parts[0]}${parts[1]} 'private' but AW don't support doing this.")
                             }
                         }
 
                         when (tFinal) {
                             AccessTransformer.FinalState.LEAVE -> {}
                             AccessTransformer.FinalState.MAKEFINAL -> {
-                                println("Tried to make ${member.className}.${parts[0]}${parts[1]} 'final' but AW don't support doing this.")
+                                logger.warn("Tried to make ${member.className}.${parts[0]}${parts[1]} 'final' but AW don't support doing this.")
                             }
                             AccessTransformer.FinalState.REMOVEFINAL -> awWriter.visitMethod(member.className, parts[0], parts[1], AccessWidenerReader.AccessType.EXTENDABLE, false)
                             AccessTransformer.FinalState.CONFLICT -> {
-                                println("FINAL-STATE CONFLICT FOR ${member.className}.${parts[0]}${parts[1]}!")
+                                logger.warn("FINAL-STATE CONFLICT FOR ${member.className}.${parts[0]}${parts[1]}!")
                             }
                         }
                     }
@@ -445,7 +440,7 @@ object AccessTransformerMinecraftTransformer {
                                 )
 
                                 Modifier.PROTECTED -> {
-                                    println("Tried to make $className 'protected' but AW don't support doing this\nmaking the class public instead.")
+                                    logger.warn("Tried to make $className 'protected' but AW don't support doing this\nmaking the class public instead.")
                                     awWriter.visitClass(
                                         className,
                                         AccessWidenerReader.AccessType.ACCESSIBLE,
@@ -454,18 +449,18 @@ object AccessTransformerMinecraftTransformer {
                                 }
 
                                 Modifier.DEFAULT -> {
-                                    println("Tried to make $className 'default' but AW don't support doing this.")
+                                    logger.warn("Tried to make $className 'default' but AW don't support doing this.")
                                 }
 
                                 Modifier.PRIVATE -> {
-                                    println("Tried to make $className 'private' but AW don't support doing this.")
+                                    logger.warn("Tried to make $className 'private' but AW don't support doing this.")
                                 }
                             }
 
                             when (tFinal) {
                                 AccessTransformer.FinalState.LEAVE -> {}
                                 AccessTransformer.FinalState.MAKEFINAL -> {
-                                    println("Tried to make $className 'final' but AW don't support doing this.")
+                                    logger.warn("Tried to make $className 'final' but AW don't support doing this.")
                                 }
 
                                 AccessTransformer.FinalState.REMOVEFINAL -> awWriter.visitClass(
@@ -475,7 +470,7 @@ object AccessTransformerMinecraftTransformer {
                                 )
 
                                 AccessTransformer.FinalState.CONFLICT -> {
-                                    println("FINAL-STATE CONFLICT FOR $className!")
+                                    logger.warn("FINAL-STATE CONFLICT FOR $className!")
                                 }
                             }
                         } else {
@@ -490,25 +485,25 @@ object AccessTransformerMinecraftTransformer {
                                                 awWriter.visitMethod(member.className, methodName, methodDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
                                             }
                                             Modifier.PROTECTED -> {
-                                                println("Tried to make ${member.className}.${methodName}${methodDesc} 'protected' but AW don't support doing this\nmaking the function public instead.")
+                                                logger.warn("Tried to make ${member.className}.${methodName}${methodDesc} 'protected' but AW don't support doing this\nmaking the function public instead.")
                                                 awWriter.visitMethod(member.className, methodName, methodDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
                                             }
                                             Modifier.DEFAULT -> {
-                                                println("Tried to make ${member.className}.${methodName}${methodDesc} 'default' but AW don't support doing this.")
+                                                logger.warn("Tried to make ${member.className}.${methodName}${methodDesc} 'default' but AW don't support doing this.")
                                             }
                                             Modifier.PRIVATE -> {
-                                                println("Tried to make ${member.className}.${methodName}${methodDesc} 'private' but AW don't support doing this.")
+                                                logger.warn("Tried to make ${member.className}.${methodName}${methodDesc} 'private' but AW don't support doing this.")
                                             }
                                         }
 
                                         when (tFinal) {
                                             AccessTransformer.FinalState.LEAVE -> {}
                                             AccessTransformer.FinalState.MAKEFINAL -> {
-                                                println("Tried to make ${member.className}.${methodName}${methodDesc} 'final' but AW don't support doing this.")
+                                                logger.warn("Tried to make ${member.className}.${methodName}${methodDesc} 'final' but AW don't support doing this.")
                                             }
                                             AccessTransformer.FinalState.REMOVEFINAL -> awWriter.visitMethod(member.className, methodName, methodDesc, AccessWidenerReader.AccessType.EXTENDABLE, false)
                                             AccessTransformer.FinalState.CONFLICT -> {
-                                                println("FINAL-STATE CONFLICT FOR ${member.className}.${methodName}${methodDesc}!")
+                                                logger.warn("FINAL-STATE CONFLICT FOR ${member.className}.${methodName}${methodDesc}!")
                                             }
                                         }
                                     }
@@ -523,27 +518,27 @@ object AccessTransformerMinecraftTransformer {
                                                 awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
                                             }
                                             Modifier.PROTECTED -> {
-                                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'protected' but AW don't support doing this\nmaking the field public instead.")
+                                                logger.warn("Tried to make ${member.className}.${fieldName} $fieldDesc 'protected' but AW don't support doing this\nmaking the field public instead.")
                                                 awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
                                             }
                                             Modifier.DEFAULT -> {
-                                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
+                                                logger.warn("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
                                             }
                                             Modifier.PRIVATE -> {
-                                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
+                                                logger.warn("Tried to make ${member.className}.${fieldName} $fieldDesc 'default' but AW don't support doing this.")
                                             }
                                         }
 
                                         when (tFinal) {
                                             AccessTransformer.FinalState.LEAVE -> {}
                                             AccessTransformer.FinalState.MAKEFINAL -> {
-                                                println("Tried to make ${member.className}.${fieldName} $fieldDesc 'final' but AW don't support doing this.")
+                                                logger.warn("Tried to make ${member.className}.${fieldName} $fieldDesc 'final' but AW don't support doing this.")
                                             }
                                             AccessTransformer.FinalState.REMOVEFINAL -> {
                                                 awWriter.visitField(member.className, fieldName, fieldDesc, AccessWidenerReader.AccessType.MUTABLE, false)
                                             }
                                             AccessTransformer.FinalState.CONFLICT -> {
-                                                println("FINAL-STATE CONFLICT FOR ${member.className}.${fieldName} $fieldDesc!")
+                                                logger.warn("FINAL-STATE CONFLICT FOR ${member.className}.${fieldName} $fieldDesc!")
                                             }
                                         }
                                     }

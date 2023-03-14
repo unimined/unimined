@@ -77,10 +77,6 @@ object FixParamAnnotations {
         }
 
         private val expectedSynthetic by lazy {
-            if (name.contains("nu\$b")) {
-                println()
-            }
-
             // check for enum
             if ((access and Opcodes.ACC_ENUM) != 0) {
                 return@lazy listOf(Type.getType("Ljava/lang/String;"), Type.INT_TYPE)

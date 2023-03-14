@@ -224,7 +224,7 @@ class ModRemapperImpl(
                     AccessWidenerMinecraftTransformer.awRemapper(
                         remap.first.type.id,
                         remap.second.type.id
-                    ), innerJarStripper, AccessTransformerMinecraftTransformer.atRemapper(remapAtToLegacy)
+                    ), innerJarStripper, AccessTransformerMinecraftTransformer.atRemapper(project.logger, remapAtToLegacy)
                 ) + NonClassCopyMode.FIX_META_INF.remappers + (
                     if (remapper.second != null) {
                         listOf(remapper.second!!)

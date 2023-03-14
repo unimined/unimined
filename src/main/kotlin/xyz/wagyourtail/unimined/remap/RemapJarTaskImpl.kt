@@ -118,7 +118,7 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
                     remapper,
                     listOf(
                         AccessWidenerMinecraftTransformer.awRemapper(fromNs.namespace, toNs.namespace),
-                        AccessTransformerMinecraftTransformer.atRemapper(remapATToLegacy.get()),
+                        AccessTransformerMinecraftTransformer.atRemapper(project.logger, remapATToLegacy.get()),
                         betterMixinExtension
                     )
                 )

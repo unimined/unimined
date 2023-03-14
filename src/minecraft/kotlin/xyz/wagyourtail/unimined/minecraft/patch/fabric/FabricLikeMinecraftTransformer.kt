@@ -352,7 +352,7 @@ abstract class FabricLikeMinecraftTransformer(
     )
     override fun at2aw(input: File, output: File) = at2aw(input, output, devNamespace)
     override fun at2aw(input: File, output: File, namespace: MappingNamespace) : File {
-        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), namespace.namespace, project.mappings.getMappingTree(EnvType.COMBINED)).toFile()
+        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), namespace.namespace, project.mappings.getMappingTree(EnvType.COMBINED), project.logger).toFile()
     }
 
     override fun mergeAws(inputs: List<File>): File {
