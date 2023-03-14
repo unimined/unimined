@@ -32,6 +32,10 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     open val merger: ClassMerger = ClassMerger()
 
+    override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit = { cl, _, _, e ->
+        throw RuntimeException("Error merging class ${cl.name}", e)
+    }
+
     fun isAnonClass(node: ClassNode): Boolean =
         node.innerClasses?.firstOrNull { it.name == node.name }.let { it != null && it.innerName == null}
 
@@ -89,7 +93,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
                 val out = try {
                     merger.accept(node, serverNode)
                 } catch (e: Exception) {
-                    throw RuntimeException("Error merging class $name", e)
+                    onMergeFail(node, serverNode!!, mergedFS, e)
+                    continue
                 }
                 out.accept(classWriter)
                 val path = mergedFS.getPath(name)
