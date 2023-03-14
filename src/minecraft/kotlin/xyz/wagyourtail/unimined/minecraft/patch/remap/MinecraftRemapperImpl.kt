@@ -36,6 +36,7 @@ class MinecraftRemapperImpl(
 
     @ApiStatus.Internal
     fun provide(minecraft: MinecraftJar, remapTo: MappingNamespace, remapFallback: MappingNamespace): MinecraftJar {
+        if (remapTo == minecraft.mappingNamespace && remapFallback == minecraft.fallbackNamespace) return minecraft
         return minecraft.let(consumerApply {
             val mappingsId = mappings.getCombinedNames(minecraft.envType)
             val parent = if (mappings.hasStubs(envType)) {

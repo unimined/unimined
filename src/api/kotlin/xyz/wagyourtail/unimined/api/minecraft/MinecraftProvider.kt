@@ -53,6 +53,21 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
      */
     abstract val launcher: LauncherProvider
 
+    /**
+     * namespace to use when merging
+     * @since 0.4.2
+     */
+    @get:ApiStatus.Internal
+    @set:ApiStatus.Internal
+    var mergeNamespace: MappingNamespace = MappingNamespace.OFFICIAL
+
+    /**
+     * @since 0.4.2
+     */
+    fun setMergeNamespace(namespace: String) {
+        mergeNamespace = MappingNamespace.getNamespace(namespace)
+    }
+
     @Deprecated("use launcher instead", ReplaceWith("launcher"))
     val runs
         get() = launcher

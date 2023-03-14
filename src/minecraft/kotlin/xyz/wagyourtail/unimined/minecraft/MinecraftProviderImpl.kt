@@ -269,10 +269,10 @@ abstract class MinecraftProviderImpl(
                     "jar",
                     minecraft.getMinecraft(EnvType.SERVER)
                 )
-                mcPatcher.merge(
-                    client,
-                    server
-                )
+                mcRemapper.provide(mcPatcher.merge(
+                    mcRemapper.provide(client, mergeNamespace, mergeNamespace),
+                    mcRemapper.provide(server, mergeNamespace, mergeNamespace)
+                ), MappingNamespace.OFFICIAL, MappingNamespace.OFFICIAL)
             } else {
                 MinecraftJar(
                     minecraft.mcVersionFolder(minecraft.version),
