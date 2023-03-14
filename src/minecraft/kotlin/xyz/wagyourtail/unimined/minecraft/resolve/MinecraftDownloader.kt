@@ -421,10 +421,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     fun serverJarDownloadPath(version: String): Path {
-        val versionF = if (version.startsWith("a")) {
-            parent.serverVersionOverride.get() ?: version.replaceFirst("1", "0")
-        } else version
-        return mcVersionFolder(version).resolve("minecraft-$versionF-server.jar")
+        return mcVersionFolder(version).resolve("minecraft-$version-server.jar")
     }
 
     fun clientMappingsDownloadPath(version: String): Path {
