@@ -182,7 +182,9 @@ abstract class AbstractMinecraftTransformer protected constructor(
         "*",
         "META-INF/**",
         "net/minecraft/**",
-        "com/mojang/blaze3d/**"
+        "com/mojang/blaze3d/**",
+        "paulscode/sound/**",
+        "com/jcraft/**"
     ).map { Regex(GlobToRegex.apply(it)) }
 
     /*
