@@ -12,9 +12,11 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftResolver
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.util.LazyMutable
+import xyz.wagyourtail.unimined.util.stream
 import xyz.wagyourtail.unimined.util.testSha1
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.io.InputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URI
@@ -32,13 +34,14 @@ import kotlin.io.path.inputStream
 class MinecraftDownloader(val project: Project, private val parent: MinecraftProviderImpl) : MinecraftResolver() {
 
     companion object {
+
         fun download(download: Download, path: Path) {
 
             if (testSha1(download.size, download.sha1, path)) {
                 return
             }
 
-            download.url?.toURL()?.openStream()?.use {
+            download.url?.stream()?.use {
                 Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
             }
 
@@ -277,7 +280,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
 
         if (!versionOverridesFile.exists()) {
             try {
-                URI.create("https://maven.wagyourtail.xyz/releases/mc-c2s.json").toURL().openStream().use {
+                URI.create("https://maven.wagyourtail.xyz/releases/mc-c2s.json").stream().use {
                     Files.write(
                         versionOverridesFile,
                         it.readBytes(),
@@ -287,7 +290,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 }
             } catch (e: Exception) {
                 versionOverridesFile.deleteIfExists()
-                e.printStackTrace()
+                throw e
             }
         }
 

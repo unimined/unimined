@@ -6,7 +6,9 @@ import org.slf4j.LoggerFactory
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.io.OutputStream
+import java.net.URI
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
@@ -28,6 +30,12 @@ fun Configuration.getFile(dep: Dependency, extension: Regex): File {
 fun Configuration.getFile(dep: Dependency, extension: String = "jar"): File {
     resolve()
     return files(dep).first { it.extension == extension }
+}
+
+fun URI.stream(): InputStream {
+    val conn = toURL().openConnection()
+    conn.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+    return conn.getInputStream()
 }
 
 object OSUtils {

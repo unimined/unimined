@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.Constants.ASSET_BASE_URL
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
+import xyz.wagyourtail.unimined.util.stream
 import xyz.wagyourtail.unimined.util.testSha1
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -43,7 +44,7 @@ class AssetsDownloader(val project: Project, private val parent: MinecraftProvid
             return
         }
 
-        assets.url?.toURL()?.openStream()?.use {
+        assets.url?.stream()?.use {
             Files.copy(it, index, StandardCopyOption.REPLACE_EXISTING)
         }
 

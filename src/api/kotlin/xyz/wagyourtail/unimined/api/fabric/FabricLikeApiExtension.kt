@@ -1,12 +1,14 @@
 package xyz.wagyourtail.unimined.api.fabric
 
+import xyz.wagyourtail.unimined.util.stream
+import java.net.URI
 import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
 abstract class FabricLikeApiExtension(val name: String) {
     fun module(moduleName: String, version: String): String {
-        val url = URL(getUrl(version))
-        url.openStream().use {
+        val url = URI(getUrl(version))
+        url.stream().use {
             val dbf = DocumentBuilderFactory.newInstance()
             val db = dbf.newDocumentBuilder()
             val doc = db.parse(it)
