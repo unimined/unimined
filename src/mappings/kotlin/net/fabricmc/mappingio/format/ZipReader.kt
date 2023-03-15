@@ -178,12 +178,14 @@ object ZipReader {
                                         mappingTree
                                     )
                                 }
+                            } else {
+                                println("Skipping SRG Client")
                             }
                         }
 
                         MappingType.SRG_SERVER -> {
-                            readInputStreamFor(entry, zip) {
-                                if (envType == EnvType.SERVER) {
+                            if (envType == EnvType.SERVER) {
+                                readInputStreamFor(entry, zip) {
                                     SrgReader.read(
                                         InputStreamReader(it),
                                         MappingNamespace.OFFICIAL.namespace,
@@ -191,6 +193,8 @@ object ZipReader {
                                         mappingTree
                                     )
                                 }
+                            } else {
+                                println("Skipping SRG Server")
                             }
                         }
 
@@ -217,6 +221,8 @@ object ZipReader {
                                         mappingTree
                                     )
                                 }
+                            } else {
+                                println("Skipping RGS Client")
                             }
                         }
 
@@ -230,6 +236,8 @@ object ZipReader {
                                         mappingTree
                                     )
                                 }
+                            } else {
+                                println("Skipping RGS Server")
                             }
                         }
 

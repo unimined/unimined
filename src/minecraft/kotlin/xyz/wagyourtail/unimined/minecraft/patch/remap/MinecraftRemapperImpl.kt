@@ -63,7 +63,7 @@ class MinecraftRemapperImpl(
                 return@consumerApply target
             }
             val last = path.last()
-            project.logger.lifecycle("Remapping minecraft to $remapTo")
+            project.logger.lifecycle("Remapping minecraft $envType to $remapTo")
             var prevTarget = minecraft.path
             var prevNamespace = minecraft.mappingNamespace
             for (step in path) {
@@ -118,7 +118,7 @@ class MinecraftRemapperImpl(
             }
             remapper.finish()
         } catch (e: RuntimeException) {
-            project.logger.warn("Failed to remap $from to $target")
+            project.logger.warn("Failed to remap $from to $target in $envType")
             target.deleteIfExists()
             throw e
         }

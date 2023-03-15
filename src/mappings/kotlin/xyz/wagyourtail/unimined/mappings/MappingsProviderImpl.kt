@@ -288,137 +288,134 @@ abstract class MappingsProviderImpl(
     private class ArgumentMapping(to: String, val index: Int) : Mapping(to)
     private class LocalVariableMapping(to: String, val lvIndex: Int, val startOpIdx: Int, val lvtRowIndex: Int) : Mapping(to)
 
-    private val mappingCache = mutableMapOf<Pair<MappingNamespace, MappingNamespace>, List<Mapping>>()
-
     private fun getInternalMappingsProvider(
         envType: EnvType,
         remap: Pair<MappingNamespace, MappingNamespace>,
         remapLocalVariables: Boolean,
     ) : List<Mapping> {
-        return mappingCache.computeIfAbsent(remap) {
-            val reverse = remap.first.shouldReverse(remap.second)
-            val srcName = (if (reverse) remap.second else remap.first).namespace
-            val dstName = (if (reverse) remap.first else remap.second).namespace
+        project.logger.info("Getting internal mappings provider for $envType, $remap, $remapLocalVariables")
+        val reverse = remap.first.shouldReverse(remap.second)
+        val srcName = (if (reverse) remap.second else remap.first).namespace
+        val dstName = (if (reverse) remap.first else remap.second).namespace
 
-            val mappingTree = getMappingTree(envType)
-            val fromId = mappingTree.getNamespaceId(srcName)
-            val toId = mappingTree.getNamespaceId(dstName)
+        val mappingTree = getMappingTree(envType)
+        val fromId = mappingTree.getNamespaceId(srcName)
+        val toId = mappingTree.getNamespaceId(dstName)
 
-            if (fromId == MappingTreeView.NULL_NAMESPACE_ID) {
-                throw IllegalArgumentException("Unknown source namespace: $srcName")
+        if (fromId == MappingTreeView.NULL_NAMESPACE_ID) {
+            throw IllegalArgumentException("Unknown source namespace: $srcName")
+        }
+
+        if (toId == MappingTreeView.NULL_NAMESPACE_ID) {
+            throw IllegalArgumentException("Unknown target namespace: $dstName")
+        }
+
+        val mappings = mutableListOf<Mapping>()
+
+        for (classDef in mappingTree.classes) {
+            var fromClassName = classDef.getName(fromId)
+            var toClassName = classDef.getName(toId)
+
+            if (fromClassName == null) {
+                project.logger.info("Target class {} has no name in namespace {}", classDef, srcName)
+                fromClassName = toClassName
             }
 
-            if (toId == MappingTreeView.NULL_NAMESPACE_ID) {
-                throw IllegalArgumentException("Unknown target namespace: $dstName")
+            // detect missing inner class
+            if (fromClassName != null && fromClassName.contains("$")) {
+                toClassName = fixInnerClassName(
+                    mappingTree,
+                    fromId,
+                    toId,
+                    fromClassName,
+                    toClassName
+                )
             }
 
-            val mappings = mutableListOf<Mapping>()
+            if (toClassName == null) {
+                project.logger.info("Target class {} has no name in namespace {}", classDef, dstName)
+                toClassName = fromClassName
+            }
 
-            for (classDef in mappingTree.classes) {
-                var fromClassName = classDef.getName(fromId)
-                var toClassName = classDef.getName(toId)
+            if (fromClassName == null) {
+                project.logger.info("Class $classDef has no name in either namespace $srcName or $dstName")
+                continue
+            }
 
-                if (fromClassName == null) {
-                    project.logger.info("Target class {} has no name in namespace {}", classDef, srcName)
-                    fromClassName = toClassName
+            if (reverse) {
+                mappings.add(ClassMapping(toClassName, fromClassName))
+            } else {
+                mappings.add(ClassMapping(fromClassName, toClassName))
+            }
+
+            for (fieldDef in classDef.fields) {
+                val fromFieldName = fieldDef.getName(fromId)
+                val toFieldName = fieldDef.getName(toId)
+
+                if (fromFieldName == null) {
+                    project.logger.info("Target field {} has no name in namespace {}", fieldDef, srcName)
+                    continue
                 }
 
-                // detect missing inner class
-                if (fromClassName != null && fromClassName.contains("$")) {
-                    toClassName = fixInnerClassName(
-                        mappingTree,
-                        fromId,
-                        toId,
-                        fromClassName,
-                        toClassName
-                    )
-                }
-
-                if (toClassName == null) {
-                    project.logger.info("Target class {} has no name in namespace {}", classDef, dstName)
-                    toClassName = fromClassName
-                }
-
-                if (fromClassName == null) {
-                    project.logger.info("Class $classDef has no name in either namespace $srcName or $dstName")
+                if (toFieldName == null) {
+                    project.logger.info("Target field {} has no name in namespace {}", fieldDef, dstName)
                     continue
                 }
 
                 if (reverse) {
-                    mappings.add(ClassMapping(toClassName, fromClassName))
+                    mappings.add(FieldMapping(toFieldName, fieldDef.getDesc(toId), fromFieldName))
                 } else {
-                    mappings.add(ClassMapping(fromClassName, toClassName))
+                    mappings.add(FieldMapping(fromFieldName, fieldDef.getDesc(fromId), toFieldName))
+                }
+            }
+
+            for (methodDef in classDef.methods) {
+                val fromMethodName = methodDef.getName(fromId)
+                val toMethodName = methodDef.getName(toId)
+
+                if (fromMethodName == null) {
+                    project.logger.info("Target method {} has no name in namespace {}", methodDef, srcName)
+                    continue
                 }
 
-                for (fieldDef in classDef.fields) {
-                    val fromFieldName = fieldDef.getName(fromId)
-                    val toFieldName = fieldDef.getName(toId)
-
-                    if (fromFieldName == null) {
-                        project.logger.info("Target field {} has no name in namespace {}", fieldDef, srcName)
-                        continue
-                    }
-
-                    if (toFieldName == null) {
-                        project.logger.info("Target field {} has no name in namespace {}", fieldDef, dstName)
-                        continue
-                    }
-
-                    if (reverse) {
-                        mappings.add(FieldMapping(toFieldName, fieldDef.getDesc(toId), fromFieldName))
-                    } else {
-                        mappings.add(FieldMapping(fromFieldName, fieldDef.getDesc(fromId), toFieldName))
-                    }
+                if (toMethodName == null) {
+                    project.logger.info("Target method {} has no name in namespace {}", methodDef, dstName)
+                    continue
                 }
 
-                for (methodDef in classDef.methods) {
-                    val fromMethodName = methodDef.getName(fromId)
-                    val toMethodName = methodDef.getName(toId)
+                if (reverse) {
+                    mappings.add(MethodMapping(toMethodName, methodDef.getDesc(toId)!!, fromMethodName))
+                } else {
+                    mappings.add(MethodMapping(fromMethodName, methodDef.getDesc(fromId)!!, toMethodName))
+                }
 
-                    if (fromMethodName == null) {
-                        project.logger.info("Target method {} has no name in namespace {}", methodDef, srcName)
-                        continue
-                    }
+                if (remapLocalVariables) {
+                    for (arg in methodDef.args) {
+                        val toArgName = if (reverse) arg.getName(fromId) else arg.getName(toId)
 
-                    if (toMethodName == null) {
-                        project.logger.info("Target method {} has no name in namespace {}", methodDef, dstName)
-                        continue
-                    }
-
-                    if (reverse) {
-                        mappings.add(MethodMapping(toMethodName, methodDef.getDesc(toId)!!, fromMethodName))
-                    } else {
-                        mappings.add(MethodMapping(fromMethodName, methodDef.getDesc(fromId)!!, toMethodName))
-                    }
-
-                    if (remapLocalVariables) {
-                        for (arg in methodDef.args) {
-                            val toArgName = if (reverse) arg.getName(fromId) else arg.getName(toId)
-
-                            if (toArgName != null) {
-                                mappings.add(ArgumentMapping(toArgName, arg.lvIndex))
-                            }
+                        if (toArgName != null) {
+                            mappings.add(ArgumentMapping(toArgName, arg.lvIndex))
                         }
+                    }
 
-                        for (localVar in methodDef.vars) {
-                            val toLocalVarName = if (reverse) localVar.getName(fromId) else localVar.getName(toId)
+                    for (localVar in methodDef.vars) {
+                        val toLocalVarName = if (reverse) localVar.getName(fromId) else localVar.getName(toId)
 
-                            if (toLocalVarName != null) {
-                                mappings.add(
-                                    LocalVariableMapping(
-                                        toLocalVarName,
-                                        localVar.lvIndex,
-                                        localVar.startOpIdx,
-                                        localVar.lvtRowIndex
-                                    )
+                        if (toLocalVarName != null) {
+                            mappings.add(
+                                LocalVariableMapping(
+                                    toLocalVarName,
+                                    localVar.lvIndex,
+                                    localVar.startOpIdx,
+                                    localVar.lvtRowIndex
                                 )
-                            }
+                            )
                         }
                     }
                 }
             }
-            mappings
         }
+        return mappings
     }
 
     @ApiStatus.Internal
