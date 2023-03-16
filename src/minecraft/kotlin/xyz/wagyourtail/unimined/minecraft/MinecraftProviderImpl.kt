@@ -42,6 +42,8 @@ import xyz.wagyourtail.unimined.util.OSUtils
 import xyz.wagyourtail.unimined.util.consumerApply
 import java.net.HttpURLConnection
 import java.net.URI
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
@@ -406,7 +408,7 @@ abstract class MinecraftProviderImpl(
         if (!infoFile.exists()) {
             if (!project.gradle.startParameter.isOffline) {
                 //test if betacraft has our version on file
-                val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${minecraft.metadata.id}.info")
+                val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${URLEncoder.encode(minecraft.metadata.id, StandardCharsets.UTF_8.name()).replace("+", "%20")}.info")
                     .toURL()
                     .openConnection() as HttpURLConnection
                 url.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
