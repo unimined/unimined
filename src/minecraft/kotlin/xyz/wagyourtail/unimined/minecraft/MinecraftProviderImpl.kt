@@ -123,9 +123,11 @@ abstract class MinecraftProviderImpl(
 
     private fun afterEvaluate() {
         val dep = minecraft.dependency
+        val urlEncodeVersion = URLEncoder.encode(dep.version, StandardCharsets.UTF_8.name())
+
         combined.dependencies.clear()
         val newDep = project.dependencies.create(
-            "net.minecraft:${getMinecraftDepName()}:${dep.version}"
+            "net.minecraft:${getMinecraftDepName()}:${urlEncodeVersion}"
         )
         combined.dependencies.add(newDep)
         minecraft.dependency = newDep
@@ -408,7 +410,7 @@ abstract class MinecraftProviderImpl(
         if (!infoFile.exists()) {
             if (!project.gradle.startParameter.isOffline) {
                 //test if betacraft has our version on file
-                val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${URLEncoder.encode(minecraft.metadata.id, StandardCharsets.UTF_8.name()).replace("+", "%20")}.info")
+                val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${URLEncoder.encode(minecraft.metadata.id, StandardCharsets.UTF_8.name())}.info")
                     .toURL()
                     .openConnection() as HttpURLConnection
                 url.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")

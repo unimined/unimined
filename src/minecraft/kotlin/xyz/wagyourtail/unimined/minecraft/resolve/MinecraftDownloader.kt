@@ -16,10 +16,11 @@ import xyz.wagyourtail.unimined.util.stream
 import xyz.wagyourtail.unimined.util.testSha1
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.io.InputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URI
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -247,6 +248,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     private fun getVersionFromLauncherMeta(versionId: String): JsonObject {
+        val versionId = URLDecoder.decode(versionId, StandardCharsets.UTF_8.name())
         for (version in launcherMeta) {
             val versionObject = version.asJsonObject
             val id = versionObject.get("id").asString
