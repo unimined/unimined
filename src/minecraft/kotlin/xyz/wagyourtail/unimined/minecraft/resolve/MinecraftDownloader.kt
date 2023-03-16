@@ -74,7 +74,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 project.logger.info("selecting split-jar client for sourceset client")
                 parent.client.dependencies.add(
                     project.dependencies.create(
-                        "net.minecraft:${dependency.name}:${version}:client"
+                        "net.minecraft:${dependency.name}:${dependency.version!!}:client"
                     )
                 )
             } else {
@@ -82,7 +82,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 project.logger.info("selecting combined-jar for sourceset client")
                 parent.client.dependencies.add(
                     project.dependencies.create(
-                        "net.minecraft:${dependency.name}:${version}"
+                        "net.minecraft:${dependency.name}:${dependency.version!!}"
                     )
                 )
             }
@@ -92,7 +92,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 project.logger.info("selecting split-jar server for sourceset server")
                 parent.server.dependencies.add(
                     project.dependencies.create(
-                        "net.minecraft:${dependency.name}:${version}:server"
+                        "net.minecraft:${dependency.name}:${dependency.version!!}:server"
                     )
                 )
             } else {
@@ -100,7 +100,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 project.logger.info("selecting combined-jar for sourceset server")
                 parent.server.dependencies.add(
                     project.dependencies.create(
-                        "net.minecraft:${dependency.name}:${version}"
+                        "net.minecraft:${dependency.name}:${dependency.version!!}"
                     )
                 )
             }
@@ -112,14 +112,14 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
                 if (client) {
                     it.dependencies.add(
                         project.dependencies.create(
-                            "net.minecraft:${dependency.name}:${version}:client"
+                            "net.minecraft:${dependency.name}:${dependency.version!!}:client"
                         )
                     )
                 }
                 if (server) {
                     it.dependencies.add(
                         project.dependencies.create(
-                            "net.minecraft:${dependency.name}:${version}:server"
+                            "net.minecraft:${dependency.name}:${dependency.version!!}:server"
                         )
                     )
                 }
@@ -153,7 +153,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     override val version: String by lazy {
-        dependency.version!!
+        URLDecoder.decode(dependency.version!!, StandardCharsets.UTF_8.name())
     }
 
     val launcherMeta by lazy {
@@ -248,7 +248,6 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
     }
 
     private fun getVersionFromLauncherMeta(versionId: String): JsonObject {
-        val versionId = URLDecoder.decode(versionId, StandardCharsets.UTF_8.name())
         for (version in launcherMeta) {
             val versionObject = version.asJsonObject
             val id = versionObject.get("id").asString
