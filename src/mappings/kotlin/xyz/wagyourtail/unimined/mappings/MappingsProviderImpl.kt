@@ -121,7 +121,7 @@ abstract class MappingsProviderImpl(
         } + mappingFileEnvs.computeIfAbsent(envType) {
             val config = getMappings(envType)
             config.dependencies.map {
-                it to config.files(it).first { it.extension != "pom" }
+                it to (config.files(it).firstOrNull { it.extension != "pom" } ?: throw IllegalStateException("No mappings file found for $it"))
             }.toSet()
         }
     }
