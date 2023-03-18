@@ -61,6 +61,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     val clientExtra = project.configurations.maybeCreate(Constants.FORGE_CLIENT_EXTRA)
 
     lateinit var mcpConfig: Dependency
+
     val mcpConfigData by lazy {
         val config = project.mappings.getMappings(EnvType.COMBINED).getFile(mcpConfig, Regex("zip"))
         val configJson = ZipReader.readInputStreamFor("config.json", config.toPath()) {

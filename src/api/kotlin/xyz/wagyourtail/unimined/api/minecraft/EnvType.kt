@@ -8,4 +8,14 @@ enum class EnvType(val classifier: String?) {
     SERVER("server"),
     COMBINED(null),
     ;
+
+    companion object {
+        fun parse(value: String) =
+            when (value) {
+                "client" -> CLIENT
+                "server" -> SERVER
+                "combined", "joined" -> COMBINED
+                else -> throw IllegalArgumentException("Invalid environment type: $value")
+            }
+    }
 }
