@@ -89,10 +89,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         project.mappings.getMappings(EnvType.COMBINED).dependencies.apply {
             val empty = isEmpty()
-            mcpConfig = project.dependencies.create("de.oceanlabs.mcp:mcp_config:${provider.minecraft.version}@zip")
-            add(mcpConfig)
+            mcpConfig = project.dependencies.create(userdevCfg["mcp"]?.asString ?: "de.oceanlabs.mcp:mcp_config:${provider.minecraft.version}@zip")
             if (empty) {
                 if (parent.mcpVersion == null || parent.mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
+                add(mcpConfig)
                 add(project.dependencies.create("de.oceanlabs.mcp:mcp_${parent.mcpChannel}:${parent.mcpVersion}@zip"))
             } else {
                 val deps = this.filter { it != mcpConfig }
