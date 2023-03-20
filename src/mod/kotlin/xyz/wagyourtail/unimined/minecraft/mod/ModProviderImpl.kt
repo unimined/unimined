@@ -5,7 +5,6 @@ import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.mod.ModProvider
-import xyz.wagyourtail.unimined.api.unimined
 
 open class ModProviderImpl(
     val project: Project,

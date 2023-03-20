@@ -5,7 +5,6 @@ import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.launch.LauncherProvider
-import xyz.wagyourtail.unimined.api.unimined
 
 class LauncherProvierImpl(val project: Project, unimined: UniminedExtension) : LauncherProvider() {
 

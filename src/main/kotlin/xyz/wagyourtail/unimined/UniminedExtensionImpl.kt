@@ -2,7 +2,6 @@ package xyz.wagyourtail.unimined
 
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.UniminedExtension
-import xyz.wagyourtail.unimined.launch.LauncherProvierImpl
 import xyz.wagyourtail.unimined.mappings.MappingsProviderImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.mod.ModProviderImpl

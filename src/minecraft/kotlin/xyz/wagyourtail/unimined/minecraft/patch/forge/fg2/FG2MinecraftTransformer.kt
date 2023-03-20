@@ -11,7 +11,6 @@ import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
-import xyz.wagyourtail.unimined.util.SemVerUtils
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.net.URI
 import java.nio.file.FileSystems

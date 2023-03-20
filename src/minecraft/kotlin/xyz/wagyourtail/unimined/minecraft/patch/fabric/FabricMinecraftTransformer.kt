@@ -6,7 +6,6 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.fabric.FabricApiExtension
-import xyz.wagyourtail.unimined.api.fabric.LegacyFabricApiExtension
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl

@@ -11,10 +11,10 @@ import org.gradle.process.JavaExecSpec
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.util.getFile
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.FG3MinecraftTransformer
+import xyz.wagyourtail.unimined.util.getFile
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection

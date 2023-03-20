@@ -2,7 +2,6 @@ package xyz.wagyourtail.unimined.api.fabric
 
 import xyz.wagyourtail.unimined.util.stream
 import java.net.URI
-import java.net.URL
 import javax.xml.parsers.DocumentBuilderFactory
 
 abstract class FabricLikeApiExtension(val name: String) {
