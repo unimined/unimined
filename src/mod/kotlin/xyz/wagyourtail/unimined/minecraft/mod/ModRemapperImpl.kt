@@ -123,7 +123,6 @@ class ModRemapperImpl(
             project.mappings.getAvailableMappings(envType)
         )
         project.logger.info("remapping from $prodNamespace to ${devNamespace}/${devFallbackNamespace}")
-        if (count == 0) return
         val configs = mutableMapOf<Configuration, Configuration>()
         for (c in config.configurations) {
             val newC = project.configurations.detachedConfiguration().apply {

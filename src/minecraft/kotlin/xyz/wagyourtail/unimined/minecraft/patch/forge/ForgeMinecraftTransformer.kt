@@ -219,6 +219,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         project.repositories.maven {
             it.url = URI("https://maven.minecraftforge.net/")
             it.metadataSources {
+                it.mavenPom()
                 it.artifact()
             }
         }

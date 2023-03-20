@@ -115,7 +115,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             if (dep[1] == "gson" && dep[2] == "2.8.0") {
                 provider.mcLibraries.dependencies.add(project.dependencies.create("${dep[0]}:${dep[1]}:2.8.9"))
             } else {
-                provider.mcLibraries.dependencies.add(project.dependencies.create(element.asString.replace(".+", "")))
+                provider.mcLibraries.dependencies.add(project.dependencies.create(element.asString))
             }
         }
 
