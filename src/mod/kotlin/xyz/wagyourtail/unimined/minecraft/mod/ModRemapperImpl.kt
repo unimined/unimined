@@ -109,6 +109,12 @@ class ModRemapperImpl(
         val devFallbackNamespace = toFallbackNamespace
         val devNamespace = toNamespace
 
+        val count = config.configurations.sumOf { it.dependencies.size }
+        if (count == 0) {
+            project.logger.lifecycle("No mod dependencies found, skipping.")
+            return
+        }
+        project.logger.lifecycle("Found $count mod dependencies, remapping to $devNamespace")
         val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
             prodNamespace,
             prodNamespace,
@@ -116,11 +122,7 @@ class ModRemapperImpl(
             devNamespace,
             project.mappings.getAvailableMappings(envType)
         )
-        project.logger.lifecycle("remapping from $prodNamespace to ${devNamespace}/${devFallbackNamespace}")
-        project.logger.lifecycle("Calculating total mod dependency count...")
-        val count = config.configurations.sumOf { it.dependencies.size }
-        val last = path.last()
-        project.logger.lifecycle("Found $count dependencies, remapping to $last")
+        project.logger.info("remapping from $prodNamespace to ${devNamespace}/${devFallbackNamespace}")
         if (count == 0) return
         val configs = mutableMapOf<Configuration, Configuration>()
         for (c in config.configurations) {
@@ -164,7 +166,7 @@ class ModRemapperImpl(
             val remapper = constructRemapper(envType, prevNamespace, step.second, mc)
             val tags = preRemapInternal(remapper.first, mods)
             mods.clear()
-            mods.putAll(remapInternal(remapper, envType, tags, step == last, prevNamespace to step.second))
+            mods.putAll(remapInternal(remapper, envType, tags, step.second == devNamespace, prevNamespace to step.second))
             prevNamespace = step.second
             prevPrevNamespace = mcNamespace
         }
