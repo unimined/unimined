@@ -8,10 +8,10 @@ import org.gradle.api.logging.configuration.ShowStacktrace
 import org.gradle.process.ExecResult
 import org.gradle.process.JavaExecSpec
 
-object ForgeToolExecutor {
+object SubprocessExecutor {
     fun shouldShowVerboseStdout(project: Project): Boolean {
         // if running with INFO or DEBUG logging
-        return project.gradle.startParameter.logLevel.compareTo(LogLevel.LIFECYCLE) < 0
+        return project.gradle.startParameter.logLevel < LogLevel.LIFECYCLE
     }
 
     fun shouldShowVerboseStderr(project: Project): Boolean {
@@ -28,6 +28,7 @@ object ForgeToolExecutor {
      */
     fun exec(project: Project, configurator: Action<in JavaExecSpec>): ExecResult {
         return project.javaexec { spec: JavaExecSpec ->
+            spec.workingDir(project.rootProject.projectDir)
             configurator.execute(spec)
             if (shouldShowVerboseStdout(project)) {
                 spec.standardOutput = System.out

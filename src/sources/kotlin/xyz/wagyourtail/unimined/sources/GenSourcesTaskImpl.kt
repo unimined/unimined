@@ -5,7 +5,7 @@ import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.sources.GenSourcesTask
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
-import xyz.wagyourtail.unimined.util.runJarInSubprocess
+import xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
@@ -48,13 +48,14 @@ abstract class GenSourcesTaskImpl() : GenSourcesTask() {
 
             val args = resolvePlaceholders(args, inputJar.toPath(), outputJar.toPath())
 
-            val exit = runJarInSubprocess(
-                decompilerJar.toPath(),
-                *args.toTypedArray(),
-                workingDir = inputJar.parentFile.toPath(),
-            )
-            if (exit != 0) {
-                throw RuntimeException("Decompilation failed with exit code $exit")
+            val result = SubprocessExecutor.exec(project) { spec ->
+                spec.workingDir(inputJar.parentFile)
+                spec.classpath(decompilerJar)
+                spec.args(args)
+            }
+
+            if (result.exitValue != 0) {
+                throw RuntimeException("Decompilation failed with exit code ${result.exitValue}")
             }
         }
     }

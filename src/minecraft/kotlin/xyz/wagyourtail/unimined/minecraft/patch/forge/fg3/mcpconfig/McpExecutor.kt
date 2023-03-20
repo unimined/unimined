@@ -208,7 +208,7 @@ data class McpExecutor(
         }
 
         override fun javaexec(configurator: Action<in JavaExecSpec>) {
-            ForgeToolExecutor.exec(project, configurator).rethrowFailure().assertNormalExitValue()
+            SubprocessExecutor.exec(project, configurator).rethrowFailure().assertNormalExitValue()
         }
 
         override val minecraftLibraries: Set<File>

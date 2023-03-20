@@ -98,89 +98,89 @@ fun Path.getSha1(): String {
 }
 
 
-fun runJarInSubprocess(
-    jar: Path,
-    vararg args: String,
-    mainClass: String? = null,
-    workingDir: Path = Paths.get("."),
-    env: Map<String, String> = mapOf(),
-    wait: Boolean = true,
-    jvmArgs: List<String> = listOf()
-): Int? {
-    val javaHome = System.getProperty("java.home")
-    val javaBin = Paths.get(javaHome, "bin", if (OSUtils.oSId == "windows") "java.exe" else "java")
-    if (!javaBin.exists()) {
-        throw IllegalStateException("java binary not found at $javaBin")
-    }
-    val processArgs = if (mainClass == null) {
-        arrayOf("-jar", jar.toString())
-    } else {
-        arrayOf("-cp", jar.toString(), mainClass)
-    } + args
-    val processBuilder = ProcessBuilder(
-        javaBin.toString(),
-        *jvmArgs.toTypedArray(),
-        *processArgs,
-    )
-
-    val logger = LoggerFactory.getLogger(UniminedExtension::class.java);
-
-    processBuilder.directory(workingDir.toFile())
-    processBuilder.environment().putAll(env)
-
-    logger.info("Running: ${processBuilder.command().joinToString(" ")}")
-    val process = processBuilder.start()
-
-    val inputStream = process.inputStream
-    val errorStream = process.errorStream
-
-    val outputThread = Thread {
-        inputStream.copyTo(object : OutputStream() {
-            // buffer and write lines
-            private var line: String? = null
-
-            override fun write(b: Int) {
-                if (b == '\r'.toInt()) {
-                    return
-                }
-                if (b == '\n'.toInt()) {
-                    logger.info(line)
-                    line = null
-                } else {
-                    line = (line ?: "") + b.toChar()
-                }
-            }
-        })
-    }
-
-    val errorThread = Thread {
-        errorStream.copyTo(object : OutputStream() {
-            // buffer and write lines
-            private var line: String? = null
-
-            override fun write(b: Int) {
-                if (b == '\r'.toInt()) {
-                    return
-                }
-                if (b == '\n'.toInt()) {
-                    logger.error(line)
-                    line = null
-                } else {
-                    line = (line ?: "") + b.toChar()
-                }
-            }
-        })
-    }
-
-    outputThread.start()
-    errorThread.start()
-
-    if (wait) {
-        process.waitFor()
-        return process.exitValue()
-    }
-    return null
-}
+//fun runJarInSubprocess(
+//    jar: Path,
+//    vararg args: String,
+//    mainClass: String? = null,
+//    workingDir: Path = Paths.get("."),
+//    env: Map<String, String> = mapOf(),
+//    wait: Boolean = true,
+//    jvmArgs: List<String> = listOf()
+//): Int? {
+//    val javaHome = System.getProperty("java.home")
+//    val javaBin = Paths.get(javaHome, "bin", if (OSUtils.oSId == "windows") "java.exe" else "java")
+//    if (!javaBin.exists()) {
+//        throw IllegalStateException("java binary not found at $javaBin")
+//    }
+//    val processArgs = if (mainClass == null) {
+//        arrayOf("-jar", jar.toString())
+//    } else {
+//        arrayOf("-cp", jar.toString(), mainClass)
+//    } + args
+//    val processBuilder = ProcessBuilder(
+//        javaBin.toString(),
+//        *jvmArgs.toTypedArray(),
+//        *processArgs,
+//    )
+//
+//    val logger = LoggerFactory.getLogger(UniminedExtension::class.java);
+//
+//    processBuilder.directory(workingDir.toFile())
+//    processBuilder.environment().putAll(env)
+//
+//    logger.info("Running: ${processBuilder.command().joinToString(" ")}")
+//    val process = processBuilder.start()
+//
+//    val inputStream = process.inputStream
+//    val errorStream = process.errorStream
+//
+//    val outputThread = Thread {
+//        inputStream.copyTo(object : OutputStream() {
+//            // buffer and write lines
+//            private var line: String? = null
+//
+//            override fun write(b: Int) {
+//                if (b == '\r'.toInt()) {
+//                    return
+//                }
+//                if (b == '\n'.toInt()) {
+//                    logger.info(line)
+//                    line = null
+//                } else {
+//                    line = (line ?: "") + b.toChar()
+//                }
+//            }
+//        })
+//    }
+//
+//    val errorThread = Thread {
+//        errorStream.copyTo(object : OutputStream() {
+//            // buffer and write lines
+//            private var line: String? = null
+//
+//            override fun write(b: Int) {
+//                if (b == '\r'.toInt()) {
+//                    return
+//                }
+//                if (b == '\n'.toInt()) {
+//                    logger.error(line)
+//                    line = null
+//                } else {
+//                    line = (line ?: "") + b.toChar()
+//                }
+//            }
+//        })
+//    }
+//
+//    outputThread.start()
+//    errorThread.start()
+//
+//    if (wait) {
+//        process.waitFor()
+//        return process.exitValue()
+//    }
+//    return null
+//}
 
 fun Path.deleteRecursively() {
     Files.walkFileTree(this, object : SimpleFileVisitor<Path>() {
