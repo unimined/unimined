@@ -7,7 +7,7 @@ import org.gradle.api.tasks.Optional
 import org.jetbrains.annotations.ApiStatus
 import java.io.File
 
-abstract class GenSourcesTask() : ConventionTask() {
+abstract class GenSourcesTask(): ConventionTask() {
     @get:Input
     @get:Optional
     @get:ApiStatus.Internal

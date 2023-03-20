@@ -6,7 +6,7 @@ import java.io.OutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-class MCPWriter(writer: OutputStream, private val side: Int) : MappingWriter {
+class MCPWriter(writer: OutputStream, private val side: Int): MappingWriter {
     private val writer = ZipOutputStream(writer)
     private val fields = StringBuilder().append("searge,name,side,desc")
     private val methods = StringBuilder().append("searge,name,side,desc")

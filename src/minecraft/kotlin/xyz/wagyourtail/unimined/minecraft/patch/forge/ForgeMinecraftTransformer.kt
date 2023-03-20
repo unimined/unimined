@@ -37,7 +37,7 @@ import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 
-class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImpl) :
+class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImpl):
         AbstractMinecraftTransformer(project, provider, Constants.FORGE_PROVIDER), ForgePatcher {
 
     val forge: Configuration = project.configurations.maybeCreate(Constants.FORGE_PROVIDER)
@@ -58,25 +58,41 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
             forgeTransformer.deleteMetaInf = value
         }
 
-    override var devNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.NAMED, project.mappings.getAvailableMappings(project.minecraft.defaultEnv)) }
-    override var devFallbackNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.INT, project.mappings.getAvailableMappings(project.minecraft.defaultEnv)) }
+    override var devNamespace by LazyMutable {
+        MappingNamespace.findByType(
+            MappingNamespace.Type.NAMED,
+            project.mappings.getAvailableMappings(project.minecraft.defaultEnv)
+        )
+    }
+    override var devFallbackNamespace by LazyMutable {
+        MappingNamespace.findByType(
+            MappingNamespace.Type.INT,
+            project.mappings.getAvailableMappings(project.minecraft.defaultEnv)
+        )
+    }
 
     override var mixinConfig: List<String> = mutableListOf()
 
 
     private val sideMarkers = mapOf(
-        "net/minecraftforge/fml/relauncher/SideOnly" to Triple("net/minecraftforge/fml/relauncher/Side", "value", mapOf(
-            EnvType.CLIENT to "CLIENT",
-            EnvType.SERVER to "SERVER"
-        )),
-        "cpw/mods/fml/relauncher/SideOnly" to Triple("cpw/mods/fml/relauncher/Side", "value", mapOf(
-            EnvType.CLIENT to "CLIENT",
-            EnvType.SERVER to "SERVER"
-        )),
-        "cpw/mods/fml/common/asm/SideOnly" to Triple("cpw/mods/fml/common/Side", "value", mapOf(
-            EnvType.CLIENT to "CLIENT",
-            EnvType.SERVER to "SERVER"
-        )),
+        "net/minecraftforge/fml/relauncher/SideOnly" to Triple(
+            "net/minecraftforge/fml/relauncher/Side", "value", mapOf(
+                EnvType.CLIENT to "CLIENT",
+                EnvType.SERVER to "SERVER"
+            )
+        ),
+        "cpw/mods/fml/relauncher/SideOnly" to Triple(
+            "cpw/mods/fml/relauncher/Side", "value", mapOf(
+                EnvType.CLIENT to "CLIENT",
+                EnvType.SERVER to "SERVER"
+            )
+        ),
+        "cpw/mods/fml/common/asm/SideOnly" to Triple(
+            "cpw/mods/fml/common/Side", "value", mapOf(
+                EnvType.CLIENT to "CLIENT",
+                EnvType.SERVER to "SERVER"
+            )
+        ),
     )
 
     private val actualSideMarker by lazy {
@@ -97,7 +113,11 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
 
     private fun applyAnnotationVisitor(visitor: AnnotationVisitor, env: EnvType) {
         if (actualSideMarker == null) return
-        visitor.visitEnum(actualSideMarker!!.second.second, "L${actualSideMarker!!.second.first};", actualSideMarker!!.second.third[env])
+        visitor.visitEnum(
+            actualSideMarker!!.second.second,
+            "L${actualSideMarker!!.second.first};",
+            actualSideMarker!!.second.third[env]
+        )
         visitor.visitEnd()
     }
 
@@ -170,7 +190,9 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         return AccessTransformerMinecraftTransformer.aw2at(input.toPath(), output.toPath(), true).toFile()
     }
 
-    override fun at2aw(input: String, output: String, namespace: MappingNamespace) = at2aw(File(input), File(output), namespace)
+    override fun at2aw(input: String, output: String, namespace: MappingNamespace) =
+        at2aw(File(input), File(output), namespace)
+
     override fun at2aw(input: String, namespace: MappingNamespace) = at2aw(File(input), namespace)
     override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
     override fun at2aw(input: String) = at2aw(File(input))
@@ -181,9 +203,16 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
             .resolve("${project.name}.accesswidener"),
         namespace
     )
+
     override fun at2aw(input: File, output: File) = at2aw(input, output, devNamespace)
-    override fun at2aw(input: File, output: File, namespace: MappingNamespace) : File {
-        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), namespace.namespace, project.mappings.getMappingTree(EnvType.COMBINED), project.logger).toFile()
+    override fun at2aw(input: File, output: File, namespace: MappingNamespace): File {
+        return AccessTransformerMinecraftTransformer.at2aw(
+            input.toPath(),
+            output.toPath(),
+            namespace.namespace,
+            project.mappings.getMappingTree(EnvType.COMBINED),
+            project.logger
+        ).toFile()
     }
 
     @get:ApiStatus.Internal

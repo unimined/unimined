@@ -38,10 +38,12 @@ abstract class LauncherProvider {
     )
 
     @Deprecated("use setConfig instead", ReplaceWith("setConfig(\"client\", action)"))
-    fun setClient(@DelegatesTo(
-        value = LaunchConfig::class,
-        strategy = Closure.DELEGATE_FIRST
-    ) action: Closure<*>) {
+    fun setClient(
+        @DelegatesTo(
+            value = LaunchConfig::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
         config("client", action)
     }
 
@@ -51,10 +53,12 @@ abstract class LauncherProvider {
     }
 
     @Deprecated("use setConfig instead", ReplaceWith("setConfig(\"server\", action)"))
-    fun setServer(@DelegatesTo(
-        value = LaunchConfig::class,
-        strategy = Closure.DELEGATE_FIRST
-    ) action: Closure<*>) {
+    fun setServer(
+        @DelegatesTo(
+            value = LaunchConfig::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
         config("server", action)
     }
 

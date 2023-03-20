@@ -28,7 +28,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     protected val project: Project,
     val provider: MinecraftProviderImpl,
     val providerName: String
-) : MinecraftPatcher {
+): MinecraftPatcher {
 
     open val merger: ClassMerger = ClassMerger()
 
@@ -37,7 +37,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     fun isAnonClass(node: ClassNode): Boolean =
-        node.innerClasses?.firstOrNull { it.name == node.name }.let { it != null && it.innerName == null}
+        node.innerClasses?.firstOrNull { it.name == node.name }.let { it != null && it.innerName == null }
 
     open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         val merged = MinecraftJar(
@@ -140,6 +140,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
         }
         return target
     }
+
     protected open fun applyLaunches() {
         project.logger.lifecycle("Applying run configs")
         project.logger.info("client: ${provider.client}, server: ${provider.server}")

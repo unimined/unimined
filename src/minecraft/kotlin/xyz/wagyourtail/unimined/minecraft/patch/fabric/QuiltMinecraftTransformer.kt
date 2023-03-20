@@ -13,7 +13,7 @@ import java.net.URI
 class QuiltMinecraftTransformer(
     project: Project,
     provider: MinecraftProviderImpl
-) : FabricLikeMinecraftTransformer(
+): FabricLikeMinecraftTransformer(
     project,
     provider,
     Constants.QUILT_PROVIDER,
@@ -56,6 +56,7 @@ class QuiltMinecraftTransformer(
             "-Dloader.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.CLIENT)}\""
         )
     }
+
     override fun applyServerRunTransform(config: LaunchConfig) {
         config.mainClass = serverMainClass ?: config.mainClass
         config.jvmArgs += listOf(

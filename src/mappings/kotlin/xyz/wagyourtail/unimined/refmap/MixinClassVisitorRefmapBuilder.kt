@@ -22,7 +22,7 @@ class MixinClassVisitorRefmapBuilder(
     delegate: ClassVisitor,
     val existingMappings: Map<String, String>,
     private val onEnd: () -> Unit = {}
-) : ClassVisitor(Constant.ASM_VERSION, delegate) {
+): ClassVisitor(Constant.ASM_VERSION, delegate) {
     private val mapper = commonData.mapper
     private val resolver = commonData.resolver
     private val logger = commonData.logger
@@ -33,7 +33,7 @@ class MixinClassVisitorRefmapBuilder(
 
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
         val av = if (Annotation.MIXIN == descriptor) {
-            object : AnnotationVisitor(Constant.ASM_VERSION, super.visitAnnotation(descriptor, visible)) {
+            object: AnnotationVisitor(Constant.ASM_VERSION, super.visitAnnotation(descriptor, visible)) {
                 override fun visit(name: String, value: Any) {
                     super.visit(name, value)
                     logger.info("Found annotation value $name: $value")
@@ -45,7 +45,7 @@ class MixinClassVisitorRefmapBuilder(
                 override fun visitArray(name: String?): AnnotationVisitor {
                     return when (name) {
                         AnnotationElement.TARGETS -> {
-                            return object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                            return object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
                                 override fun visit(name: String?, value: Any) {
                                     if (remap.get()) {
                                         classTargets.add(value as String)
@@ -56,7 +56,7 @@ class MixinClassVisitorRefmapBuilder(
                         }
 
                         AnnotationElement.VALUE, null -> {
-                            return object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                            return object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
                                 override fun visit(name: String?, value: Any) {
                                     if (remap.get()) {
                                         classValues.add((value as Type).internalName)
@@ -106,7 +106,7 @@ class MixinClassVisitorRefmapBuilder(
         access: Int, name: String, descriptor: String, signature: String?, exceptions: Array<out String>?
     ): MethodVisitor {
         val remap = AtomicBoolean(remap.get())
-        return object : MethodVisitor(
+        return object: MethodVisitor(
             Constant.ASM_VERSION, super.visitMethod(access, name, descriptor, signature, exceptions)
         ) {
 
@@ -126,7 +126,7 @@ class MixinClassVisitorRefmapBuilder(
                     ?: super.visitAnnotation(descriptor, visible)
             }
 
-            fun visitAccessor(visitor: AnnotationVisitor) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+            fun visitAccessor(visitor: AnnotationVisitor) = object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
                 val remapAccessor = AtomicBoolean(remap.get())
                 var targetName: String? = null
                 override fun visit(name: String?, value: Any) {
@@ -205,7 +205,7 @@ class MixinClassVisitorRefmapBuilder(
                 }
             }
 
-            fun visitInvoker(visitor: AnnotationVisitor) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+            fun visitInvoker(visitor: AnnotationVisitor) = object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
                 val remapInvoker = AtomicBoolean(remap.get())
                 var targetName: String? = null
                 override fun visit(name: String?, value: Any) {
@@ -283,7 +283,7 @@ class MixinClassVisitorRefmapBuilder(
                 }
             }
 
-            fun visitInject(visitor: AnnotationVisitor) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+            fun visitInject(visitor: AnnotationVisitor) = object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
                 val remapInject = AtomicBoolean(remap.get())
                 var targetNames = mutableListOf<String>()
                 override fun visit(name: String, value: Any) {
@@ -307,7 +307,7 @@ class MixinClassVisitorRefmapBuilder(
                         }
 
                         AnnotationElement.METHOD -> {
-                            object : AnnotationVisitor(Constant.ASM_VERSION, delegate) {
+                            object: AnnotationVisitor(Constant.ASM_VERSION, delegate) {
                                 override fun visit(name: String?, value: Any) {
                                     super.visit(name, value)
                                     targetNames.add(value as String)
@@ -420,7 +420,9 @@ class MixinClassVisitorRefmapBuilder(
                                         } ?: Optional.empty()
                                     }
                                     target.ifPresent {
-                                        val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
+                                        val mappedClass = resolver.resolveClass(targetClass)
+                                            .map { mapper.mapName(it) }
+                                            .orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
                                         val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
                                         refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
@@ -443,7 +445,7 @@ class MixinClassVisitorRefmapBuilder(
                 }
             }
 
-            fun visitModifyArg(visitor: AnnotationVisitor) = object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+            fun visitModifyArg(visitor: AnnotationVisitor) = object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
                 val remapModifyArg = AtomicBoolean(remap.get())
                 var targetNames = mutableListOf<String>()
 
@@ -475,7 +477,7 @@ class MixinClassVisitorRefmapBuilder(
                         }
 
                         AnnotationElement.METHOD -> {
-                            object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                            object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
                                 override fun visit(name: String?, value: Any) {
                                     super.visit(name, value)
                                     targetNames.add(value as String)
@@ -534,7 +536,9 @@ class MixinClassVisitorRefmapBuilder(
                                     } ?: Optional.empty()
                                 }
                                 target.ifPresent {
-                                    val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
+                                    val mappedClass = resolver.resolveClass(targetClass)
+                                        .map { mapper.mapName(it) }
+                                        .orElse(targetClass)
                                     val mappedName = mapper.mapName(it)
                                     val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
                                     refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
@@ -559,7 +563,7 @@ class MixinClassVisitorRefmapBuilder(
             fun visitModifyArgs(visitor: AnnotationVisitor) = visitModifyArg(visitor)
 
             fun visitModifyConstant(visitor: AnnotationVisitor) =
-                object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+                object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
                     val remapModifyConstant = AtomicBoolean(remap.get())
                     var targetNames = mutableListOf<String>()
 
@@ -574,7 +578,7 @@ class MixinClassVisitorRefmapBuilder(
                         } else if (name == AnnotationElement.SLICE) {
                             ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { visitSlice(it, remap) }
                         } else if (name == AnnotationElement.METHOD) {
-                            object : AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                            object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
                                 override fun visit(name: String?, value: Any) {
                                     super.visit(name, value)
                                     targetNames.add(value as String)
@@ -633,7 +637,9 @@ class MixinClassVisitorRefmapBuilder(
 
 
                                     target.ifPresent {
-                                        val mappedClass = resolver.resolveClass(targetClass).map { mapper.mapName(it) }.orElse(targetClass)
+                                        val mappedClass = resolver.resolveClass(targetClass)
+                                            .map { mapper.mapName(it) }
+                                            .orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
                                         val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
                                         refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
@@ -662,7 +668,7 @@ class MixinClassVisitorRefmapBuilder(
     }
 
     fun visitAt(visitor: AnnotationVisitor, remap: AtomicBoolean) =
-        object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+        object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
             val remapAt = AtomicBoolean(remap.get())
             var targetName: String? = null
             override fun visit(name: String, value: Any) {
@@ -820,7 +826,7 @@ class MixinClassVisitorRefmapBuilder(
         }
 
     fun visitDesc(visitor: AnnotationVisitor, remap: AtomicBoolean) =
-        object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+        object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
             val remapDesc = AtomicBoolean(remap.get())
             override fun visit(name: String, value: Any) {
                 TODO()
@@ -832,7 +838,7 @@ class MixinClassVisitorRefmapBuilder(
         }
 
     fun visitSlice(visitor: AnnotationVisitor, remap: AtomicBoolean) =
-        object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+        object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
             override fun visitAnnotation(name: String?, descriptor: String?): AnnotationVisitor {
                 return if (name == AnnotationElement.FROM || name == AnnotationElement.TO) {
                     visitAt(super.visitAnnotation(name, descriptor), remap)
@@ -852,7 +858,7 @@ class ArrayVisitorWrapper(
     val api: Int,
     delegate: AnnotationVisitor,
     val delegateCreator: (AnnotationVisitor) -> AnnotationVisitor
-) : AnnotationVisitor(api, delegate) {
+): AnnotationVisitor(api, delegate) {
     override fun visitAnnotation(name: String?, descriptor: String): AnnotationVisitor {
         return delegateCreator(super.visitAnnotation(name, descriptor))
     }

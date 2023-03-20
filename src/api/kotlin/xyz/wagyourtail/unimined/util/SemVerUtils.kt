@@ -126,7 +126,7 @@ object SemVerUtils {
         }
     }
 
-    data class PrefixedRange(val prefix: String, val major: String?, val minor: String?, val patch: String?) :
+    data class PrefixedRange(val prefix: String, val major: String?, val minor: String?, val patch: String?):
             SemVerMatcher {
 
         override fun matches(version: SemVer): Boolean {
@@ -255,7 +255,7 @@ object SemVerUtils {
         }
     }
 
-    data class AndRange(val first: SemVerMatcher, val second: SemVerMatcher) : SemVerMatcher {
+    data class AndRange(val first: SemVerMatcher, val second: SemVerMatcher): SemVerMatcher {
         override fun matches(version: SemVer): Boolean {
             return first.matches(version) && second.matches(version)
         }
@@ -276,7 +276,7 @@ object SemVerUtils {
         }
     }
 
-    data class OrRange(val first: SemVerMatcher, val second: SemVerMatcher) : SemVerMatcher {
+    data class OrRange(val first: SemVerMatcher, val second: SemVerMatcher): SemVerMatcher {
         override fun matches(version: SemVer): Boolean {
             return first.matches(version) || second.matches(version)
         }

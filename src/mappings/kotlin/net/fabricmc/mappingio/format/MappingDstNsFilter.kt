@@ -4,7 +4,7 @@ import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
 
-class MappingDstNsFilter(next: MappingVisitor?, val namespaces: List<String>) : ForwardingMappingVisitor(next) {
+class MappingDstNsFilter(next: MappingVisitor?, val namespaces: List<String>): ForwardingMappingVisitor(next) {
     private lateinit var nsMap: Map<Int, Int>
 
     override fun visitNamespaces(srcNamespace: String, dstNamespaces: MutableList<String>) {

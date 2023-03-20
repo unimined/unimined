@@ -33,7 +33,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.*
 import kotlin.io.path.*
 
-class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer) : JarModMinecraftTransformer(
+class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
     project, parent.provider, Constants.FORGE_PROVIDER
 ) {
 
@@ -88,7 +88,9 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 //        forgeInstaller.dependencies.add(project.dependencies.create(installer))
 
         project.mappings.getMappings(EnvType.COMBINED).dependencies.apply {
-            mcpConfig = project.dependencies.create(userdevCfg["mcp"]?.asString ?: "de.oceanlabs.mcp:mcp_config:${provider.minecraft.version}@zip")
+            mcpConfig = project.dependencies.create(
+                userdevCfg["mcp"]?.asString ?: "de.oceanlabs.mcp:mcp_config:${provider.minecraft.version}@zip"
+            )
             val mcpConfigUserSpecified = firstOrNull { it.group == "de.oceanlabs.mcp" && it.name == "mcp_config" }
             if (mcpConfigUserSpecified != null) {
                 if (mcpConfigUserSpecified.version != mcpConfig.version) {
@@ -222,7 +224,9 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun createClientExtra(
-        baseMinecraftClient: MinecraftJar, @Suppress("UNUSED_PARAMETER") baseMinecraftServer: MinecraftJar, patchedMinecraft: Path
+        baseMinecraftClient: MinecraftJar,
+        @Suppress("UNUSED_PARAMETER") baseMinecraftServer: MinecraftJar,
+        patchedMinecraft: Path
     ) {
         val clientExtra = patchedMinecraft.parent.createDirectories()
             .resolve("client-extra-${provider.minecraft.version}.jar")
@@ -361,6 +365,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                         File.pathSeparator
                     ) { "mod%%$it" }
                 }
+
                 "{mcp_mappings}" -> "unimined.stub"
                 "{natives}" -> {
                     val nativesDir = provider.clientWorkingDirectory.get().resolve("natives").toPath()
@@ -377,12 +382,14 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     private fun detectOtherProjectSourceSetOutputs(): Set<SourceSet> {
         val ss = project.extensions.getByType(SourceSetContainer::class.java)
-        val launchClasspath = provider.clientSourceSets.firstOrNull() ?: provider.combinedSourceSets.firstOrNull() ?: ss.getByName("main")
+        val launchClasspath = provider.clientSourceSets.firstOrNull() ?: provider.combinedSourceSets.firstOrNull()
+        ?: ss.getByName("main")
         val runtimeClasspath = launchClasspath.runtimeClasspath
         val sourceSets = mutableSetOf<SourceSet>()
         val projects = project.rootProject.allprojects.filter { it != project }
         for (project in projects) {
-            for (sourceSet in project.extensions.findByType(SourceSetContainer::class.java)?.asMap?.values ?: listOf()) {
+            for (sourceSet in project.extensions.findByType(SourceSetContainer::class.java)?.asMap?.values
+                ?: listOf()) {
                 if (sourceSet.output.files.intersect(runtimeClasspath.files).isNotEmpty()) {
                     sourceSets.add(sourceSet)
                 }

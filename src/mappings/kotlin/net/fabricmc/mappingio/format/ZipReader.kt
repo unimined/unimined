@@ -262,7 +262,8 @@ object ZipReader {
 
                         MappingType.TINY -> {
                             readInputStreamFor(entry, zip) {
-                                Tiny2Reader.read(InputStreamReader(it),
+                                Tiny2Reader.read(
+                                    InputStreamReader(it),
                                     MappingNsRenamer(
                                         mappingTree, mapOf(
                                             "official" to MappingNamespace.OFFICIAL.namespace,

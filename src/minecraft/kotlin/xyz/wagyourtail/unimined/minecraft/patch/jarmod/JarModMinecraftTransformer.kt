@@ -30,12 +30,22 @@ open class JarModMinecraftTransformer(
     project: Project,
     provider: MinecraftProviderImpl,
     private val jarModProvider: String = Constants.JARMOD_PROVIDER,
-) : AbstractMinecraftTransformer(
+): AbstractMinecraftTransformer(
     project, provider, "jarmod"
 ), JarModPatcher {
 
-    override var devNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.NAMED, project.mappings.getAvailableMappings(project.minecraft.defaultEnv)) }
-    override var devFallbackNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.INT, project.mappings.getAvailableMappings(project.minecraft.defaultEnv)) }
+    override var devNamespace by LazyMutable {
+        MappingNamespace.findByType(
+            MappingNamespace.Type.NAMED,
+            project.mappings.getAvailableMappings(project.minecraft.defaultEnv)
+        )
+    }
+    override var devFallbackNamespace by LazyMutable {
+        MappingNamespace.findByType(
+            MappingNamespace.Type.INT,
+            project.mappings.getAvailableMappings(project.minecraft.defaultEnv)
+        )
+    }
     override var deleteMetaInf: Boolean = false
 
     init {

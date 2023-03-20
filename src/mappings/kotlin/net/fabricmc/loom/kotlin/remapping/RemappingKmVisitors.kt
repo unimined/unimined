@@ -45,7 +45,7 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         return null
     }
 
-    inner class RemappingKmClassVisitor(delegate: KmClassVisitor?) : KmClassVisitor(delegate) {
+    inner class RemappingKmClassVisitor(delegate: KmClassVisitor?): KmClassVisitor(delegate) {
         override fun visit(flags: Flags, name: ClassName) {
             super.visit(flags, remapper.map(name))
         }
@@ -101,13 +101,13 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingKmLambdaVisitor(delegate: KmLambdaVisitor?) : KmLambdaVisitor(delegate) {
+    inner class RemappingKmLambdaVisitor(delegate: KmLambdaVisitor?): KmLambdaVisitor(delegate) {
         override fun visitFunction(flags: Flags, name: String): KmFunctionVisitor {
             return RemappingKmFunctionVisitor(super.visitFunction(flags, name))
         }
     }
 
-    inner class RemappingKmTypeVisitor(delegate: KmTypeVisitor?) : KmTypeVisitor(delegate) {
+    inner class RemappingKmTypeVisitor(delegate: KmTypeVisitor?): KmTypeVisitor(delegate) {
         override fun visitClass(name: ClassName) {
             super.visitClass(remapper.map(name.replace('.', '$')).replace('$', '.'))
         }
@@ -137,13 +137,13 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmTypeExtensionVisitor(delegate: JvmTypeExtensionVisitor?) : JvmTypeExtensionVisitor(delegate) {
+    inner class RemappingJvmTypeExtensionVisitor(delegate: JvmTypeExtensionVisitor?): JvmTypeExtensionVisitor(delegate) {
         override fun visitAnnotation(annotation: KmAnnotation) {
             super.visitAnnotation(KmAnnotation(remapper.map(annotation.className), annotation.arguments))
         }
     }
 
-    inner class RemappingKmFunctionVisitor(delegate: KmFunctionVisitor?) : KmFunctionVisitor(delegate) {
+    inner class RemappingKmFunctionVisitor(delegate: KmFunctionVisitor?): KmFunctionVisitor(delegate) {
         override fun visitReceiverParameterType(flags: Flags): KmTypeVisitor {
             return RemappingKmTypeVisitor(super.visitReceiverParameterType(flags))
         }
@@ -174,13 +174,13 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingKmContractVisitor(delegate: KmContractVisitor?) : KmContractVisitor(delegate) {
+    inner class RemappingKmContractVisitor(delegate: KmContractVisitor?): KmContractVisitor(delegate) {
         override fun visitEffect(type: KmEffectType, invocationKind: KmEffectInvocationKind?): KmEffectVisitor {
             return RemappingKmEffectVisitor(super.visitEffect(type, invocationKind))
         }
     }
 
-    inner class RemappingKmEffectVisitor(delegate: KmEffectVisitor?) : KmEffectVisitor(delegate) {
+    inner class RemappingKmEffectVisitor(delegate: KmEffectVisitor?): KmEffectVisitor(delegate) {
         override fun visitConclusionOfConditionalEffect(): KmEffectExpressionVisitor {
             return RemappingKmEffectExpressionVisitor(super.visitConclusionOfConditionalEffect())
         }
@@ -190,7 +190,7 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingKmEffectExpressionVisitor(delegate: KmEffectExpressionVisitor?) : KmEffectExpressionVisitor(
+    inner class RemappingKmEffectExpressionVisitor(delegate: KmEffectExpressionVisitor?): KmEffectExpressionVisitor(
         delegate
     ) {
         override fun visitAndArgument(): KmEffectExpressionVisitor {
@@ -206,7 +206,7 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingKmPropertyVisitor(delegate: KmPropertyVisitor?) : KmPropertyVisitor(delegate) {
+    inner class RemappingKmPropertyVisitor(delegate: KmPropertyVisitor?): KmPropertyVisitor(delegate) {
         override fun visitReceiverParameterType(flags: Flags): KmTypeVisitor {
             return RemappingKmTypeVisitor(super.visitReceiverParameterType(flags))
         }
@@ -233,7 +233,7 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmPropertyExtensionVisitor(delegate: JvmPropertyExtensionVisitor?) :
+    inner class RemappingJvmPropertyExtensionVisitor(delegate: JvmPropertyExtensionVisitor?):
             JvmPropertyExtensionVisitor(delegate) {
         override fun visit(
             jvmFlags: Flags,
@@ -258,7 +258,7 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingKmTypeParameterVisitor(delegate: KmTypeParameterVisitor?) : KmTypeParameterVisitor(delegate) {
+    inner class RemappingKmTypeParameterVisitor(delegate: KmTypeParameterVisitor?): KmTypeParameterVisitor(delegate) {
         override fun visitExtensions(type: KmExtensionType): KmTypeParameterExtensionVisitor {
             return RemappingJvmTypeParameterExtensionVisitor(super.visitExtensions(type) as JvmTypeParameterExtensionVisitor?)
         }
@@ -268,14 +268,14 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmTypeParameterExtensionVisitor(delegate: JvmTypeParameterExtensionVisitor?) :
+    inner class RemappingJvmTypeParameterExtensionVisitor(delegate: JvmTypeParameterExtensionVisitor?):
             JvmTypeParameterExtensionVisitor(delegate) {
         override fun visitAnnotation(annotation: KmAnnotation) {
             super.visitAnnotation(KmAnnotation(remapper.map(annotation.className), annotation.arguments))
         }
     }
 
-    inner class RemappingKmValueParameterVisitor(delegate: KmValueParameterVisitor?) : KmValueParameterVisitor(delegate) {
+    inner class RemappingKmValueParameterVisitor(delegate: KmValueParameterVisitor?): KmValueParameterVisitor(delegate) {
         override fun visitType(flags: Flags): KmTypeVisitor {
             return RemappingKmTypeVisitor(super.visitType(flags))
         }
@@ -285,7 +285,7 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingKmTypeAliasVisitor(delegate: KmTypeAliasVisitor?) : KmTypeAliasVisitor(delegate) {
+    inner class RemappingKmTypeAliasVisitor(delegate: KmTypeAliasVisitor?): KmTypeAliasVisitor(delegate) {
         override fun visitExpandedType(flags: Flags): KmTypeVisitor {
             return RemappingKmTypeVisitor(super.visitExpandedType(flags))
         }
@@ -308,7 +308,7 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmFunctionExtensionVisitor(delegate: JvmFunctionExtensionVisitor?) :
+    inner class RemappingJvmFunctionExtensionVisitor(delegate: JvmFunctionExtensionVisitor?):
             JvmFunctionExtensionVisitor(delegate) {
         override fun visit(signature: JvmMethodSignature?) {
             super.visit(remapJvmMethodSignature(signature))
@@ -319,7 +319,7 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmClassExtensionVisitor(delegate: JvmClassExtensionVisitor?) : JvmClassExtensionVisitor(
+    inner class RemappingJvmClassExtensionVisitor(delegate: JvmClassExtensionVisitor?): JvmClassExtensionVisitor(
         delegate
     ) {
         override fun visitAnonymousObjectOriginName(internalName: String) {
@@ -336,7 +336,7 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingKmConstructorVisitor(delegate: KmConstructorVisitor?) : KmConstructorVisitor(delegate) {
+    inner class RemappingKmConstructorVisitor(delegate: KmConstructorVisitor?): KmConstructorVisitor(delegate) {
         override fun visitExtensions(type: KmExtensionType): KmConstructorExtensionVisitor {
             return RemappingJvmConstructorExtensionVisitor(super.visitExtensions(type) as JvmConstructorExtensionVisitor?)
         }
@@ -346,14 +346,14 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmConstructorExtensionVisitor(delegate: JvmConstructorExtensionVisitor?) :
+    inner class RemappingJvmConstructorExtensionVisitor(delegate: JvmConstructorExtensionVisitor?):
             JvmConstructorExtensionVisitor(delegate) {
         override fun visit(signature: JvmMethodSignature?) {
             super.visit(remapJvmMethodSignature(signature))
         }
     }
 
-    inner class RemappingKmPackageVisitor(delegate: KmPackageVisitor?) : KmPackageVisitor(delegate) {
+    inner class RemappingKmPackageVisitor(delegate: KmPackageVisitor?): KmPackageVisitor(delegate) {
         override fun visitExtensions(type: KmExtensionType): KmPackageExtensionVisitor {
             return RemappingJvmPackageExtensionVisitor(super.visitExtensions(type) as JvmPackageExtensionVisitor?)
         }
@@ -376,7 +376,7 @@ class RemappingKmVisitors(private val remapper: Remapper) {
         }
     }
 
-    inner class RemappingJvmPackageExtensionVisitor(delegate: JvmPackageExtensionVisitor?) : JvmPackageExtensionVisitor(
+    inner class RemappingJvmPackageExtensionVisitor(delegate: JvmPackageExtensionVisitor?): JvmPackageExtensionVisitor(
         delegate
     ) {
         override fun visitLocalDelegatedProperty(

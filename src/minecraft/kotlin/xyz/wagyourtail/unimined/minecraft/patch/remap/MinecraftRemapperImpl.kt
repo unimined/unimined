@@ -23,7 +23,7 @@ import kotlin.io.path.*
 class MinecraftRemapperImpl(
     val project: Project,
     val provider: MinecraftProviderImpl,
-) : MinecraftRemapper() {
+): MinecraftRemapper() {
     private val mappings by lazy { project.mappings }
 
     val MC_LV_PATTERN = Regex("\\$\\$\\d+")
@@ -55,7 +55,13 @@ class MinecraftRemapperImpl(
                 return@consumerApply target
             }
 
-            val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(mappingNamespace, fallbackNamespace, remapFallback, remapTo, mappings.getAvailableMappings(project.minecraft.defaultEnv))
+            val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
+                mappingNamespace,
+                fallbackNamespace,
+                remapFallback,
+                remapTo,
+                mappings.getAvailableMappings(project.minecraft.defaultEnv)
+            )
             if (path.isEmpty()) {
                 if (minecraft.path != target.path) {
                     minecraft.path.copyTo(target.path, overwrite = true)

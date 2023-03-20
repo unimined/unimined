@@ -47,7 +47,7 @@ abstract class ModRemapper(val project: Project) {
     /**
      * @since 0.4.0
      */
-     @set:ApiStatus.Internal
+    @set:ApiStatus.Internal
     var remapMixins: MixinRemap = MixinRemap.NONE
 
     fun setRemapMixins(remap: String) {
@@ -79,11 +79,12 @@ abstract class ModRemapper(val project: Project) {
      * pass a closure to configure the remapper.
      * @since 0.3.3
      */
-    fun setTinyRemapperConf(@DelegatesTo(
-        value = ForgePatcher::class,
-        strategy = Closure.DELEGATE_FIRST
-    ) action: Closure<*>
-    ){
+    fun setTinyRemapperConf(
+        @DelegatesTo(
+            value = ForgePatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
         tinyRemapperConf = {
             action.delegate = it
             action.resolveStrategy = Closure.DELEGATE_FIRST

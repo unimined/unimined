@@ -23,7 +23,7 @@ import java.nio.file.StandardCopyOption
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 
-abstract class RemapJarTaskImpl : RemapJarTask() {
+abstract class RemapJarTaskImpl: RemapJarTask() {
     private val minecraftProvider = project.extensions.getByType(MinecraftProviderImpl::class.java)
     private val uniminedExtension = project.extensions.getByType(UniminedExtensionImpl::class.java)
 
@@ -84,7 +84,14 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
         minecraftProvider.mcPatcher.afterRemapJarTask(outputs.files.files.first().toPath())
     }
 
-    protected fun remapToInternal(from: Path, target: Path, envType: EnvType, fromNs: MappingNamespace, toNs: MappingNamespace, mc: Path) {
+    protected fun remapToInternal(
+        from: Path,
+        target: Path,
+        envType: EnvType,
+        fromNs: MappingNamespace,
+        toNs: MappingNamespace,
+        mc: Path
+    ) {
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(
                 uniminedExtension.mappingsProvider.getMappingsProvider(
@@ -100,12 +107,18 @@ abstract class RemapJarTaskImpl : RemapJarTask() {
         if (classpath != null) {
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
-        val betterMixinExtension = BetterMixinExtension("${project.rootProject.name}.refmap.json", project.gradle.startParameter.logLevel)
+        val betterMixinExtension = BetterMixinExtension(
+            "${project.rootProject.name}.refmap.json",
+            project.gradle.startParameter.logLevel
+        )
         remapperB.extension(betterMixinExtension)
         project.minecraft.mcRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         remapper.readClassPathAsync(
-            *sourceSet.runtimeClasspath.files.map { it.toPath() }.filter { !minecraftProvider.isMinecraftJar(it) }.filter { it.exists() }.toTypedArray()
+            *sourceSet.runtimeClasspath.files.map { it.toPath() }
+                .filter { !minecraftProvider.isMinecraftJar(it) }
+                .filter { it.exists() }
+                .toTypedArray()
         )
         remapper.readClassPathAsync(mc)
 

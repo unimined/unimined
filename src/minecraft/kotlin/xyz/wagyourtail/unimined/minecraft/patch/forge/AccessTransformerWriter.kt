@@ -4,7 +4,7 @@ import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor
 import java.io.BufferedWriter
 
-class AccessTransformerWriter(private val output: BufferedWriter) : AccessWidenerVisitor, AutoCloseable {
+class AccessTransformerWriter(private val output: BufferedWriter): AccessWidenerVisitor, AutoCloseable {
     private val classes = mutableMapOf<String, MutableSet<AccessType>>()
     private val fields = mutableMapOf<String, MutableSet<AccessType>>()
     private val methods = mutableMapOf<String, MutableSet<AccessType>>()

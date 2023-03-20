@@ -12,7 +12,11 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 
-class HarderTargetMixinClassVisitor(private val tasks: MutableList<Consumer<CommonData>>, delegate: ClassVisitor?, private val existingMappings: Map<String, String>) :
+class HarderTargetMixinClassVisitor(
+    private val tasks: MutableList<Consumer<CommonData>>,
+    delegate: ClassVisitor?,
+    private val existingMappings: Map<String, String>
+):
         ClassVisitor(Constant.ASM_VERSION, delegate) {
     private var _class: MxClass? = null
 
@@ -104,7 +108,7 @@ class HarderTargetMixinClassVisitor(private val tasks: MutableList<Consumer<Comm
         private val method: MxMember,
         private val remap: Boolean,
         private val targets: List<String>
-    ) :
+    ):
             MethodVisitor(Constant.ASM_VERSION, delegate) {
 
         override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
@@ -121,7 +125,7 @@ class HarderTargetMixinClassVisitor(private val tasks: MutableList<Consumer<Comm
     internal class HardTargetMixinFieldVisitor(
         private val tasks: MutableList<Consumer<CommonData>>, delegate: FieldVisitor?, private val field: MxMember,
         private val remap: Boolean, private val targets: List<String>
-    ) : FieldVisitor(Constant.ASM_VERSION, delegate) {
+    ): FieldVisitor(Constant.ASM_VERSION, delegate) {
 
 
         override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
@@ -138,7 +142,7 @@ class HarderTargetMixinClassVisitor(private val tasks: MutableList<Consumer<Comm
         remapOut: AtomicBoolean,
         targetsOut: MutableList<String>,
         val existingMappings: Map<String, String>
-    ) :
+    ):
             AnnotationVisitor(Constant.ASM_VERSION, delegate) {
         private val remap0: AtomicBoolean
         private val targets: MutableList<String>
@@ -159,7 +163,7 @@ class HarderTargetMixinClassVisitor(private val tasks: MutableList<Consumer<Comm
         override fun visitArray(name: String?): AnnotationVisitor {
             val visitor = super.visitArray(name)
             return if (name == AnnotationElement.TARGETS) {
-                object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+                object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
                     override fun visit(name: String?, value: Any) {
                         var value = (value as String)
                         val srcName = existingMappings[value] ?: value.replace("\\s".toRegex(), "").replace('.', '/')
@@ -168,7 +172,7 @@ class HarderTargetMixinClassVisitor(private val tasks: MutableList<Consumer<Comm
                     }
                 }
             } else if (name == AnnotationElement.VALUE || name == null) {
-                object : AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+                object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
                     override fun visit(name: String?, value: Any) {
                         val srcType = Objects.requireNonNull(value as Type)
                         targets.add(srcType.internalName)

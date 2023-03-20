@@ -6,7 +6,7 @@ import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
  * The class responsible for patching minecraft for jar mods.
  * @since 0.2.3
  */
-interface JarModPatcher : MinecraftPatcher {
+interface JarModPatcher: MinecraftPatcher {
 
     override val prodNamespace: MappingNamespace
         get() = MappingNamespace.OFFICIAL

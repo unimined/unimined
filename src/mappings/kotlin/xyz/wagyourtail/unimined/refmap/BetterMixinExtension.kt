@@ -25,7 +25,12 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.name
 import kotlin.io.path.writeText
 
-class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLevel = LogLevel.WARN, val targets: Set<MixinExtension.AnnotationTarget> = MixinExtension.AnnotationTarget.values().toSet(), val fallbackWhenNotInJson: Boolean = false) :
+class BetterMixinExtension(
+    var defaultRefmapPath: String,
+    val loggerLevel: LogLevel = LogLevel.WARN,
+    val targets: Set<MixinExtension.AnnotationTarget> = MixinExtension.AnnotationTarget.values().toSet(),
+    val fallbackWhenNotInJson: Boolean = false
+):
         TinyRemapper.Extension,
         TinyRemapper.ApplyVisitorProvider,
         TinyRemapper.AnalyzeVisitorProvider,
@@ -98,7 +103,13 @@ class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLe
                     combinedMappings[key] = value.asString
                 }
             }
-            MixinClassVisitorRefmapBuilder(CommonData(cls.environment, logger), cls.name, target, next, combinedMappings) {
+            MixinClassVisitorRefmapBuilder(
+                CommonData(cls.environment, logger),
+                cls.name,
+                target,
+                next,
+                combinedMappings
+            ) {
                 if (target.size() > 0) {
                     val refmaps = refmapNames.map { refmaps[it]!! }
                     for (refmap in refmaps) {
@@ -113,7 +124,7 @@ class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLe
         } else if (fallbackWhenNotInJson) {
             fallback.preApplyVisitor(cls, next)
         } else {
-            object : ClassVisitor(Constant.ASM_VERSION, next) {
+            object: ClassVisitor(Constant.ASM_VERSION, next) {
                 override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor {
                     if (Annotation.MIXIN == descriptor) {
                         logger.error("Found mixin class: ${cls.name}, but it is not in a mixin json file! This will cause issues and the mixin will not be remapped!")
@@ -146,7 +157,12 @@ class BetterMixinExtension(var defaultRefmapPath: String, val loggerLevel: LogLe
             }
             return HarderTargetMixinClassVisitor(tasks[mrjVersion]!!, next, combinedMappings)
         } else if (fallbackWhenNotInJson) {
-            val fallbackFn = fallback::class.java.getDeclaredMethod("analyzeVisitor", Int::class.java, String::class.java, ClassVisitor::class.java)
+            val fallbackFn = fallback::class.java.getDeclaredMethod(
+                "analyzeVisitor",
+                Int::class.java,
+                String::class.java,
+                ClassVisitor::class.java
+            )
             fallbackFn.isAccessible = true
             return fallbackFn(fallback, mrjVersion, className, next) as ClassVisitor?
         }

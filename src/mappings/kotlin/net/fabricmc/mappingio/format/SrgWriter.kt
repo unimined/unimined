@@ -4,7 +4,7 @@ import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingWriter
 import java.io.Writer
 
-class SrgWriter(val writer: Writer) : MappingWriter {
+class SrgWriter(val writer: Writer): MappingWriter {
     override fun close() {
         writer.close()
     }

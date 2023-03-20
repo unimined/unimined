@@ -12,7 +12,7 @@ import kotlin.properties.Delegates
 
 object FixParamAnnotations {
 
-    class DontTransformException : Exception()
+    class DontTransformException: Exception()
 
     fun apply(fs: FileSystem) {
         fs.rootDirectories.forEach { root ->
@@ -32,7 +32,7 @@ object FixParamAnnotations {
         }
     }
 
-    class ParameterAnnotationVisitor(cv: ClassVisitor) : ClassVisitor(Constant.ASM_VERSION, cv) {
+    class ParameterAnnotationVisitor(cv: ClassVisitor): ClassVisitor(Constant.ASM_VERSION, cv) {
         var access by Delegates.notNull<Int>()
         lateinit var name: String
         var outer: String? = null
@@ -109,7 +109,11 @@ object FixParamAnnotations {
             listOf(Type.getObjectType(info.outerName))
         }
 
-        class MethodParameterAnnotationVisitor(methodVisitor: MethodVisitor, desc: String, private val sythetic: List<Type>) : MethodVisitor(Constant.ASM_VERSION, methodVisitor) {
+        class MethodParameterAnnotationVisitor(
+            methodVisitor: MethodVisitor,
+            desc: String,
+            private val sythetic: List<Type>
+        ): MethodVisitor(Constant.ASM_VERSION, methodVisitor) {
             private val params = Type.getArgumentTypes(desc).toList()
             private var fixOffset = 0
             override fun visitAnnotableParameterCount(parameterCount: Int, visible: Boolean) {

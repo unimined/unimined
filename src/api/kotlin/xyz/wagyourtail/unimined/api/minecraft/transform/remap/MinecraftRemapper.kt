@@ -23,10 +23,12 @@ abstract class MinecraftRemapper {
      * pass a closure to configure the remapper.
      * @since 0.2.3
      */
-    fun setTinyRemapperConf(@DelegatesTo(
-        value = ForgePatcher::class,
-        strategy = Closure.DELEGATE_FIRST
-    ) action: Closure<*>){
+    fun setTinyRemapperConf(
+        @DelegatesTo(
+            value = ForgePatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
         tinyRemapperConf = {
             action.delegate = it
             action.resolveStrategy = Closure.DELEGATE_FIRST

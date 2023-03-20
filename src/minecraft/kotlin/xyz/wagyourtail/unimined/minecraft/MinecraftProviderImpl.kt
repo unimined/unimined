@@ -55,7 +55,8 @@ import kotlin.io.path.writeBytes
 abstract class MinecraftProviderImpl(
     project: Project,
     unimined: UniminedExtension
-) : MinecraftProvider<MinecraftRemapperImpl, AbstractMinecraftTransformer>(project), ArtifactProvider<ArtifactIdentifier> {
+): MinecraftProvider<MinecraftRemapperImpl, AbstractMinecraftTransformer>(project),
+        ArtifactProvider<ArtifactIdentifier> {
 
     @ApiStatus.Internal
     val combined: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_COMBINED_PROVIDER)
@@ -67,9 +68,10 @@ abstract class MinecraftProviderImpl(
     val server: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_SERVER_PROVIDER)
 
     @ApiStatus.Internal
-    override val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER).apply {
-        isTransitive = true
-    }
+    override val mcLibraries: Configuration = project.configurations.maybeCreate(Constants.MINECRAFT_LIBRARIES_PROVIDER)
+        .apply {
+            isTransitive = true
+        }
 
     @ApiStatus.Internal
     override val minecraft: MinecraftDownloader = MinecraftDownloader(project, this)
@@ -154,7 +156,7 @@ abstract class MinecraftProviderImpl(
         action(mcPatcher as FabricLikeMinecraftTransformer)
     }
 
-    override fun quilt (action: (FabricLikePatcher) -> Unit) {
+    override fun quilt(action: (FabricLikePatcher) -> Unit) {
         mcPatcher = QuiltMinecraftTransformer(project, this)
         action(mcPatcher as FabricLikeMinecraftTransformer)
     }
@@ -190,15 +192,16 @@ abstract class MinecraftProviderImpl(
         }
 
         assert(clientSourceSets.none { serverSourceSets.contains(it) } &&
-        combinedSourceSets.none { serverSourceSets.contains(it) } &&
-        combinedSourceSets.none { clientSourceSets.contains(it) }
+                combinedSourceSets.none { serverSourceSets.contains(it) } &&
+                combinedSourceSets.none { clientSourceSets.contains(it) }
         ) {
-         """
+            """
             |Can only provide one version of minecraft to each sourceSet.
             |client: $clientSourceSets
             |server: $serverSourceSets
             |combined: $combinedSourceSets
-            """.trimMargin() }
+            """.trimMargin()
+        }
 
     }
 
@@ -243,7 +246,11 @@ abstract class MinecraftProviderImpl(
     }
 
     @ApiStatus.Internal
-    override fun getMinecraftWithMapping(envType: EnvType, namespace: MappingNamespace, fallbackNamespace: MappingNamespace): Path {
+    override fun getMinecraftWithMapping(
+        envType: EnvType,
+        namespace: MappingNamespace,
+        fallbackNamespace: MappingNamespace
+    ): Path {
         project.logger.lifecycle("Getting minecraft with mapping $envType:$namespace")
         return minecraftMapped.computeIfAbsent(envType) {
             mutableMapOf()
@@ -301,9 +308,11 @@ abstract class MinecraftProviderImpl(
         EnvType.CLIENT -> {
             client
         }
+
         EnvType.SERVER -> {
             server
         }
+
         EnvType.COMBINED -> {
             combined
         }
@@ -326,7 +335,11 @@ abstract class MinecraftProviderImpl(
             } else {
                 when (info.classifier) {
                     "client" -> {
-                        val mc = getMinecraftWithMapping(EnvType.CLIENT, mcPatcher.devNamespace, mcPatcher.devFallbackNamespace)
+                        val mc = getMinecraftWithMapping(
+                            EnvType.CLIENT,
+                            mcPatcher.devNamespace,
+                            mcPatcher.devFallbackNamespace
+                        )
                         project.logger.info("providing client minecraft jar at $mc")
                         StreamableArtifact.ofFile(
                             info,
@@ -336,7 +349,11 @@ abstract class MinecraftProviderImpl(
                     }
 
                     "server" -> {
-                        val mc = getMinecraftWithMapping(EnvType.SERVER, mcPatcher.devNamespace, mcPatcher.devFallbackNamespace)
+                        val mc = getMinecraftWithMapping(
+                            EnvType.SERVER,
+                            mcPatcher.devNamespace,
+                            mcPatcher.devFallbackNamespace
+                        )
                         project.logger.info("providing server minecraft jar at $mc")
                         StreamableArtifact.ofFile(
                             info,
@@ -361,7 +378,11 @@ abstract class MinecraftProviderImpl(
                         if (disableCombined.get()) {
                             Artifact.none()
                         } else {
-                            val mc = getMinecraftWithMapping(EnvType.COMBINED, mcPatcher.devNamespace, mcPatcher.devFallbackNamespace)
+                            val mc = getMinecraftWithMapping(
+                                EnvType.COMBINED,
+                                mcPatcher.devNamespace,
+                                mcPatcher.devFallbackNamespace
+                            )
                             project.logger.info("providing combined minecraft jar at $mc")
                             StreamableArtifact.ofFile(
                                 info,
@@ -410,7 +431,14 @@ abstract class MinecraftProviderImpl(
         if (!infoFile.exists()) {
             if (!project.gradle.startParameter.isOffline) {
                 //test if betacraft has our version on file
-                val url = URI.create("http://files.betacraft.uk/launcher/assets/jsons/${URLEncoder.encode(minecraft.metadata.id, StandardCharsets.UTF_8.name())}.info")
+                val url = URI.create(
+                    "http://files.betacraft.uk/launcher/assets/jsons/${
+                        URLEncoder.encode(
+                            minecraft.metadata.id,
+                            StandardCharsets.UTF_8.name()
+                        )
+                    }.info"
+                )
                     .toURL()
                     .openConnection() as HttpURLConnection
                 url.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
@@ -439,7 +467,7 @@ abstract class MinecraftProviderImpl(
         @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
         return LaunchConfig(
             project,
-                "client",
+            "client",
             "runClient",
             "Minecraft Client",
             combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),

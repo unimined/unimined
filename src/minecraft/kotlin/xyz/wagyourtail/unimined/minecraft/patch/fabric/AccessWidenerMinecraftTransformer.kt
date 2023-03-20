@@ -24,7 +24,7 @@ import kotlin.io.path.*
 object AccessWidenerMinecraftTransformer {
 
     fun awRemapper(source: String, target: String): OutputConsumerPath.ResourceRemapper =
-        object : OutputConsumerPath.ResourceRemapper {
+        object: OutputConsumerPath.ResourceRemapper {
             override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
                 // read the beginning of the file and see if it begins with "accessWidener"
                 return relativePath.extension.equals("accesswidener", true) ||
@@ -81,7 +81,10 @@ object AccessWidenerMinecraftTransformer {
                             logger.warn("Could not find class $targetClass in $output")
                         }
                     } catch (e: Exception) {
-                        logger.warn("An error occurred while transforming $target with access widener $accessWidener for namespace $namespace in $output", e)
+                        logger.warn(
+                            "An error occurred while transforming $target with access widener $accessWidener for namespace $namespace in $output",
+                            e
+                        )
                     }
                 }
             }
@@ -93,7 +96,13 @@ object AccessWidenerMinecraftTransformer {
         return false
     }
 
-    fun mergeAws(inputs: List<Path>, output: Path, targetNamespace: MappingNamespace, mappingsProvider: MappingsProvider, mcProvider: MinecraftProvider<*, *>): Path {
+    fun mergeAws(
+        inputs: List<Path>,
+        output: Path,
+        targetNamespace: MappingNamespace,
+        mappingsProvider: MappingsProvider,
+        mcProvider: MinecraftProvider<*, *>
+    ): Path {
         val merger = AccessWidenerMerger(targetNamespace.namespace)
 
         inputs.forEach {
@@ -110,7 +119,13 @@ object AccessWidenerMinecraftTransformer {
         return output
     }
 
-    private fun createVisitors(awm: AccessWidenerMerger, mappingsProvider: MappingsProvider, target: String, input: InputStream, mcProvider: MinecraftProvider<*, *>) {
+    private fun createVisitors(
+        awm: AccessWidenerMerger,
+        mappingsProvider: MappingsProvider,
+        target: String,
+        input: InputStream,
+        mcProvider: MinecraftProvider<*, *>
+    ) {
         AccessWidenerReader(AccessWidenerBetterRemapper(awm, mappingsProvider, target, mcProvider)).read(
             BufferedReader(InputStreamReader(input))
         )

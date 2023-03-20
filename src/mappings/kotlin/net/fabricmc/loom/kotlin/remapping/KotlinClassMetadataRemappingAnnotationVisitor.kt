@@ -36,7 +36,7 @@ class KotlinClassMetadataRemappingAnnotationVisitor(
     private val remapper: Remapper,
     val next: AnnotationVisitor,
     val className: String?
-) :
+):
         AnnotationNode(Opcodes.ASM9, KotlinMetadataRemappingClassVisitor.ANNOTATION_DESCRIPTOR) {
 
     private val logger = LoggerFactory.getLogger(javaClass)

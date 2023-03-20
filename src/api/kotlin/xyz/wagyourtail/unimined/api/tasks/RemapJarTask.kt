@@ -11,11 +11,11 @@ import xyz.wagyourtail.unimined.api.sourceSet
 import xyz.wagyourtail.unimined.util.LazyMutable
 
 /**
-* task responsible for transforming your built jar to production.
-* @since 0.1.0
+ * task responsible for transforming your built jar to production.
+ * @since 0.1.0
  */
 @Suppress("LeakingThis")
-abstract class RemapJarTask : Jar() {
+abstract class RemapJarTask: Jar() {
     @get:InputFile
     abstract val inputFile: RegularFileProperty
 

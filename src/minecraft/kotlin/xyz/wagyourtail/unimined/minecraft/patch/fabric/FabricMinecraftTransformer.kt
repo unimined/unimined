@@ -14,7 +14,7 @@ import java.net.URI
 open class FabricMinecraftTransformer(
     project: Project,
     provider: MinecraftProviderImpl
-) : FabricLikeMinecraftTransformer(
+): FabricLikeMinecraftTransformer(
     project,
     provider,
     Constants.FABRIC_PROVIDER,

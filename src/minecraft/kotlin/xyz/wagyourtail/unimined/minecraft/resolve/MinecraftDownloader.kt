@@ -32,7 +32,7 @@ import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 
 @Suppress("MemberVisibilityCanBePrivate")
-class MinecraftDownloader(val project: Project, private val parent: MinecraftProviderImpl) : MinecraftResolver() {
+class MinecraftDownloader(val project: Project, private val parent: MinecraftProviderImpl): MinecraftResolver() {
 
     companion object {
 

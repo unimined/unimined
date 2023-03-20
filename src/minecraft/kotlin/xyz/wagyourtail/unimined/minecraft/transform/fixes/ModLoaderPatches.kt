@@ -602,7 +602,7 @@ object ModLoaderPatches {
         addMod.instructions = addModNewInstructions
     }
 
-    class ClassWriterASM(val fileSystem: FileSystem) : ClassWriter(COMPUTE_MAXS or COMPUTE_FRAMES) {
+    class ClassWriterASM(val fileSystem: FileSystem): ClassWriter(COMPUTE_MAXS or COMPUTE_FRAMES) {
         override fun getCommonSuperClass(type1: String, type2: String): String {
             try {
                 return super.getCommonSuperClass(type1, type2)

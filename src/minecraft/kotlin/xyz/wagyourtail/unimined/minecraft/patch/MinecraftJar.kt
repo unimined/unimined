@@ -43,7 +43,7 @@ data class MinecraftJar(
         fallbackNamespace: MappingNamespace = from.fallbackNamespace,
         awOrAt: String? = from.awOrAt,
         extension: String = from.extension
-    ) : this(parentPath, name, envType, version, patches, mappingNamespace, fallbackNamespace, awOrAt, extension) {
+    ): this(parentPath, name, envType, version, patches, mappingNamespace, fallbackNamespace, awOrAt, extension) {
         assert(
             from.parentPath != parentPath ||
                     from.name != name ||

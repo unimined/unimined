@@ -18,11 +18,11 @@ class ParentOrSet<T> private constructor() {
         this.value = value
     }
 
-    constructor(parentOrSet: ParentOrSet<T>) : this() {
+    constructor(parentOrSet: ParentOrSet<T>): this() {
         parent = parentOrSet
     }
 
-    constructor(value: T) : this() {
+    constructor(value: T): this() {
         this.value = value
     }
 }

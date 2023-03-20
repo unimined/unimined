@@ -7,7 +7,7 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.mod.ModProviderImpl
 
 @Suppress("LeakingThis")
-abstract class UniminedExtensionImpl(project: Project) : UniminedExtension(project) {
+abstract class UniminedExtensionImpl(project: Project): UniminedExtension(project) {
 
     override val minecraftProvider = project.extensions.create(
         "minecraft",

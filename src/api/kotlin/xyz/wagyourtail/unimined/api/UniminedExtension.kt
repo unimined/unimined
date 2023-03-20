@@ -42,7 +42,7 @@ abstract class UniminedExtension(val project: Project) {
     abstract val useGlobalCache: Property<Boolean>
 
     @get:ApiStatus.Internal
-    abstract val minecraftProvider: MinecraftProvider<*,*>
+    abstract val minecraftProvider: MinecraftProvider<*, *>
 
     @get:ApiStatus.Internal
     abstract val mappingsProvider: MappingsProvider

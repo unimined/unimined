@@ -161,7 +161,7 @@ data class McpExecutor(
         }
     }
 
-    private inner class ExecutionContextImpl constructor(private val step: McpConfigStep) : StepLogic.ExecutionContext {
+    private inner class ExecutionContextImpl constructor(private val step: McpConfigStep): StepLogic.ExecutionContext {
         override fun logger(): Logger {
             return project.logger
         }

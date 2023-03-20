@@ -25,7 +25,7 @@ sealed interface ConfigValue {
         variable: Function<in Variable, out R>
     ): R
 
-    data class Constant(val value: String) : ConfigValue {
+    data class Constant(val value: String): ConfigValue {
         override fun <R> fold(
             constant: Function<in Constant, out R>,
             variable: Function<in Variable, out R>
@@ -34,7 +34,7 @@ sealed interface ConfigValue {
         }
     }
 
-    data class Variable(val name: String) : ConfigValue {
+    data class Variable(val name: String): ConfigValue {
         override fun <R> fold(
             constant: Function<in Constant, out R>,
             variable: Function<in Variable, out R>

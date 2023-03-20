@@ -7,7 +7,7 @@ import java.io.File
  * The class responsible for patching minecraft for fabric.
  * @since 0.2.3
  */
-interface FabricLikePatcher : MinecraftPatcher, AccessTransformablePatcher {
+interface FabricLikePatcher: MinecraftPatcher, AccessTransformablePatcher {
 
     override val prodNamespace: MappingNamespace
         get() = MappingNamespace.INTERMEDIARY

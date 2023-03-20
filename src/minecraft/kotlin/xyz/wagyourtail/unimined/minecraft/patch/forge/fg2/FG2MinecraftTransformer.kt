@@ -22,7 +22,7 @@ import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.io.path.writeBytes
 
-class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer) : JarModMinecraftTransformer(
+class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
     project,
     parent.provider,
     Constants.FORGE_PROVIDER
@@ -82,7 +82,11 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        val shadedForge = super.transform(if (minecraft.envType == EnvType.COMBINED) minecraft else transformIntern(minecraft))
+        val shadedForge = super.transform(
+            if (minecraft.envType == EnvType.COMBINED) minecraft else transformIntern(
+                minecraft
+            )
+        )
         return provider.mcRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
     }
 

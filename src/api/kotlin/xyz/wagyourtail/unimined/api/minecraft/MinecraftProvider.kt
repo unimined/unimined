@@ -28,7 +28,7 @@ val Project.minecraft
  * @since 0.1.0
  */
 @Suppress("LeakingThis")
-abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val project: Project) {
+abstract class MinecraftProvider<T: MinecraftRemapper, U: MinecraftPatcher>(val project: Project) {
     @get:ApiStatus.Internal
     abstract val minecraft: MinecraftResolver
 
@@ -314,6 +314,11 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U : MinecraftPatcher>(val
     }
 
     @ApiStatus.Internal
-    abstract fun getMinecraftWithMapping(envType: EnvType, namespace: MappingNamespace, fallbackNamespace: MappingNamespace): Path
+    abstract fun getMinecraftWithMapping(
+        envType: EnvType,
+        namespace: MappingNamespace,
+        fallbackNamespace: MappingNamespace
+    ): Path
+
     abstract fun isMinecraftJar(path: Path): Boolean
 }

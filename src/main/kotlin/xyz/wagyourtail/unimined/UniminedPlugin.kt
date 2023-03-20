@@ -9,7 +9,7 @@ import xyz.wagyourtail.unimined.remap.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.sources.GenSourcesTaskImpl
 
 @Suppress("UNUSED")
-class UniminedPlugin : Plugin<Project> {
+class UniminedPlugin: Plugin<Project> {
     lateinit var ext: UniminedExtensionImpl
 
     override fun apply(project: Project) {

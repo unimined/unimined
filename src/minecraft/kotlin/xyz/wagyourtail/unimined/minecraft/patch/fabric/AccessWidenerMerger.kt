@@ -9,14 +9,14 @@ import xyz.wagyourtail.unimined.api.mappings.MappingsProvider
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 
-class AccessWidenerMerger(private val namespace: String) : AccessWidenerVisitor {
+class AccessWidenerMerger(private val namespace: String): AccessWidenerVisitor {
     // Contains the actual transforms. Class names are as class-file internal binary names (forward slash is used
     // instead of period as the package separator).
     private val classAccess: HashMap<String, Access> = HashMap()
     private val methodAccess: HashMap<EntryTriple, Access> = HashMap()
     private val fieldAccess: HashMap<EntryTriple, Access> = HashMap()
 
-    fun writeToAccessWidenerWriter() : AccessWidenerWriter {
+    fun writeToAccessWidenerWriter(): AccessWidenerWriter {
         val writer = AccessWidenerWriter()
 
         writer.visitHeader(namespace)
@@ -29,9 +29,11 @@ class AccessWidenerMerger(private val namespace: String) : AccessWidenerVisitor 
                 ClassAccess.ACCESSIBLE -> {
                     writer.visitClass(name, AccessWidenerReader.AccessType.ACCESSIBLE, false)
                 }
+
                 ClassAccess.EXTENDABLE -> {
                     writer.visitClass(name, AccessWidenerReader.AccessType.EXTENDABLE, false)
                 }
+
                 ClassAccess.ACCESSIBLE_EXTENDABLE -> {
                     writer.visitClass(name, AccessWidenerReader.AccessType.ACCESSIBLE, false)
                     writer.visitClass(name, AccessWidenerReader.AccessType.EXTENDABLE, false)
@@ -45,14 +47,40 @@ class AccessWidenerMerger(private val namespace: String) : AccessWidenerVisitor 
             when (access) {
                 MethodAccess.DEFAULT -> {}
                 MethodAccess.ACCESSIBLE -> {
-                    writer.visitMethod(triple.owner, triple.name, triple.desc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                    writer.visitMethod(
+                        triple.owner,
+                        triple.name,
+                        triple.desc,
+                        AccessWidenerReader.AccessType.ACCESSIBLE,
+                        false
+                    )
                 }
+
                 MethodAccess.EXTENDABLE -> {
-                    writer.visitMethod(triple.owner, triple.name, triple.desc, AccessWidenerReader.AccessType.EXTENDABLE, false)
+                    writer.visitMethod(
+                        triple.owner,
+                        triple.name,
+                        triple.desc,
+                        AccessWidenerReader.AccessType.EXTENDABLE,
+                        false
+                    )
                 }
+
                 MethodAccess.ACCESSIBLE_EXTENDABLE -> {
-                    writer.visitMethod(triple.owner, triple.name, triple.desc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
-                    writer.visitMethod(triple.owner, triple.name, triple.desc, AccessWidenerReader.AccessType.EXTENDABLE, false)
+                    writer.visitMethod(
+                        triple.owner,
+                        triple.name,
+                        triple.desc,
+                        AccessWidenerReader.AccessType.ACCESSIBLE,
+                        false
+                    )
+                    writer.visitMethod(
+                        triple.owner,
+                        triple.name,
+                        triple.desc,
+                        AccessWidenerReader.AccessType.EXTENDABLE,
+                        false
+                    )
                 }
             }
         }
@@ -63,14 +91,40 @@ class AccessWidenerMerger(private val namespace: String) : AccessWidenerVisitor 
             when (access) {
                 FieldAccess.DEFAULT -> {}
                 FieldAccess.ACCESSIBLE -> {
-                    writer.visitField(triple.owner, triple.name, triple.desc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
+                    writer.visitField(
+                        triple.owner,
+                        triple.name,
+                        triple.desc,
+                        AccessWidenerReader.AccessType.ACCESSIBLE,
+                        false
+                    )
                 }
+
                 FieldAccess.MUTABLE -> {
-                    writer.visitField(triple.owner, triple.name, triple.desc, AccessWidenerReader.AccessType.MUTABLE, false)
+                    writer.visitField(
+                        triple.owner,
+                        triple.name,
+                        triple.desc,
+                        AccessWidenerReader.AccessType.MUTABLE,
+                        false
+                    )
                 }
+
                 FieldAccess.ACCESSIBLE_MUTABLE -> {
-                    writer.visitField(triple.owner, triple.name, triple.desc, AccessWidenerReader.AccessType.ACCESSIBLE, false)
-                    writer.visitField(triple.owner, triple.name, triple.desc, AccessWidenerReader.AccessType.MUTABLE, false)
+                    writer.visitField(
+                        triple.owner,
+                        triple.name,
+                        triple.desc,
+                        AccessWidenerReader.AccessType.ACCESSIBLE,
+                        false
+                    )
+                    writer.visitField(
+                        triple.owner,
+                        triple.name,
+                        triple.desc,
+                        AccessWidenerReader.AccessType.MUTABLE,
+                        false
+                    )
                 }
             }
         }
@@ -176,7 +230,7 @@ class AccessWidenerBetterRemapper
     private val mappingsProvider: MappingsProvider,
     private val toNamespace: String,
     private val mcProvider: MinecraftProvider<*, *>
-) : AccessWidenerVisitor {
+): AccessWidenerVisitor {
     private var remapper: TinyRemapper? = null
 
     override fun visitHeader(namespace: String) {
@@ -204,7 +258,11 @@ class AccessWidenerBetterRemapper
     }
 
     override fun visitClass(name: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
-        delegate.visitClass(if (remapper != null) remapper!!.environment.remapper.map(name) else name, access, transitive)
+        delegate.visitClass(
+            if (remapper != null) remapper!!.environment.remapper.map(name) else name,
+            access,
+            transitive
+        )
     }
 
     override fun visitMethod(
@@ -269,7 +327,7 @@ interface Access {
     fun makeMutable(): Access
 }
 
-enum class ClassAccess : Access {
+enum class ClassAccess: Access {
     DEFAULT,
     ACCESSIBLE,
     EXTENDABLE,
@@ -292,7 +350,7 @@ enum class ClassAccess : Access {
     }
 }
 
-enum class MethodAccess : Access {
+enum class MethodAccess: Access {
     DEFAULT,
     ACCESSIBLE,
     EXTENDABLE,
@@ -315,7 +373,7 @@ enum class MethodAccess : Access {
     }
 }
 
-enum class FieldAccess : Access {
+enum class FieldAccess: Access {
     DEFAULT,
     ACCESSIBLE,
     MUTABLE,

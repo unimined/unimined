@@ -183,7 +183,7 @@ fun Path.getSha1(): String {
 //}
 
 fun Path.deleteRecursively() {
-    Files.walkFileTree(this, object : SimpleFileVisitor<Path>() {
+    Files.walkFileTree(this, object: SimpleFileVisitor<Path>() {
         override fun postVisitDirectory(dir: Path, exc: IOException?): FileVisitResult {
             dir.deleteExisting()
             return FileVisitResult.CONTINUE

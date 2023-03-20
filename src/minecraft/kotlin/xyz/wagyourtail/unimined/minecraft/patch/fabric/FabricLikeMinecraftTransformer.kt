@@ -39,7 +39,7 @@ abstract class FabricLikeMinecraftTransformer(
     providerName: String,
     val modJsonName: String,
     val accessWidenerJsonKey: String
-) : AbstractMinecraftTransformer(
+): AbstractMinecraftTransformer(
     project,
     provider,
     providerName
@@ -86,21 +86,35 @@ abstract class FabricLikeMinecraftTransformer(
     )
 
     override val prodNamespace = MappingNamespace.INTERMEDIARY
-    override var devNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.NAMED, project.mappings.getAvailableMappings(project.minecraft.defaultEnv)) }
-    override var devFallbackNamespace by LazyMutable { MappingNamespace.findByType(MappingNamespace.Type.INT, project.mappings.getAvailableMappings(project.minecraft.defaultEnv)) }
+    override var devNamespace by LazyMutable {
+        MappingNamespace.findByType(
+            MappingNamespace.Type.NAMED,
+            project.mappings.getAvailableMappings(project.minecraft.defaultEnv)
+        )
+    }
+    override var devFallbackNamespace by LazyMutable {
+        MappingNamespace.findByType(
+            MappingNamespace.Type.INT,
+            project.mappings.getAvailableMappings(project.minecraft.defaultEnv)
+        )
+    }
 
     private val devMappings: Path by lazy {
-        project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve("intermediary2named.jar").apply {
-            val export = MappingExportImpl(EnvType.COMBINED).apply {
-                location = toFile()
-                type = MappingExportTypes.TINY_V2
-                sourceNamespace = MappingNamespace.OFFICIAL
-                targetNamespace = listOf(prodNamespace, devNamespace)
-                renameNs[devNamespace] = "named"
+        project.unimined.getLocalCache()
+            .resolve("mappings")
+            .createDirectories()
+            .resolve("intermediary2named.jar")
+            .apply {
+                val export = MappingExportImpl(EnvType.COMBINED).apply {
+                    location = toFile()
+                    type = MappingExportTypes.TINY_V2
+                    sourceNamespace = MappingNamespace.OFFICIAL
+                    targetNamespace = listOf(prodNamespace, devNamespace)
+                    renameNs[devNamespace] = "named"
+                }
+                export.validate()
+                export.exportFunc(project.mappings.getMappingTree(EnvType.COMBINED))
             }
-            export.validate()
-            export.exportFunc(project.mappings.getMappingTree(EnvType.COMBINED))
-        }
     }
 
     init {
@@ -335,7 +349,9 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
 
-    override fun at2aw(input: String, output: String, namespace: MappingNamespace) = at2aw(File(input), File(output), namespace)
+    override fun at2aw(input: String, output: String, namespace: MappingNamespace) =
+        at2aw(File(input), File(output), namespace)
+
     override fun at2aw(input: String, namespace: MappingNamespace) = at2aw(File(input), namespace)
     override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
     override fun at2aw(input: String) = at2aw(File(input))
@@ -346,9 +362,16 @@ abstract class FabricLikeMinecraftTransformer(
             .resolve("${project.name}.accesswidener"),
         namespace
     )
+
     override fun at2aw(input: File, output: File) = at2aw(input, output, devNamespace)
-    override fun at2aw(input: File, output: File, namespace: MappingNamespace) : File {
-        return AccessTransformerMinecraftTransformer.at2aw(input.toPath(), output.toPath(), namespace.namespace, project.mappings.getMappingTree(EnvType.COMBINED), project.logger).toFile()
+    override fun at2aw(input: File, output: File, namespace: MappingNamespace): File {
+        return AccessTransformerMinecraftTransformer.at2aw(
+            input.toPath(),
+            output.toPath(),
+            namespace.namespace,
+            project.mappings.getMappingTree(EnvType.COMBINED),
+            project.logger
+        ).toFile()
     }
 
     override fun mergeAws(inputs: List<File>): File {
@@ -371,6 +394,12 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     override fun mergeAws(output: File, namespace: MappingNamespace, inputs: List<File>): File {
-        return AccessWidenerMinecraftTransformer.mergeAws(inputs.map { it.toPath() }, output.toPath(), namespace, project.mappings, provider).toFile()
+        return AccessWidenerMinecraftTransformer.mergeAws(
+            inputs.map { it.toPath() },
+            output.toPath(),
+            namespace,
+            project.mappings,
+            provider
+        ).toFile()
     }
 }

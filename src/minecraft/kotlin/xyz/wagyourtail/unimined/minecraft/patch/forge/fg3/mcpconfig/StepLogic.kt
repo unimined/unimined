@@ -50,7 +50,7 @@ interface StepLogic {
         }
     }
 
-    class OfFunction(private val function: McpConfigFunction) : StepLogic {
+    class OfFunction(private val function: McpConfigFunction): StepLogic {
         @Throws(IOException::class)
         override fun execute(context: ExecutionContext) {
             context.setOutput("output")
@@ -78,7 +78,7 @@ interface StepLogic {
         }
     }
 
-    class Strip : StepLogic {
+    class Strip: StepLogic {
         companion object {
             private fun trimLeadingSlash(string: String): String {
                 if (string.startsWith(File.separator)) {
@@ -122,7 +122,7 @@ interface StepLogic {
         }
     }
 
-    class ListLibraries : StepLogic {
+    class ListLibraries: StepLogic {
         @Throws(IOException::class)
         override fun execute(context: ExecutionContext) {
             PrintWriter(Files.newBufferedWriter(context.setOutput("libraries.txt"))).use { writer ->
@@ -133,7 +133,7 @@ interface StepLogic {
         }
     }
 
-    class DownloadManifestFile(private val download: Download) : StepLogic {
+    class DownloadManifestFile(private val download: Download): StepLogic {
 
         @Throws(IOException::class)
         override fun execute(context: ExecutionContext) {
@@ -144,13 +144,13 @@ interface StepLogic {
         }
     }
 
-    class NoOp : StepLogic {
+    class NoOp: StepLogic {
         @Throws(IOException::class)
         override fun execute(context: ExecutionContext) {
         }
     }
 
-    class NoOpWithFile(private val path: Supplier<Path>) : StepLogic {
+    class NoOpWithFile(private val path: Supplier<Path>): StepLogic {
         @Throws(IOException::class)
         override fun execute(context: ExecutionContext) {
             context.setOutput(path.get())

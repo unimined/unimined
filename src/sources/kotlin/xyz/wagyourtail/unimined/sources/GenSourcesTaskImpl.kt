@@ -10,7 +10,7 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Path
 
-abstract class GenSourcesTaskImpl() : GenSourcesTask() {
+abstract class GenSourcesTaskImpl(): GenSourcesTask() {
     private val minecraftProvider = project.extensions.getByType(MinecraftProviderImpl::class.java)
     private val modProvider = project.extensions.getByType(UniminedExtension::class.java).modProvider
 

@@ -11,7 +11,7 @@ class ClassMerger(
     val toMergedMethods: (MethodNode, EnvType) -> Unit = { _, _ -> }
 ) {
 
-    fun accept(client: ClassNode?, server:ClassNode?): ClassNode {
+    fun accept(client: ClassNode?, server: ClassNode?): ClassNode {
         if (client == null) {
             toMergedClass(server!!, EnvType.SERVER)
             return server
@@ -30,7 +30,8 @@ class ClassMerger(
         merged.name = client.name
         merged.signature = client.signature
         merged.superName = client.superName
-        merged.interfaces = client.interfaces?.toMutableSet()?.apply { addAll(server.interfaces ?: setOf()) }?.toList() ?: server.interfaces
+        merged.interfaces = client.interfaces?.toMutableSet()?.apply { addAll(server.interfaces ?: setOf()) }?.toList()
+            ?: server.interfaces
         merged.sourceFile = client.sourceFile
         merged.sourceDebug = client.sourceDebug
         merged.module = client.module
@@ -44,7 +45,7 @@ class ClassMerger(
                     add(a)
                 }
             }
-         } ?: server.visibleAnnotations
+        } ?: server.visibleAnnotations
         merged.invisibleAnnotations = client.invisibleAnnotations?.toMutableList()?.apply {
             for (a in server.invisibleAnnotations ?: listOf()) {
                 if (!any { areAnnotationNodesEqual(it, a) }) {
@@ -82,8 +83,12 @@ class ClassMerger(
             }
         } ?: server.innerClasses
         merged.nestHostClass = client.nestHostClass
-        merged.nestMembers = client.nestMembers?.toMutableSet()?.apply { addAll(server.nestMembers ?: setOf()) }?.toList() ?: server.nestMembers
-        merged.permittedSubclasses = client.permittedSubclasses?.toMutableSet()?.apply { addAll(server.permittedSubclasses ?: setOf()) }?.toList() ?: server.permittedSubclasses
+        merged.nestMembers = client.nestMembers?.toMutableSet()
+            ?.apply { addAll(server.nestMembers ?: setOf()) }
+            ?.toList() ?: server.nestMembers
+        merged.permittedSubclasses = client.permittedSubclasses?.toMutableSet()
+            ?.apply { addAll(server.permittedSubclasses ?: setOf()) }
+            ?.toList() ?: server.permittedSubclasses
         // merge record components
         merged.recordComponents = client.recordComponents?.toMutableList()?.apply {
             for (a in server.recordComponents ?: listOf()) {
@@ -95,7 +100,7 @@ class ClassMerger(
 
         // merge fields
         val fields = client.fields.map { it to EnvType.CLIENT }.toMutableList()
-        outer@for (field in server.fields) {
+        outer@ for (field in server.fields) {
             for (f in fields) {
                 if (areFieldNodesEqual(f.first, field)) {
                     fields.remove(f)
@@ -114,7 +119,7 @@ class ClassMerger(
 
         // merge methods
         val methods = client.methods.map { it to EnvType.CLIENT }.toMutableList()
-        outer@for (method in server.methods) {
+        outer@ for (method in server.methods) {
             for (m in methods) {
                 if (areMethodNodesEqual(m.first, method)) {
                     methods.remove(m)
@@ -316,7 +321,11 @@ class ClassMerger(
             val aInstructions = a.instructions
             val bInstructions = b.instructions
             for (i in 0 until aInstructions.size()) {
-                if (!areInstructionsEqual(aInstructions[i], bInstructions[i])) throw IllegalStateException("Instructions are not equal: ${aInstructions[i]} != ${bInstructions[i]} at index $i in ${a.name} ${a.desc} (${a.instructions.size()} instructions) and ${b.name} ${b.desc} (${b.instructions.size()} instructions)")
+                if (!areInstructionsEqual(
+                        aInstructions[i],
+                        bInstructions[i]
+                    )
+                ) throw IllegalStateException("Instructions are not equal: ${aInstructions[i]} != ${bInstructions[i]} at index $i in ${a.name} ${a.desc} (${a.instructions.size()} instructions) and ${b.name} ${b.desc} (${b.instructions.size()} instructions)")
             }
 
             return true

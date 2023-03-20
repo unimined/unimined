@@ -23,7 +23,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.outputStream
 
-open class MappingExportTaskImpl : MappingExportTask() {
+open class MappingExportTaskImpl: MappingExportTask() {
     private val minecraftProvider = project.extensions.getByType(MinecraftProvider::class.java)
     private val mappingsProvider = project.extensions.getByType(MappingsProviderImpl::class.java)
 
@@ -68,7 +68,7 @@ open class MappingExportTaskImpl : MappingExportTask() {
     }
 }
 
-class MappingExportImpl(envType: EnvType) : MappingExport(envType) {
+class MappingExportImpl(envType: EnvType): MappingExport(envType) {
 
     @set:ApiStatus.Internal
     override var exportFunc: (MappingTreeView) -> Unit = ::export
@@ -96,7 +96,7 @@ class MappingExportImpl(envType: EnvType) : MappingExport(envType) {
                     else -> throw RuntimeException("Unknown export type $type")
                 }
                 if (skipComments) {
-                    visitor = object : MappingWriter by visitor {
+                    visitor = object: MappingWriter by visitor {
                         override fun visitComment(targetKind: MappedElementKind?, comment: String?) {}
                     }
                 }
@@ -104,12 +104,12 @@ class MappingExportImpl(envType: EnvType) : MappingExport(envType) {
                     MappingSourceNsSwitch(
                         MappingDstNsFilter(
                             MappingNsRenamer(
-                                    visitor,
-                                    renameNs.mapKeys { it.key.namespace }
-                             ),
+                                visitor,
+                                renameNs.mapKeys { it.key.namespace }
+                            ),
                             targetNamespace?.map { it.namespace } ?: mappingTree.dstNamespaces
                         ),
-                    sourceNamespace?.namespace ?: mappingTree.srcNamespace
+                        sourceNamespace?.namespace ?: mappingTree.srcNamespace
                     ),
                 )
                 os.flush()

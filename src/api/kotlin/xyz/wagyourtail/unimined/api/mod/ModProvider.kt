@@ -28,11 +28,13 @@ abstract class ModProvider(val uniminedExtension: UniminedExtension) {
      * @since 0.4.0
      */
     abstract val combinedConfig: Configs
+
     /**
      * The mod configurations.
      * @since 0.4.0
      */
     abstract val clientConfig: Configs
+
     /**
      * The mod configurations.
      * @since 0.4.0
@@ -114,29 +116,29 @@ abstract class ModProvider(val uniminedExtension: UniminedExtension) {
         private fun sourceSets(sourceSets: SourceSetContainer) {
             when (envType) {
                 EnvType.SERVER -> {
-                    for (sourceSet in project.minecraft.serverSourceSets){
+                    for (sourceSet in project.minecraft.serverSourceSets) {
                         sourceSet.compileClasspath += modCompileOnly + modImplementation
                         sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
                 }
 
                 EnvType.CLIENT -> {
-                    for (sourceSet in project.minecraft.clientSourceSets){
+                    for (sourceSet in project.minecraft.clientSourceSets) {
                         sourceSet.compileClasspath += modCompileOnly + modImplementation
                         sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
                 }
 
                 EnvType.COMBINED -> {
-                    for (sourceSet in project.minecraft.combinedSourceSets){
+                    for (sourceSet in project.minecraft.combinedSourceSets) {
                         sourceSet.compileClasspath += modCompileOnly + modImplementation
                         sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
-                    for (sourceSet in project.minecraft.serverSourceSets){
+                    for (sourceSet in project.minecraft.serverSourceSets) {
                         sourceSet.compileClasspath += modCompileOnly + modImplementation
                         sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }
-                    for (sourceSet in project.minecraft.clientSourceSets){
+                    for (sourceSet in project.minecraft.clientSourceSets) {
                         sourceSet.compileClasspath += modCompileOnly + modImplementation
                         sourceSet.runtimeClasspath += localRuntime + modRuntimeOnly + modLocalRuntime + modImplementation
                     }

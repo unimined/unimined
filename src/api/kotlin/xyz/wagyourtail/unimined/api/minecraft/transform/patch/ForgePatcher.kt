@@ -6,7 +6,7 @@ import java.io.File
  * The class responsible for patching minecraft for forge.
  * @since 0.2.3
  */
-interface ForgePatcher : JarModPatcher, AccessTransformablePatcher {
+interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
 
     /**
      * location of access transformer file to apply to the minecraft jar.

@@ -16,7 +16,7 @@ import org.gradle.api.Project
  * }
  */
 @Suppress("unused")
-open class FabricApiExtension : FabricLikeApiExtension("fabric-api") {
+open class FabricApiExtension: FabricLikeApiExtension("fabric-api") {
     companion object {
         fun apply(target: Project) {
             target.extensions.create("fabricApi", FabricApiExtension::class.java)

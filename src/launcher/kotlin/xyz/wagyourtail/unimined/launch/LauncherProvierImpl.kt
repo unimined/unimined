@@ -6,7 +6,7 @@ import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.launch.LauncherProvider
 
-class LauncherProvierImpl(val project: Project, unimined: UniminedExtension) : LauncherProvider() {
+class LauncherProvierImpl(val project: Project, unimined: UniminedExtension): LauncherProvider() {
 
     private var lock = false
 

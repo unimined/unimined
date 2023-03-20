@@ -153,7 +153,7 @@ class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, vararg val map
 
 @ApiStatus.Internal
 abstract class MappingMember(val srcName: String, vararg targets: Pair<String, String>) {
-    constructor(srcName: String, targets: Map<String, String>) : this(srcName, *targets.toList().toTypedArray())
+    constructor(srcName: String, targets: Map<String, String>): this(srcName, *targets.toList().toTypedArray())
 
     internal val targets = mutableMapOf(*targets)
 
@@ -168,8 +168,8 @@ abstract class MappingMember(val srcName: String, vararg targets: Pair<String, S
  * A class to represent a class mapping.
  * @since 0.1.0
  */
-class ClassMapping(srcName: String, vararg targets: Pair<String, String>) : MappingMember(srcName, *targets) {
-    constructor(srcName: String, targets: Map<String, String>) : this(srcName, *targets.toList().toTypedArray())
+class ClassMapping(srcName: String, vararg targets: Pair<String, String>): MappingMember(srcName, *targets) {
+    constructor(srcName: String, targets: Map<String, String>): this(srcName, *targets.toList().toTypedArray())
 
     private val fields = mutableListOf<FieldMapping>()
     private val methods = mutableListOf<MethodMapping>()
@@ -349,11 +349,11 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, vararg val mappin
 }
 
 @ApiStatus.Internal
-class FieldMapping(srcName: String, val srcDesc: String, vararg targets: Pair<String, String>) : MappingMember(
+class FieldMapping(srcName: String, val srcDesc: String, vararg targets: Pair<String, String>): MappingMember(
     srcName,
     *targets
 ) {
-    constructor(srcName: String, srcDesc: String, targets: Map<String, String>) : this(
+    constructor(srcName: String, srcDesc: String, targets: Map<String, String>): this(
         srcName,
         srcDesc,
         *targets.toList().toTypedArray()
@@ -373,11 +373,11 @@ class FieldMapping(srcName: String, val srcDesc: String, vararg targets: Pair<St
  * A class to represent a method mapping.
  * @since 0.1.0
  */
-class MethodMapping(srcName: String, val srcDesc: String, vararg targets: Pair<String, String>) : MappingMember(
+class MethodMapping(srcName: String, val srcDesc: String, vararg targets: Pair<String, String>): MappingMember(
     srcName,
     *targets
 ) {
-    constructor(srcName: String, srcDesc: String, targets: Map<String, String>) : this(
+    constructor(srcName: String, srcDesc: String, targets: Map<String, String>): this(
         srcName,
         srcDesc,
         *targets.toList().toTypedArray()

@@ -6,5 +6,5 @@ import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 class OfficialFabricMinecraftTransformer(
     project: Project,
     provider: MinecraftProviderImpl
-) : FabricMinecraftTransformer(project, provider) {
+): FabricMinecraftTransformer(project, provider) {
 }

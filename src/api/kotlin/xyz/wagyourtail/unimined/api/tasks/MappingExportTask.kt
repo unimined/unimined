@@ -27,7 +27,7 @@ import java.io.File
  * processResources.dependsOn(exportMappings)
  * ```
  */
-abstract class MappingExportTask : ConventionTask() {
+abstract class MappingExportTask: ConventionTask() {
 
     /**
      * export a mapping to a file.

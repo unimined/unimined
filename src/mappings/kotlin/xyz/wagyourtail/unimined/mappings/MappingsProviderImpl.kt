@@ -32,7 +32,7 @@ import kotlin.io.path.outputStream
 
 abstract class MappingsProviderImpl(
     val project: Project
-) : MappingsProvider() {
+): MappingsProvider() {
 
     private val mcProvider = project.extensions.getByType(MinecraftProvider::class.java)
 
@@ -55,9 +55,12 @@ abstract class MappingsProviderImpl(
         val file = off.resolve().first { it.extension == "txt" }
         val tree = MemoryMappingTree()
         file.inputStream()
-            .use { ProGuardReader.read(it.reader(), "mojmap", "official",
-                MappingSourceNsSwitch(tree, "official")
-            ) }
+            .use {
+                ProGuardReader.read(
+                    it.reader(), "mojmap", "official",
+                    MappingSourceNsSwitch(tree, "official")
+                )
+            }
         return tree
     }
 
@@ -121,7 +124,8 @@ abstract class MappingsProviderImpl(
         } + mappingFileEnvs.computeIfAbsent(envType) {
             val config = getMappings(envType)
             config.dependencies.map {
-                it to (config.files(it).firstOrNull { it.extension != "pom" } ?: throw IllegalStateException("No mappings file found for $it"))
+                it to (config.files(it).firstOrNull { it.extension != "pom" }
+                    ?: throw IllegalStateException("No mappings file found for $it"))
             }.toSet()
         }
     }
@@ -182,15 +186,18 @@ abstract class MappingsProviderImpl(
                 if (mapping.second.extension == "zip" || mapping.second.extension == "jar") {
                     val contents = ZipReader.readContents(mapping.second.toPath())
                     project.logger.info("Detected mapping type: ${ZipReader.getZipTypeFromContentList(contents)}")
-                    ZipReader.readMappings(envType, mapping.second.toPath(), contents, mappingTree, when (mapping.first.name) {
-                        "yarn" -> MappingNamespace.YARN
-                        "quilt-mappings" -> MappingNamespace.QUILT
-                        else -> MappingNamespace.YARN
-                    })
+                    ZipReader.readMappings(
+                        envType, mapping.second.toPath(), contents, mappingTree, when (mapping.first.name) {
+                            "yarn" -> MappingNamespace.YARN
+                            "quilt-mappings" -> MappingNamespace.QUILT
+                            else -> MappingNamespace.YARN
+                        }
+                    )
                 } else if (mapping.second.name == "client_mappings.txt" || mapping.second.name == "server_mappings.txt") {
                     project.logger.info("Detected proguard mappings")
                     InputStreamReader(mapping.second.inputStream()).use {
-                        ProGuardReader.read(it, MappingNamespace.MOJMAP.namespace, MappingNamespace.OFFICIAL.namespace,
+                        ProGuardReader.read(
+                            it, MappingNamespace.MOJMAP.namespace, MappingNamespace.OFFICIAL.namespace,
                             MappingSourceNsSwitch(
                                 mappingTree,
                                 MappingNamespace.OFFICIAL.namespace
@@ -225,11 +232,12 @@ abstract class MappingsProviderImpl(
             "mappings for $envType, srcNamespace: ${mappingTree.srcNamespace} dstNamespaces: ${
                 mappingTree.dstNamespaces.joinToString(
                     ","
-                ) 
+                )
             }"
         )
         try {
-            val available = (mappingTree.dstNamespaces.filter { !internalNS.contains(it) }.map { MappingNamespace.getNamespace(it) } + MappingNamespace.OFFICIAL).toSet()
+            val available = (mappingTree.dstNamespaces.filter { !internalNS.contains(it) }
+                .map { MappingNamespace.getNamespace(it) } + MappingNamespace.OFFICIAL).toSet()
             project.logger.lifecycle("found mappings for $envType: $available")
         } catch (e: Exception) {
             project.logger.error("Namespace in ${mappingTree.dstNamespaces} not found.")
@@ -274,25 +282,30 @@ abstract class MappingsProviderImpl(
             } ?: fromClassName.substring(fromClassName.lastIndexOf('$'))
             if (outerToClassName != null && (toClassName == null || !toClassName.startsWith(outerToClassName))) {
                 toClassName = "$outerToClassName$$innerClassName"
-                project.logger.info("Detected missing inner class, replacing with: {} -> {}", fromClassName, toClassName)
+                project.logger.info(
+                    "Detected missing inner class, replacing with: {} -> {}",
+                    fromClassName,
+                    toClassName
+                )
             }
         }
         return toClassName
     }
 
     private open class Mapping(val to: String?)
-    private class ClassMapping(val from: String, to: String) : Mapping(to)
-    private open class MemberMapping(val from: String, val fromDesc: String?, to: String) : Mapping(to)
-    private class MethodMapping(from: String, fromDesc: String, to: String) : MemberMapping(from, fromDesc, to)
-    private class FieldMapping(from: String, fromDesc: String?, to: String) : MemberMapping(from, fromDesc, to)
-    private class ArgumentMapping(to: String, val index: Int) : Mapping(to)
-    private class LocalVariableMapping(to: String, val lvIndex: Int, val startOpIdx: Int, val lvtRowIndex: Int) : Mapping(to)
+    private class ClassMapping(val from: String, to: String): Mapping(to)
+    private open class MemberMapping(val from: String, val fromDesc: String?, to: String): Mapping(to)
+    private class MethodMapping(from: String, fromDesc: String, to: String): MemberMapping(from, fromDesc, to)
+    private class FieldMapping(from: String, fromDesc: String?, to: String): MemberMapping(from, fromDesc, to)
+    private class ArgumentMapping(to: String, val index: Int): Mapping(to)
+    private class LocalVariableMapping(to: String, val lvIndex: Int, val startOpIdx: Int, val lvtRowIndex: Int):
+            Mapping(to)
 
     private fun getInternalMappingsProvider(
         envType: EnvType,
         remap: Pair<MappingNamespace, MappingNamespace>,
         remapLocalVariables: Boolean,
-    ) : List<Mapping> {
+    ): List<Mapping> {
         project.logger.info("Getting internal mappings provider for $envType, $remap, $remapLocalVariables")
         val reverse = remap.first.shouldReverse(remap.second)
         val srcName = (if (reverse) remap.second else remap.first).namespace
@@ -435,24 +448,34 @@ abstract class MappingsProviderImpl(
                         lastMethod = null
                         acceptor.acceptClass(mapping.from, mapping.to)
                     }
+
                     is MethodMapping -> {
                         if (lastClass == null) throw IllegalStateException("Method mapping before class mapping")
                         lastMethod = memberOf(lastClass, mapping.from, mapping.fromDesc)
 
                         acceptor.acceptMethod(lastMethod, mapping.to)
                     }
+
                     is FieldMapping -> {
                         if (lastClass == null) throw IllegalStateException("Field mapping before class mapping")
                         lastMethod = null
                         acceptor.acceptField(memberOf(lastClass, mapping.from, mapping.fromDesc), mapping.to)
                     }
+
                     is ArgumentMapping -> {
                         if (lastMethod == null) throw IllegalStateException("Argument mapping before method mapping")
                         acceptor.acceptMethodArg(lastMethod, mapping.index, mapping.to)
                     }
+
                     is LocalVariableMapping -> {
                         if (lastMethod == null) throw IllegalStateException("Local variable mapping before method mapping")
-                        acceptor.acceptMethodVar(lastMethod, mapping.lvIndex, mapping.startOpIdx, mapping.lvtRowIndex, mapping.to)
+                        acceptor.acceptMethodVar(
+                            lastMethod,
+                            mapping.lvIndex,
+                            mapping.startOpIdx,
+                            mapping.lvtRowIndex,
+                            mapping.to
+                        )
                     }
                 }
             }
@@ -460,7 +483,8 @@ abstract class MappingsProviderImpl(
     }
 
     @ApiStatus.Internal
-    override fun getAvailableMappings(envType: EnvType): Set<MappingNamespace> = (getMappingTree(envType).dstNamespaces.filter { !internalNS.contains(it) }.mapNotNull {
+    override fun getAvailableMappings(envType: EnvType): Set<MappingNamespace> =
+        (getMappingTree(envType).dstNamespaces.filter { !internalNS.contains(it) }.mapNotNull {
             try {
                 MappingNamespace.getNamespace(it)
             } catch (e: Exception) {

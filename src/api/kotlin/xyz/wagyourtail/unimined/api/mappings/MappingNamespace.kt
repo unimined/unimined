@@ -35,7 +35,12 @@ enum class MappingNamespace(val namespace: String, val type: Type) {
             return byName[namespace] ?: throw IllegalArgumentException("Invalid namespace: $namespace")
         }
 
-        fun calculateShortestRemapPathInternal(from: MappingNamespace, to: MappingNamespace, available: Set<MappingNamespace>, current: MutableList<Pair<Boolean, MappingNamespace>>): MutableList<Pair<Boolean, MappingNamespace>>? {
+        fun calculateShortestRemapPathInternal(
+            from: MappingNamespace,
+            to: MappingNamespace,
+            available: Set<MappingNamespace>,
+            current: MutableList<Pair<Boolean, MappingNamespace>>
+        ): MutableList<Pair<Boolean, MappingNamespace>>? {
             val results = mutableListOf<MutableList<Pair<Boolean, MappingNamespace>>>()
 
             if (from.type.ordinal != 2) {
@@ -70,8 +75,19 @@ enum class MappingNamespace(val namespace: String, val type: Type) {
             return results.minByOrNull { it.size }
         }
 
-        fun calculateShortestRemapPathWithFallbacks(from: MappingNamespace, fromFallback: MappingNamespace, toFallback: MappingNamespace, to: MappingNamespace, available: Set<MappingNamespace>): List<Pair<Boolean, MappingNamespace>> {
-            val path = if (fromFallback == toFallback) mutableListOf() else calculateShortestRemapPathInternal(fromFallback, toFallback, available, mutableListOf())
+        fun calculateShortestRemapPathWithFallbacks(
+            from: MappingNamespace,
+            fromFallback: MappingNamespace,
+            toFallback: MappingNamespace,
+            to: MappingNamespace,
+            available: Set<MappingNamespace>
+        ): List<Pair<Boolean, MappingNamespace>> {
+            val path = if (fromFallback == toFallback) mutableListOf() else calculateShortestRemapPathInternal(
+                fromFallback,
+                toFallback,
+                available,
+                mutableListOf()
+            )
                 ?: throw IllegalArgumentException("Invalid target: $to")
             if (from != fromFallback)
                 path.add(0, from.shouldReverse(fromFallback) to fromFallback)
@@ -82,7 +98,7 @@ enum class MappingNamespace(val namespace: String, val type: Type) {
 
         fun findByType(type: Type, available: Set<MappingNamespace>): MappingNamespace {
             return byType[type]?.firstOrNull { it in available }
-                 ?: throw IllegalArgumentException("No valid namespaces for type $type in $available")
+                ?: throw IllegalArgumentException("No valid namespaces for type $type in $available")
         }
 
     }
@@ -95,7 +111,12 @@ fun main(args: Array<String>) {
             MappingNamespace.getNamespace("intermediary"),
             MappingNamespace.getNamespace("searge"),
             MappingNamespace.getNamespace("searge"),
-            setOf(MappingNamespace.INTERMEDIARY, MappingNamespace.YARN, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
+            setOf(
+                MappingNamespace.INTERMEDIARY,
+                MappingNamespace.YARN,
+                MappingNamespace.SEARGE,
+                MappingNamespace.OFFICIAL
+            )
         )
     )
 }

@@ -9,7 +9,7 @@ import xyz.wagyourtail.unimined.api.mod.ModProvider
 open class ModProviderImpl(
     val project: Project,
     uniminedExtension: UniminedExtension
-) : ModProvider(uniminedExtension) {
+): ModProvider(uniminedExtension) {
 
     override val modRemapper = ModRemapperImpl(project, this, uniminedExtension)
 
