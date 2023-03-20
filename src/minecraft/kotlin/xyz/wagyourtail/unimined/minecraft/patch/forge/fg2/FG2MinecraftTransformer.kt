@@ -60,12 +60,12 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         project.mappings.getMappings(EnvType.COMBINED).dependencies.apply {
             val empty = isEmpty()
             if (empty) {
-                if (!SemVerUtils.matches(provider.minecraft.version, "<1.7.10")) {
+                if (provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.7.10") != -1) {
                     add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraft.version}:srg@zip"))
                 }
-                if (SemVerUtils.matches(provider.minecraft.version, "<1.7")) {
+                if (provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.7") == -1) {
                     add(project.dependencies.create(forgeSrc))
-                } else if (SemVerUtils.matches(provider.minecraft.version, "<1.7.10")) {
+                } else if (provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.7.10") == -1) {
                     throw UnsupportedOperationException("Forge 1.7-1.7.9 don't have automatic mappings support. please supply the mcp mappings or whatever manually")
                 } else {
                     if (parent.mcpVersion == null || parent.mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
@@ -74,7 +74,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             } else {
                 val deps = this.toList()
                 clear()
-                if (!SemVerUtils.matches(provider.minecraft.version, "<1.7.10")) {
+                if (provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.7.10") != -1) {
                     add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraft.version}:srg@zip"))
                 }
                 addAll(deps)

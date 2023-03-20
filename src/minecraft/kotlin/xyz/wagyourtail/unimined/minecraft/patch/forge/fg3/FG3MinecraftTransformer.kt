@@ -282,7 +282,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         //  extract binpatches
         val binPatchFile = ZipReader.readInputStreamFor(userdevCfg["binpatches"].asString, forgeUd.toPath()) {
-            outFolder.resolve("binpatches.pack.lzma").apply {
+            outFolder.resolve("binpatches.lzma").apply {
                 writeBytes(
                     it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
                 )
