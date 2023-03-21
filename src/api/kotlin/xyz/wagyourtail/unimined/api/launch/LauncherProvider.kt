@@ -73,4 +73,5 @@ abstract class LauncherProvider {
 
     @ApiStatus.Internal
     abstract fun addTarget(config: LaunchConfig)
+    abstract fun configFirst(config: String, action: LaunchConfig.() -> Unit)
 }

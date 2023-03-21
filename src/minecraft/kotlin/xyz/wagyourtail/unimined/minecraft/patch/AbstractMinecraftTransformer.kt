@@ -146,11 +146,11 @@ abstract class AbstractMinecraftTransformer protected constructor(
         project.logger.info("client: ${provider.client}, server: ${provider.server}")
         if (provider.minecraft.client) {
             project.logger.info("client config")
-            provider.launcher.config("client", ::applyClientRunTransform)
+            provider.launcher.configFirst("client", ::applyClientRunTransform)
         }
         if (provider.minecraft.server) {
             project.logger.info("server config")
-            provider.launcher.config("server", ::applyServerRunTransform)
+            provider.launcher.configFirst("server", ::applyServerRunTransform)
         }
     }
 

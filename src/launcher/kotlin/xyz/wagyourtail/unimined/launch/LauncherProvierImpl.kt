@@ -32,6 +32,16 @@ class LauncherProvierImpl(val project: Project, unimined: UniminedExtension): La
         }
     }
 
+    override fun configFirst(config: String, action: LaunchConfig.() -> Unit) {
+        if (lock) throw IllegalStateException("Cannot register launch targets after afterEvaluate has been called.")
+        transformers.compute(config) { _, prev ->
+            {
+                action.invoke(this)
+                prev?.invoke(this)
+            }
+        }
+    }
+
     override fun addTarget(config: LaunchConfig) {
         if (lock) throw IllegalStateException("Cannot register launch targets after afterEvaluate has been called.")
         launchTargets[config.name] = config
