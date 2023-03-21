@@ -132,7 +132,9 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
         config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
         config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-        config.args += "--tweakClass ${parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
+        config.args += listOf("--tweakClass",
+            parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"
+        )
     }
 
     override fun applyServerRunTransform(config: LaunchConfig) {
@@ -140,7 +142,9 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
         config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
         config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-        config.args += "--tweakClass ${parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLServerTweaker"}"
+        config.args += listOf("--tweakClass",
+            parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLServerTweaker"
+        )
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {

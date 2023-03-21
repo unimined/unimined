@@ -420,7 +420,9 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
                 config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
                 config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-                config.args += "--tweakClass ${parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
+                config.args += listOf("--tweakClass",
+                    parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"
+                )
             } else {
                 project.logger.info("[FG3] Using new client run config")
                 val args = get("args")?.asJsonArray?.map { it.asString } ?: listOf()
@@ -449,7 +451,9 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
                 config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
                 config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-                config.args += "--tweakClass ${parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"}"
+                config.args += listOf("--tweakClass",
+                    parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"
+                )
             } else {
                 project.logger.info("[FG3] Using new server run config")
                 val args = get("args")?.asJsonArray?.map { it.asString } ?: listOf()
