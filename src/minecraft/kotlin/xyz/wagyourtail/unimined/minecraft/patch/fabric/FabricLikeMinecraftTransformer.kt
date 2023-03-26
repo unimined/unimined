@@ -255,9 +255,9 @@ abstract class FabricLikeMinecraftTransformer(
 
     protected fun getIntermediaryClassPath(envType: EnvType): String {
         val remapClasspath = project.unimined.getLocalCache().resolve("remapClasspath.txt")
-        val s = provider.mcLibraries.files.joinToString(":") + ":" +
-                project.unimined.modProvider.modRemapper.preTransform(envType).joinToString(":") + ":" +
-                provider.getMinecraftWithMapping(envType, prodNamespace, prodNamespace)
+        val s = arrayOf(provider.mcLibraries.files.joinToString(File.pathSeparator),
+            project.unimined.modProvider.modRemapper.preTransform(envType).joinToString(File.pathSeparator),
+            provider.getMinecraftWithMapping(envType, prodNamespace, prodNamespace)).joinToString(File.pathSeparator)
         remapClasspath.writeText(s, options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
         return remapClasspath.absolutePathString()
     }
