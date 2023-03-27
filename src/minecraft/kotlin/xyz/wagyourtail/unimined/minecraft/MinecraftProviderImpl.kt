@@ -78,8 +78,7 @@ abstract class MinecraftProviderImpl(
 
     @ApiStatus.Internal
     val assetsDownloader: AssetsDownloader = AssetsDownloader(
-        project,
-        this
+        project
     )
 
     override val launcher: LauncherProvider = LauncherProvierImpl(project, unimined)

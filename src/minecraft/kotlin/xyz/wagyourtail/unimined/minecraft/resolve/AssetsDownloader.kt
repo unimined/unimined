@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.createDirectories
 import kotlin.io.path.inputStream
 
-class AssetsDownloader(val project: Project, private val parent: MinecraftProviderImpl) {
+class AssetsDownloader(val project: Project) {
 
     fun downloadAssets(project: Project, assets: AssetIndex): Path {
         val dir = assetsDir()
@@ -33,7 +33,7 @@ class AssetsDownloader(val project: Project, private val parent: MinecraftProvid
             JsonParser.parseReader(InputStreamReader(it)).asJsonObject
         }
 
-        resolveAssets(project, assetsJson, dir)
+        resolveAssets(assetsJson, dir)
         return dir
     }
 
@@ -41,98 +41,89 @@ class AssetsDownloader(val project: Project, private val parent: MinecraftProvid
         return project.unimined.getGlobalCache().resolve("assets")
     }
 
-    private fun updateIndex(assets: AssetIndex, index: Path) {
-        if (testSha1(assets.size, assets.sha1!!, index)) {
-            return
-        }
+    private fun updateIndex(assets: AssetIndex, index: Path) =
+        downloadAsset(project, assets.url!!, assets.size, assets.sha1!!, index, "assets index")
 
-        assets.url?.stream()?.use {
-            Files.copy(it, index, StandardCopyOption.REPLACE_EXISTING)
-        }
+    @Synchronized
+    private fun resolveAssets(assetsJson: JsonObject, dir: Path) {
+        project.logger.lifecycle("Resolving assets...")
+        val copyToResources = assetsJson.get("map_to_resources")?.asBoolean ?: false
+        for (key in assetsJson.keySet()) {
+            val keyDir = dir.resolve(key)
+            val value = assetsJson.get(key)
+            if (value is JsonObject) {
+                val entries = value.entrySet()
+                project.logger.lifecycle("Resolving $key (${entries.size} files)...")
+                var downloaded = AtomicInteger(0)
+                val timeStart = System.currentTimeMillis()
+                entries.parallelStream().forEach { (key, value) ->
+                    val size = value.asJsonObject.get("size").asLong
+                    val hash = value.asJsonObject.get("hash").asString
+                    val assetPath = keyDir.resolve(hash.substring(0, 2)).resolve(hash)
+                    val assetUrl = URI.create("$ASSET_BASE_URL${hash.substring(0, 2)}/$hash")
 
-        if (!testSha1(assets.size, assets.sha1, index)) {
-            throw Exception("Failed to download " + assets.url)
+                    downloadAsset(project, assetUrl, size, hash, assetPath, key)
+
+                    if (copyToResources) {
+                        val resourcePath = project.projectDir.resolve("run")
+                            .resolve("client")
+                            .resolve("resources")
+                            .resolve(key)
+                        resourcePath.parentFile.mkdirs()
+                        assetPath.inputStream()
+                            .use { Files.copy(it, resourcePath.toPath(), StandardCopyOption.REPLACE_EXISTING) }
+                    }
+
+                    if (project.logger.isDebugEnabled) {
+                        project.logger.debug("${downloaded.addAndGet(1) * 100 / entries.size}% (${downloaded}/${entries.size})\n")
+                    } else {
+                        print("${downloaded.addAndGet(1) * 100 / entries.size}% (${downloaded}/${entries.size})\r")
+                        System.out.flush()
+                    }
+                }
+                val timeEnd = System.currentTimeMillis()
+                project.logger.lifecycle("Finished resolving $key in ${timeEnd - timeStart}ms")
+            }
         }
     }
 
-    companion object {
-        @Synchronized
-        private fun resolveAssets(project: Project, assetsJson: JsonObject, dir: Path) {
-            project.logger.lifecycle("Resolving assets...")
-            val copyToResources = assetsJson.get("map_to_resources")?.asBoolean ?: false
-            for (key in assetsJson.keySet()) {
-                val keyDir = dir.resolve(key)
-                val value = assetsJson.get(key)
-                if (value is JsonObject) {
-                    val entries = value.entrySet()
-                    project.logger.lifecycle("Resolving $key (${entries.size} files)...")
-                    var downloaded = AtomicInteger(0)
-                    val timeStart = System.currentTimeMillis()
-                    entries.parallelStream().forEach { (key, value) ->
-                        val size = value.asJsonObject.get("size").asLong
-                        val hash = value.asJsonObject.get("hash").asString
-                        val assetPath = keyDir.resolve(hash.substring(0, 2)).resolve(hash)
-                        val assetUrl = URI.create("$ASSET_BASE_URL${hash.substring(0, 2)}/$hash")
-
-                        var i = 0
-                        while (!testSha1(size, hash, assetPath) && i < 3) {
-                            if (i != 0) {
-                                project.logger.warn("Failed to download asset $key : $assetUrl")
-                            }
-                            i += 1
-                            try {
-                                project.logger.info("Downloading $key : $assetUrl")
-                                assetPath.parent.createDirectories()
-
-                                val urlConnection = assetUrl.toURL().openConnection() as HttpURLConnection
-
-                                urlConnection.connectTimeout = 5000
-                                urlConnection.readTimeout = 5000
-
-                                urlConnection.addRequestProperty(
-                                    "User-Agent",
-                                    "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)"
-                                )
-                                urlConnection.addRequestProperty("Accept", "*/*")
-                                urlConnection.addRequestProperty("Accept-Encoding", "gzip, deflate")
-
-                                if (urlConnection.responseCode == 200) {
-                                    urlConnection.inputStream.use {
-                                        Files.copy(it, assetPath, StandardCopyOption.REPLACE_EXISTING)
-                                    }
-                                } else {
-                                    project.logger.error("Failed to download asset $key $assetUrl error code: ${urlConnection.responseCode}")
-                                }
-                            } catch (e: Exception) {
-                                project.logger.error("Failed to download asset $key : $assetUrl", e)
-                            }
-                        }
-
-                        if (i == 3 && !testSha1(size, hash, assetPath)) {
-                            throw IOException("Failed to download asset $key : $assetUrl")
-                        }
-
-                        if (copyToResources) {
-                            val resourcePath = project.projectDir.resolve("run")
-                                .resolve("client")
-                                .resolve("resources")
-                                .resolve(key)
-                            resourcePath.parentFile.mkdirs()
-                            assetPath.inputStream()
-                                .use { Files.copy(it, resourcePath.toPath(), StandardCopyOption.REPLACE_EXISTING) }
-                        }
-
-                        if (project.logger.isDebugEnabled) {
-                            project.logger.debug("${downloaded.addAndGet(1) * 100 / entries.size}% (${downloaded}/${entries.size})\n")
-                        } else {
-                            print("${downloaded.addAndGet(1) * 100 / entries.size}% (${downloaded}/${entries.size})\r")
-                            System.out.flush()
-                        }
-                    }
-                    val timeEnd = System.currentTimeMillis()
-                    project.logger.lifecycle("Finished resolving $key in ${timeEnd - timeStart}ms")
-                }
+    private fun downloadAsset(project: Project, uri: URI, size: Long, hash: String, path: Path, key: String) {
+        var i = 0
+        while (!testSha1(size, hash, path) && i < 3) {
+            if (i != 0) {
+                project.logger.warn("Failed to download asset $key : $uri")
             }
+            i += 1
+            try {
+                project.logger.info("Downloading $key : $uri")
+                path.parent.createDirectories()
+
+                val urlConnection = uri.toURL().openConnection() as HttpURLConnection
+
+                urlConnection.connectTimeout = 5000
+                urlConnection.readTimeout = 5000
+
+                urlConnection.addRequestProperty(
+                    "User-Agent",
+                    "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)"
+                )
+                urlConnection.addRequestProperty("Accept", "*/*")
+                urlConnection.addRequestProperty("Accept-Encoding", "gzip, deflate")
+
+                if (urlConnection.responseCode == 200) {
+                    urlConnection.inputStream.use {
+                        Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
+                    }
+                } else {
+                    project.logger.error("Failed to download asset $key $uri error code: ${urlConnection.responseCode}")
+                }
+            } catch (e: Exception) {
+                project.logger.error("Failed to download asset $key : $uri", e)
+            }
+        }
+
+        if (i == 3 && !testSha1(size, hash, path)) {
+            throw IOException("Failed to download asset $key : $uri")
         }
     }
 }

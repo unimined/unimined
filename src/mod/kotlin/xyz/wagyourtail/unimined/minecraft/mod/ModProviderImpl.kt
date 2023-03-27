@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.mod.ModProvider
 
+@Suppress("LeakingThis")
 open class ModProviderImpl(
     val project: Project,
     uniminedExtension: UniminedExtension

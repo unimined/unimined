@@ -273,13 +273,7 @@ abstract class MappingsProviderImpl(
                     outerToClassName
                 )
             }
-            val innerClassName = toClassName?.let {
-                it.substring(
-                    it.lastIndexOf(
-                        '$'
-                    )
-                )
-            } ?: fromClassName.substring(fromClassName.lastIndexOf('$'))
+            val innerClassName = toClassName?.substringAfterLast('$') ?: fromClassName.substringAfterLast('$')
             if (outerToClassName != null && (toClassName == null || !toClassName.startsWith(outerToClassName))) {
                 toClassName = "$outerToClassName$$innerClassName"
                 project.logger.info(
