@@ -30,7 +30,14 @@ abstract class MappingsProvider {
     /**
      * Get a stub mapping provider for the given environment.
      */
+    @Deprecated("use stub(envType: String) instead", ReplaceWith("stub(envType)"))
     fun getStub(envType: String) = getStub(EnvType.valueOf(envType))
+
+    /**
+     * Get a stub mapping provider for the given environment.
+     * @since 0.4.10
+     */
+    fun stub(envType: String) = getStub(EnvType.valueOf(envType))
 
     @ApiStatus.Internal
     abstract fun getStub(envType: EnvType): MemoryMapping

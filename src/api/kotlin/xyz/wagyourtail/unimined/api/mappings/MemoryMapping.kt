@@ -63,6 +63,17 @@ class MemoryMapping {
     }
 
     /**
+     * @since 0.4.10
+     */
+     fun c(srcName: String, targets: Map<String, String>, @DelegatesTo(value = ClassMapping::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+        c(srcName, targets) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
      * bind a set of target mappings
      * @param mappings The mappings to bind.
      * @since 0.1.0
@@ -83,9 +94,11 @@ class MemoryMapping {
         mappings: List<String>,
         @DelegatesTo(value = MemoryMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
     ) {
-        action.delegate = MemoryMappingWithMappings(this, *mappings.toTypedArray())
-        action.resolveStrategy = Closure.DELEGATE_FIRST
-        action.call()
+        withMappings(*mappings.toTypedArray()) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
     }
 
     private fun getNamespaces(): Set<String> {
@@ -149,6 +162,29 @@ class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, vararg val map
             action(ClassMappingWithMappings(this, *mappings))
         }
     }
+
+    /**
+     * @since 0.4.10
+     */
+     fun c(srcName: String, targets: List<String>) {
+        memoryMapping.c(srcName, *(mappings zip targets).toTypedArray())
+     }
+
+    /**
+     * @since 0.4.10
+     */
+    fun c(srcName: String, targets: List<String>, @DelegatesTo(value = ClassMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+        c(srcName, *targets.toTypedArray()) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * @since 0.4.10
+     */
+
 }
 
 @ApiStatus.Internal
@@ -248,6 +284,17 @@ class ClassMapping(srcName: String, vararg targets: Pair<String, String>): Mappi
     }
 
     /**
+     * @since 0.4.10
+     */
+    fun m(srcName: String, srcDesc: String, targets: Map<String, String>, @DelegatesTo(value = MethodMapping::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+        m(srcName, srcDesc, *targets.toList().toTypedArray()) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
      * Bind a set of mappings to this class.
      * @param mappings The mappings to bind.
      * @param action A closure to add mappings to the class.
@@ -323,6 +370,13 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, vararg val mappin
     }
 
     /**
+     * @since 0.4.10
+     */
+    fun f(srcName: String, srcDesc: String, targets: List<String>) {
+        f(srcName, srcDesc, *targets.toTypedArray())
+    }
+
+    /**
      * Add a field mapping.
      * @param srcName The source name of the field.
      * @param srcDesc The source descriptor of the field.
@@ -331,6 +385,13 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, vararg val mappin
      */
     fun m(srcName: String, srcDesc: String, vararg targets: String) {
         classMapping.m(srcName, srcDesc, *(mappings zip targets).toTypedArray())
+    }
+
+    /**
+     * @since 0.4.10
+     */
+    fun m(srcName: String, srcDesc: String, targets: List<String>) {
+        m(srcName, srcDesc, *targets.toTypedArray())
     }
 
     /**
@@ -344,6 +405,17 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, vararg val mappin
     fun m(srcName: String, srcDesc: String, vararg targets: String, action: MethodMappingWithMappings.() -> Unit) {
         classMapping.m(srcName, srcDesc, *(mappings zip targets).toTypedArray()) {
             action(MethodMappingWithMappings(this, *mappings))
+        }
+    }
+
+    /**
+     * @since 0.4.10
+     */
+    fun m(srcName: String, srcDesc: String, targets: List<String>, @DelegatesTo(value = MethodMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+        m(srcName, srcDesc, *targets.toTypedArray()) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
         }
     }
 }
@@ -478,6 +550,13 @@ class MethodMappingWithMappings(val methodMapping: MethodMapping, vararg val map
      */
     fun p(index: Int, vararg targets: String) {
         methodMapping.p(index, *(mappings zip targets).toTypedArray())
+    }
+
+    /**
+     * @since 0.4.10
+     */
+    fun p(index: Int, targets: List<String>) {
+        p(index, *targets.toTypedArray())
     }
 }
 
