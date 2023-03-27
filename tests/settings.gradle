@@ -1,0 +1,28 @@
+pluginManagement {
+	repositories {
+        mavenLocal()
+		maven {
+			name = 'WagYourMaven'
+			url = 'https://maven.wagyourtail.xyz/snapshots'
+		}
+		maven {
+			name = 'ForgeMaven'
+			url = 'https://maven.minecraftforge.net/'
+		}
+		maven {
+			name = 'FabricMaven'
+			url = 'https://maven.fabricmc.net/'
+		}
+		maven {
+			name = "legacy-fabric"
+			url = "https://repo.legacyfabric.net/repository/legacyfabric/"
+		}
+		gradlePluginPortal()
+ 		maven {
+			name = 'Jitpack'
+			url = 'https://jitpack.io'
+		}
+	}
+}
+
+includeBuild('..')
