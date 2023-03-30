@@ -89,8 +89,12 @@ enum class MappingNamespace(val namespace: String, val type: Type) {
                 mutableListOf()
             )
                 ?: throw IllegalArgumentException("Invalid target: $to")
-            if (from != fromFallback)
+            if (from != fromFallback) {
                 path.add(0, from.shouldReverse(fromFallback) to fromFallback)
+                if (path.size > 1 && from == path[1].second) {
+                    path.removeAll(listOf(path[0], path[1]))
+                }
+            }
             if (toFallback != to)
                 path.add(toFallback.shouldReverse(to) to to)
             return path
@@ -107,13 +111,12 @@ enum class MappingNamespace(val namespace: String, val type: Type) {
 fun main(args: Array<String>) {
     println(
         MappingNamespace.calculateShortestRemapPathWithFallbacks(
-            MappingNamespace.getNamespace("yarn"),
-            MappingNamespace.getNamespace("intermediary"),
             MappingNamespace.getNamespace("searge"),
+            MappingNamespace.getNamespace("official"),
             MappingNamespace.getNamespace("searge"),
+            MappingNamespace.getNamespace("mojmap"),
             setOf(
-                MappingNamespace.INTERMEDIARY,
-                MappingNamespace.YARN,
+                MappingNamespace.MOJMAP,
                 MappingNamespace.SEARGE,
                 MappingNamespace.OFFICIAL
             )

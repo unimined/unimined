@@ -210,7 +210,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 .resolve("forge"),
             envType = EnvType.COMBINED,
             mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) MappingNamespace.OFFICIAL else MappingNamespace.SEARGE,
-            fallbackNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) MappingNamespace.OFFICIAL else MappingNamespace.SEARGE
+            fallbackNamespace = MappingNamespace.OFFICIAL
         )
         createClientExtra(clientjar, serverjar, output.path)
         if (output.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
