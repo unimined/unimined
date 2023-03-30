@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.Constants.ASSET_BASE_URL
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
+import xyz.wagyourtail.unimined.util.getSha1
 import xyz.wagyourtail.unimined.util.stream
 import xyz.wagyourtail.unimined.util.testSha1
 import java.io.IOException
@@ -16,6 +17,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.zip.GZIPInputStream
 import kotlin.io.path.createDirectories
 import kotlin.io.path.inputStream
 
@@ -108,11 +110,11 @@ class AssetsDownloader(val project: Project) {
                     "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)"
                 )
                 urlConnection.addRequestProperty("Accept", "*/*")
-                urlConnection.addRequestProperty("Accept-Encoding", "gzip, deflate")
+                urlConnection.addRequestProperty("Accept-Encoding", "gzip")
 
                 if (urlConnection.responseCode == 200) {
                     urlConnection.inputStream.use {
-                        Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
+                        Files.copy(if ("gzip" == urlConnection.contentEncoding) GZIPInputStream(it) else it, path, StandardCopyOption.REPLACE_EXISTING)
                     }
                 } else {
                     project.logger.error("Failed to download asset $key $uri error code: ${urlConnection.responseCode}")
@@ -123,7 +125,17 @@ class AssetsDownloader(val project: Project) {
         }
 
         if (i == 3 && !testSha1(size, hash, path)) {
-            throw IOException("Failed to download asset $key : $uri")
+            val expected_size = size
+            val actual_size = Files.size(path)
+            if (expected_size != actual_size) {
+                throw IOException("Failed to download asset $key : $uri , expected size: $expected_size, actual size: $actual_size")
+            }
+            val expected_hash = hash
+            val actual_hash = path.getSha1()
+            if (expected_hash != actual_hash) {
+                throw IOException("Failed to download asset $key : $uri , expected hash: $expected_hash, actual hash: $actual_hash")
+            }
+            throw IOException("Failed to download asset $key : $uri , unknown error.")
         }
     }
 }
