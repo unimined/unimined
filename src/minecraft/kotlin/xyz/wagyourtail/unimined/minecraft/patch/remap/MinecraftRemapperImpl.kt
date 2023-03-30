@@ -73,7 +73,7 @@ class MinecraftRemapperImpl(
             var prevTarget = minecraft.path
             var prevNamespace = minecraft.mappingNamespace
             for (step in path) {
-                project.logger.info("  $step")
+                project.logger.info("  $prevNamespace -> $step")
                 val targetFile = if (step == last) {
                     target.path
                 } else if (step.first) {
@@ -89,6 +89,7 @@ class MinecraftRemapperImpl(
                 remapToInternal(prevTarget, targetFile, envType, prevNamespace, step.second)
                 prevTarget = targetFile
                 prevNamespace = step.second
+                project.logger.info("    $targetFile")
             }
             target
         })

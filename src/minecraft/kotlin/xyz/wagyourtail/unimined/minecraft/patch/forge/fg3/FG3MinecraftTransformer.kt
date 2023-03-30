@@ -209,7 +209,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             parentPath = provider.minecraft.mcVersionFolder(provider.minecraft.version)
                 .resolve("forge"),
             envType = EnvType.COMBINED,
-            mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) MappingNamespace.OFFICIAL else MappingNamespace.SEARGE
+            mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) MappingNamespace.OFFICIAL else MappingNamespace.SEARGE,
+            fallbackNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) MappingNamespace.OFFICIAL else MappingNamespace.SEARGE
         )
         createClientExtra(clientjar, serverjar, output.path)
         if (output.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
@@ -323,7 +324,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         //   shade in forge jar
         val shadedForge = super.transform(patchedMC)
         return if (userdevCfg["notchObf"]?.asBoolean == true) {
-            provider.mcRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
+            provider.mcRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.SEARGE)
         } else {
             shadedForge
         }
