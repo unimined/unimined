@@ -26,10 +26,8 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util.zip.ZipInputStream
-import kotlin.io.path.createDirectories
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.exists
-import kotlin.io.path.inputStream
+import java.util.zip.ZipOutputStream
+import kotlin.io.path.*
 
 @Suppress("MemberVisibilityCanBePrivate")
 class MinecraftDownloader(val project: Project, private val parent: MinecraftProviderImpl): MinecraftResolver() {
@@ -251,7 +249,7 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         for (version in launcherMeta) {
             val versionObject = version.asJsonObject
             val id = versionObject.get("id").asString
-            if (id == versionId) {
+            if (id == versionId.substringAfter("empty-")) {
                 return versionObject
             }
         }
@@ -265,6 +263,12 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         if (clientPath.exists() && !project.gradle.startParameter.isRefreshDependencies) {
             clientPath
         } else {
+            if (version.startsWith("empty-")) {
+                clientPath.outputStream().use {
+                    ZipOutputStream(it).close()
+                }
+                return@lazy clientPath
+            }
             val metadata = metadata
             val clientJar = metadata.downloads["client"]
                 ?: throw IllegalStateException("No client jar found for version $version")
@@ -315,6 +319,12 @@ class MinecraftDownloader(val project: Project, private val parent: MinecraftPro
         if (serverPath.exists() && !project.gradle.startParameter.isRefreshDependencies) {
             serverPath
         } else {
+            if (version.startsWith("empty-")) {
+                serverPath.outputStream().use {
+                    ZipOutputStream(it).close()
+                }
+                return@lazy serverPath
+            }
             val metadata = metadata
             var serverJar = metadata.downloads["server"]
 

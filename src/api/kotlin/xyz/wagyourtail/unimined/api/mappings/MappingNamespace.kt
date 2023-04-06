@@ -32,7 +32,7 @@ enum class MappingNamespace(val namespace: String, val type: Type) {
         val byType: Map<Type, Set<MappingNamespace>> = values().groupBy { it.type }.mapValues { it.value.toSet() }
 
         fun getNamespace(namespace: String): MappingNamespace {
-            return byName[namespace] ?: throw IllegalArgumentException("Invalid namespace: $namespace")
+            return byName[namespace] ?: throw IllegalArgumentException("Invalid namespace: $namespace, available: ${byName.keys}")
         }
 
         fun calculateShortestRemapPathInternal(

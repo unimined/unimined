@@ -68,6 +68,8 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             if (isEmpty())
                 add(project.dependencies.create(forgeSrc))
         }
+
+        super.afterEvaluate()
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
@@ -224,6 +226,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun applyClientRunTransform(config: LaunchConfig) {
+        super.applyClientRunTransform(config)
         config.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${config.workingDir.absolutePath}\"")
         if (parent.mainClass != null) config.mainClass = parent.mainClass!!
     }

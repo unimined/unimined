@@ -59,7 +59,7 @@ class LauncherProvierImpl(val project: Project, unimined: UniminedExtension): La
 
     private fun genIntellijRunsTask(tasks: TaskContainer) {
         val genIntellijRuns = tasks.register("genIntellijRuns") {
-            it.group = "unimined"
+            it.group = "unimined_launcher"
             it.doLast {
                 for (configName in launchTargets.keys) {
                     getTarget(configName).createIdeaRunConfig()

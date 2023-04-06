@@ -3,7 +3,11 @@ package xyz.wagyourtail.unimined.minecraft.patch.jarmod
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskContainer
 import org.gradle.configurationcache.extensions.capitalized
+import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
@@ -11,6 +15,8 @@ import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
+import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
@@ -18,10 +24,8 @@ import xyz.wagyourtail.unimined.minecraft.transform.fixes.ModLoaderPatches
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.util.deleteRecursively
-import java.nio.file.FileSystem
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
+import java.io.File
+import java.nio.file.*
 import java.util.zip.ZipInputStream
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
@@ -47,6 +51,10 @@ open class JarModMinecraftTransformer(
         )
     }
     override var deleteMetaInf: Boolean = false
+
+    override var projectIsJarMod: Boolean = false
+
+    override var transforms: String? = null
 
     init {
         for (envType in EnvType.values()) {
@@ -81,6 +89,11 @@ open class JarModMinecraftTransformer(
             val jarMod = thisEnv.sortedBy { "${it.name}-${it.version}" }
             jarMod.joinToString("+") { it.name + "-" + it.version }
         }
+    }
+
+    override fun afterEvaluate() {
+        super.afterEvaluate()
+        project.unimined.events.register(::tasks)
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
@@ -139,11 +152,94 @@ open class JarModMinecraftTransformer(
         })
     }
 
+    protected fun detectProjectSourceSets(): Set<SourceSet> {
+        val ss = project.extensions.getByType(SourceSetContainer::class.java)
+        val launchClasspath = provider.clientSourceSets.firstOrNull() ?: provider.combinedSourceSets.firstOrNull()
+        ?: ss.getByName("main")
+        val runtimeClasspath = launchClasspath.runtimeClasspath
+        val sourceSets = mutableSetOf<SourceSet>()
+        val projects = project.rootProject.allprojects
+        for (project in projects) {
+            for (sourceSet in project.extensions.findByType(SourceSetContainer::class.java)?.asMap?.values
+                ?: listOf()) {
+                if (sourceSet.output.files.intersect(runtimeClasspath.files).isNotEmpty()) {
+                    sourceSets.add(sourceSet)
+                }
+            }
+        }
+        return sourceSets
+    }
+
+    fun getJarModAgent(): Path {
+        // extract to unimined cache
+        JarModMinecraftTransformer::class.java.getResourceAsStream("/jarmod-agent.jar").use {
+            val path = project.unimined.getGlobalCache().resolve("jarmod-agent.jar")
+            if (it == null) throw IllegalStateException("jarmod-agent.jar not found!")
+            Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
+            return path
+        }
+    }
+
     override fun applyClientRunTransform(config: LaunchConfig) {
         config.mainClass = clientMainClass ?: config.mainClass
+        if (projectIsJarMod) {
+            applyJarModAgent(config)
+        }
     }
 
     override fun applyServerRunTransform(config: LaunchConfig) {
         config.mainClass = serverMainClass ?: config.mainClass
+        if (projectIsJarMod) {
+            applyJarModAgent(config)
+        }
+    }
+
+    private fun applyJarModAgent(config: LaunchConfig) {
+        var args = ""
+        // transform
+        transforms?.let {
+            args += "-transforms=${it.replace(" ", "\\ ")} "
+        }
+        // priority classpath
+        val priorityClasspath = detectProjectSourceSets().map { it.output.classesDirs }.flatten()
+        if (priorityClasspath.isNotEmpty()) {
+            args += "-priorityClasspath=${priorityClasspath.joinToString(File.pathSeparator) { it.absolutePath.replace(" ", "\\ ") }} "
+        }
+        config.jvmArgs.add("-javaagent:${getJarModAgent()}=$args")
+    }
+
+    private fun tasks(tasks: TaskContainer) {
+        if (projectIsJarMod) {
+            val remapJar = tasks.getByName("remapJar") as RemapJarTask
+            val client = project.minecraft.clientSourceSets.firstOrNull()
+            val server = project.minecraft.serverSourceSets.firstOrNull()
+            val build = tasks.getByName("build")
+            remapJar.archiveClassifier.set(
+                if (client != null) {
+                    "client-remapped"
+                } else {
+                    "remapped"
+                }
+            )
+            val resolveJarModTask = tasks.register("resolveTransforms", JarModTransformResolveTaskImpl::class.java) {
+                it.group = "unimined"
+                it.inputFile.set(remapJar.archiveFile)
+                if (client != null) {
+                    it.archiveClassifier.set("client")
+                }
+            }
+            if (server != null) {
+                val serverRemapJar  = tasks.getByName("serverRemapJar") as RemapJarTask
+                serverRemapJar.archiveClassifier.set("server-remapped")
+                val serverResolveJarModTask = tasks.register("serverResolveTransforms", JarModTransformResolveTaskImpl::class.java) {
+                    it.group = "unimined"
+                    it.inputFile.set(serverRemapJar.archiveFile)
+                    it.remapJarTask = serverRemapJar
+                    it.archiveClassifier.set("server")
+                }
+                build.dependsOn(serverResolveJarModTask)
+            }
+            build.dependsOn(resolveJarModTask)
+        }
     }
 }

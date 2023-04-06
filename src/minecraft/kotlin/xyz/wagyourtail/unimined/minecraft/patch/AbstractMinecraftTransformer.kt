@@ -10,7 +10,6 @@ import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
-import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.transform.fixes.FixParamAnnotations
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
@@ -141,7 +140,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
         return target
     }
 
-    protected open fun applyLaunches() {
+    open fun applyLaunches() {
         project.logger.lifecycle("Applying run configs")
         project.logger.info("client: ${provider.client}, server: ${provider.server}")
         if (provider.minecraft.client) {
@@ -166,8 +165,6 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     @ApiStatus.Internal
     open fun afterEvaluate() {
-        project.unimined.events.register(::sourceSets)
-        applyLaunches()
     }
 
     @ApiStatus.Internal

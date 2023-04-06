@@ -6,12 +6,13 @@ plugins {
     `java-gradle-plugin`
     `maven-publish`
 }
-base {
-    archivesName.set(project.properties["archives_base_name"] as String)
-}
 
 version = if (project.hasProperty("version_snapshot")) project.properties["version"] as String + "-SNAPSHOT" else project.properties["version"] as String
 group = project.properties["maven_group"] as String
+
+base {
+    archivesName.set(project.properties["archives_base_name"] as String)
+}
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -138,6 +139,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false
     }
+
+    // class transform
+    implementation("net.lenni0451.classtransform:core:1.8.4")
 }
 
 tasks.jar {
@@ -152,11 +156,14 @@ tasks.jar {
     )
 
     manifest {
-        attributes.putAll(
-            mapOf(
-                "Implementation-Version" to project.version
-            )
+        attributes(
+            "Implementation-Version" to project.version
         )
+    }
+
+    from(project(":JarModAgent").tasks.getByName("shadowJar")) {
+        into("")
+        rename(".+", "jarmod-agent.jar")
     }
 }
 
@@ -188,10 +195,10 @@ publishing {
     repositories {
         maven {
             name = "WagYourMaven"
-            if (project.hasProperty("version_snapshot")) {
-                url = URI.create("https://maven.wagyourtail.xyz/snapshots/")
+            url = if (project.hasProperty("version_snapshot")) {
+                URI.create("https://maven.wagyourtail.xyz/snapshots/")
             } else {
-                url = URI.create("https://maven.wagyourtail.xyz/releases/")
+                URI.create("https://maven.wagyourtail.xyz/releases/")
             }
             credentials {
                 username = project.findProperty("mvn.user") as String? ?: System.getenv("USERNAME")
@@ -202,7 +209,7 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = project.group as String
-            artifactId = project.name
+            artifactId = project.properties["archives_base_name"] as String? ?: project.name
             version = project.version as String
 
             from(components["java"])

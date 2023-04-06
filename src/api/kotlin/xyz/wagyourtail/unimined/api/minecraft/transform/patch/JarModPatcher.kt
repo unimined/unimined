@@ -12,4 +12,8 @@ interface JarModPatcher: MinecraftPatcher {
         get() = MappingNamespace.OFFICIAL
 
     var deleteMetaInf: Boolean
+
+    var projectIsJarMod: Boolean
+
+    var transforms: String?
 }

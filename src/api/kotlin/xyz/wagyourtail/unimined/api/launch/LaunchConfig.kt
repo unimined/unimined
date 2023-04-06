@@ -23,7 +23,6 @@ data class LaunchConfig(
     val name: String,
     val taskName: String,
     var description: String,
-    var commonClasspath: SourceSet,
     var launchClasspath: SourceSet,
     var mainClass: String,
     val args: MutableList<String>,
@@ -40,7 +39,6 @@ data class LaunchConfig(
             name,
             taskName,
             description,
-            commonClasspath,
             launchClasspath,
             mainClass,
             args.toMutableList(),
@@ -135,7 +133,7 @@ data class LaunchConfig(
         )
     }
 
-    //TODO: add eclipse run configs
+    //TODO: add eclipse/vsc run configs
 
     fun createGradleTask(tasks: TaskContainer, group: String): Task {
         return tasks.create(taskName, JavaExec::class.java) {

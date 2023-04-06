@@ -25,11 +25,15 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.launch.LauncherProvierImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.NoTransformMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.fabric.*
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.FabricLikeMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.QuiltMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.remap.MinecraftRemapperImpl
@@ -136,6 +140,8 @@ abstract class MinecraftProviderImpl(
         minecraft.afterEvaluate()
         addMcLibraries()
         mcPatcher.afterEvaluate()
+        project.unimined.events.register(mcPatcher::sourceSets)
+        mcPatcher.applyLaunches()
 
         if (minecraft.client) {
             launcher.addTarget(provideVanillaRunClientTask())
@@ -146,27 +152,37 @@ abstract class MinecraftProviderImpl(
     }
 
     override fun fabric(action: (FabricLikePatcher) -> Unit) {
-        mcPatcher = OfficialFabricMinecraftTransformer(project, this)
+        if (mcPatcher !is OfficialFabricMinecraftTransformer) {
+            mcPatcher = OfficialFabricMinecraftTransformer(project, this)
+        }
         action(mcPatcher as FabricLikeMinecraftTransformer)
     }
 
     override fun legacyFabric(action: (FabricLikePatcher) -> Unit) {
-        mcPatcher = LegacyFabricMinecraftTransformer(project, this)
+        if (mcPatcher !is LegacyFabricMinecraftTransformer) {
+            mcPatcher = LegacyFabricMinecraftTransformer(project, this)
+        }
         action(mcPatcher as FabricLikeMinecraftTransformer)
     }
 
     override fun quilt(action: (FabricLikePatcher) -> Unit) {
-        mcPatcher = QuiltMinecraftTransformer(project, this)
+        if (mcPatcher !is QuiltMinecraftTransformer) {
+            mcPatcher = QuiltMinecraftTransformer(project, this)
+        }
         action(mcPatcher as FabricLikeMinecraftTransformer)
     }
 
     override fun jarMod(action: (JarModPatcher) -> Unit) {
-        mcPatcher = JarModMinecraftTransformer(project, this)
+        if (mcPatcher !is JarModMinecraftTransformer) {
+            mcPatcher = JarModMinecraftTransformer(project, this)
+        }
         action(mcPatcher as JarModMinecraftTransformer)
     }
 
     override fun forge(action: (ForgePatcher) -> Unit) {
-        mcPatcher = ForgeMinecraftTransformer(project, this)
+        if (mcPatcher !is ForgeMinecraftTransformer) {
+            mcPatcher = ForgeMinecraftTransformer(project, this)
+        }
         action(mcPatcher as ForgeMinecraftTransformer)
     }
 
@@ -469,7 +485,6 @@ abstract class MinecraftProviderImpl(
             "client",
             "runClient",
             "Minecraft Client",
-            combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
             clientSourceSets.firstOrNull() ?: combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
             minecraft.metadata.mainClass,
             minecraft.metadata.getGameArgs(
@@ -508,7 +523,6 @@ abstract class MinecraftProviderImpl(
             "server",
             "runServer",
             "Minecraft Server",
-            combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
             serverSourceSets.firstOrNull() ?: combinedSourceSets.firstOrNull() ?: sourceSets.getByName("main"),
             mainClass ?: "unknown.main.class", // TODO: get from meta-inf, this is wrong
             mutableListOf("nogui"),

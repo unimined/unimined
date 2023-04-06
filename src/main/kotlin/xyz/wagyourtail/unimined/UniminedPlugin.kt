@@ -25,11 +25,11 @@ class UniminedPlugin: Plugin<Project> {
         )
 
         ext = project.extensions.create("unimined", UniminedExtensionImpl::class.java, project)
-        remapJarTask(project, project.tasks)
+        ext.events.register(::remapJarTask)
         genSourcesTask(project.tasks)
     }
 
-    private fun remapJarTask(project: Project, tasks: TaskContainer) {
+    private fun remapJarTask(tasks: TaskContainer) {
         val jarTask = tasks.getByName("jar") as Jar
         val client = ext.minecraftProvider.clientSourceSets.firstOrNull()
         val server = ext.minecraftProvider.serverSourceSets.firstOrNull()
@@ -48,7 +48,7 @@ class UniminedPlugin: Plugin<Project> {
                 it.archiveClassifier.set("client")
             }
         }
-        if (server != null || client != null) {
+        if (server != null) {
             val serverJar = tasks.register("serverJar", Jar::class.java) {
                 server?.output?.let { out -> it.from(out) }
                 it.group = "unimined"

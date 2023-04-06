@@ -79,6 +79,8 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 addAll(deps)
             }
         }
+
+        super.afterEvaluate()
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
@@ -128,6 +130,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun applyClientRunTransform(config: LaunchConfig) {
+        super.applyClientRunTransform(config)
         config.mainClass = parent.mainClass ?: config.mainClass
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
         config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
@@ -138,6 +141,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun applyServerRunTransform(config: LaunchConfig) {
+        super.applyServerRunTransform(config)
         config.mainClass = parent.mainClass ?: config.mainClass
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
         config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"

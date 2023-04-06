@@ -7,7 +7,6 @@ import org.apache.commons.io.output.NullOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.LogLevel
-import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.*
@@ -153,6 +152,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 )
             }
         }
+
+        super.afterEvaluate()
     }
 
     val userdevCfg by lazy {
@@ -358,7 +359,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
                 "{asset_index}" -> provider.minecraft.metadata.assetIndex?.id ?: ""
                 "{source_roots}" -> {
-                    (listOf(config.commonClasspath.output.resourcesDir) + config.commonClasspath.output.classesDirs + detectOtherProjectSourceSetOutputs().flatMap {
+                    (detectProjectSourceSets().flatMap {
                         listOf(
                             it.output.resourcesDir
                         ) + it.output.classesDirs
@@ -381,24 +382,6 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    private fun detectOtherProjectSourceSetOutputs(): Set<SourceSet> {
-        val ss = project.extensions.getByType(SourceSetContainer::class.java)
-        val launchClasspath = provider.clientSourceSets.firstOrNull() ?: provider.combinedSourceSets.firstOrNull()
-        ?: ss.getByName("main")
-        val runtimeClasspath = launchClasspath.runtimeClasspath
-        val sourceSets = mutableSetOf<SourceSet>()
-        val projects = project.rootProject.allprojects.filter { it != project }
-        for (project in projects) {
-            for (sourceSet in project.extensions.findByType(SourceSetContainer::class.java)?.asMap?.values
-                ?: listOf()) {
-                if (sourceSet.output.files.intersect(runtimeClasspath.files).isNotEmpty()) {
-                    sourceSets.add(sourceSet)
-                }
-            }
-        }
-        return sourceSets
-    }
-
     private fun createLegacyClasspath() {
 //        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 //        val source = sourceSets.findByName("client") ?: sourceSets.getByName("main")
@@ -411,6 +394,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun applyClientRunTransform(config: LaunchConfig) {
+        super.applyClientRunTransform(config)
         createLegacyClasspath()
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
             val mainClass = get("main").asString
@@ -443,6 +427,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun applyServerRunTransform(config: LaunchConfig) {
+        super.applyServerRunTransform(config)
         userdevCfg.get("runs").asJsonObject.get("server").asJsonObject.apply {
             val mainClass = get("main").asString
             parent.tweakClassServer = get("env")?.asJsonObject?.get("tweakClass")?.asString
