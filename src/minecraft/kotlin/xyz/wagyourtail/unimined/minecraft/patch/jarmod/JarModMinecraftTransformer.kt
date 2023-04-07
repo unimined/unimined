@@ -13,7 +13,6 @@ import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
-import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
@@ -21,7 +20,10 @@ import xyz.wagyourtail.unimined.minecraft.transform.fixes.ModLoaderPatches
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.util.deleteRecursively
-import java.nio.file.*
+import java.nio.file.FileSystem
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import java.util.zip.ZipInputStream
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
@@ -156,16 +158,6 @@ open class JarModMinecraftTransformer(
             }
         }
         return sourceSets
-    }
-
-    fun getJarModAgent(): Path {
-        // extract to unimined cache
-        JarModMinecraftTransformer::class.java.getResourceAsStream("/jarmod-agent.jar").use {
-            val path = project.unimined.getGlobalCache().resolve("jarmod-agent.jar")
-            if (it == null) throw IllegalStateException("jarmod-agent.jar not found!")
-            Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
-            return path
-        }
     }
 
     override fun applyClientRunTransform(config: LaunchConfig) {

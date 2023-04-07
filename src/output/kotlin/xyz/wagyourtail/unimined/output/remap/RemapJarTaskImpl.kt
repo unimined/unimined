@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.remap
+package xyz.wagyourtail.unimined.output.remap
 
 import net.fabricmc.loom.util.kotlin.KotlinClasspathService
 import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader
@@ -6,7 +6,7 @@ import net.fabricmc.mappingio.format.ZipReader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.tasks.TaskAction
-import xyz.wagyourtail.unimined.UniminedExtensionImpl
+import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -25,7 +25,7 @@ import kotlin.io.path.exists
 
 abstract class RemapJarTaskImpl: RemapJarTask() {
     private val minecraftProvider = project.extensions.getByType(MinecraftProviderImpl::class.java)
-    private val uniminedExtension = project.extensions.getByType(UniminedExtensionImpl::class.java)
+    private val uniminedExtension = project.extensions.getByType(UniminedExtension::class.java)
 
     @TaskAction
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")

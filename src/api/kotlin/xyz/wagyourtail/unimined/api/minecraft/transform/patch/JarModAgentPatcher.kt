@@ -20,6 +20,6 @@ interface JarModAgentPatcher : JarModPatcher {
      * is only here for legacy reasons and testing.
      */
     @Deprecated("may violate mojang's EULA... use at your own risk. this is not recommended and is only here for legacy reasons and testing.")
-    var compileTimeTransforms: Boolean
+    var compiletimeTransforms: Boolean
 
 }

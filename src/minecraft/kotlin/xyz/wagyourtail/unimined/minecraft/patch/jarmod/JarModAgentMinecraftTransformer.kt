@@ -35,7 +35,7 @@ class JarModAgentMinecraftTransformer(
 
     override var transforms: String? = null
 
-    override var compileTimeTransforms: Boolean = false
+    override var compiletimeTransforms: Boolean = false
 
     override fun applyClientRunTransform(config: LaunchConfig) {
         super.applyClientRunTransform(config)
@@ -45,6 +45,11 @@ class JarModAgentMinecraftTransformer(
     override fun applyServerRunTransform(config: LaunchConfig) {
         super.applyServerRunTransform(config)
         applyJarModAgent(config)
+    }
+
+    private fun getJarModAgent(): Path {
+        // TODO: fix
+        return File("${project.buildDir}/unimined/jarModAgent.jar").toPath()
     }
 
     private fun applyJarModAgent(config: LaunchConfig) {
@@ -61,9 +66,10 @@ class JarModAgentMinecraftTransformer(
         config.jvmArgs.add("-javaagent:${getJarModAgent()}=$args")
     }
 
+    @Suppress("DEPRECATION")
     override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
         super.afterRemapJarTask(remapJarTask, output)
-        if (compileTimeTransforms && transforms != null) {
+        if (compiletimeTransforms && transforms != null) {
             project.logger.lifecycle("Running compile time transforms for ${remapJarTask.name}...")
 
             val envType = remapJarTask.envType.getOrElse(project.minecraft.defaultEnv)!!

@@ -72,18 +72,6 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         )
     }
 
-    override var projectIsJarMod: Boolean
-        get() = forgeTransformer.projectIsJarMod
-        set(value) {
-            forgeTransformer.projectIsJarMod = value
-        }
-
-    override var transforms: String?
-        get() = forgeTransformer.transforms
-        set(value) {
-            forgeTransformer.transforms = value
-        }
-
     override var mixinConfig: List<String> = mutableListOf()
 
 

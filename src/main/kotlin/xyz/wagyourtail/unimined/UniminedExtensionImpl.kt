@@ -5,6 +5,7 @@ import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.mappings.MappingsProviderImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.mod.ModProviderImpl
+import xyz.wagyourtail.unimined.output.OutputProviderImpl
 
 @Suppress("LeakingThis")
 abstract class UniminedExtensionImpl(project: Project): UniminedExtension(project) {
@@ -26,6 +27,13 @@ abstract class UniminedExtensionImpl(project: Project): UniminedExtension(projec
     override val modProvider = project.extensions.create(
         "mods",
         ModProviderImpl::class.java,
+        project,
+        this
+    )
+
+    override val outputProvider = project.extensions.create(
+        "output",
+        OutputProviderImpl::class.java,
         project,
         this
     )
