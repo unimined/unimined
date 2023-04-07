@@ -12,7 +12,7 @@ import xyz.wagyourtail.unimined.api.launch.LauncherProvider
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.remap.MinecraftRemapper
 import xyz.wagyourtail.unimined.util.LazyMutable
@@ -285,7 +285,7 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U: MinecraftPatcher>(val 
      * @param action the action to configure the patcher.
      * @since 0.1.0
      */
-    abstract fun jarMod(action: (JarModPatcher) -> Unit)
+    abstract fun jarMod(action: (JarModAgentPatcher) -> Unit)
 
     /**
      * enables the jar mod patcher.
@@ -294,7 +294,7 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U: MinecraftPatcher>(val 
      */
     fun jarMod(
         @DelegatesTo(
-            value = JarModPatcher::class,
+            value = JarModAgentPatcher::class,
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {

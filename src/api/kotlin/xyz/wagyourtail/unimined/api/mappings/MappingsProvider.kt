@@ -35,7 +35,7 @@ abstract class MappingsProvider {
 
     /**
      * Get a stub mapping provider for the given environment.
-     * @since 0.4.10
+     * @since 0.5.0
      */
     fun stub(envType: String) = getStub(EnvType.valueOf(envType))
 

@@ -17,6 +17,7 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.tasks.MappingExportTypes
+import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mappings.MappingExportImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
@@ -472,7 +473,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         }
     }
 
-    override fun afterRemapJarTask(output: Path) {
+    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
         //TODO: JarJar
     }
 

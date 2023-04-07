@@ -83,6 +83,14 @@ sourceSets {
             sourceSets["minecraft"]
         )
     }
+    create("output") {
+        inputOf(main.get())
+        outputOf(
+            sourceSets["api"],
+            sourceSets["mappings"],
+            sourceSets["minecraft"]
+        )
+    }
     create("sources") {
         inputOf(main.get())
         outputOf(
@@ -98,7 +106,8 @@ sourceSets {
             sourceSets["launcher"],
             sourceSets["minecraft"],
             sourceSets["mod"],
-            sourceSets["sources"]
+            sourceSets["sources"],
+            sourceSets["output"]
         )
     }
 }
@@ -152,6 +161,7 @@ tasks.jar {
         sourceSets["launcher"].output,
         sourceSets["mod"].output,
         sourceSets["sources"].output,
+        sourceSets["output"].output,
         sourceSets["main"].output
     )
 
@@ -159,11 +169,6 @@ tasks.jar {
         attributes(
             "Implementation-Version" to project.version
         )
-    }
-
-    from(project(":JarModAgent").tasks.getByName("shadowJar")) {
-        into("")
-        rename(".+", "jarmod-agent.jar")
     }
 }
 

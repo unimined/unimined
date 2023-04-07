@@ -14,6 +14,7 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.tasks.MappingExportTypes
+import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mappings.MappingExportImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
@@ -265,7 +266,7 @@ abstract class FabricLikeMinecraftTransformer(
         return remapClasspath.absolutePathString()
     }
 
-    override fun afterRemapJarTask(output: Path) {
+    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
         insertIncludes(output)
         insertAW(output)
     }

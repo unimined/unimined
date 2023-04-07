@@ -24,7 +24,7 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.launch.LauncherProvierImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
@@ -35,7 +35,7 @@ import xyz.wagyourtail.unimined.minecraft.patch.fabric.LegacyFabricMinecraftTran
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.QuiltMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.remap.MinecraftRemapperImpl
 import xyz.wagyourtail.unimined.minecraft.resolve.AssetsDownloader
 import xyz.wagyourtail.unimined.minecraft.resolve.Extract
@@ -172,11 +172,11 @@ abstract class MinecraftProviderImpl(
         action(mcPatcher as FabricLikeMinecraftTransformer)
     }
 
-    override fun jarMod(action: (JarModPatcher) -> Unit) {
-        if (mcPatcher !is JarModMinecraftTransformer) {
-            mcPatcher = JarModMinecraftTransformer(project, this)
+    override fun jarMod(action: (JarModAgentPatcher) -> Unit) {
+        if (mcPatcher !is JarModAgentMinecraftTransformer) {
+            mcPatcher = JarModAgentMinecraftTransformer(project, this)
         }
-        action(mcPatcher as JarModMinecraftTransformer)
+        action(mcPatcher as JarModAgentMinecraftTransformer)
     }
 
     override fun forge(action: (ForgePatcher) -> Unit) {

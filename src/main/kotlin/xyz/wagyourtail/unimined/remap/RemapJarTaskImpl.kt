@@ -81,7 +81,7 @@ abstract class RemapJarTaskImpl: RemapJarTask() {
             prevNamespace = step.second
         }
 
-        minecraftProvider.mcPatcher.afterRemapJarTask(outputs.files.files.first().toPath())
+        minecraftProvider.mcPatcher.afterRemapJarTask(this, outputs.files.files.first().toPath())
     }
 
     protected fun remapToInternal(

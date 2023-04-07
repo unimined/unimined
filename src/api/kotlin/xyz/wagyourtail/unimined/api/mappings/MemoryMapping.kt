@@ -63,7 +63,7 @@ class MemoryMapping {
     }
 
     /**
-     * @since 0.4.10
+     * @since 0.5.0
      */
      fun c(srcName: String, targets: Map<String, String>, @DelegatesTo(value = ClassMapping::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
         c(srcName, targets) {
@@ -164,14 +164,14 @@ class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, vararg val map
     }
 
     /**
-     * @since 0.4.10
+     * @since 0.5.0
      */
      fun c(srcName: String, targets: List<String>) {
         memoryMapping.c(srcName, *(mappings zip targets).toTypedArray())
      }
 
     /**
-     * @since 0.4.10
+     * @since 0.5.0
      */
     fun c(srcName: String, targets: List<String>, @DelegatesTo(value = ClassMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
         c(srcName, *targets.toTypedArray()) {
@@ -182,7 +182,7 @@ class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, vararg val map
     }
 
     /**
-     * @since 0.4.10
+     * @since 0.5.0
      */
 
 }
@@ -284,7 +284,7 @@ class ClassMapping(srcName: String, vararg targets: Pair<String, String>): Mappi
     }
 
     /**
-     * @since 0.4.10
+     * @since 0.5.0
      */
     fun m(srcName: String, srcDesc: String, targets: Map<String, String>, @DelegatesTo(value = MethodMapping::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
         m(srcName, srcDesc, *targets.toList().toTypedArray()) {
@@ -370,7 +370,7 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, vararg val mappin
     }
 
     /**
-     * @since 0.4.10
+     * @since 0.5.0
      */
     fun f(srcName: String, srcDesc: String, targets: List<String>) {
         f(srcName, srcDesc, *targets.toTypedArray())
@@ -388,7 +388,7 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, vararg val mappin
     }
 
     /**
-     * @since 0.4.10
+     * @since 0.5.0
      */
     fun m(srcName: String, srcDesc: String, targets: List<String>) {
         m(srcName, srcDesc, *targets.toTypedArray())
@@ -409,7 +409,7 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, vararg val mappin
     }
 
     /**
-     * @since 0.4.10
+     * @since 0.5.0
      */
     fun m(srcName: String, srcDesc: String, targets: List<String>, @DelegatesTo(value = MethodMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
         m(srcName, srcDesc, *targets.toTypedArray()) {
@@ -553,7 +553,7 @@ class MethodMappingWithMappings(val methodMapping: MethodMapping, vararg val map
     }
 
     /**
-     * @since 0.4.10
+     * @since 0.5.0
      */
     fun p(index: Int, targets: List<String>) {
         p(index, *targets.toTypedArray())

@@ -4,13 +4,11 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.jvm.tasks.Jar
-import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.sourceSet
 import xyz.wagyourtail.unimined.util.LazyMutable
 
 /**
- * @since 0.4.10
+ * @since 0.5.0
  */
 @Suppress("LeakingThis")
 abstract class JarModTransformResolveTask : Jar() {

@@ -10,6 +10,7 @@ import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
+import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.transform.fixes.FixParamAnnotations
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
@@ -177,7 +178,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     @ApiStatus.Internal
-    open fun afterRemapJarTask(output: Path) {
+    open fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
         // do nothing
     }
 
