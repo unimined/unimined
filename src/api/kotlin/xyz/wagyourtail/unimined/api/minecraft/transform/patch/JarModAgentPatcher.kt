@@ -1,5 +1,8 @@
 package xyz.wagyourtail.unimined.api.minecraft.transform.patch
 
+import org.gradle.api.artifacts.Configuration
+import org.jetbrains.annotations.ApiStatus
+
 /**
  * @since 0.5.0
  */
@@ -21,5 +24,8 @@ interface JarModAgentPatcher : JarModPatcher {
      */
     @Deprecated("may violate mojang's EULA... use at your own risk. this is not recommended and is only here for legacy reasons and testing.")
     var compiletimeTransforms: Boolean
+
+    @get:ApiStatus.Internal
+    val jarModAgent: Configuration
 
 }

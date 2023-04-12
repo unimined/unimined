@@ -4,6 +4,7 @@ import net.fabricmc.mappingio.format.ZipReader
 import net.lenni0451.classtransform.TransformerManager
 import net.lenni0451.classtransform.utils.tree.IClassProvider
 import org.gradle.api.Project
+import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
@@ -31,11 +32,53 @@ class JarModAgentMinecraftTransformer(
 ) : JarModMinecraftTransformer(
     project, provider, Constants.JARMOD_PROVIDER, "JarModAgent"
 ), JarModAgentPatcher {
-
+    companion object {
+        private val JMA_TRANSFORMERS = "jma.transformers"
+        private val JMA_PRIORITY_CLASSPATH = "jma.priorityClasspath"
+    }
 
     override var transforms: String? = null
 
     override var compiletimeTransforms: Boolean = false
+
+    override var jarModAgent = project.configurations.maybeCreate(Constants.JARMOD_AGENT_PROVIDER)
+
+    val jmaFile by lazy {
+        jarModAgent.resolve().first { it.extension == "jar" }.toPath()
+    }
+
+    override fun afterEvaluate() {
+        if (jarModAgent.dependencies.isEmpty()) {
+            project.repositories.maven {
+                it.url = project.uri("https://maven.wagyourtail.xyz/snapshots/")
+                it.name = "WagYourTail's Maven Snapshots"
+            }
+            jarModAgent.dependencies.add(
+                project.dependencies.create(
+                    "xyz.wagyourtail.unimined:jarmod-agent:0.1.0-SNAPSHOT"
+                )
+            )
+        }
+
+        super.afterEvaluate()
+    }
+
+    override fun sourceSets(sourceSets: SourceSetContainer) {
+        for (sourceSet in provider.combinedSourceSets) {
+            sourceSet.compileClasspath += jarModAgent
+            sourceSet.runtimeClasspath += jarModAgent
+        }
+
+        for (sourceSet in provider.clientSourceSets) {
+            sourceSet.compileClasspath += jarModAgent
+            sourceSet.runtimeClasspath += jarModAgent
+        }
+
+        for (sourceSet in provider.serverSourceSets) {
+            sourceSet.compileClasspath += jarModAgent
+            sourceSet.runtimeClasspath += jarModAgent
+        }
+    }
 
     override fun applyClientRunTransform(config: LaunchConfig) {
         super.applyClientRunTransform(config)
@@ -47,23 +90,17 @@ class JarModAgentMinecraftTransformer(
         applyJarModAgent(config)
     }
 
-    private fun getJarModAgent(): Path {
-        // TODO: fix
-        return File("${project.buildDir}/unimined/jarModAgent.jar").toPath()
-    }
-
     private fun applyJarModAgent(config: LaunchConfig) {
-        var args = ""
-        // transform
         transforms?.let {
-            args += "-transforms=${it.replace(" ", "\\ ")} "
+               config.jvmArgs.add("-D${JMA_TRANSFORMERS}=$it")
         }
         // priority classpath
-        val priorityClasspath = detectProjectSourceSets().map { it.output.classesDirs }.flatten()
+        val priorityClasspath = detectProjectSourceSets().map { it.output.classesDirs.toMutableSet().also {set-> it.output.resourcesDir.let { set.add(it) } } }.flatten()
         if (priorityClasspath.isNotEmpty()) {
-            args += "-priorityClasspath=${priorityClasspath.joinToString(File.pathSeparator) { it.absolutePath.replace(" ", "\\ ") }} "
+            config.jvmArgs.add("-D${JMA_PRIORITY_CLASSPATH}=${priorityClasspath.joinToString(File.pathSeparator) { it.absolutePath }}")
         }
-        config.jvmArgs.add("-javaagent:${getJarModAgent()}=$args")
+        config.jvmArgs.add("-javaagent:${jmaFile}")
+        //TODO: add mods to priority classpath, and resolve their jma.transformers
     }
 
     @Suppress("DEPRECATION")

@@ -24,6 +24,8 @@ object Constants {
 
     const val JARMOD_PROVIDER = "jarMod"
 
+    const val JARMOD_AGENT_PROVIDER = "jarModAgent"
+
     const val FABRIC_PROVIDER = "fabric"
 
     const val QUILT_PROVIDER = "quilt"
