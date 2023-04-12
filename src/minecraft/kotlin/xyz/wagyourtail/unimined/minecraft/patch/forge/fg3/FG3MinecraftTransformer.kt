@@ -404,7 +404,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 //        val source = sourceSets.findByName("client") ?: sourceSets.getByName("main")
 
         legacyClasspath.writeText(
-            (provider.mcLibraries.resolve() + provider.combined.resolve() + provider.client.resolve() + clientExtra.resolve()).joinToString(
+            (provider.mcLibraries.files + provider.combined.resolve() + provider.client.resolve() + clientExtra.resolve()).joinToString(
                 "\n"
             ) { it.toString() }, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
         )

@@ -29,7 +29,10 @@ import xyz.wagyourtail.unimined.launch.LauncherProvierImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.NoTransformMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.fabric.*
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.FabricLikeMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.QuiltMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.remap.MinecraftRemapperImpl
@@ -136,6 +139,9 @@ abstract class MinecraftProviderImpl(
         minecraft.afterEvaluate()
         addMcLibraries()
         mcPatcher.afterEvaluate()
+
+        // resolve mc libraries early.
+        mcLibraries.resolve()
 
         if (minecraft.client) {
             launcher.addTarget(provideVanillaRunClientTask())

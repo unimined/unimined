@@ -109,7 +109,7 @@ class ModRemapperImpl(
         tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         remapper.readClassPathAsync(
-            *project.minecraft.mcLibraries.resolve().map { it.toPath() }.toTypedArray()
+            *project.minecraft.mcLibraries.files.map { it.toPath() }.toTypedArray()
         )
         remapper.readClassPathAsync(mc)
         return remapper to mixinExtension
