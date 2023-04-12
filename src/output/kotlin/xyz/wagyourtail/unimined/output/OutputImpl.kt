@@ -22,10 +22,6 @@ abstract class OutputImpl<T: Jar, U: Jar>(
             field = value
         }
 
-    protected val buildTask by lazy {
-        project.tasks.getByName("build")
-    }
-
     protected val taskApplyMap = mutableMapOf<String, T.() -> Unit>()
     protected val taskApplyFirstMap = mutableMapOf<String, T.() -> Unit>()
 
@@ -43,19 +39,16 @@ abstract class OutputImpl<T: Jar, U: Jar>(
         if (project.minecraft.combinedSourceSets.isNotEmpty() && !project.minecraft.disableCombined.get()) {
             configFirst("combined") {
                 applyEnvConfig(EnvType.COMBINED, this)
-                buildTask.dependsOn(this)
             }
         }
         if (project.minecraft.clientSourceSets.isNotEmpty()) {
             configFirst("client") {
                 applyEnvConfig(EnvType.CLIENT, this)
-                buildTask.dependsOn(this)
             }
         }
         if (project.minecraft.serverSourceSets.isNotEmpty()) {
             configFirst("server") {
                 applyEnvConfig(EnvType.SERVER, this)
-                buildTask.dependsOn(this)
             }
         }
     }
@@ -122,19 +115,24 @@ abstract class OutputImpl<T: Jar, U: Jar>(
         beforeResolvePrev()
         val prev = prev?.resolve()
         beforeResolve(prev)
-        val res = mutableMapOf<String, T>()
+        val res = mutableMapOf<String, Pair<T, T.() -> Unit>>()
         for (name in (currentKeys + (prev?.keys ?: emptySet())).toSet()) {
-            res[name] = create("$name${baseTaskName.capitalized()}").also {
+            res[name] = create("$name${baseTaskName.capitalized()}") to {
                 if (taskApplyFirstMap.containsKey(name)) {
-                    taskApplyFirstMap[name]!!.invoke(it)
+                    taskApplyFirstMap[name]!!.invoke(this)
                 }
                 if (taskApplyMap.containsKey(name)) {
-                    taskApplyMap[name]!!.invoke(it)
+                    taskApplyMap[name]!!.invoke(this)
                 }
             }
         }
-        resolved = res
-        return res
+        resolved = res.mapValues { v ->
+            v.value.first.also { entry ->
+                prev?.get(v.key)?.let {v.value.first.dependsOn(it)}
+                v.value.second.invoke(entry)
+            }
+        }
+        return resolved
     }
 
 }

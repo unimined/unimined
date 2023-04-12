@@ -19,14 +19,18 @@ open class OutputProviderImpl(
 
     override val remapJar = RemapJarOutputImpl(project, unimined, jar).also { sequence.add(it) }
 
+    protected val buildTask by lazy {
+        project.tasks.getByName("build")
+    }
+
     //TODO: document how to use this for shadow
     override fun addOutputStep(name: String, type: Class<out Jar>): OutputImpl<*, *> {
         return object : OutputImpl<Jar, Jar>(project, unimined, sequence.last() as OutputImpl<Jar, *>, name) {
             override fun applyEnvConfig(env: EnvType, task: Jar) {
             }
 
-            override fun create(name: String, config: Jar.() -> Unit): Jar {
-                return project.tasks.create(name, type, config)
+            override fun create(name: String): Jar {
+                return project.tasks.create(name, type)
             }
         }.also { sequence.add(it) }
     }
@@ -39,7 +43,9 @@ open class OutputProviderImpl(
 
     private fun afterEvaluate() {
         // only resolve last, it will chain backwards
-        sequence.last().resolve()
+        for (task in sequence.last().resolve().values) {
+            buildTask.dependsOn(task)
+        }
     }
 
 }
