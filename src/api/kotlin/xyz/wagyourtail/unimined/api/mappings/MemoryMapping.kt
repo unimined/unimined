@@ -85,6 +85,15 @@ class MemoryMapping {
     }
 
     /**
+     * @since 0.4.10
+     */
+    @JvmName("withMappingsKt")
+    fun withMappings(src: String, vararg mappings: String, action: MemoryMappingWithMappings.() -> Unit) {
+        srcNamespace = src
+        action(MemoryMappingWithMappings(this, *mappings))
+    }
+
+    /**
      * bind a set of target mappings
      * @param mappings The mappings to bind.
      * @since 0.1.0
@@ -94,6 +103,22 @@ class MemoryMapping {
         mappings: List<String>,
         @DelegatesTo(value = MemoryMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
     ) {
+        withMappings(*mappings.toTypedArray()) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * @since 0.4.10
+     */
+    fun withMappings(
+        src: String,
+        mappings: List<String>,
+        @DelegatesTo(value = MemoryMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ) {
+        srcNamespace = src
         withMappings(*mappings.toTypedArray()) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
