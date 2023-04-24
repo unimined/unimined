@@ -42,11 +42,17 @@ open class OutputProviderImpl(
         }
     }
 
-    override fun <T: Jar> addOutputStep(name: String, type: Class<T>): OutputImpl<T, *> {
+    override fun <T: Jar> addStep(name: String, type: Class<T>): OutputImpl<T, *> {
         return outputStep(name, type).also { sequence.add(it) }
     }
 
-    override fun <T: Jar> addOutputStepBefore(name: String, type: Class<T>, before: String): OutputImpl<T, *> {
+    override fun <T: Jar> addStep(name: String, type: Class<T>, action: OutputImpl<T, *>.() -> Unit) {
+        val output = outputStep(name, type)
+        sequence.add(output)
+        output.action()
+    }
+
+    override fun <T: Jar> addStepBefore(before: String, name: String, type: Class<T>): OutputImpl<T, *> {
         val output = outputStep(name, type)
         sequence.add(sequence.indexOfFirst { it.baseTaskName == before }.also {
             if (it == -1) {
@@ -54,6 +60,16 @@ open class OutputProviderImpl(
             }
          }, output)
         return output
+    }
+
+    override fun <T: Jar> addStepBefore(before: String, name: String, type: Class<T>, action: OutputImpl<T, *>.() -> Unit) {
+        val output = outputStep(name, type)
+        sequence.add(sequence.indexOfFirst { it.baseTaskName == before }.also {
+            if (it == -1) {
+                throw IllegalArgumentException("before task $before not found")
+            }
+         }, output)
+        output.action()
     }
 
     override fun getOutputStep(name: String): OutputImpl<*, *>? = sequence.find { it.baseTaskName == name }
