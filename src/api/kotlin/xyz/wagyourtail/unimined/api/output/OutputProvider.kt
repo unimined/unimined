@@ -22,7 +22,7 @@ abstract class OutputProvider {
     abstract val remapJar: RemapJarOutput
 
     abstract fun <T: Jar> addStep(name: String, type: Class<T>): Output<T>
-    abstract fun getOutputStep(name: String): Output<*>?
+    abstract fun getStep(name: String): Output<*>?
     abstract fun <T: Jar> addStepBefore(before: String, name: String, type: Class<T>): Output<T>
     abstract fun <T: Jar> addStep(
         name: String,
@@ -69,4 +69,22 @@ abstract class OutputProvider {
             action.call()
         }
     }
+
+    abstract fun getStep(name: String, action: Output<*>.() -> Unit)
+
+    fun getStep(
+        name: String,
+        @DelegatesTo(
+            strategy = Closure.DELEGATE_FIRST,
+            value = Output::class
+        )
+        action: Closure<*>
+    ) {
+        getStep(name) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
 }

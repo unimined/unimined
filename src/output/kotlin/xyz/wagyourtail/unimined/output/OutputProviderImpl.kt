@@ -16,9 +16,9 @@ open class OutputProviderImpl(
 
     val sequence: MutableList<OutputImpl<*, *>> = mutableListOf()
 
-    override val jar = JarOutputImpl(project, unimined).also { sequence.add(it) }
+    override val jar = JarOutputImpl(project, unimined, this).also { sequence.add(it) }
 
-    override val remapJar = RemapJarOutputImpl(project, unimined, jar).also { sequence.add(it) }
+    override val remapJar = RemapJarOutputImpl(project, unimined, this).also { sequence.add(it) }
 
     protected val buildTask by lazy {
         project.tasks.getByName("build")
@@ -73,7 +73,11 @@ open class OutputProviderImpl(
         output.action()
     }
 
-    override fun getOutputStep(name: String): OutputImpl<*, *>? = sequence.find { it.baseTaskName == name }
+    override fun getStep(name: String): OutputImpl<*, *>? = sequence.find { it.baseTaskName == name }
+
+    override fun getStep(name: String, action: Output<*>.() -> Unit) {
+        getStep(name)!!.also(action)
+    }
 
     init {
         unimined.events.register(::afterEvaluate)

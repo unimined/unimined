@@ -7,13 +7,14 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.output.remap.RemapJarOutput
 import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
 import xyz.wagyourtail.unimined.output.OutputImpl
+import xyz.wagyourtail.unimined.output.OutputProviderImpl
 import xyz.wagyourtail.unimined.output.jar.JarOutputImpl
 
 class RemapJarOutputImpl(
     project: Project,
     unimined: UniminedExtension,
-    prev: JarOutputImpl
-) : OutputImpl<RemapJarTask, Jar>(project, unimined, prev, "remapJar"), RemapJarOutput {
+    parent: OutputProviderImpl
+) : OutputImpl<RemapJarTask, Jar>(project, unimined, parent, "remapJar"), RemapJarOutput {
 
     override fun applyEnvConfig(env: EnvType, task: RemapJarTask) {
         task.envType.set(env)

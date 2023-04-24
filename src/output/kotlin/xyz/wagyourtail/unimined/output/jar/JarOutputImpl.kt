@@ -7,11 +7,13 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.output.jar.JarOutput
 import xyz.wagyourtail.unimined.output.OutputImpl
+import xyz.wagyourtail.unimined.output.OutputProviderImpl
 
 class JarOutputImpl(
     project: Project,
-    unimined: UniminedExtension
-) : OutputImpl<Jar, Nothing>(project, unimined, null, "jar"), JarOutput {
+    unimined: UniminedExtension,
+    parent: OutputProviderImpl
+) : OutputImpl<Jar, Nothing>(project, unimined, parent, "jar"), JarOutput {
 
     override fun afterEvaluate() {
         super.afterEvaluate()
