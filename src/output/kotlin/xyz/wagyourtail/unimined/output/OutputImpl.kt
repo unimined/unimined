@@ -11,9 +11,12 @@ import xyz.wagyourtail.unimined.api.output.Output
 abstract class OutputImpl<T: Jar, U: Jar>(
     val project: Project,
     val unimined: UniminedExtension,
-    val prev: OutputImpl<U, *>?,
+    val outputProviderImpl: OutputProviderImpl,
     val baseTaskName: String
 ) : Output<T> {
+
+    val prev
+        get() = outputProviderImpl.getBefore(this)
 
     override var disable: Boolean = false
         // disable if prev is disabled
@@ -114,7 +117,7 @@ abstract class OutputImpl<T: Jar, U: Jar>(
         }
         beforeResolvePrev()
         val prev = prev?.resolve()
-        beforeResolve(prev)
+        beforeResolve(prev as Map<String, U>?)
         val res = mutableMapOf<String, Pair<T, T.() -> Unit>>()
         for (name in (currentKeys + (prev?.keys ?: emptySet())).toSet()) {
             res[name] = create("$name${baseTaskName.capitalized()}") to {

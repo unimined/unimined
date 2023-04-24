@@ -19,6 +19,7 @@ abstract class OutputProvider {
 
     abstract val remapJar: RemapJarOutput
 
-    abstract fun addOutputStep(name: String, type: Class<out Jar>): Output<*>
+    abstract fun <T: Jar> addOutputStep(name: String, type: Class<T>): Output<T>
     abstract fun getOutputStep(name: String): Output<*>?
+    abstract fun <T: Jar> addOutputStepBefore(name: String, type: Class<T>, before: String): Output<T>
 }
