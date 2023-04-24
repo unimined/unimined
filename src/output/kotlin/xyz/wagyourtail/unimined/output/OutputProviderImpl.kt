@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.output.Output
 import xyz.wagyourtail.unimined.api.output.OutputProvider
 import xyz.wagyourtail.unimined.output.jar.JarOutputImpl
 import xyz.wagyourtail.unimined.output.remap.RemapJarOutputImpl
@@ -46,7 +47,7 @@ open class OutputProviderImpl(
         return outputStep(name, type).also { sequence.add(it) }
     }
 
-    override fun <T: Jar> addStep(name: String, type: Class<T>, action: OutputImpl<T, *>.() -> Unit) {
+    override fun <T: Jar> addStep(name: String, type: Class<T>, action: Output<T>.() -> Unit) {
         val output = outputStep(name, type)
         sequence.add(output)
         output.action()
@@ -62,13 +63,13 @@ open class OutputProviderImpl(
         return output
     }
 
-    override fun <T: Jar> addStepBefore(before: String, name: String, type: Class<T>, action: OutputImpl<T, *>.() -> Unit) {
+    override fun <T: Jar> addStepBefore(before: String, name: String, type: Class<T>, action: Output<T>.() -> Unit) {
         val output = outputStep(name, type)
         sequence.add(sequence.indexOfFirst { it.baseTaskName == before }.also {
             if (it == -1) {
                 throw IllegalArgumentException("before task $before not found")
             }
-         }, output)
+        }, output)
         output.action()
     }
 
