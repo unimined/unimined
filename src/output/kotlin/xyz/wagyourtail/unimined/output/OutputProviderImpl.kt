@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.api.output.OutputProvider
 import xyz.wagyourtail.unimined.api.output.shade.ShadeJarOutput
 import xyz.wagyourtail.unimined.output.jar.JarOutputImpl
 import xyz.wagyourtail.unimined.output.remap.RemapJarOutputImpl
+import xyz.wagyourtail.unimined.output.shade.ShadeJarOutputImpl
 
 open class OutputProviderImpl(
     val project: Project,
@@ -56,6 +57,9 @@ open class OutputProviderImpl(
     }
 
     override fun <T: Jar> addStepBefore(before: String, name: String, type: Class<T>): OutputImpl<T, *> {
+        if (isResolved()) {
+            throw IllegalStateException("cannot add step after resolve")
+        }
         val output = outputStep(name, type)
         sequence.add(sequence.indexOfFirst { it.baseTaskName == before }.also {
             if (it == -1) {
@@ -66,6 +70,9 @@ open class OutputProviderImpl(
     }
 
     override fun <T: Jar> addStepBefore(before: String, name: String, type: Class<T>, action: Output<T>.() -> Unit) {
+        if (isResolved()) {
+            throw IllegalStateException("cannot add step after resolve")
+        }
         val output = outputStep(name, type)
         sequence.add(sequence.indexOfFirst { it.baseTaskName == before }.also {
             if (it == -1) {
@@ -76,11 +83,22 @@ open class OutputProviderImpl(
     }
 
     override fun addShadeStep(name: String, action: ShadeJarOutput.() -> Unit) {
-
+        val shadeStep = ShadeJarOutputImpl<Jar>(project, unimined, this, name)
+        sequence.add(shadeStep)
+        shadeStep.action()
     }
 
     override fun addShadeStepBefore(before: String, name: String, action: ShadeJarOutput.() -> Unit) {
-
+        if (isResolved()) {
+            throw IllegalStateException("cannot add step after resolve")
+        }
+        val shadeStep = ShadeJarOutputImpl<Jar>(project, unimined, this, name)
+        sequence.add(sequence.indexOfFirst { it.baseTaskName == before }.also {
+            if (it == -1) {
+                throw IllegalArgumentException("before task $before not found")
+            }
+        }, shadeStep)
+        shadeStep.action()
     }
 
     override fun getStep(name: String): OutputImpl<*, *>? = sequence.find { it.baseTaskName == name }
@@ -94,6 +112,8 @@ open class OutputProviderImpl(
     }
 
     fun resolve() = sequence.last().resolve()
+
+    fun isResolved() = sequence.last().isResolved()
 
     private fun afterEvaluate() {
         // only resolve last, it will chain backwards
