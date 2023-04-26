@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.output.jar.JarOutput
 import xyz.wagyourtail.unimined.api.output.remap.RemapJarOutput
+import xyz.wagyourtail.unimined.api.output.shade.ShadeJarOutput
 
 
 val Project.outputProvider
@@ -86,5 +87,10 @@ abstract class OutputProvider {
             action.call()
         }
     }
+
+    abstract fun removeStep(name: String)
+
+    abstract fun addShadeStep(name: String, action: ShadeJarOutput.() -> Unit)
+    abstract fun addShadeStepBefore(before: String, name: String, action: ShadeJarOutput.() -> Unit)
 
 }

@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.output.Output
 import xyz.wagyourtail.unimined.api.output.OutputProvider
+import xyz.wagyourtail.unimined.api.output.shade.ShadeJarOutput
 import xyz.wagyourtail.unimined.output.jar.JarOutputImpl
 import xyz.wagyourtail.unimined.output.remap.RemapJarOutputImpl
 
@@ -35,6 +36,7 @@ open class OutputProviderImpl(
     private fun <T: Jar> outputStep(name: String, type: Class<T>): OutputImpl<T, *> {
         return object : OutputImpl<T, Jar>(project, unimined, this, name) {
             override fun applyEnvConfig(env: EnvType, task: T) {
+                // no-op
             }
 
             override fun create(name: String): T {
@@ -73,6 +75,14 @@ open class OutputProviderImpl(
         output.action()
     }
 
+    override fun addShadeStep(name: String, action: ShadeJarOutput.() -> Unit) {
+
+    }
+
+    override fun addShadeStepBefore(before: String, name: String, action: ShadeJarOutput.() -> Unit) {
+
+    }
+
     override fun getStep(name: String): OutputImpl<*, *>? = sequence.find { it.baseTaskName == name }
 
     override fun getStep(name: String, action: Output<*>.() -> Unit) {
@@ -83,11 +93,21 @@ open class OutputProviderImpl(
         unimined.events.register(::afterEvaluate)
     }
 
+    fun resolve() = sequence.last().resolve()
+
     private fun afterEvaluate() {
         // only resolve last, it will chain backwards
-        for (task in sequence.last().resolve().values) {
+        for (task in resolve().values) {
             buildTask.dependsOn(task)
         }
+    }
+
+    override fun removeStep(name: String) {
+        val step = getStep(name)!!
+        if (step.isResolved()) {
+            throw IllegalStateException("cannot remove after resolving outputs")
+        }
+        sequence.remove(step)
     }
 
 }

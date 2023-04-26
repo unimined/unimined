@@ -30,6 +30,8 @@ abstract class OutputImpl<T: Jar, U: Jar>(
 
     protected lateinit var resolved: Map<String, T>
 
+    fun isResolved() = ::resolved.isInitialized
+
     init {
         @Suppress("USELESS_CAST")
         unimined.events.register (register@{
