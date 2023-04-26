@@ -93,4 +93,35 @@ abstract class OutputProvider {
     abstract fun addShadeStep(name: String, action: ShadeJarOutput.() -> Unit)
     abstract fun addShadeStepBefore(before: String, name: String, action: ShadeJarOutput.() -> Unit)
 
+    fun addShadeStep(
+        name: String,
+        @DelegatesTo(
+            strategy = Closure.DELEGATE_FIRST,
+            value = ShadeJarOutput::class
+        )
+        action: Closure<*>
+    ) {
+        addShadeStep(name) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun addShadeStepBefore(
+        before: String,
+        name: String,
+        @DelegatesTo(
+            strategy = Closure.DELEGATE_FIRST,
+            value = ShadeJarOutput::class
+        )
+        action: Closure<*>
+    ) {
+        addShadeStepBefore(before, name) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
 }

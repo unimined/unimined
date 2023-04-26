@@ -63,6 +63,7 @@ abstract class OutputImpl<T: Jar, U: Jar>(
     protected abstract fun create(name: String): T
 
     override fun config(named: String, apply: T.() -> Unit) {
+        if (isResolved()) throw IllegalStateException("Cannot configure after resolve")
         val prev = taskApplyMap[named]
         if (prev != null) {
             taskApplyMap[named] = {
@@ -75,6 +76,7 @@ abstract class OutputImpl<T: Jar, U: Jar>(
     }
 
     override fun configFirst(named: String, apply: T.() -> Unit) {
+        if (isResolved()) throw IllegalStateException("Cannot configure after resolve")
         val prev = taskApplyFirstMap[named]
         if (prev != null) {
             taskApplyFirstMap[named] = {
@@ -111,7 +113,7 @@ abstract class OutputImpl<T: Jar, U: Jar>(
     }
 
     fun resolve(): Map<String, T> {
-        if (this::resolved.isInitialized) return resolved
+        if (isResolved()) return resolved
         // ensure prev has all of this one's tasks
         val currentKeys = taskApplyFirstMap.keys + taskApplyMap.keys
         for (name in currentKeys) {
