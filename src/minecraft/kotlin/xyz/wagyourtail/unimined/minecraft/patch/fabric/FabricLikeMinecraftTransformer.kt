@@ -99,7 +99,7 @@ abstract class FabricLikeMinecraftTransformer(
         )
     }
 
-    private val devMappings: Path by lazy {
+    protected val devMappings: Path? by lazy {
         project.unimined.getLocalCache()
             .resolve("mappings")
             .createDirectories()
@@ -194,9 +194,11 @@ abstract class FabricLikeMinecraftTransformer(
             serverMainClass = mainClass?.get("server")?.asString
         }
 
-        provider.mcLibraries.dependencies.add(
-            project.dependencies.create(project.files(devMappings))
-        )
+        if (devMappings != null) {
+            provider.mcLibraries.dependencies.add(
+                project.dependencies.create(project.files(devMappings))
+            )
+        }
 
         super.afterEvaluate()
     }
