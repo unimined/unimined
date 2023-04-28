@@ -46,7 +46,7 @@ object AccessTransformerMinecraftTransformer {
                             ).use {
                                 remapped.copyTo(
                                     if (remapToLegacy) {
-                                        transformToLegacyTransformer(it).buffered()
+                                        transformToLegacyTransformer(it)
                                     } else {
                                         it
                                     }
