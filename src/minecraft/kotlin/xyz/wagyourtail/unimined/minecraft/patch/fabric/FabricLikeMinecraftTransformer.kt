@@ -85,7 +85,9 @@ abstract class FabricLikeMinecraftTransformer(
         }
     )
 
-    override val prodNamespace = MappingNamespace.INTERMEDIARY
+    override var prodNamespace = MappingNamespace.INTERMEDIARY
+
+
     override var devNamespace by LazyMutable {
         MappingNamespace.findByType(
             MappingNamespace.Type.NAMED,

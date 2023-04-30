@@ -10,10 +10,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.launch.LauncherProvider
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.*
 import xyz.wagyourtail.unimined.api.minecraft.transform.remap.MinecraftRemapper
 import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.File
@@ -313,12 +310,35 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U: MinecraftPatcher>(val 
         jarMod {}
     }
 
+    /**
+     * @since 0.4.10
+     */
+    abstract fun merged(action: (MergedPatcher) -> Unit)
+
+    /**
+     * @since 0.4.10
+     */
+
+    fun merged(
+        @DelegatesTo(
+            value = MergedPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        merged {
+            action.delegate = it
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     @ApiStatus.Internal
     abstract fun getMinecraftWithMapping(
         envType: EnvType,
         namespace: MappingNamespace,
         fallbackNamespace: MappingNamespace
     ): Path
+
 
     abstract fun isMinecraftJar(path: Path): Boolean
 }
