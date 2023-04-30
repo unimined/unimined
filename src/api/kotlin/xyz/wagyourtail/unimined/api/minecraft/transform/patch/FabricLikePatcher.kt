@@ -10,13 +10,13 @@ import java.io.File
 interface FabricLikePatcher: MinecraftPatcher, AccessTransformablePatcher {
 
     /**
-     * 0.5.0 - make var for beta's and other official mapped versions
+     * 0.4.10 - make var for beta's and other official mapped versions
      * @since 0.2.3
      */
     override var prodNamespace: MappingNamespace
 
     /**
-     * @since 0.5.0
+     * @since 0.4.10
      */
     fun setProdNamespace(namespace: String) {
         prodNamespace = MappingNamespace.getNamespace(namespace)
