@@ -88,7 +88,7 @@ enum class MappingNamespace(val namespace: String, val type: Type) {
                 available,
                 mutableListOf()
             )
-                ?: throw IllegalArgumentException("Invalid target: $to")
+                ?: throw IllegalArgumentException("Invalid target: $to, available: $available")
             if (from != fromFallback) {
                 path.add(0, from.shouldReverse(fromFallback) to fromFallback)
                 if (path.size > 1 && from == path[1].second) {
