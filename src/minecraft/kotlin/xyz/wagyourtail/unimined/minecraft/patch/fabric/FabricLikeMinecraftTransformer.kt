@@ -101,7 +101,7 @@ abstract class FabricLikeMinecraftTransformer(
         )
     }
 
-    protected open val devMappings: Path? by lazy {
+    protected open var devMappings: Path? by LazyMutable {
         project.unimined.getLocalCache()
             .resolve("mappings")
             .createDirectories()

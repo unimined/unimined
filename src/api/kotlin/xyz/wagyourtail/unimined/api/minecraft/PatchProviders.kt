@@ -17,7 +17,7 @@ interface PatchProviders {
      * @param action the action to configure the patcher.
      * @since 0.1.0
      */
-    abstract fun fabric(action: (FabricLikePatcher) -> Unit)
+    fun fabric(action: (FabricLikePatcher) -> Unit)
 
     /**
      * enables the fabric patcher.
@@ -50,7 +50,7 @@ interface PatchProviders {
      * @param action the action to perform on the patcher.
      * @since 0.4.2
      */
-    abstract fun legacyFabric(action: (FabricLikePatcher) -> Unit)
+    fun legacyFabric(action: (FabricLikePatcher) -> Unit)
 
     /**
      * enables the fabric patcher with additional tweaks for LegacyFabric.
@@ -83,7 +83,7 @@ interface PatchProviders {
      * @param action the action to configure the patcher.
      * @since 0.3.4
      */
-    abstract fun quilt(action: (FabricLikePatcher) -> Unit)
+    fun quilt(action: (FabricLikePatcher) -> Unit)
 
     /**
      * enables the quilt patcher.
@@ -117,7 +117,7 @@ interface PatchProviders {
      * @param action the action to configure the patcher.
      * @since 0.1.0
      */
-    abstract fun forge(action: (ForgePatcher) -> Unit)
+    fun forge(action: (ForgePatcher) -> Unit)
 
     /**
      * enables the forge patcher.
@@ -150,7 +150,7 @@ interface PatchProviders {
      * @param action the action to configure the patcher.
      * @since 0.1.0
      */
-    abstract fun jarMod(action: (JarModPatcher) -> Unit)
+    fun jarMod(action: (JarModPatcher) -> Unit)
 
     /**
      * enables the jar mod patcher.
