@@ -7,7 +7,6 @@ import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
 
 /**
- * older functions were directly in {@link MinecraftProvider} before
  * @since 0.4.10
  */
 interface PatchProviders {

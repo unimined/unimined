@@ -35,15 +35,3 @@ object GlobToRegex {
         } + "$"
     }
 }
-
-fun main(vararg args: String) {
-    println(GlobToRegex.patternMatcher)
-
-    // unit tests
-    println(GlobToRegex.apply("*.java"))
-    println(GlobToRegex.apply("**/*.java"))
-    println(GlobToRegex.apply("*.js?"))
-    println(GlobToRegex.apply("**/.gitignore"))
-    println(GlobToRegex.apply("*.js{on,}"))
-    println(GlobToRegex.apply("*.js\\*"))
-}

@@ -13,7 +13,7 @@ import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MergedPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.remap.MinecraftRemapper
 import xyz.wagyourtail.unimined.util.LazyMutable

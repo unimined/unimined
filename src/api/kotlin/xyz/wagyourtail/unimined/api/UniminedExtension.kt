@@ -18,8 +18,14 @@ abstract class UniminedExtension(val project: Project) {
 
     var useGlobalCache: Boolean by FinalizeOnRead(true)
 
+    /**
+     * @since 1.0.0
+     */
     abstract fun minecraft(sourceSet: SourceSet, action: MinecraftConfig.() -> Unit): MinecraftConfig
 
+    /**
+     * @since 1.0.0
+     */
     fun minecraft(
         sourceSet: SourceSet,
         @DelegatesTo(value = MinecraftConfig::class, strategy = Closure.DELEGATE_FIRST)

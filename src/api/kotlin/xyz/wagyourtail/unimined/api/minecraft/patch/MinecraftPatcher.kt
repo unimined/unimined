@@ -12,6 +12,7 @@ import java.nio.file.FileSystem
  * @since 0.2.3
  */
 interface MinecraftPatcher {
+
     fun name(): String {
         return this::class.simpleName!!
     }
@@ -21,18 +22,6 @@ interface MinecraftPatcher {
      */
     @get:ApiStatus.Internal
     val prodNamespace: MappingNamespace
-
-    /**
-     * the namespace to use for the development jar.
-     */
-    @set:ApiStatus.Internal
-    var devNamespace: MappingNamespace
-
-    /**
-     * the namespace to use for fallback on the development jar.
-     */
-    @set:ApiStatus.Internal
-    var devFallbackNamespace: MappingNamespace
 
     /**
      * @since 0.4.2
@@ -47,14 +36,6 @@ interface MinecraftPatcher {
         onMergeFail = { clientNode, serverNode, fs, exception ->
             closure.call(clientNode, serverNode, fs, exception)
         }
-    }
-
-    fun setDevNamespace(namespace: String) {
-        devNamespace = MappingNamespace.getNamespace(namespace)
-    }
-
-    fun setDevFallbackNamespace(namespace: String) {
-        devFallbackNamespace = MappingNamespace.getNamespace(namespace)
     }
 
 }

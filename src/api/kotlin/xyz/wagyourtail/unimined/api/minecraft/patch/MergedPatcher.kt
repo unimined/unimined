@@ -1,7 +1,8 @@
-package xyz.wagyourtail.unimined.api.minecraft.transform.patch
+package xyz.wagyourtail.unimined.api.minecraft.patch
 
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.PatchProviders
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 
 /**
  * @since 0.4.10

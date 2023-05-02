@@ -6,6 +6,9 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 
+/**
+ * @since 1.0.0
+ */
 abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConfig) {
     abstract val devNamespace: MappingNamespace
     abstract val devFallbackNamespace: MappingNamespace

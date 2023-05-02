@@ -2,6 +2,9 @@ package xyz.wagyourtail.unimined.api.mappings
 
 import kotlin.math.abs
 
+/**
+ * @since 1.0.0
+ */
 class MappingNamespace(val namespace: String, val type: Type) {
     enum class Type(val id: String) {
         NAMED("named"),
