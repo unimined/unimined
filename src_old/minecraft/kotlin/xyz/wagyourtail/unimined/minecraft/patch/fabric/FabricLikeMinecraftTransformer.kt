@@ -7,6 +7,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSetContainer
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
@@ -86,7 +87,9 @@ abstract class FabricLikeMinecraftTransformer(
         }
     )
 
-    override val prodNamespace = MappingNamespace.INTERMEDIARY
+    override var prodNamespace = MappingNamespace.INTERMEDIARY
+
+
     override var devNamespace by LazyMutable {
         MappingNamespace.findByType(
             MappingNamespace.Type.NAMED,
@@ -100,7 +103,9 @@ abstract class FabricLikeMinecraftTransformer(
         )
     }
 
-    private val devMappings: Path by lazy {
+    @get:ApiStatus.Internal
+    @set:ApiStatus.Internal
+    var devMappings: Path? by LazyMutable {
         project.unimined.getLocalCache()
             .resolve("mappings")
             .createDirectories()
@@ -195,9 +200,11 @@ abstract class FabricLikeMinecraftTransformer(
             serverMainClass = mainClass?.get("server")?.asString
         }
 
-        provider.mcLibraries.dependencies.add(
-            project.dependencies.create(project.files(devMappings))
-        )
+        if (devMappings != null) {
+            provider.mcLibraries.dependencies.add(
+                project.dependencies.create(project.files(devMappings))
+            )
+        }
 
         super.afterEvaluate()
     }

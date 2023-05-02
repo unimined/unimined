@@ -17,8 +17,14 @@ import java.security.MessageDigest
  * @since 0.1.0
  */
 class MemoryMapping {
-    private val classes = mutableListOf<ClassMapping>()
     var srcNamespace = "official"
+    private val classesBySrc = mutableMapOf<String, MutableList<ClassMapping>>()
+
+    private val classes
+        get() = bySrc(srcNamespace)
+
+    @ApiStatus.Internal
+    fun bySrc(srcName: String) = classesBySrc.computeIfAbsent(srcName) { mutableListOf() }
 
     /**
      * Add a class mapping.
@@ -81,6 +87,16 @@ class MemoryMapping {
      */
     @JvmName("withMappingsKt")
     fun withMappings(vararg mappings: String, action: MemoryMappingWithMappings.() -> Unit) {
+        srcNamespace = "official"
+        action(MemoryMappingWithMappings(this, *mappings))
+    }
+
+    /**
+     * @since 0.4.10
+     */
+    @JvmName("withMappingsKt")
+    fun withMappings(src: String, vararg mappings: String, action: MemoryMappingWithMappings.() -> Unit) {
+        srcNamespace = src
         action(MemoryMappingWithMappings(this, *mappings))
     }
 
@@ -101,6 +117,22 @@ class MemoryMapping {
         }
     }
 
+    /**
+     * @since 0.4.10
+     */
+    fun withMappings(
+        src: String,
+        mappings: List<String>,
+        @DelegatesTo(value = MemoryMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
+    ) {
+        srcNamespace = src
+        withMappings(*mappings.toTypedArray()) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     private fun getNamespaces(): Set<String> {
         val namespaces = mutableSetOf<String>()
         classes.forEach { clazz ->
@@ -111,15 +143,20 @@ class MemoryMapping {
 
     @ApiStatus.Internal
     fun visit(visitor: MappingVisitor) {
-        val namespaces = getNamespaces().mapIndexed { i: Int, s: String -> s to i }
-        if (visitor.visitHeader()) {
-            visitor.visitNamespaces(srcNamespace, namespaces.map { it.first })
-        }
-
-        if (visitor.visitContent()) {
-            classes.forEach { clazz ->
-                clazz.visit(visitor, mapOf(*namespaces.toTypedArray()))
+        for (src in classesBySrc.keys) {
+            srcNamespace = src
+            val namespaces = getNamespaces().mapIndexed { i: Int, s: String -> s to i }
+            if (visitor.visitHeader()) {
+                visitor.visitNamespaces(srcNamespace, namespaces.map { it.first })
             }
+
+            if (visitor.visitContent()) {
+                classes.forEach { clazz ->
+                    clazz.visit(visitor, mapOf(*namespaces.toTypedArray()))
+                }
+            }
+
+            visitor.visitEnd()
         }
     }
 

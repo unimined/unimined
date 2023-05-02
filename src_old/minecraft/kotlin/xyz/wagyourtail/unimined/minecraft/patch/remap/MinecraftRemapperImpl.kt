@@ -17,7 +17,10 @@ import xyz.wagyourtail.unimined.minecraft.patch.forge.AccessTransformerMinecraft
 import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.nio.file.Path
-import kotlin.io.path.*
+import kotlin.io.path.copyTo
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.exists
 
 @Suppress("MemberVisibilityCanBePrivate")
 class MinecraftRemapperImpl(
@@ -113,7 +116,7 @@ class MinecraftRemapperImpl(
             .fixPackageAccess(true)
         tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
-        remapper.readClassPathAsync(*provider.mcLibraries.resolve().map { it.toPath() }.toTypedArray())
+        remapper.readClassPathAsync(*provider.mcLibraries.files.map { it.toPath() }.toTypedArray())
         try {
             remapper.readInputsAsync(from)
             OutputConsumerPath.Builder(target).build().use {

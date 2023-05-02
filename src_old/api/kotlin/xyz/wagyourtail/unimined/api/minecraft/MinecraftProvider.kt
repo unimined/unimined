@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MergedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.remap.MinecraftRemapper
 import xyz.wagyourtail.unimined.util.LazyMutable
@@ -28,7 +29,7 @@ val Project.minecraft
  * @since 0.1.0
  */
 @Suppress("LeakingThis")
-abstract class MinecraftProvider<T: MinecraftRemapper, U: MinecraftPatcher>(val project: Project) {
+abstract class MinecraftProvider<T: MinecraftRemapper, U: MinecraftPatcher>(val project: Project) : PatchProviders {
     @get:ApiStatus.Internal
     abstract val minecraft: MinecraftResolver
 
@@ -148,169 +149,25 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U: MinecraftPatcher>(val 
     }
 
     /**
-     * enables the fabric patcher.
-     * @param action the action to configure the patcher.
-     * @since 0.1.0
+     * @since 0.4.10
      */
-    abstract fun fabric(action: (FabricLikePatcher) -> Unit)
+    abstract fun merged(action: (MergedPatcher) -> Unit)
 
     /**
-     * enables the fabric patcher.
-     * @param action the action to perform on the patcher.
-     * @since 0.1.0
+     * @since 0.4.10
      */
-    fun fabric(
+
+    fun merged(
         @DelegatesTo(
-            value = FabricLikePatcher::class,
+            value = MergedPatcher::class,
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {
-        fabric {
+        merged {
             action.delegate = it
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
-    }
-
-    /**
-     * enables the fabric patcher.
-     * @since 0.1.0
-     */
-    fun fabric() {
-        fabric {}
-    }
-
-    /**
-     * enables the fabric patcher with additional tweaks for LegacyFabric.
-     * @param action the action to perform on the patcher.
-     * @since 0.4.2
-     */
-    abstract fun legacyFabric(action: (FabricLikePatcher) -> Unit)
-
-    /**
-     * enables the fabric patcher with additional tweaks for LegacyFabric.
-     * @param action the action to perform on the patcher.
-     * @since 0.4.2
-     */
-    fun legacyFabric(
-        @DelegatesTo(
-            value = FabricLikePatcher::class,
-            strategy = Closure.DELEGATE_FIRST
-        ) action: Closure<*>
-    ) {
-        legacyFabric {
-            action.delegate = it
-            action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
-        }
-    }
-
-    /**
-     * enables the fabric patcher with additional tweaks for LegacyFabric.
-     * @since 0.4.2
-     */
-    fun legacyFabric() {
-        legacyFabric {}
-    }
-
-    /**
-     * enables the quilt patcher.
-     * @param action the action to configure the patcher.
-     * @since 0.3.4
-     */
-    abstract fun quilt(action: (FabricLikePatcher) -> Unit)
-
-    /**
-     * enables the quilt patcher.
-     * @param action the action to perform on the patcher.
-     * @since 0.3.4
-     */
-    fun quilt(
-        @DelegatesTo(
-            value = FabricLikePatcher::class,
-            strategy = Closure.DELEGATE_FIRST
-        ) action: Closure<*>
-    ) {
-        quilt {
-            action.delegate = it
-            action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
-        }
-    }
-
-    /**
-     * enables the quilt patcher.
-     * @since 0.3.4
-     * @since 0.3.4
-     */
-    fun quilt() {
-        quilt {}
-    }
-
-    /**
-     * enables the forge patcher.
-     * @param action the action to configure the patcher.
-     * @since 0.1.0
-     */
-    abstract fun forge(action: (ForgePatcher) -> Unit)
-
-    /**
-     * enables the forge patcher.
-     * @param action the action to perform on the patcher.
-     * @since 0.1.0
-     */
-    fun forge(
-        @DelegatesTo(
-            value = ForgePatcher::class,
-            strategy = Closure.DELEGATE_FIRST
-        ) action: Closure<*>
-    ) {
-        forge {
-            action.delegate = it
-            action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
-        }
-    }
-
-    /**
-     * enables the forge patcher.
-     * @since 0.1.0
-     */
-    fun forge() {
-        forge {}
-    }
-
-    /**
-     * enables the jar mod patcher.
-     * @param action the action to configure the patcher.
-     * @since 0.1.0
-     */
-    abstract fun jarMod(action: (JarModAgentPatcher) -> Unit)
-
-    /**
-     * enables the jar mod patcher.
-     * @param action the action to perform on the patcher.
-     * @since 0.1.0
-     */
-    fun jarMod(
-        @DelegatesTo(
-            value = JarModAgentPatcher::class,
-            strategy = Closure.DELEGATE_FIRST
-        ) action: Closure<*>
-    ) {
-        jarMod {
-            action.delegate = it
-            action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
-        }
-    }
-
-    /**
-     * enables the jar mod patcher.
-     * @since 0.1.0
-     */
-    fun jarMod() {
-        jarMod {}
     }
 
     @ApiStatus.Internal
@@ -319,6 +176,7 @@ abstract class MinecraftProvider<T: MinecraftRemapper, U: MinecraftPatcher>(val 
         namespace: MappingNamespace,
         fallbackNamespace: MappingNamespace
     ): Path
+
 
     abstract fun isMinecraftJar(path: Path): Boolean
 }

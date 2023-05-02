@@ -46,7 +46,6 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             parent.devFallbackNamespace = value
         }
 
-    val afterForgeJarModder = JarModMinecraftTransformer(project, provider)
     var resolvedForgeDeps = false
 
     override val merger: ClassMerger
@@ -85,7 +84,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
 
         // apply jarMod
-        return afterForgeJarModder.transform(super.transform(minecraft))
+        return super.transform(minecraft)
     }
 
     private val forgeDeps: Configuration = project.configurations.maybeCreate(Constants.FORGE_DEPS)

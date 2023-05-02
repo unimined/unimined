@@ -24,10 +24,13 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MergedPatcher
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
 import xyz.wagyourtail.unimined.launch.LauncherProvierImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.minecraft.patch.MergedMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.minecraft.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.FabricLikeMinecraftTransformer
@@ -143,6 +146,9 @@ abstract class MinecraftProviderImpl(
         project.unimined.events.register(mcPatcher::sourceSets)
         mcPatcher.applyLaunches()
 
+        // resolve mc libraries early.
+        mcLibraries.resolve()
+
         if (minecraft.client) {
             launcher.addTarget(provideVanillaRunClientTask())
         }
@@ -184,6 +190,14 @@ abstract class MinecraftProviderImpl(
             mcPatcher = ForgeMinecraftTransformer(project, this)
         }
         action(mcPatcher as ForgeMinecraftTransformer)
+    }
+
+    override fun merged(action: (MergedPatcher) -> Unit) {
+        mcPatcher = MergedMinecraftTransformer(project, this)
+        action(mcPatcher as MergedMinecraftTransformer)
+        if ((mcPatcher as MergedMinecraftTransformer).patchers.isEmpty()) {
+            throw IllegalStateException("MergedPatcher must have at least one patcher")
+        }
     }
 
     private fun sourceSets(@Suppress("UNUSED_PARAMETER") sourceSets: SourceSetContainer) {
