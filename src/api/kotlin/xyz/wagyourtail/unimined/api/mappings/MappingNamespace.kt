@@ -2,21 +2,22 @@ package xyz.wagyourtail.unimined.api.mappings
 
 import kotlin.math.abs
 
-enum class MappingNamespace(val namespace: String, val type: Type) {
-    OFFICIAL("official", Type.OBF),
-    INTERMEDIARY("intermediary", Type.INT),
-    SEARGE("searge", Type.INT),
-    HASHED("hashed", Type.INT),
-    MOJMAP("mojmap", Type.NAMED),
-    MCP("mcp", Type.NAMED),
-    YARN("yarn", Type.NAMED),
-    QUILT("quilt", Type.NAMED),
-    ;
-
+class MappingNamespace(val namespace: String, val type: Type) {
     enum class Type(val id: String) {
         NAMED("named"),
         INT("intermediary"),
         OBF("official")
+        ;
+
+        companion object {
+
+            val byId = values().associateBy { it.id }
+
+            fun fromId(id: String): Type {
+                return byId[id] ?: throw IllegalArgumentException("Invalid type: $id, available: ${byId.keys}")
+            }
+
+        }
     }
 
     fun shouldReverse(target: MappingNamespace): Boolean {
@@ -28,8 +29,28 @@ enum class MappingNamespace(val namespace: String, val type: Type) {
     }
 
     companion object {
-        val byName: Map<String, MappingNamespace> = values().associateBy { it.namespace }
-        val byType: Map<Type, Set<MappingNamespace>> = values().groupBy { it.type }.mapValues { it.value.toSet() }
+        private val values = mutableListOf<MappingNamespace>()
+        private val byName = mutableMapOf<String, MappingNamespace>()
+        private val byType = mutableMapOf<Type, MutableSet<MappingNamespace>>()
+
+        val OFFICIAL = MappingNamespace("official", Type.OBF)
+        val INTERMEDIARY = MappingNamespace("intermediary", Type.INT)
+        val SEARGE = MappingNamespace("searge", Type.INT)
+        val HASHED = MappingNamespace("hashed", Type.INT)
+        val MOJMAP = MappingNamespace("mojmap", Type.NAMED)
+        val MCP = MappingNamespace("mcp", Type.NAMED)
+        val YARN = MappingNamespace("yarn", Type.NAMED)
+        val QUILT = MappingNamespace("quilt", Type.NAMED)
+
+        private fun addNS(ns: MappingNamespace) {
+            values.add(ns)
+            byName[ns.namespace] = ns
+            byType.computeIfAbsent(ns.type) { mutableSetOf() }.add(ns)
+        }
+
+        fun values(): List<MappingNamespace> {
+            return values
+        }
 
         fun getNamespace(namespace: String): MappingNamespace {
             return byName[namespace] ?: throw IllegalArgumentException("Invalid namespace: $namespace, available: ${byName.keys}")
@@ -106,20 +127,12 @@ enum class MappingNamespace(val namespace: String, val type: Type) {
         }
 
     }
-}
 
-fun main(args: Array<String>) {
-    println(
-        MappingNamespace.calculateShortestRemapPathWithFallbacks(
-            MappingNamespace.getNamespace("searge"),
-            MappingNamespace.getNamespace("official"),
-            MappingNamespace.getNamespace("searge"),
-            MappingNamespace.getNamespace("mojmap"),
-            setOf(
-                MappingNamespace.MOJMAP,
-                MappingNamespace.SEARGE,
-                MappingNamespace.OFFICIAL
-            )
-        )
-    )
+    init {
+        addNS(this)
+    }
+
+    override fun toString(): String {
+        return namespace.uppercase()
+    }
 }
