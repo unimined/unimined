@@ -141,8 +141,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
         return target
     }
 
-    open fun applyLaunches() {
-        project.logger.lifecycle("Applying run configs")
+    internal open fun applyLaunches() {
+        project.logger.lifecycle("Applying $providerName run configs")
         project.logger.info("client: ${provider.client}, server: ${provider.server}")
         if (provider.minecraft.client) {
             project.logger.info("client config")

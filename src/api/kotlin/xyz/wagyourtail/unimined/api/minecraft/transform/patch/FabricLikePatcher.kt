@@ -9,8 +9,18 @@ import java.io.File
  */
 interface FabricLikePatcher: MinecraftPatcher, AccessTransformablePatcher {
 
-    override val prodNamespace: MappingNamespace
-        get() = MappingNamespace.INTERMEDIARY
+    /**
+     * 0.4.10 - make var for beta's and other official mapped versions
+     * @since 0.2.3
+     */
+    override var prodNamespace: MappingNamespace
+
+    /**
+     * @since 0.4.10
+     */
+    fun setProdNamespace(namespace: String) {
+        prodNamespace = MappingNamespace.getNamespace(namespace)
+    }
 
     /**
      * location of access widener file to apply to the minecraft jar.
