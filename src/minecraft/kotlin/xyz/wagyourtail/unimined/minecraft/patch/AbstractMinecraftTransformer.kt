@@ -83,6 +83,10 @@ abstract class AbstractMinecraftTransformer protected constructor(
                     // copy directly
                     val mergedPath = mergedFS.getPath(path)
                     mergedPath.parent?.createDirectories()
+                    if (mergedPath.exists()) {
+                        project.logger.warn("Entry in server jar already exists in client jar: $path, skipping")
+                        return@forEachInZip
+                    }
                     mergedPath.writeBytes(stream.readBytes())
                 }
             }
