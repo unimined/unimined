@@ -9,7 +9,7 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar

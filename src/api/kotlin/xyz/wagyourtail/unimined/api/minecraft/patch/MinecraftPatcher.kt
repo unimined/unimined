@@ -3,7 +3,7 @@ package xyz.wagyourtail.unimined.api.minecraft.transform.patch
 import groovy.lang.Closure
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import java.nio.file.FileSystem
 
 /**

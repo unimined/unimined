@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.tasks
+package xyz.wagyourtail.unimined.api.task
 
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property

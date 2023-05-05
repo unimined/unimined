@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.api.minecraft.transform.patch
 
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 
 /**
  * The class responsible for patching minecraft for jar mods.

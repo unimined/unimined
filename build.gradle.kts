@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URI
 
 plugins {
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm") version "1.8.21"
     `java-gradle-plugin`
     `maven-publish`
 }
@@ -27,6 +27,7 @@ repositories {
     maven {
         url = URI.create("https://maven.fabricmc.net/")
     }
+    gradlePluginPortal()
 }
 
 fun SourceSet.inputOf(sourceSet: SourceSet) {
@@ -55,6 +56,12 @@ sourceSets {
     create("api") {
         inputOf(main.get())
     }
+    create("mapping") {
+        inputOf(main.get())
+        outputOf(
+            sourceSets["api"]
+        )
+    }
     main {
         outputOf(
             sourceSets["api"]
@@ -74,11 +81,16 @@ sourceSets {
 
 dependencies {
     testImplementation(kotlin("test"))
+
+    runtimeOnly(gradleApi())
+
     // guava
     implementation("com.google.guava:guava:31.1-jre")
 
     // gson
-    implementation("com.google.code.gson:gson:2.9.0")
+    implementation("com.google.code.gson:gson:2.9.0") {
+
+    }
 
     // artifact transformer
     implementation("net.minecraftforge:artifactural:3.0.10")

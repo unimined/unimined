@@ -5,7 +5,7 @@ import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.output.remap.RemapJarOutput
-import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
+import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.output.OutputImpl
 import xyz.wagyourtail.unimined.output.OutputProviderImpl
 

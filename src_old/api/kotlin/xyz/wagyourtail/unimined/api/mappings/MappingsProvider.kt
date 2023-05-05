@@ -5,6 +5,7 @@ import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 
 val Project.mappings

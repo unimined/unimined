@@ -10,12 +10,13 @@ import net.fabricmc.mappingio.format.SrgWriter
 import net.fabricmc.mappingio.format.Tiny2Writer2
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.impldep.org.eclipse.jgit.lib.ObjectChecker.type
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.api.tasks.MappingExport
-import xyz.wagyourtail.unimined.api.tasks.MappingExportTask
-import xyz.wagyourtail.unimined.api.tasks.MappingExportTypes
+import xyz.wagyourtail.unimined.api.task.MappingExport
+import xyz.wagyourtail.unimined.api.task.MappingExportTask
+import xyz.wagyourtail.unimined.api.task.MappingExportTypes
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.StandardOpenOption

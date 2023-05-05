@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.minecraft.patch
 
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.util.plusAssign
 import java.nio.file.Path

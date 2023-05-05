@@ -8,7 +8,7 @@ import org.gradle.api.logging.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.MappingsProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import java.io.BufferedReader

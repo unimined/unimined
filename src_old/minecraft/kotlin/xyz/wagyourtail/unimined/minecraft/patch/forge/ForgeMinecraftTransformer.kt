@@ -11,13 +11,13 @@ import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.tasks.MappingExportTypes
-import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
+import xyz.wagyourtail.unimined.api.task.MappingExportTypes
+import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.mappings.MappingExportImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl

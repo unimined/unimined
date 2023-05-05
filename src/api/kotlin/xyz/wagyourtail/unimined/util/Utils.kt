@@ -2,6 +2,8 @@ package xyz.wagyourtail.unimined.util
 
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.tasks.SourceSet
+import org.gradle.configurationcache.extensions.capitalized
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -215,3 +217,6 @@ fun getTempFilePath(prefix: String, suffix: String): Path {
 operator fun StringBuilder.plusAssign(other: String) {
     append(other)
 }
+
+val SourceSet.identifier
+    get() = if (name == "main") "" else name.capitalized()

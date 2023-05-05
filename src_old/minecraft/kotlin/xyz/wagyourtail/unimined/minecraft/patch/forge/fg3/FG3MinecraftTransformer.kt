@@ -12,7 +12,7 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.unimined

@@ -9,7 +9,7 @@ import xyz.wagyourtail.unimined.api.Constants
 import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
-import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
+import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.io.BufferedReader

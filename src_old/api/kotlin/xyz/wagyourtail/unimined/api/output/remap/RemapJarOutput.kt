@@ -2,9 +2,8 @@ package xyz.wagyourtail.unimined.api.output.remap
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.output.Output
-import xyz.wagyourtail.unimined.api.tasks.RemapJarTask
+import xyz.wagyourtail.unimined.api.task.RemapJarTask
 
 /**
  * @since 0.5.0

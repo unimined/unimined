@@ -1,7 +1,7 @@
 package xyz.wagyourtail.unimined.minecraft.patch
 
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl

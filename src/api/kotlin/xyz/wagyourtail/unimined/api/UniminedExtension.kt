@@ -10,11 +10,10 @@ import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 
+val Project.unimined
+    get() = extensions.getByType(UniminedExtension::class.java)
+
 abstract class UniminedExtension(val project: Project) {
-
-    val Project.unimined
-        get() = extensions.getByType(UniminedExtension::class.java)
-
 
     var useGlobalCache: Boolean by FinalizeOnRead(true)
 

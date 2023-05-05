@@ -11,7 +11,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.Constants
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.mappings.MappingsProvider
 import xyz.wagyourtail.unimined.api.mappings.MemoryMapping
 import xyz.wagyourtail.unimined.api.minecraft.EnvType

@@ -2,7 +2,7 @@ package net.fabricmc.mappingio.format
 
 import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.tree.MemoryMappingTree
-import xyz.wagyourtail.unimined.api.mappings.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import java.io.InputStream
 import java.io.InputStreamReader

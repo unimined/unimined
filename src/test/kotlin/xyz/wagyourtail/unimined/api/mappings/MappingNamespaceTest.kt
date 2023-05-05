@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.api.mappings
 
 import org.junit.jupiter.api.Test
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import kotlin.test.assertEquals
 
 class MappingNamespaceTest {
