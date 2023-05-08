@@ -15,9 +15,7 @@ abstract class MappingDepConfig<T : Dependency>(val dep: T, val mappingsConfig: 
      * work...
      *
      * This can be used for things such as changing which namespace is used for official
-     * on pre-1.2.5,
-     *
-     * For example, with retroMCP they use client/server for the official mappings
+     * on pre-1.2.5, For example, with retroMCP they use client/server for the official mappings
      * and so you want to get those recognized as official mappings instead of the default
      * for unimined to use.
      */
