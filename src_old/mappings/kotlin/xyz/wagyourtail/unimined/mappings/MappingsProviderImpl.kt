@@ -57,8 +57,8 @@ abstract class MappingsProviderImpl(
         file.inputStream()
             .use {
                 ProGuardReader.read(
-                    it.reader(), "mojmap", "official",
-                    MappingSourceNsSwitch(tree, "official")
+                    it.reader(), MappingNamespace.MOJMAP.namespace, MappingNamespace.OFFICIAL.namespace,
+                    MappingSourceNsSwitch(tree, MappingNamespace.OFFICIAL.namespace)
                 )
             }
         return tree

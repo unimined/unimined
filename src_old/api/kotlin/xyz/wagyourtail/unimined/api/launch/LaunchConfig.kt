@@ -17,7 +17,6 @@ import kotlin.io.path.relativeTo
  * abstraction layer for minecraft run configs.
  * @since 0.2.3
  */
-@ApiStatus.Internal
 data class LaunchConfig(
     val project: Project,
     val name: String,

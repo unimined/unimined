@@ -19,14 +19,14 @@ import kotlin.io.path.outputStream
 
 object ZipReader {
 
-    fun getZipTypeFromContentList(zipContents: List<String>): MCPConfigVersion {
+    fun getZipTypeFromContentList(zipContents: List<String>): ZipFormat {
         val mappingFormats = mutableSetOf<MappingType>()
         for (value in MappingType.values()) {
             if (zipContents.any { it.matches(value.pattern) }) {
                 mappingFormats.add(value)
             }
         }
-        for (value in MCPConfigVersion.values()) {
+        for (value in ZipFormat.values()) {
             if (mappingFormats.containsAll(value.contains) && mappingFormats.none { value.doesntContain.contains(it) }) {
                 return value
             }
@@ -48,7 +48,7 @@ object ZipReader {
         zip: Path,
         zipContents: List<String>,
         mappingTree: MemoryMappingTree,
-        named: MappingNamespace
+        nameMap: Map<String, MappingNamespace>
     ) {
         val mcpConfigVersion = getZipTypeFromContentList(zipContents)
         println("Detected Zip Format: ${mcpConfigVersion.name} & envType: $envType")
@@ -64,7 +64,7 @@ object ZipReader {
                     when (mappingType) {
                         MappingType.MCP_METHODS -> {
                             when (mcpConfigVersion) {
-                                MCPConfigVersion.OLD_MCP -> {
+                                ZipFormat.OLD_MCP -> {
                                     readInputStreamFor(entry, zip) {
                                         OldMCPReader.readMethod(
                                             envType,
@@ -77,7 +77,7 @@ object ZipReader {
                                     }
                                 }
 
-                                MCPConfigVersion.OLDER_MCP -> {
+                                ZipFormat.OLDER_MCP -> {
                                     readInputStreamFor(entry, zip) {
                                         OlderMCPReader.readMethod(
                                             envType,
@@ -117,7 +117,7 @@ object ZipReader {
 
                         MappingType.MCP_FIELDS -> {
                             when (mcpConfigVersion) {
-                                MCPConfigVersion.OLD_MCP -> {
+                                ZipFormat.OLD_MCP -> {
                                     readInputStreamFor(entry, zip) {
                                         OldMCPReader.readField(
                                             envType,
@@ -130,7 +130,7 @@ object ZipReader {
                                     }
                                 }
 
-                                MCPConfigVersion.OLDER_MCP -> {
+                                ZipFormat.OLDER_MCP -> {
                                     readInputStreamFor(entry, zip) {
                                         OlderMCPReader.readField(
                                             envType,
@@ -279,8 +279,7 @@ object ZipReader {
                                                     "official" to MappingNamespace.OFFICIAL.namespace,
                                                     "intermediary" to MappingNamespace.INTERMEDIARY.namespace,
                                                     "hashed" to MappingNamespace.HASHED.namespace,
-                                                    "named" to named.namespace
-                                                )
+                                                ) + nameMap.mapValues { it.value.namespace }
                                             )
                                         )
                                     } else if (bs.contentEquals("v1\t")) {
@@ -291,8 +290,7 @@ object ZipReader {
                                                     "official" to MappingNamespace.OFFICIAL.namespace,
                                                     "intermediary" to MappingNamespace.INTERMEDIARY.namespace,
                                                     "hashed" to MappingNamespace.HASHED.namespace,
-                                                    "named" to named.namespace
-                                                )
+                                                ) + nameMap.mapValues { it.value.namespace }
                                             )
                                         )
                                     } else {
@@ -405,7 +403,7 @@ object ZipReader {
         }
     }
 
-    enum class MCPConfigVersion(
+    enum class ZipFormat(
         val contains: Set<MappingType>,
         val doesntContain: Set<MappingType> = setOf(),
         val ignore: Set<MappingType> = setOf()

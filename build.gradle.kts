@@ -62,9 +62,33 @@ sourceSets {
             sourceSets["api"]
         )
     }
-    main {
+    create("mods") {
+        inputOf(main.get())
+        outputOf(
+            sourceSets["api"],
+            sourceSets["mapping"]
+        )
+    }
+    create("runs") {
+        inputOf(main.get())
         outputOf(
             sourceSets["api"]
+        )
+    }
+    create("minecraft") {
+        inputOf(main.get())
+        outputOf(
+            sourceSets["api"],
+            sourceSets["mapping"],
+            sourceSets["mods"],
+            sourceSets["runs"]
+        )
+    }
+    main {
+        outputOf(
+            sourceSets["api"],
+            sourceSets["mapping"],
+            sourceSets["minecraft"]
         )
     }
     create("old") {
@@ -72,8 +96,13 @@ sourceSets {
         this.java.srcDir("src_old/")
     }
     test {
+        inputOf(
+            main.get()
+        )
         outputOf(
             sourceSets["api"],
+            sourceSets["mapping"],
+            sourceSets["minecraft"],
             main.get()
         )
     }
@@ -128,6 +157,8 @@ dependencies {
 tasks.jar {
     from(
         sourceSets["api"].output,
+        sourceSets["minecraft"].output,
+        sourceSets["mapping"].output,
         sourceSets["main"].output
     )
 

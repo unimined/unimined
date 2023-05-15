@@ -132,7 +132,5 @@ class MinecraftRemapperImpl(
             target.deleteIfExists()
             throw e
         }
-
-
     }
 }

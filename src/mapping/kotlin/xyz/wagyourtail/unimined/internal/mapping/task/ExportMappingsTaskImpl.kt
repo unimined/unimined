@@ -26,11 +26,11 @@ class ExportMappingsTaskImpl(val mappings: MappingsProvider) : ExportMappingsTas
 
     @TaskAction
     fun run() {
-        project.logger.lifecycle("[$path] Exporting mappings...")
+        project.logger.lifecycle("[Unimined/ExportMappings $path] Exporting mappings...")
         for (export in exports) {
-            project.logger.info("[$path] Exporting mappings to ${export.location}")
+            project.logger.info("[Unimined/ExportMappings $path] Exporting mappings to ${export.location}")
             project.logger.debug(
-                "[$path] ${export.type} ${export.sourceNamespace} -> [${
+                "[Unimined/ExportMappings $path] ${export.type} ${export.sourceNamespace} -> [${
                     export.targetNamespace?.joinToString(
                         ", "
                     )

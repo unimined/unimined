@@ -218,5 +218,5 @@ operator fun StringBuilder.plusAssign(other: String) {
     append(other)
 }
 
-val SourceSet.identifier
-    get() = if (name == "main") "" else name.capitalized()
+fun String.withSourceSet(sourceSet: SourceSet) =
+    if (sourceSet.name == "main") this else "${sourceSet.name}${this.capitalized()}"

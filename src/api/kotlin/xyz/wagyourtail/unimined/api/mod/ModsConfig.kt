@@ -2,30 +2,27 @@ package xyz.wagyourtail.unimined.api.mod
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import org.gradle.api.artifacts.Configuration
+import org.jetbrains.annotations.ApiStatus
+import java.io.File
 
-abstract class ModsConfig(val project: Project, val minecraft: MinecraftConfig) {
+abstract class ModsConfig {
 
-    abstract fun remap(
-        dependency: Any
-    )
+    fun remap(config: Configuration) {
+        remap(config) {}
+    }
 
-    abstract fun remap(
-        dependency: Any,
-        action: ModDepConfig.() -> Unit
-    )
+    abstract fun remap(config: Configuration, action: ModRemapSettings.() -> Unit)
 
     fun remap(
-        dependency: Any,
-        @DelegatesTo(value = ModDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        config: Configuration,
+        @DelegatesTo(value = ModRemapSettings::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        remap(dependency) {
+        remap(config) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
-
 }

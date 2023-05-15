@@ -16,6 +16,14 @@ val Project.unimined
 abstract class UniminedExtension(val project: Project) {
 
     var useGlobalCache: Boolean by FinalizeOnRead(true)
+    var forceReload: Boolean by FinalizeOnRead(java.lang.Boolean.getBoolean("unimined.forceReload"))
+
+    /**
+     * @since 1.0.0
+     */
+    fun minecraft(sourceSet: SourceSet): MinecraftConfig {
+        return minecraft(sourceSet) {}
+    }
 
     /**
      * @since 1.0.0
