@@ -10,12 +10,24 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
 
     private val remapConfigs = mutableMapOf<Configuration, ModRemapSettings.() -> Unit>()
 
+    init {
+        project.afterEvaluate {
+            afterEvaluate()
+        }
+    }
+
     override fun remap(config: Configuration, action: ModRemapSettings.() -> Unit) {
         TODO("Not yet implemented")
     }
 
-    fun apply() {
-        TODO("IMPLEMENT")
+    fun afterEvaluate() {
+        // remove deps from each config
+
+        // retrieve in detached configs
+
+        // remap
+
+        // supply back to original configs
     }
 
 

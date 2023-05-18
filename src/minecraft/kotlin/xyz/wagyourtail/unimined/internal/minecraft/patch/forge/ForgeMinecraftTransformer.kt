@@ -4,6 +4,7 @@ import com.google.gson.JsonParser
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
@@ -79,6 +80,41 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
             )
         ),
     )
+
+    override fun forge(dep: Any, action: Dependency.() -> Unit) {
+        forge.dependencies.add(if (dep is String && !dep.contains(":")) {
+            if (provider.minecraftData.isPreCombined) {
+                if (provider.side == EnvType.COMBINED) throw IllegalStateException("Cannot use forge dependency pre 1.3 without specifying non-combined side")
+                project.dependencies.create("net.minecraftforge:forge:${dep}:${provider.side.classifier}@zip")
+            } else {
+                val zip = provider.minecraftData.mcVersionCompare(provider.version, "1.6") < 0
+                project.dependencies.create("net.minecraftforge:forge:${dep}:universal@${if (zip) "zip" else "jar"}")
+            }
+        } else {
+            project.dependencies.create(dep)
+        }.apply(action))
+
+        if (forge.dependencies.isEmpty()) {
+            throw IllegalStateException("No forge dependency found!")
+        }
+
+        if (forge.dependencies.size > 1) {
+            throw IllegalStateException("Multiple forge dependencies found, make sure you only have one forge dependency!")
+        }
+
+        val forgeDep = forge.dependencies.first()
+
+        if (forgeDep.group != "net.minecraftforge" || !(forgeDep.name == "minecraftforge" || forgeDep.name == "forge")) {
+            throw IllegalStateException("Invalid forge dependency found, if you are using multiple dependencies in the forge configuration, make sure the last one is the forge dependency!")
+        }
+
+        forgeTransformer = if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") < 0) {
+            FG1MinecraftTransformer(project, this)
+        } else {
+            val jar = forge.files(forgeDep).first { it.extension == "zip" || it.extension == "jar" }
+            determineForgeProviderFromUniversal(jar)
+        }
+    }
 
     private val actualSideMarker by lazy {
         if (forge.dependencies.isEmpty()) return@lazy null // pre 1.3 - see below
@@ -237,36 +273,14 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
     }
 
     override fun apply() {
-
-        if (forge.dependencies.isEmpty()) {
-            throw IllegalStateException("No forge dependency found!")
-        }
-
-        val forgeDep = forge.dependencies.last()
-        if (forgeDep.group != "net.minecraftforge" || !(forgeDep.name == "minecraftforge" || forgeDep.name == "forge")) {
-            throw IllegalStateException("Invalid forge dependency found, if you are using multiple dependencies in the forge configuration, make sure the last one is the forge dependency!")
-        }
+        val forgeDep = forge.dependencies.first()
 
         // test if pre unified jar
         if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") < 0) {
             forgeTransformer = FG1MinecraftTransformer(project, this)
-            // add forge client/server if universal is disabled
-            val forgeClient = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:client@zip"
-            val forgeServer = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:server@zip"
-            forgeTransformer.jarModConfiguration(EnvType.CLIENT).dependencies.apply {
-                add(project.dependencies.create(forgeClient))
-            }
-            forgeTransformer.jarModConfiguration(EnvType.SERVER).dependencies.apply {
-                add(project.dependencies.create(forgeServer))
-            }
+            forgeTransformer.jarModConfiguration.dependencies.add(forgeDep)
         } else {
-            forge.dependencies.remove(forgeDep)
-
-            val zip = provider.minecraftData.mcVersionCompare(provider.version, "1.6") < 0
-            val forgeUniversal = project.dependencies.create("${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:universal@${if (zip) "zip" else "jar"}")
-            forge.dependencies.add(forgeUniversal)
-
-            val jar = forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+            val jar = forge.files(forgeDep).first { it.extension == "zip" || it.extension == "jar" }
             forgeTransformer = determineForgeProviderFromUniversal(jar)
 
             //parse version json from universal jar and apply

@@ -32,7 +32,7 @@ import java.nio.file.*
 import kotlin.io.path.*
 
 class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
-    project, parent.provider, "forge", "FG3"
+    project, parent.provider, providerName = "FG3"
 ) {
 
     override val prodNamespace = MappingNamespace.SEARGE
@@ -61,7 +61,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun apply() {
-        val forgeDep = parent.forge.dependencies.last()
+        val forgeDep = parent.forge.dependencies.first()
 
         // detect if userdev3 or userdev
         //   read if forgeDep has binpatches file

@@ -9,7 +9,7 @@ import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.mods.RemapJarTaskImpl
+import xyz.wagyourtail.unimined.internal.mods.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.BufferedReader
@@ -102,13 +102,15 @@ class JarModAgentMinecraftTransformer(
             // remove minecraft
             classpath.removeIf { provider.isMinecraftJar(it.toPath()) }
             // add back with correct mappings
-            classpath.add(provider.minecraftFileDev)
+            val targetNamespace = remapJarTask.targetNamespace.get() ?: this.prodNamespace
+            classpath.add(provider.getMinecraft(targetNamespace, targetNamespace).toFile())
             // add input jar
             // copy output to temp
             // add temp to classpath
             val temp = getTempFilePath(output.nameWithoutExtension, "jar")
             Files.copy(output, temp)
             classpath.add(temp.toFile())
+
             //TODO: remove and add back mods with correct mappings
             val classLoader = URLClassLoader(classpath.map { it.toURI().toURL() }.toTypedArray())
 

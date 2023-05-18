@@ -23,8 +23,7 @@ import kotlin.io.path.writeBytes
 class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
     project,
     parent.provider,
-    "forge",
-    "FG2"
+    providerName = "FG2"
 ) {
 
     override val prodNamespace = MappingNamespace.SEARGE

@@ -7,6 +7,7 @@ import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
 import xyz.wagyourtail.unimined.util.XMLBuilder
+import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
@@ -132,7 +133,7 @@ data class RunConfig(
     //TODO: add eclipse/vsc run configs
 
     fun createGradleTask(tasks: TaskContainer, group: String): Task {
-        return tasks.create(taskName, JavaExec::class.java) {
+        return tasks.create(taskName.withSourceSet(launchClasspath), JavaExec::class.java) {
             it.group = group
             it.description = description
             it.mainClass.set(mainClass)

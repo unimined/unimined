@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.internal.mods
+package xyz.wagyourtail.unimined.internal.mods.task
 
 import net.fabricmc.loom.util.kotlin.KotlinClasspathService
 import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader

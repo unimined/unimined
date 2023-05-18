@@ -1,5 +1,8 @@
 package xyz.wagyourtail.unimined.api.minecraft.transform.patch
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
+import org.gradle.api.artifacts.Dependency
 import java.io.File
 
 /**
@@ -36,6 +39,32 @@ interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
         set(value) {
             mixinConfig = value
         }
+
+    fun forge(dep: Any) {
+        forge(dep) {}
+    }
+
+    /**
+     * set the version of forge to use
+     * must be called
+     * @since 1.0.0
+     */
+    fun forge(dep: Any, action: Dependency.() -> Unit)
+
+    fun forge(
+        dep: Any,
+        @DelegatesTo(
+            value = Dependency::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        forge(dep) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
 
     /**
      * set the access transformer file to apply to the minecraft jar.
@@ -83,4 +112,5 @@ interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
      * convert access widener to legacy access transformer (mc version <= 1.7.10).
      */
     fun aw2atLegacy(input: File, output: File): File
+
 }

@@ -2,17 +2,14 @@ package xyz.wagyourtail.unimined.api.runs
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
 abstract class RunsConfig {
     /**
      * just a flag to disable all.
      */
-    var off: Boolean = false
-
-    protected val transformers = mutableMapOf<String, RunConfig.() -> Unit>()
+    var off: Boolean by FinalizeOnRead(false)
 
     fun config(
         config: String,
@@ -63,11 +60,8 @@ abstract class RunsConfig {
         config("server", action)
     }
 
-    @get:ApiStatus.Internal
-    val registeredTargets: Set<String>
-        get() = transformers.keys.toSet()
-
     @ApiStatus.Internal
     abstract fun addTarget(config: RunConfig)
+
     abstract fun configFirst(config: String, action: RunConfig.() -> Unit)
 }

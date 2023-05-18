@@ -22,6 +22,11 @@ interface FabricLikePatcher: MinecraftPatcher, AccessTransformablePatcher {
         loader(dep) {}
     }
 
+    /**
+     * set the version of fabric loader to use
+     * must be called
+     * @since 1.0.0
+     */
     fun loader(dep: Any, action: Dependency.() -> Unit)
 
     fun loader(

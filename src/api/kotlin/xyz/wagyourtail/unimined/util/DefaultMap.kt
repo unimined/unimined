@@ -4,11 +4,11 @@ package xyz.wagyourtail.unimined.util
 // doing it anyway
 class DefaultMap<T, U>(val initializer: (T) -> U, val map: MutableMap<T, U> = mutableMapOf()) : MutableMap<T, U> by map {
 
-    override fun get(key: T): U? {
+    override fun get(key: T): U {
         if (!containsKey(key)) {
             map[key] = initializer(key)
         }
-        return map[key]
+        return map[key]!!
     }
 
 }

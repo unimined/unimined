@@ -7,7 +7,6 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
@@ -24,8 +23,7 @@ import kotlin.io.path.*
 class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
     project,
     parent.provider,
-    "forge",
-    "FG1"
+    providerName = "FG1"
 ) {
 
     override val prodNamespace: MappingNamespace
@@ -38,14 +36,12 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     override fun apply() {
         // get and add forge-src to mappings
-        val forge = jarModConfiguration(EnvType.COMBINED).dependencies.last()
+        val forge = parent.forge.dependencies.first()
         if (forge.group != "net.minecraftforge" || !(forge.name == "minecraftforge" || forge.name == "forge")) {
             throw IllegalStateException("Invalid forge dependency found, if you are using multiple dependencies in the forge configuration, make sure the last one is the forge dependency!")
         }
 
-        if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") < 0) {
-            jarModConfiguration(EnvType.COMBINED).dependencies.remove(forge)
-        }
+        parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
 
         provider.mappings.mappingsDeps.apply {
             if (isEmpty())
@@ -178,9 +174,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
 
-        val forge = jarModConfiguration(EnvType.CLIENT).resolve().firstOrNull()?.toPath()
-            ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath()
-            ?: throw IllegalStateException("No forge jar found for ${EnvType.CLIENT}!")
+        val forge = parent.forge.resolve().first().toPath()
 
 
         // resolve dyn libs

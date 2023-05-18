@@ -27,8 +27,9 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Extract
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.MinecraftDownloader
+import xyz.wagyourtail.unimined.internal.minecraft.task.GenSourcesTaskImpl
 import xyz.wagyourtail.unimined.internal.mods.ModsProvider
-import xyz.wagyourtail.unimined.internal.mods.RemapJarTaskImpl
+import xyz.wagyourtail.unimined.internal.mods.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.internal.runs.RunsProvider
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -172,9 +173,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         // add minecraft libraries
         addLibraries(minecraftData.metadata.libraries)
 
-        // remap mods
-        mods.apply()
-
         // create remapjar task
         val task = project.tasks.findByName("jar".withSourceSet(sourceSet))
         if (task != null) {
@@ -191,6 +189,12 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         // finalize run configs
         runs.apply()
+
+        // add gen sources task
+        project.tasks.register("genSources".withSourceSet(sourceSet), GenSourcesTaskImpl::class.java, sourceSet).configure(consumerApply {
+            group = "unimined"
+            description = "Generates sources for $sourceSet's minecraft jar"
+        })
     }
 
     override val minecraftFileDev: File by lazy {
@@ -205,7 +209,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     fun provideVanillaRunClientTask(name: String, workingDirectory: File): RunConfig {
         val nativeDir = workingDirectory.resolve("natives")
 
-        val preRunClient = project.tasks.create("preRun${name.withSourceSet(sourceSet).capitalized()}", consumerApply {
+        val preRunClient = project.tasks.create("preRun${name.capitalized()}".withSourceSet(sourceSet), consumerApply {
+            group = "unimined_internal"
+            description = "Prepares the run configuration for $name by extracting natives and downloading assets"
             doLast {
                 if (nativeDir.exists()) {
                     nativeDir.deleteRecursively()

@@ -34,11 +34,7 @@ open class JarModMinecraftTransformer(
 
     override var deleteMetaInf: Boolean = false
 
-    init {
-        for (envType in EnvType.values()) {
-            jarModConfiguration(envType)
-        }
-    }
+    val jarModConfiguration = project.configurations.maybeCreate(jarModProvider.withSourceSet(provider.sourceSet))
 
     override val transform = (listOf<(FileSystem) -> Unit>(
         ModLoaderPatches::fixURIisNotHierarchicalException,
@@ -49,24 +45,12 @@ open class JarModMinecraftTransformer(
         transform.add(pathFilter)
     }
 
-    fun jarModConfiguration(envType: EnvType): Configuration {
-        return project.configurations.maybeCreate("$jarModProvider${(envType.classifier?.capitalized() ?: "")}".withSourceSet(provider.sourceSet))
-    }
-
-    private val combinedNamesMap = mutableMapOf<EnvType, String>()
-    private fun getCombinedNames(envType: EnvType): String {
-        return combinedNamesMap.computeIfAbsent(envType) {
-            val thisEnv = jarModConfiguration(envType).dependencies.toMutableSet()
-            if (envType != EnvType.COMBINED) {
-                thisEnv.addAll(jarModConfiguration(EnvType.COMBINED).dependencies)
-            }
-            val jarMod = thisEnv.sortedBy { "${it.name}-${it.version}" }
-            jarMod.joinToString("+") { it.name + "-" + it.version }
-        }
+    private val combinedNames by lazy {
+        val jarMod = jarModConfiguration.dependencies.sortedBy { "${it.name}-${it.version}" }
+        jarMod.joinToString("+") { it.name + "-" + it.version }
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        val combinedNames = getCombinedNames(minecraft.envType)
         if (combinedNames.isEmpty()) {
             return minecraft
         }
@@ -79,10 +63,7 @@ open class JarModMinecraftTransformer(
                 return@consumerApply target
             }
 
-            val jarmod = jarModConfiguration(envType).resolve().toMutableSet()
-            if (envType != EnvType.COMBINED) {
-                jarmod.addAll(jarModConfiguration(EnvType.COMBINED).resolve())
-            }
+            val jarmod = jarModConfiguration.resolve().toMutableSet()
 
             try {
                 Files.copy(path, target.path, StandardCopyOption.REPLACE_EXISTING)
