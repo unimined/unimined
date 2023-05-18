@@ -21,7 +21,7 @@ import xyz.wagyourtail.unimined.mappings.MappingExportImpl
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.minecraft.patch.forge.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.LazyMutable
 import java.io.File
@@ -129,7 +129,7 @@ abstract class FabricLikeMinecraftTransformer(
 
     protected abstract fun addMavens()
 
-    override fun afterEvaluate() {
+    override fun apply() {
         val client = provider.clientSourceSets.isNotEmpty() || provider.combinedSourceSets.isNotEmpty()
         val server = provider.serverSourceSets.isNotEmpty() || provider.combinedSourceSets.isNotEmpty()
 
@@ -206,7 +206,7 @@ abstract class FabricLikeMinecraftTransformer(
             )
         }
 
-        super.afterEvaluate()
+        super.apply()
     }
 
     private fun createFabricLoaderDependency(it: JsonElement) {

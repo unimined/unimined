@@ -398,9 +398,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         mappings
     }
 
-    fun getTRMappings(
+    override fun getTRMappings(
         remap: Pair<MappingNamespace, MappingNamespace>,
-        remapLocals: Boolean = false,
+        remapLocals: Boolean,
     ) : (IMappingProvider.MappingAcceptor) -> Unit {
         val mappings = mappingProvider[remap] ?: throw IllegalStateException("mapping provider returned null for $remap, this should never happen!")
         return { acceptor ->

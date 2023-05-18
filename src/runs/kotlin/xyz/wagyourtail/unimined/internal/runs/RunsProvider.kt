@@ -23,5 +23,9 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
         TODO("Not yet implemented")
     }
 
+    fun apply() {
+
+    }
+
 
 }

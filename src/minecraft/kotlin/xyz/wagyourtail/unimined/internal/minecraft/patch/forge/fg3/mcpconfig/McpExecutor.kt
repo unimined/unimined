@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft.patch.forge.fg3.mcpconfig
+package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig
 
 import com.google.common.base.Stopwatch
 import com.google.common.hash.Hashing
@@ -8,10 +8,7 @@ import org.gradle.api.Project
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.process.JavaExecSpec
-import xyz.wagyourtail.unimined.api.Constants
-import xyz.wagyourtail.unimined.api.mappings.mappings
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
+import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.util.getFile
@@ -26,7 +23,7 @@ import kotlin.io.path.writeBytes
 
 data class McpExecutor(
     private val project: Project,
-    private val minecraftProvider: MinecraftProviderImpl,
+    private val provider: MinecraftProvider,
     private val cache: Path,
     private val steps: List<McpConfigStep>,
     private val functions: Map<String, McpConfigFunction>,
@@ -91,9 +88,10 @@ data class McpExecutor(
     }
 
     private fun mappings(step: McpConfigStep): Path {
-        val mappings = project.mappings.getMappings(EnvType.COMBINED)
-        val transformer = ((minecraftProvider.mcPatcher as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
-        val mcpConfig = mappings.getFile(transformer.mcpConfig, Regex("zip"))
+        val transformer = ((provider.mcPatcher as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
+        val configuration = project.configurations.detachedConfiguration(transformer.mcpConfig)
+        configuration.resolve()
+        val mcpConfig = configuration.getFile(transformer.mcpConfig, Regex("zip"))
         val target = getStepCache(step.name).createDirectories()
             .resolve(transformer.mcpConfigData.mappingsPath.split("/").last())
         ZipReader.readInputStreamFor(transformer.mcpConfigData.mappingsPath, mcpConfig.toPath()) {
@@ -138,17 +136,17 @@ data class McpExecutor(
     private fun getStepLogic(type: String): StepLogic {
         return when (type) {
             "downloadManifest", "downloadJson" -> StepLogic.NoOp()
-            "downloadClient" -> StepLogic.NoOpWithFile { minecraftProvider.minecraft.getMinecraft(EnvType.CLIENT) }
-            "downloadServer" -> StepLogic.NoOpWithFile { minecraftProvider.minecraft.getMinecraft(EnvType.SERVER) }
+            "downloadClient" -> StepLogic.NoOpWithFile { provider.minecraftData.minecraftClient.path }
+            "downloadServer" -> StepLogic.NoOpWithFile { provider.minecraftData.minecraftServer.path }
             "strip" -> StepLogic.Strip()
 //            "strip" -> StepLogic.NoOp()
             "listLibraries" -> StepLogic.ListLibraries()
             "downloadClientMappings" -> StepLogic.DownloadManifestFile(
-                minecraftProvider.minecraft.metadata.downloads["client_mappings"]!!
+                provider.minecraftData.officialClientMappingsFile.toPath()
             )
 
             "downloadServerMappings" -> StepLogic.DownloadManifestFile(
-                minecraftProvider.minecraft.metadata.downloads["server_mappings"]!!
+                provider.minecraftData.officialServerMappingsFile.toPath()
             )
 
             else -> {
@@ -180,9 +178,10 @@ data class McpExecutor(
         }
 
         override fun mappings(): Path {
-            val mappings = project.mappings.getMappings(EnvType.COMBINED)
-            val transformer = ((minecraftProvider.mcPatcher as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
-            val mcpConfig = mappings.getFile(transformer.mcpConfig, Regex("zip"))
+            val transformer = ((provider.mcPatcher as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
+            val configuration = project.configurations.detachedConfiguration(transformer.mcpConfig)
+            configuration.resolve()
+            val mcpConfig = configuration.getFile(transformer.mcpConfig, Regex("zip"))
             val target = getStepCache(step.name).createDirectories()
                 .resolve(transformer.mcpConfigData.mappingsPath.split("/").last())
             ZipReader.readInputStreamFor(transformer.mcpConfigData.mappingsPath, mcpConfig.toPath()) {
@@ -212,6 +211,6 @@ data class McpExecutor(
         }
 
         override val minecraftLibraries: Set<File>
-            get() = project.configurations.getByName(Constants.MINECRAFT_LIBRARIES_PROVIDER).resolve()
+            get() = provider.minecraftLibraries.resolve()
     }
 }

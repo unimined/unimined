@@ -1,12 +1,8 @@
-package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
+package xyz.wagyourtail.unimined.minecraft.patch.fabric
 
 import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor
 import net.fabricmc.accesswidener.AccessWidenerWriter
-import net.fabricmc.tinyremapper.TinyRemapper
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
-import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
-import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 
 class AccessWidenerMerger(private val namespace: String): AccessWidenerVisitor {
     // Contains the actual transforms. Class names are as class-file internal binary names (forward slash is used
@@ -218,177 +214,102 @@ class AccessWidenerMerger(private val namespace: String): AccessWidenerVisitor {
             null
         )
     }
-}
 
-class AccessWidenerBetterRemapper
-/**
- * @param delegate      The visitor to forward the remapped information to.
- * @param toNamespace   The namespace that the access widener will be remapped to.
- */(
-    private val delegate: AccessWidenerVisitor,
-    private val mappings: MappingsProvider,
-    private val toNamespace: String,
-    private val mcProvider: MinecraftProvider
-): AccessWidenerVisitor {
-    private var remapper: TinyRemapper? = null
-
-    override fun visitHeader(namespace: String) {
-        if (namespace != toNamespace) {
-            remapper = TinyRemapper.newRemapper()
-                .withMappings(
-                    mappings.getTRMappings(
-                        MappingNamespace.getNamespace(namespace) to MappingNamespace.getNamespace(toNamespace),
-                        false
-                    )
-                ).build()
-
-            remapper?.readClassPathAsync(*mcProvider.minecraftLibraries.resolve().map { it.toPath() }.toTypedArray())
-            remapper?.readClassPathAsync(
-                mcProvider.getMinecraft(
-                    MappingNamespace.getNamespace(namespace),
-                    MappingNamespace.getNamespace(namespace)
-                )
-            )
+    class EntryTriple(val owner: String, val name: String, val desc: String) {
+        override fun toString(): String {
+            return "EntryTriple{owner=$owner,name=$name,desc=$desc}"
         }
 
-        delegate.visitHeader(toNamespace)
+        override fun hashCode(): Int {
+            return owner.hashCode() * 37 + name.hashCode() * 19 + desc.hashCode()
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as EntryTriple
+
+            if (owner != other.owner) return false
+            if (name != other.name) return false
+            if (desc != other.desc) return false
+
+            return true
+        }
     }
 
-    override fun visitClass(name: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
-        delegate.visitClass(
-            if (remapper != null) remapper!!.environment.remapper.map(name) else name,
-            access,
-            transitive
-        )
+    interface Access {
+        fun makeAccessible(): Access
+        fun makeExtendable(): Access
+        fun makeMutable(): Access
     }
 
-    override fun visitMethod(
-        owner: String,
-        name: String,
-        descriptor: String,
-        access: AccessWidenerReader.AccessType,
-        transitive: Boolean
-    ) {
-        delegate.visitMethod(
-            if (remapper != null) remapper!!.environment.remapper.map(owner) else owner,
-            if (remapper != null) remapper!!.environment.remapper.mapMethodName(owner, name, descriptor) else name,
-            if (remapper != null) remapper!!.environment.remapper.mapDesc(descriptor) else descriptor,
-            access,
-            transitive
-        )
+    enum class ClassAccess: Access {
+        DEFAULT,
+        ACCESSIBLE,
+        EXTENDABLE,
+        ACCESSIBLE_EXTENDABLE;
+
+        override fun makeAccessible(): Access {
+            return if (this == EXTENDABLE || this == ACCESSIBLE_EXTENDABLE) {
+                ACCESSIBLE_EXTENDABLE
+            } else ACCESSIBLE
+        }
+
+        override fun makeExtendable(): Access {
+            return if (this == ACCESSIBLE || this == ACCESSIBLE_EXTENDABLE) {
+                ACCESSIBLE_EXTENDABLE
+            } else EXTENDABLE
+        }
+
+        override fun makeMutable(): Access {
+            throw UnsupportedOperationException("Classes cannot be made mutable")
+        }
     }
 
-    override fun visitField(
-        owner: String,
-        name: String,
-        descriptor: String,
-        access: AccessWidenerReader.AccessType,
-        transitive: Boolean
-    ) {
-        delegate.visitField(
-            if (remapper != null) remapper!!.environment.remapper.map(owner) else owner,
-            if (remapper != null) remapper!!.environment.remapper.mapFieldName(owner, name, descriptor) else name,
-            if (remapper != null) remapper!!.environment.remapper.mapDesc(descriptor) else descriptor,
-            access,
-            transitive
-        )
-    }
-}
+    enum class MethodAccess: Access {
+        DEFAULT,
+        ACCESSIBLE,
+        EXTENDABLE,
+        ACCESSIBLE_EXTENDABLE;
 
-class EntryTriple(val owner: String, val name: String, val desc: String) {
-    override fun toString(): String {
-        return "EntryTriple{owner=$owner,name=$name,desc=$desc}"
-    }
+        override fun makeAccessible(): Access {
+            return if (this == EXTENDABLE || this == ACCESSIBLE_EXTENDABLE) {
+                ACCESSIBLE_EXTENDABLE
+            } else ACCESSIBLE
+        }
 
-    override fun hashCode(): Int {
-        return owner.hashCode() * 37 + name.hashCode() * 19 + desc.hashCode()
+        override fun makeExtendable(): Access {
+            return if (this == ACCESSIBLE || this == ACCESSIBLE_EXTENDABLE) {
+                ACCESSIBLE_EXTENDABLE
+            } else EXTENDABLE
+        }
+
+        override fun makeMutable(): Access {
+            throw UnsupportedOperationException("Methods cannot be made mutable")
+        }
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+    enum class FieldAccess: Access {
+        DEFAULT,
+        ACCESSIBLE,
+        MUTABLE,
+        ACCESSIBLE_MUTABLE;
 
-        other as EntryTriple
+        override fun makeAccessible(): Access {
+            return if (this == MUTABLE || this == ACCESSIBLE_MUTABLE) {
+                ACCESSIBLE_MUTABLE
+            } else ACCESSIBLE
+        }
 
-        if (owner != other.owner) return false
-        if (name != other.name) return false
-        if (desc != other.desc) return false
+        override fun makeExtendable(): Access {
+            throw UnsupportedOperationException("Fields cannot be made extendable")
+        }
 
-        return true
-    }
-}
-
-interface Access {
-    fun makeAccessible(): Access
-    fun makeExtendable(): Access
-    fun makeMutable(): Access
-}
-
-enum class ClassAccess: Access {
-    DEFAULT,
-    ACCESSIBLE,
-    EXTENDABLE,
-    ACCESSIBLE_EXTENDABLE;
-
-    override fun makeAccessible(): Access {
-        return if (this == EXTENDABLE || this == ACCESSIBLE_EXTENDABLE) {
-            ACCESSIBLE_EXTENDABLE
-        } else ACCESSIBLE
-    }
-
-    override fun makeExtendable(): Access {
-        return if (this == ACCESSIBLE || this == ACCESSIBLE_EXTENDABLE) {
-            ACCESSIBLE_EXTENDABLE
-        } else EXTENDABLE
-    }
-
-    override fun makeMutable(): Access {
-        throw UnsupportedOperationException("Classes cannot be made mutable")
-    }
-}
-
-enum class MethodAccess: Access {
-    DEFAULT,
-    ACCESSIBLE,
-    EXTENDABLE,
-    ACCESSIBLE_EXTENDABLE;
-
-    override fun makeAccessible(): Access {
-        return if (this == EXTENDABLE || this == ACCESSIBLE_EXTENDABLE) {
-            ACCESSIBLE_EXTENDABLE
-        } else ACCESSIBLE
-    }
-
-    override fun makeExtendable(): Access {
-        return if (this == ACCESSIBLE || this == ACCESSIBLE_EXTENDABLE) {
-            ACCESSIBLE_EXTENDABLE
-        } else EXTENDABLE
-    }
-
-    override fun makeMutable(): Access {
-        throw UnsupportedOperationException("Methods cannot be made mutable")
-    }
-}
-
-enum class FieldAccess: Access {
-    DEFAULT,
-    ACCESSIBLE,
-    MUTABLE,
-    ACCESSIBLE_MUTABLE;
-
-    override fun makeAccessible(): Access {
-        return if (this == MUTABLE || this == ACCESSIBLE_MUTABLE) {
-            ACCESSIBLE_MUTABLE
-        } else ACCESSIBLE
-    }
-
-    override fun makeExtendable(): Access {
-        throw UnsupportedOperationException("Fields cannot be made extendable")
-    }
-
-    override fun makeMutable(): Access {
-        return if (this == ACCESSIBLE || this == ACCESSIBLE_MUTABLE) {
-            ACCESSIBLE_MUTABLE
-        } else MUTABLE
+        override fun makeMutable(): Access {
+            return if (this == ACCESSIBLE || this == ACCESSIBLE_MUTABLE) {
+                ACCESSIBLE_MUTABLE
+            } else MUTABLE
+        }
     }
 }

@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft.patch.forge
+package xyz.wagyourtail.unimined.internal.mapping.at
 
 import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerWriter
@@ -10,7 +10,7 @@ import net.minecraftforge.accesstransformer.AccessTransformer.Modifier
 import net.minecraftforge.accesstransformer.Target
 import net.minecraftforge.accesstransformer.parser.AccessTransformerList
 import org.gradle.api.logging.Logger
-import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.minecraft.patch.forge.AccessTransformerWriter
 import java.io.*
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -20,44 +20,42 @@ import kotlin.io.path.*
 
 object AccessTransformerMinecraftTransformer {
 
-    fun atRemapper(logger: Logger, remapToLegacy: Boolean = false): OutputConsumerPath.ResourceRemapper =
-        object: OutputConsumerPath.ResourceRemapper {
-            override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
-                return relativePath.name == "accesstransformer.cfg" ||
-                        relativePath.name.endsWith("_at.cfg")
-            }
+    class AtRemapper(val logger: Logger, val remapToLegacy: Boolean = false): OutputConsumerPath.ResourceRemapper {
+        override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
+            return relativePath.name == "accesstransformer.cfg" ||
+                    relativePath.name.endsWith("_at.cfg")
+        }
 
-            override fun transform(
-                destinationDirectory: Path,
-                relativePath: Path,
-                input: InputStream,
-                remapper: TinyRemapper
-            ) {
-                val output = destinationDirectory.resolve(relativePath)
-                output.parent.createDirectories()
-                BufferedReader(input.reader()).use { reader ->
-                    transformFromLegacyTransformer(reader).use { fromLegacy ->
-                        remapModernTransformer(fromLegacy.buffered(), remapper, logger).use { remapped ->
-                            Files.newBufferedWriter(
-                                output,
-                                StandardCharsets.UTF_8,
-                                StandardOpenOption.CREATE,
-                                StandardOpenOption.TRUNCATE_EXISTING
-                            ).use {
-                                remapped.copyTo(
-                                    if (remapToLegacy) {
-                                        transformToLegacyTransformer(it)
-                                    } else {
-                                        it
-                                    }
-                                )
-                            }
+        override fun transform(
+            destinationDirectory: Path,
+            relativePath: Path,
+            input: InputStream,
+            remapper: TinyRemapper
+        ) {
+            val output = destinationDirectory.resolve(relativePath)
+            output.parent.createDirectories()
+            BufferedReader(input.reader()).use { reader ->
+                TransformFromLegacyTransformer(reader).use { fromLegacy ->
+                    RemapModernTransformer(fromLegacy.buffered(), remapper, logger).use { remapped ->
+                        Files.newBufferedWriter(
+                            output,
+                            StandardCharsets.UTF_8,
+                            StandardOpenOption.CREATE,
+                            StandardOpenOption.TRUNCATE_EXISTING
+                        ).use {
+                            remapped.copyTo(
+                                if (remapToLegacy) {
+                                    TransformToLegacyTransformer(it)
+                                } else {
+                                    it
+                                }
+                            )
                         }
                     }
                 }
             }
-
         }
+    }
 
     private val legacyMethod = Regex(
         "^(\\w+(?:[\\-+]f)?)\\s+([\\w.$]+)\\.([\\w*<>]+)(\\(.+?)\\s*?(#.+?)?\$",
@@ -78,7 +76,7 @@ object AccessTransformerMinecraftTransformer {
         RegexOption.MULTILINE
     )
 
-    private fun transformFromLegacyTransformer(reader: BufferedReader): Reader = object: Reader() {
+    private class TransformFromLegacyTransformer(val reader: BufferedReader) : Reader() {
         var line: String? = null
         var closed = false
 
@@ -104,7 +102,7 @@ object AccessTransformerMinecraftTransformer {
             if (line == null) {
                 return -1
             }
-            line = transformFromLegacyTransformer(line!!) + "\n"
+            line = TransformFromLegacyTransformer(line!!) + "\n"
             return read(cbuf, off, len)
         }
 
@@ -119,10 +117,9 @@ object AccessTransformerMinecraftTransformer {
                 closed = true
             }
         }
-
     }
 
-    private fun transformFromLegacyTransformer(line: String): String {
+    private fun TransformFromLegacyTransformer(line: String): String {
         val methodMatch = legacyMethod.matchEntire(line)
         if (methodMatch != null) {
             val (access, owner, name, desc, comment) = methodMatch.destructured
@@ -148,7 +145,7 @@ object AccessTransformerMinecraftTransformer {
         return line
     }
 
-    private fun transformToLegacyTransformer(writer: BufferedWriter): Writer = object: Writer(writer) {
+    private class TransformToLegacyTransformer(val writer: BufferedWriter) : Writer(writer) {
         var lineBuffer: String? = null
         var closed = false
 
@@ -159,7 +156,7 @@ object AccessTransformerMinecraftTransformer {
             }
             closed = true
             if (lineBuffer != null) {
-                writer.write(transformToLegacyTransformer(lineBuffer!!))
+                writer.write(TransformToLegacyTransformer(lineBuffer!!))
                 lineBuffer = null
             }
             writer.close()
@@ -189,14 +186,14 @@ object AccessTransformerMinecraftTransformer {
                     lineBuffer = null
                 }
                 lines.dropLast(1).forEach {
-                    writer.write(transformToLegacyTransformer(it))
+                    writer.write(TransformToLegacyTransformer(it))
                     writer.write("\n")
                 }
             }
         }
     }
 
-    private fun transformToLegacyTransformer(line: String): String {
+    private fun TransformToLegacyTransformer(line: String): String {
         val methodMatch = modernMethod.matchEntire(line)
         if (methodMatch != null) {
             val (access, owner, name, desc, comment) = methodMatch.destructured
@@ -210,51 +207,50 @@ object AccessTransformerMinecraftTransformer {
         return line
     }
 
-    private fun remapModernTransformer(reader: BufferedReader, remapper: TinyRemapper, logger: Logger): Reader =
-        object: Reader() {
-            var line: String? = null
-            var closed = false
+    private class RemapModernTransformer(val reader: BufferedReader, val remapper: TinyRemapper, val logger: Logger) : Reader() {
+        var line: String? = null
+        var closed = false
 
-            @Synchronized
-            override fun read(cbuf: CharArray, off: Int, len: Int): Int {
-                if (closed) {
-                    throw IOException("Reader is closed")
-                }
-                if (len == 0) {
-                    return 0
-                }
-                if (line != null) {
-                    val read = line!!.length.coerceAtMost(len)
-                    line!!.toCharArray(cbuf, off, 0, read)
-                    if (read == line!!.length) {
-                        line = null
-                        return read
-                    }
-                    line = line!!.substring(read)
+        @Synchronized
+        override fun read(cbuf: CharArray, off: Int, len: Int): Int {
+            if (closed) {
+                throw IOException("Reader is closed")
+            }
+            if (len == 0) {
+                return 0
+            }
+            if (line != null) {
+                val read = line!!.length.coerceAtMost(len)
+                line!!.toCharArray(cbuf, off, 0, read)
+                if (read == line!!.length) {
+                    line = null
                     return read
                 }
-                line = reader.readLine()
-                if (line == null) {
-                    return -1
-                }
-                line = remapModernTransformer(line!!, remapper, logger) + "\n"
-                return read(cbuf, off, len)
+                line = line!!.substring(read)
+                return read
             }
-
-            override fun ready(): Boolean {
-                return line != null || reader.ready()
+            line = reader.readLine()
+            if (line == null) {
+                return -1
             }
-
-            @Synchronized
-            override fun close() {
-                if (!closed) {
-                    reader.close()
-                    closed = true
-                }
-            }
+            line = RemapModernTransformer(line!!, remapper, logger) + "\n"
+            return read(cbuf, off, len)
         }
 
-    private fun remapModernTransformer(line: String, tremapper: TinyRemapper, logger: Logger): String {
+        override fun ready(): Boolean {
+            return line != null || reader.ready()
+        }
+
+        @Synchronized
+        override fun close() {
+            if (!closed) {
+                reader.close()
+                closed = true
+            }
+        }
+    }
+
+    private fun RemapModernTransformer(line: String, tremapper: TinyRemapper, logger: Logger): String {
         try {
             val remapper = tremapper.environment.remapper
             val classMatch = modernClass.matchEntire(line)
@@ -297,10 +293,10 @@ object AccessTransformerMinecraftTransformer {
         }
     }
 
-    fun transform(accessTransformers: List<Path>, baseMinecraft: MinecraftJar, output: MinecraftJar) {
+    fun transform(accessTransformers: List<Path>, baseMinecraft: Path, output: Path) {
         if (accessTransformers.isEmpty()) return
-        if (output.path.exists()) output.path.deleteIfExists()
-        output.path.parent.createDirectories()
+        if (output.exists()) output.deleteIfExists()
+        output.parent.createDirectories()
         val processJar = TransformerProcessor::class.java.getDeclaredMethod(
             "processJar",
             Path::class.java,
@@ -308,7 +304,7 @@ object AccessTransformerMinecraftTransformer {
             List::class.java
         )
         processJar.isAccessible = true
-        processJar(null, baseMinecraft.path, output.path, accessTransformers)
+        processJar(null, baseMinecraft, output, accessTransformers)
     }
 
     fun aw2at(aw: Path, output: Path, legacy: Boolean = false): Path {
@@ -318,7 +314,7 @@ object AccessTransformerMinecraftTransformer {
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING
         )
-        val writer = if (legacy) transformToLegacyTransformer(outWriter) else outWriter
+        val writer = if (legacy) TransformToLegacyTransformer(outWriter) else outWriter
         AccessTransformerWriter(writer.buffered()).use {
             AccessWidenerReader(it).read(aw.bufferedReader())
         }
@@ -332,7 +328,7 @@ object AccessTransformerMinecraftTransformer {
             StandardOpenOption.READ
         )
 
-        val reader = transformFromLegacyTransformer(inReader)
+        val reader = TransformFromLegacyTransformer(inReader)
         val temp = at.resolveSibling(at.name + ".temp")
         val tempWriter = temp.bufferedWriter(
             StandardCharsets.UTF_8,

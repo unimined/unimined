@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft.patch.forge
+package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.format.ZipReader
@@ -9,29 +9,26 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
-import xyz.wagyourtail.unimined.api.Constants
-import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
-import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.task.MappingExportTypes
+import xyz.wagyourtail.unimined.api.runs.RunConfig
+import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
-import xyz.wagyourtail.unimined.mappings.MappingExportImpl
-import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
-import xyz.wagyourtail.unimined.minecraft.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
+import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2.FG2MinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.forge.fg2.FG2MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.resolve.parseAllLibraries
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
-import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.getSha1
+import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.io.InputStreamReader
 import java.net.URI
@@ -39,10 +36,10 @@ import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 
-class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImpl):
-        AbstractMinecraftTransformer(project, provider, Constants.FORGE_PROVIDER), ForgePatcher {
+class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
+        AbstractMinecraftTransformer(project, provider, "forge"), ForgePatcher {
 
-    val forge: Configuration = project.configurations.maybeCreate(Constants.FORGE_PROVIDER)
+    val forge: Configuration = project.configurations.maybeCreate("forge".withSourceSet(provider.sourceSet))
 
     @ApiStatus.Internal
     lateinit var forgeTransformer: JarModMinecraftTransformer
@@ -60,21 +57,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
             forgeTransformer.deleteMetaInf = value
         }
 
-    override var devNamespace by LazyMutable {
-        MappingNamespace.findByType(
-            MappingNamespace.Type.NAMED,
-            project.mappings.getAvailableMappings(project.minecraft.defaultEnv)
-        )
-    }
-    override var devFallbackNamespace by LazyMutable {
-        MappingNamespace.findByType(
-            MappingNamespace.Type.INT,
-            project.mappings.getAvailableMappings(project.minecraft.defaultEnv)
-        )
-    }
-
     override var mixinConfig: List<String> = mutableListOf()
-
 
     private val sideMarkers = mapOf(
         "net/minecraftforge/fml/relauncher/SideOnly" to Triple(
@@ -107,7 +90,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         }.filter { it.second != null }.map { it.first to it.second!! }
         if (type.size > 1) throw IllegalStateException("Found more than one side marker in forge jar: $type")
         if (type.isEmpty()) {
-            project.logger.warn("No side marker found in forge jar, using default (none)")
+            project.logger.warn("[Unimined/ForgeTransformer] No side marker found in forge jar, using default (none)")
             return@lazy null
         }
         type.first()
@@ -160,10 +143,6 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     @ApiStatus.Internal
     internal var mainClass: String? = null
 
-    init {
-        project.unimined.events.register(::applyToTask)
-    }
-
     override fun aw2at(input: String): File = aw2at(File(input))
 
     override fun aw2at(input: String, output: String) = aw2at(File(input), File(output))
@@ -198,7 +177,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     override fun at2aw(input: String, namespace: MappingNamespace) = at2aw(File(input), namespace)
     override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
     override fun at2aw(input: String) = at2aw(File(input))
-    override fun at2aw(input: File) = at2aw(input, devNamespace)
+    override fun at2aw(input: File) = at2aw(input, provider.mappings.devNamespace)
     override fun at2aw(input: File, namespace: MappingNamespace) = at2aw(
         input,
         project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
@@ -206,43 +185,44 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         namespace
     )
 
-    override fun at2aw(input: File, output: File) = at2aw(input, output, devNamespace)
+    override fun at2aw(input: File, output: File) = at2aw(input, output, provider.mappings.devNamespace)
     override fun at2aw(input: File, output: File, namespace: MappingNamespace): File {
         return AccessTransformerMinecraftTransformer.at2aw(
             input.toPath(),
             output.toPath(),
             namespace.namespace,
-            project.mappings.getMappingTree(EnvType.COMBINED),
+            provider.mappings.mappingTree,
             project.logger
         ).toFile()
     }
 
     @get:ApiStatus.Internal
     val srgToMCPAsSRG: Path by lazy {
-        project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.srg").apply {
-            val export = MappingExportImpl(EnvType.COMBINED).apply {
+        project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.srg").apply {
+            val export = ExportMappingsTaskImpl.ExportImpl().apply {
                 location = toFile()
-                type = MappingExportTypes.SRG
+                type = ExportMappingsTask.MappingExportTypes.SRG
                 sourceNamespace = MappingNamespace.SEARGE
-                targetNamespace = listOf(devNamespace)
+                targetNamespace = listOf(provider.mappings.devNamespace)
             }
             export.validate()
-            export.exportFunc(project.mappings.getMappingTree(EnvType.COMBINED))
+            export.exportFunc(provider.mappings.mappingTree)
         }
     }
 
     @get:ApiStatus.Internal
     val srgToMCPAsMCP: Path by lazy {
-        project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve("srg2mcp.jar").apply {
-            val export = MappingExportImpl(EnvType.COMBINED).apply {
+        project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.jar").apply {
+            val export = ExportMappingsTaskImpl.ExportImpl().apply {
                 location = toFile()
-                type = MappingExportTypes.MCP
+                type = ExportMappingsTask.MappingExportTypes.MCP
                 sourceNamespace = MappingNamespace.SEARGE
                 skipComments = true // the reader forge uses now is too dumb...
-                targetNamespace = listOf(devNamespace)
+                targetNamespace = listOf(provider.mappings.devNamespace)
+                envType = provider.side
             }
             export.validate()
-            export.exportFunc(project.mappings.getMappingTree(EnvType.COMBINED))
+            export.exportFunc(provider.mappings.mappingTree)
         }
     }
 
@@ -268,7 +248,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         }
 
         // test if pre unified jar
-        if (provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.3") < 0) {
+        if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") < 0) {
             forgeTransformer = FG1MinecraftTransformer(project, this)
             // add forge client/server if universal is disabled
             val forgeClient = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:client@zip"
@@ -282,7 +262,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         } else {
             forge.dependencies.remove(forgeDep)
 
-            val zip = provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.6") < 0
+            val zip = provider.minecraftData.mcVersionCompare(provider.version, "1.6") < 0
             val forgeUniversal = project.dependencies.create("${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:universal@${if (zip) "zip" else "jar"}")
             forge.dependencies.add(forgeUniversal)
 
@@ -296,7 +276,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
                 val libraries = parseAllLibraries(versionJson.getAsJsonArray("libraries"))
                 mainClass = versionJson.get("mainClass").asString
                 val args = versionJson.get("minecraftArguments").asString
-                provider.addMcLibraries(libraries.filter {
+                provider.addLibraries(libraries.filter {
                     !it.name.startsWith("net.minecraftforge:minecraftforge:") && !it.name.startsWith(
                         "net.minecraftforge:forge:"
                     )
@@ -418,7 +398,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
     fun applyATs(baseMinecraft: MinecraftJar, ats: List<Path>): MinecraftJar {
         project.logger.lifecycle("Applying ATs $ats")
         return if (accessTransformer != null) {
-            project.logger.lifecycle("Using user access transformer $accessTransformer")
+            project.logger.lifecycle("[Unimined/ForgeTransformer] Using user access transformer $accessTransformer")
             val output = MinecraftJar(
                 baseMinecraft,
                 parentPath = project.unimined.getLocalCache().resolve("forge"),
@@ -427,35 +407,30 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
             if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
                 AccessTransformerMinecraftTransformer.transform(
                     ats + listOf(accessTransformer!!.toPath()),
-                    baseMinecraft,
-                    output
+                    baseMinecraft.path,
+                    output.path
                 )
             }
             output
         } else {
             val output = MinecraftJar(baseMinecraft, awOrAt = "at")
             if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
-                AccessTransformerMinecraftTransformer.transform(ats, baseMinecraft, output)
+                AccessTransformerMinecraftTransformer.transform(ats, baseMinecraft.path, output.path)
             }
             output
         }
     }
 
-    override fun applyLaunches() {
-        super.applyLaunches()
-        //TODO: figure out datagen
-    }
-
-    override fun applyClientRunTransform(config: LaunchConfig) {
-        project.logger.info("Adding mixin config $mixinConfig to client run config")
+    override fun applyClientRunTransform(config: RunConfig) {
+        project.logger.info("[Unimined/ForgeTransformer] Adding mixin config $mixinConfig to client run config")
         forgeTransformer.applyClientRunTransform(config)
         for (mixin in mixinConfig) {
             config.args += listOf("--mixin", mixin)
         }
     }
 
-    override fun applyServerRunTransform(config: LaunchConfig) {
-        project.logger.info("Adding mixin config $mixinConfig to server run config")
+    override fun applyServerRunTransform(config: RunConfig) {
+        project.logger.info("[Unimined/ForgeTransformer] Adding mixin config $mixinConfig to server run config")
         forgeTransformer.applyServerRunTransform(config)
         for (mixin in mixinConfig) {
             config.args += listOf("--mixin", mixin)
@@ -466,16 +441,16 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProviderImp
         //TODO: JarJar
     }
 
+    override fun applyExtraLaunches() {
+        forgeTransformer.applyExtraLaunches()
+    }
+
     private fun applyToTask(container: TaskContainer) {
         for (jar in container.withType(Jar::class.java)) {
             jar.manifest {
                 it.attributes["MixinConfigs"] = mixinConfig.joinToString(",")
             }
         }
-    }
-
-    override fun sourceSets(sourceSets: SourceSetContainer) {
-        forgeTransformer.sourceSets(sourceSets)
     }
 
     override fun name(): String {

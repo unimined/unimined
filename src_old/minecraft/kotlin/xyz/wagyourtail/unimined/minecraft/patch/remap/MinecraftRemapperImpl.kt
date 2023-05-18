@@ -13,7 +13,7 @@ import xyz.wagyourtail.unimined.api.minecraft.transform.remap.MinecraftRemapper
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
 import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.minecraft.patch.forge.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.nio.file.Path
@@ -122,7 +122,7 @@ class MinecraftRemapperImpl(
             OutputConsumerPath.Builder(target).build().use {
                 it.addNonClassFiles(
                     from, remapper,
-                    listOf(AccessTransformerMinecraftTransformer.atRemapper(project.logger)) + NonClassCopyMode.FIX_META_INF.remappers
+                    listOf(AccessTransformerMinecraftTransformer.AtRemapper(project.logger)) + NonClassCopyMode.FIX_META_INF.remappers
                 )
                 remapper.apply(it)
             }

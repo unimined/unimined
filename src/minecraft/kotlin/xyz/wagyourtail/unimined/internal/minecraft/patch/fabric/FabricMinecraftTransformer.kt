@@ -10,7 +10,7 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import java.net.URI
 
-open class FabricMinecraftTransformer(
+abstract class FabricMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider
 ): FabricLikeMinecraftTransformer(
@@ -49,13 +49,13 @@ open class FabricMinecraftTransformer(
         })
     }
 
-    override fun applyLaunches() {
-        super.applyLaunches()
+    override fun applyExtraLaunches() {
+        super.applyExtraLaunches()
         //TODO: figure out datagen
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
-        config.mainClass = clientMainClass ?: config.mainClass
+        super.applyClientRunTransform(config)
         config.jvmArgs += listOf(
             "-Dfabric.development=true",
             "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.CLIENT)}\""
@@ -63,7 +63,7 @@ open class FabricMinecraftTransformer(
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
-        config.mainClass = serverMainClass ?: config.mainClass
+        super.applyServerRunTransform(config)
         config.jvmArgs += listOf(
             "-Dfabric.development=true",
             "-Dfabric.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.SERVER)}\""

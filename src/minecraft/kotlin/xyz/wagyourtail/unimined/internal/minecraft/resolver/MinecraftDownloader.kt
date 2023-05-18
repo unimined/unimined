@@ -2,28 +2,32 @@ package xyz.wagyourtail.unimined.internal.minecraft.resolver
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.tasks.SourceSetContainer
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.resolver.MinecraftData
+import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.stream
-import xyz.wagyourtail.unimined.util.testSha1
+import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.util.*
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
@@ -59,6 +63,8 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
             throw IllegalStateException("Offline mode is enabled, but version metadata is not available")
         }
 
+        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving launcher metadata")
+
         val urlConnection = URL("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json").openConnection() as HttpURLConnection
         urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
         urlConnection.requestMethod = "GET"
@@ -68,10 +74,8 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
             throw IOException("Failed to get metadata, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
         }
 
-        val versionsList = urlConnection.inputStream.use {
-            InputStreamReader(it).use { reader ->
-                JsonParser.parseReader(reader).asJsonObject
-            }
+        val versionsList = urlConnection.inputStream.reader().use {
+            JsonParser.parseReader(it).asJsonObject
         }
 
         versionsList.getAsJsonArray("versions") ?: throw Exception("Failed to get metadata, no versions")
@@ -96,6 +100,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
 
     val metadata by lazy {
         val versionJson = mcVersionFolder.resolve("version.json")
+        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving version metadata from $metadataURL")
         if (!versionJson.exists() || project.unimined.forceReload) {
             versionJson.parent.createDirectories()
 
@@ -130,7 +135,38 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         }
     }
 
-    private fun getServerVersionOverrides(): Map<String, String> {
+    val minecraftClient: MinecraftJar by lazy {
+        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving minecraft client jar")
+        val clientPath = mcVersionFolder.resolve("minecraft-$version-client.jar")
+        if (!clientPath.exists() || project.unimined.forceReload) {
+            clientPath.parent.createDirectories()
+            if (version.startsWith("empty-")) {
+                clientPath.outputStream().use {
+                    ZipOutputStream(it).close()
+                }
+            } else {
+                val clientJar = metadata.downloads["client"]
+                    ?: throw IllegalStateException("No client jar found for version $version")
+                download(clientJar, clientPath)
+            }
+        }
+        MinecraftJar(
+            mcVersionFolder,
+            "minecraft",
+            EnvType.CLIENT,
+            version,
+            listOf(),
+            MappingNamespace.OFFICIAL,
+            MappingNamespace.OFFICIAL,
+            null,
+            "jar",
+            clientPath
+        )
+    }
+
+    var serverVersionOverride: String by FinalizeOnRead(LazyMutable {
+        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving server version overrides list")
+
         val versionOverrides = mutableMapOf<String, String>()
         val versionOverridesFile = project.unimined.getGlobalCache().resolve("server-version-overrides.json")
 
@@ -160,42 +196,13 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
             }
         }
 
-        return versionOverrides
-    }
+        project.logger.info("[Unimined/MinecraftDownloader] server version overrides: $versionOverrides")
 
-    val minecraftClient: MinecraftJar by lazy {
-        val clientPath = mcVersionFolder.resolve("minecraft-$version-client.jar")
-        if (!clientPath.exists() || project.unimined.forceReload) {
-            clientPath.parent.createDirectories()
-            if (version.startsWith("empty-")) {
-                clientPath.outputStream().use {
-                    ZipOutputStream(it).close()
-                }
-            } else {
-                val clientJar = metadata.downloads["client"]
-                    ?: throw IllegalStateException("No client jar found for version $version")
-                download(clientJar, clientPath)
-            }
-        }
-        MinecraftJar(
-            mcVersionFolder,
-            "minecraft",
-            EnvType.CLIENT,
-            version,
-            listOf(),
-            MappingNamespace.OFFICIAL,
-            MappingNamespace.OFFICIAL,
-            null,
-            "jar",
-            clientPath
-        )
-    }
-
-    var serverVersionOverride: String by FinalizeOnRead(LazyMutable {
-        getServerVersionOverrides().getOrDefault(version, version)
+        versionOverrides.getOrDefault(version, version)
     })
 
     val minecraftServer: MinecraftJar by lazy {
+        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving minecraft server jar")
         val serverPath = mcVersionFolder.resolve("minecraft-$version-server.jar")
         if (!serverPath.exists() || project.unimined.forceReload) {
             serverPath.parent.createDirectories()
@@ -241,6 +248,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     }
 
     override val officialClientMappingsFile: File by lazy {
+        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving official client mappings")
         val clientMappingsPath = mcVersionFolder.resolve("client_mappings.txt")
         if (!clientMappingsPath.exists() || project.unimined.forceReload) {
             clientMappingsPath.parent.createDirectories()
@@ -258,6 +266,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     }
 
     override val officialServerMappingsFile: File by lazy {
+        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving official server mappings")
         val serverMappingsPath = mcVersionFolder.resolve("server_mappings.txt")
         if (!serverMappingsPath.exists() || project.unimined.forceReload) {
             serverMappingsPath.parent.createDirectories()

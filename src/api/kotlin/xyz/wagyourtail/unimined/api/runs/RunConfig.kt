@@ -27,7 +27,6 @@ data class RunConfig(
     val jvmArgs: MutableList<String>,
     var workingDir: File,
     val env: MutableMap<String, String>,
-    var assetsDir: Path,
     val runFirst: MutableList<Task> = mutableListOf(),
 ) {
 
@@ -43,7 +42,6 @@ data class RunConfig(
             jvmArgs.toMutableList(),
             workingDir,
             env.toMutableMap(),
-            assetsDir,
             runFirst.toMutableList(),
         )
     }
@@ -51,10 +49,10 @@ data class RunConfig(
     fun createIdeaRunConfig() {
         val file = project.rootDir.resolve(".idea")
             .resolve("runConfigurations")
-            .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}$taskName.xml")
+            .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+$taskName.xml")
 
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
-            .addStringOption("name", "${project.path} $description")
+            .addStringOption("name", "${project.path}+${taskName} $description")
             .addStringOption("type", "Application")
             .addStringOption("factoryName", "Application")
             .append(

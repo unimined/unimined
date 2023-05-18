@@ -145,16 +145,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
         return target
     }
 
-    internal open fun applyLaunches() {
-        project.logger.lifecycle("Applying $providerName run configs")
-        if (provider.side != EnvType.SERVER) {
-            project.logger.info("client config")
-            provider.runs.configFirst("client", ::applyClientRunTransform)
-        }
-        if (provider.side != EnvType.CLIENT) {
-            project.logger.info("server config")
-            provider.runs.configFirst("server", ::applyServerRunTransform)
-        }
+    open fun applyExtraLaunches() {
     }
 
     @ApiStatus.Internal
@@ -177,7 +168,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     @ApiStatus.Internal
-    open fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
+    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
         // do nothing
     }
 

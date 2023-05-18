@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.output.remap
+package xyz.wagyourtail.unimined.internal.mods
 
 import net.fabricmc.loom.util.kotlin.KotlinClasspathService
 import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader
@@ -6,16 +6,14 @@ import net.fabricmc.mappingio.format.ZipReader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.tasks.TaskAction
-import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
-import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.minecraft
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
-import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
-import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
-import xyz.wagyourtail.unimined.refmap.BetterMixinExtension
+import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.nio.file.Files
 import java.nio.file.Path
@@ -23,25 +21,23 @@ import java.nio.file.StandardCopyOption
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 
-abstract class RemapJarTaskImpl: RemapJarTask() {
-    private val minecraftProvider = project.extensions.getByType(MinecraftProviderImpl::class.java)
-    private val uniminedExtension = project.extensions.getByType(UniminedExtension::class.java)
+abstract class RemapJarTaskImpl(val provider: MinecraftConfig): RemapJarTask() {
 
     @TaskAction
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
     fun run() {
-        val prodNs = targetNamespace.getOrElse(minecraftProvider.mcPatcher.prodNamespace)!!
-        val devNs = sourceNamespace.getOrElse(minecraftProvider.mappings.devNamespace)!!
-        val devFNs = fallbackFromNamespace.getOrElse(minecraftProvider.mappings.devFallbackNamespace)!!
+        val prodNs = targetNamespace.getOrElse(provider.mcPatcher.prodNamespace)!!
+        val devNs = sourceNamespace.getOrElse(provider.mappings.devNamespace)!!
+        val devFNs = fallbackFromNamespace.getOrElse(provider.mappings.devFallbackNamespace)!!
 
-        val env = envType.getOrElse(project.minecraft.defaultEnv)!!
+        val env = envType.getOrElse(provider.side)!!
 
         val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
             devNs,
             devFNs,
             prodNs,
             prodNs,
-            project.mappings.getAvailableMappings(env)
+            (provider.mappings as MappingsProvider).available
         )
 
         if (devNs == prodNs || path.isEmpty()) {
@@ -70,8 +66,7 @@ abstract class RemapJarTaskImpl: RemapJarTask() {
             } else {
                 prevPrevNamespace
             }
-            val mc = minecraftProvider.getMinecraftWithMapping(
-                env,
+            val mc = provider.getMinecraft(
                 mcNamespace,
                 mcFallbackNamespace!!
             )
@@ -81,7 +76,7 @@ abstract class RemapJarTaskImpl: RemapJarTask() {
             prevNamespace = step.second
         }
 
-        minecraftProvider.mcPatcher.afterRemapJarTask(this, outputs.files.files.first().toPath())
+        provider.mcPatcher.afterRemapJarTask(this, outputs.files.files.first().toPath())
     }
 
     protected fun remapToInternal(
@@ -94,8 +89,7 @@ abstract class RemapJarTaskImpl: RemapJarTask() {
     ) {
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(
-                uniminedExtension.mappingsProvider.getMappingsProvider(
-                    envType,
+                provider.mappings.getTRMappings(
                     fromNs to toNs,
                     false
                 )
@@ -112,11 +106,11 @@ abstract class RemapJarTaskImpl: RemapJarTask() {
             project.gradle.startParameter.logLevel
         )
         remapperB.extension(betterMixinExtension)
-        project.minecraft.mcRemapper.tinyRemapperConf(remapperB)
+        provider.minecraftRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         remapper.readClassPathAsync(
-            *sourceSet.runtimeClasspath.files.map { it.toPath() }
-                .filter { !minecraftProvider.isMinecraftJar(it) }
+            *provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
+                .filter { !provider.isMinecraftJar(it) }
                 .filter { it.exists() }
                 .toTypedArray()
         )
@@ -130,7 +124,7 @@ abstract class RemapJarTaskImpl: RemapJarTask() {
                     from,
                     remapper,
                     listOf(
-                        AccessWidenerMinecraftTransformer.awRemapper(fromNs.namespace, toNs.namespace),
+                        AccessWidenerMinecraftTransformer.AwRemapper(fromNs.namespace, toNs.namespace),
                         AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.get()),
                         betterMixinExtension
                     )

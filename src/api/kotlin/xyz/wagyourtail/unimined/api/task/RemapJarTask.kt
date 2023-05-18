@@ -17,10 +17,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
  * @since 0.1.0
  */
 @Suppress("LeakingThis")
-abstract class RemapJarTask(
-    @get:Internal
-    val mcConfig: MinecraftConfig
-) : Jar() {
+abstract class RemapJarTask : Jar() {
 
     @get:InputFile
     abstract val inputFile: RegularFileProperty

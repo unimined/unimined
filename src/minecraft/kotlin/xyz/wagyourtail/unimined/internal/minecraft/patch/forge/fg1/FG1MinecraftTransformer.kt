@@ -1,51 +1,35 @@
-package xyz.wagyourtail.unimined.minecraft.patch.forge.fg1
+package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1
 
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.tasks.SourceSetContainer
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
-import xyz.wagyourtail.unimined.api.Constants
-import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
-import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.api.runs.RunConfig
+import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
+import xyz.wagyourtail.unimined.util.withSourceSet
+import java.io.File
 import java.io.InputStream
 import java.net.URI
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
+import java.nio.file.*
 import kotlin.io.path.*
 
 class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
     project,
     parent.provider,
-    Constants.FORGE_PROVIDER
+    "forge",
+    "FG1"
 ) {
 
     override val prodNamespace: MappingNamespace
         get() = MappingNamespace.OFFICIAL
-
-    override var devNamespace: MappingNamespace
-        get() = parent.devNamespace
-        set(value) {
-            parent.devNamespace = value
-        }
-
-    override var devFallbackNamespace: MappingNamespace
-        get() = parent.devFallbackNamespace
-        set(value) {
-            parent.devFallbackNamespace = value
-        }
 
     var resolvedForgeDeps = false
 
@@ -59,39 +43,24 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             throw IllegalStateException("Invalid forge dependency found, if you are using multiple dependencies in the forge configuration, make sure the last one is the forge dependency!")
         }
 
-        if (provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.3") < 0) {
+        if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") < 0) {
             jarModConfiguration(EnvType.COMBINED).dependencies.remove(forge)
         }
 
-        val forgeSrc = "${forge.group}:${forge.name}:${forge.version}:src@zip"
-        project.mappings.getMappings(EnvType.COMBINED).dependencies.apply {
+        provider.mappings.mappingsDeps.apply {
             if (isEmpty())
-                add(project.dependencies.create(forgeSrc))
+                provider.mappings.mapping("${forge.group}:${forge.name}:${forge.version}:src@zip")
         }
 
         super.apply()
     }
 
-    override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        // resolve forge
-        val forge = jarModConfiguration(minecraft.envType).resolve().firstOrNull()?.toPath()
-            ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath()
-            ?: throw IllegalStateException("No forge jar found for ${minecraft.envType}!")
-
-
-        // resolve dyn libs
-        ZipReader.readInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", forge, false) {
-            resolveDynLibs(getDynLibs(it))
-        }
-
-        // apply jarMod
-        return super.transform(minecraft)
+    private val forgeDeps: Configuration = project.configurations.maybeCreate("forgeDeps".withSourceSet(provider.sourceSet)).apply {
+        extendsFrom(project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)))
     }
 
-    private val forgeDeps: Configuration = project.configurations.maybeCreate(Constants.FORGE_DEPS)
 
-
-    fun resolveDynLibs(wanted: Set<String>) {
+    fun resolveDynLibs(workingDirectory: File, wanted: Set<String>) {
         if (resolvedForgeDeps) return
 
         // provide and copy some old forge deps in
@@ -134,7 +103,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
 
         // copy in
-        val path = provider.clientWorkingDirectory.get().resolve("lib").toPath().createDirectories()
+        val path = workingDirectory.resolve("lib").toPath().createDirectories()
 
         if (wanted.contains("asm-all-4.0.jar")) {
             FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/asm-all-4.0.jar").use { it1 ->
@@ -206,27 +175,19 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    override fun sourceSets(sourceSets: SourceSetContainer) {
-
-        for (sourceSet in provider.combinedSourceSets) {
-            sourceSet.compileClasspath += forgeDeps
-            sourceSet.runtimeClasspath += forgeDeps
-        }
-
-        for (sourceSet in provider.clientSourceSets) {
-            sourceSet.compileClasspath += forgeDeps
-            sourceSet.runtimeClasspath += forgeDeps
-        }
-
-        for (sourceSet in provider.serverSourceSets) {
-            sourceSet.compileClasspath += forgeDeps
-            sourceSet.runtimeClasspath += forgeDeps
-        }
-
-    }
-
-    override fun applyClientRunTransform(config: LaunchConfig) {
+    override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
+
+        val forge = jarModConfiguration(EnvType.CLIENT).resolve().firstOrNull()?.toPath()
+            ?: jarModConfiguration(EnvType.COMBINED).resolve().firstOrNull()?.toPath()
+            ?: throw IllegalStateException("No forge jar found for ${EnvType.CLIENT}!")
+
+
+        // resolve dyn libs
+        ZipReader.readInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", forge, false) {
+            resolveDynLibs(config.workingDir, getDynLibs(it))
+        }
+
         config.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${config.workingDir.absolutePath}\"")
         if (parent.mainClass != null) config.mainClass = parent.mainClass!!
     }
@@ -307,7 +268,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     outSet.add(insn.cst as String)
                 }
                 if (insn is MethodInsnNode && insn.opcode == Opcodes.INVOKESTATIC && insn.name == "debfuscationDataName") {
-                    outSet.add("deobfuscation_data_${provider.minecraft.version}.zip")
+                    outSet.add("deobfuscation_data_${provider.version}.zip")
                 }
             }
             if (insn is FieldInsnNode && insn.opcode == Opcodes.PUTSTATIC) {

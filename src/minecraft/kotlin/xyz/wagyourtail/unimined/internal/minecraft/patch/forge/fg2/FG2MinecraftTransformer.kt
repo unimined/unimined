@@ -1,15 +1,13 @@
-package xyz.wagyourtail.unimined.minecraft.patch.forge.fg2
+package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2
 
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.Constants
-import xyz.wagyourtail.unimined.api.launch.LaunchConfig
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
-import xyz.wagyourtail.unimined.api.mappings.mappings
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.api.runs.RunConfig
+import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.net.URI
@@ -25,22 +23,11 @@ import kotlin.io.path.writeBytes
 class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
     project,
     parent.provider,
-    Constants.FORGE_PROVIDER
+    "forge",
+    "FG2"
 ) {
 
     override val prodNamespace = MappingNamespace.SEARGE
-
-    override var devNamespace: MappingNamespace
-        get() = parent.devNamespace
-        set(value) {
-            parent.devNamespace = value
-        }
-
-    override var devFallbackNamespace: MappingNamespace
-        get() = parent.devFallbackNamespace
-        set(value) {
-            parent.devFallbackNamespace = value
-        }
 
     override val merger: ClassMerger
         get() = parent.merger
@@ -56,27 +43,27 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         val forgeDep = parent.forge.dependencies.last()
 
         val forgeSrc = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:src@zip"
-        project.mappings.getMappings(EnvType.COMBINED).dependencies.apply {
-            val empty = isEmpty()
+        provider.mappings.apply {
+            val empty = mappingsDeps.isEmpty()
             if (empty) {
-                if (provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.7.10") != -1) {
-                    add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraft.version}:srg@zip"))
+                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1) {
+                    mapping("de.oceanlabs.mcp:mcp:${provider.version}:srg@zip")
                 }
-                if (provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.7") == -1) {
-                    add(project.dependencies.create(forgeSrc))
-                } else if (provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.7.10") == -1) {
+                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7") == -1) {
+                    mapping(forgeSrc)
+                } else if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") == -1) {
                     throw UnsupportedOperationException("Forge 1.7-1.7.9 don't have automatic mappings support. please supply the mcp mappings or whatever manually")
                 } else {
                     if (parent.mcpVersion == null || parent.mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
-                    add(project.dependencies.create("de.oceanlabs.mcp:mcp_${parent.mcpChannel}:${parent.mcpVersion}@zip"))
+                    mapping("de.oceanlabs.mcp:mcp_${parent.mcpChannel}:${parent.mcpVersion}@zip")
                 }
             } else {
-                val deps = this.toList()
-                clear()
-                if (provider.minecraft.mcVersionCompare(provider.minecraft.version, "1.7.10") != -1) {
-                    add(project.dependencies.create("de.oceanlabs.mcp:mcp:${provider.minecraft.version}:srg@zip"))
+                val deps = mappingsDeps.toList()
+                mappingsDeps.clear()
+                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1) {
+                    mapping("de.oceanlabs.mcp:mcp:${provider.version}:srg@zip")
                 }
-                addAll(deps)
+                mappingsDeps.addAll(deps)
             }
         }
 
@@ -89,7 +76,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 minecraft
             )
         )
-        return provider.mcRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
+        return provider.minecraftRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
     }
 
     private fun transformIntern(minecraft: MinecraftJar): MinecraftJar {
@@ -129,7 +116,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return patchedMC
     }
 
-    override fun applyClientRunTransform(config: LaunchConfig) {
+    override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
         config.mainClass = parent.mainClass ?: config.mainClass
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
@@ -140,7 +127,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         )
     }
 
-    override fun applyServerRunTransform(config: LaunchConfig) {
+    override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
         config.mainClass = parent.mainClass ?: config.mainClass
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"

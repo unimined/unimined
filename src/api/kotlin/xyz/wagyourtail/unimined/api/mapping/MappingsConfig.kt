@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.api.mapping
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -61,4 +62,9 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     @ApiStatus.Experimental
     fun newNamespace(namespace: String, type: String) = MappingNamespace(namespace, MappingNamespace.Type.fromId(type))
 
+    @ApiStatus.Internal
+    abstract fun getTRMappings(
+        remap: Pair<MappingNamespace, MappingNamespace>,
+        remapLocals: Boolean = false
+    ): (IMappingProvider.MappingAcceptor) -> Unit
 }

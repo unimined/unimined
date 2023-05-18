@@ -1,17 +1,17 @@
-package xyz.wagyourtail.unimined.minecraft.patch.jarmod
+package xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod
 
 import net.fabricmc.mappingio.format.ZipReader
 import net.lenni0451.classtransform.TransformerManager
 import net.lenni0451.classtransform.utils.tree.IClassProvider
 import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
-import xyz.wagyourtail.unimined.api.Constants
-import xyz.wagyourtail.unimined.api.launch.LaunchConfig
-import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
-import xyz.wagyourtail.unimined.minecraft.MinecraftProviderImpl
+import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.internal.mods.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.util.getTempFilePath
+import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
@@ -27,10 +27,10 @@ import kotlin.io.path.writeBytes
 
 class JarModAgentMinecraftTransformer(
     project: Project,
-    provider: MinecraftProviderImpl,
-    private val jarModProvider: String = Constants.JARMOD_PROVIDER,
+    provider: MinecraftProvider,
+    private val jarModProvider: String = "jarMod",
 ) : JarModMinecraftTransformer(
-    project, provider, Constants.JARMOD_PROVIDER, "JarModAgent"
+    project, provider, "jarMod", "JarModAgent"
 ), JarModAgentPatcher {
     companion object {
         private val JMA_TRANSFORMERS = "jma.transformers"
@@ -41,7 +41,9 @@ class JarModAgentMinecraftTransformer(
 
     override var compiletimeTransforms: Boolean = false
 
-    override var jarModAgent = project.configurations.maybeCreate(Constants.JARMOD_AGENT_PROVIDER)
+    override var jarModAgent = project.configurations.maybeCreate("jarModAgent".withSourceSet(provider.sourceSet)).apply {
+        extendsFrom(project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)))
+    }
 
     val jmaFile by lazy {
         jarModAgent.resolve().first { it.extension == "jar" }.toPath()
@@ -63,34 +65,17 @@ class JarModAgentMinecraftTransformer(
         super.apply()
     }
 
-    override fun sourceSets(sourceSets: SourceSetContainer) {
-        for (sourceSet in provider.combinedSourceSets) {
-            sourceSet.compileClasspath += jarModAgent
-            sourceSet.runtimeClasspath += jarModAgent
-        }
-
-        for (sourceSet in provider.clientSourceSets) {
-            sourceSet.compileClasspath += jarModAgent
-            sourceSet.runtimeClasspath += jarModAgent
-        }
-
-        for (sourceSet in provider.serverSourceSets) {
-            sourceSet.compileClasspath += jarModAgent
-            sourceSet.runtimeClasspath += jarModAgent
-        }
-    }
-
-    override fun applyClientRunTransform(config: LaunchConfig) {
+    override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
         applyJarModAgent(config)
     }
 
-    override fun applyServerRunTransform(config: LaunchConfig) {
+    override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
         applyJarModAgent(config)
     }
 
-    private fun applyJarModAgent(config: LaunchConfig) {
+    private fun applyJarModAgent(config: RunConfig) {
         transforms?.let {
                config.jvmArgs.add("-D${JMA_TRANSFORMERS}=$it")
         }
@@ -109,15 +94,15 @@ class JarModAgentMinecraftTransformer(
         if (compiletimeTransforms && transforms != null) {
             project.logger.lifecycle("Running compile time transforms for ${remapJarTask.name}...")
 
-            val envType = remapJarTask.envType.getOrElse(project.minecraft.defaultEnv)!!
+            val envType = remapJarTask.envType
             val mappings = remapJarTask.targetNamespace.getOrElse(this.prodNamespace)!!
 
-            val classpath = remapJarTask.sourceSet.runtimeClasspath.files.toMutableSet()
+            val classpath = (remapJarTask as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
+
             // remove minecraft
-            classpath.removeIf { project.configurations.getByName("minecraft").contains(it) }
+            classpath.removeIf { provider.isMinecraftJar(it.toPath()) }
             // add back with correct mappings
-            val mc = project.minecraft.getMinecraftWithMapping(envType, mappings, mappings)
-            classpath.add(mc.toFile())
+            classpath.add(provider.minecraftFileDev)
             // add input jar
             // copy output to temp
             // add temp to classpath

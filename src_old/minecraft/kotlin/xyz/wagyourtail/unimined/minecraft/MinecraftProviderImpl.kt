@@ -25,7 +25,6 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
 import xyz.wagyourtail.unimined.launch.LauncherProvierImpl
@@ -37,7 +36,7 @@ import xyz.wagyourtail.unimined.minecraft.patch.fabric.FabricLikeMinecraftTransf
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.QuiltMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.forge.ForgeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.patch.remap.MinecraftRemapperImpl
 import xyz.wagyourtail.unimined.minecraft.resolve.AssetsDownloader
@@ -142,7 +141,7 @@ abstract class MinecraftProviderImpl(
 
         minecraft.afterEvaluate()
         addMcLibraries()
-        mcPatcher.afterEvaluate()
+        mcPatcher.apply()
         project.unimined.events.register(mcPatcher::sourceSets)
         mcPatcher.applyLaunches()
 

@@ -1,5 +1,8 @@
 package xyz.wagyourtail.unimined.api.minecraft.transform.patch
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
+import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import java.io.File
 
@@ -14,6 +17,28 @@ interface FabricLikePatcher: MinecraftPatcher, AccessTransformablePatcher {
      * @since 0.2.3
      */
     override var prodNamespace: MappingNamespace
+
+    fun loader(dep: Any) {
+        loader(dep) {}
+    }
+
+    fun loader(dep: Any, action: Dependency.() -> Unit)
+
+    fun loader(
+        dep: Any,
+        @DelegatesTo(
+            value = Dependency::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        loader(dep) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+
 
     /**
      * @since 0.4.10

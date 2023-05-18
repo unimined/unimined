@@ -11,6 +11,7 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
@@ -18,7 +19,8 @@ import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.minecraft.patch.forge.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
@@ -29,10 +31,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
-import kotlin.io.path.writeText
 
 abstract class FabricLikeMinecraftTransformer(
     project: Project,
@@ -49,8 +49,8 @@ abstract class FabricLikeMinecraftTransformer(
         val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
     }
 
-    val fabric: Configuration = project.configurations.maybeCreate(providerName.withSourceSet(provider.sourceSet)).also {
-        it.extendsFrom(project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)))
+    val fabric: Configuration = project.configurations.maybeCreate(providerName.withSourceSet(provider.sourceSet)).apply {
+        extendsFrom(project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)))
     }
 
     private val fabricJson: Configuration = project.configurations.detachedConfiguration()
@@ -58,9 +58,6 @@ abstract class FabricLikeMinecraftTransformer(
     private val include: Configuration = project.configurations.maybeCreate("include".withSourceSet(provider.sourceSet))
 
     override var accessWidener: File? by FinalizeOnRead(null)
-
-    protected var clientMainClass: String? by FinalizeOnRead(null)
-    protected var serverMainClass: String? by FinalizeOnRead(null)
 
     protected abstract val ENVIRONMENT: String
     protected abstract val ENV_TYPE: String
@@ -118,6 +115,8 @@ abstract class FabricLikeMinecraftTransformer(
 
     protected abstract fun addMavens()
 
+    var mainClass: JsonObject? = null
+
     override fun apply() {
         val client = provider.side != EnvType.SERVER
         val server = provider.side != EnvType.CLIENT
@@ -162,12 +161,7 @@ abstract class FabricLikeMinecraftTransformer(
         val libraries = json.get("libraries")?.asJsonObject
         if (libraries != null) {
             libraries.get("common")?.asJsonArray?.forEach {
-                if (client) {
-                    createFabricLoaderDependency(it)
-                }
-                if (server) {
-                    createFabricLoaderDependency(it)
-                }
+                createFabricLoaderDependency(it)
             }
             if (client) {
                 libraries.get("client")?.asJsonArray?.forEach {
@@ -181,13 +175,7 @@ abstract class FabricLikeMinecraftTransformer(
             }
         }
 
-        val mainClass = json.get("mainClass")?.asJsonObject
-        if (client) {
-            clientMainClass = mainClass?.get("client")?.asString
-        }
-        if (server) {
-            serverMainClass = mainClass?.get("server")?.asString
-        }
+        mainClass = json.get("mainClass")?.asJsonObject
 
         if (devMappings != null) {
             provider.minecraftLibraries.dependencies.add(
@@ -383,5 +371,13 @@ abstract class FabricLikeMinecraftTransformer(
             provider.mappings,
             provider
         ).toFile()
+    }
+
+    override fun applyClientRunTransform(config: RunConfig) {
+        config.mainClass = mainClass?.get("client")?.asString ?: config.mainClass
+    }
+
+    override fun applyServerRunTransform(config: RunConfig) {
+        config.mainClass = mainClass?.get("server")?.asString ?: config.mainClass
     }
 }

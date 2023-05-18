@@ -169,7 +169,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     @ApiStatus.Internal
-    open fun afterEvaluate() {
+    open fun apply() {
     }
 
     @ApiStatus.Internal
@@ -182,7 +182,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     @ApiStatus.Internal
-    open fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
+    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
         // do nothing
     }
 

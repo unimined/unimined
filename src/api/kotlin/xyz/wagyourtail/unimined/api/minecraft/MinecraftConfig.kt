@@ -5,11 +5,14 @@ import groovy.lang.DelegatesTo
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSet
+import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
+import xyz.wagyourtail.unimined.api.minecraft.remap.MinecraftRemapConfig
 import xyz.wagyourtail.unimined.api.minecraft.resolver.MinecraftData
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.mod.ModsConfig
@@ -18,6 +21,7 @@ import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.MustSet
+import java.io.File
 import java.net.URI
 import java.nio.file.Path
 
@@ -46,6 +50,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     abstract val mods: ModsConfig
     abstract val runs: RunsConfig
     abstract val minecraftData: MinecraftData
+    abstract val minecraftRemapper: MinecraftRemapConfig
 
     fun mappings(action: MappingsConfig.() -> Unit) {
         mappings.action()
@@ -81,7 +86,9 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         remap(task) {}
     }
 
-    abstract fun remap(task: Task, action: RemapJarTask.() -> Unit)
+    fun remap(task: Task, action: RemapJarTask.() -> Unit) {
+        remap(task, "remap${task.name.capitalized()}", action)
+    }
 
     fun remap(
         task: Task,
@@ -150,6 +157,12 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         fallbackNamespace: MappingNamespace
     ): Path
 
-    @ApiStatus.Experimental
-    abstract fun remapper(remapperBuilder: TinyRemapper.Builder.() -> Unit)
+    @get:ApiStatus.Internal
+    abstract val minecraftFileDev: File
+
+    @get:ApiStatus.Internal
+    abstract val minecraftLibraries: Configuration
+
+    @ApiStatus.Internal
+    abstract fun isMinecraftJar(path: Path): Boolean
 }

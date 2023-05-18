@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
+package xyz.wagyourtail.unimined.internal.mapping.aw
 
 import net.fabricmc.accesswidener.*
 import net.fabricmc.mappingio.format.ZipReader
@@ -9,8 +9,10 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
-import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerBetterRemapper
+import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMerger
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -23,29 +25,28 @@ import kotlin.io.path.*
 
 object AccessWidenerMinecraftTransformer {
 
-    fun awRemapper(source: String, target: String): OutputConsumerPath.ResourceRemapper =
-        object: OutputConsumerPath.ResourceRemapper {
-            override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
-                // read the beginning of the file and see if it begins with "accessWidener"
-                return relativePath.extension.equals("accesswidener", true) ||
-                        relativePath.extension.equals("aw", true)
-            }
-
-            override fun transform(
-                destinationDirectory: Path,
-                relativePath: Path,
-                input: InputStream,
-                remapper: TinyRemapper
-            ) {
-                val awr = AccessWidenerWriter()
-                AccessWidenerReader(AccessWidenerRemapper(awr, remapper.environment.remapper, source, target)).read(
-                    BufferedReader(InputStreamReader(input))
-                )
-                val output = destinationDirectory.resolve(relativePath)
-                output.parent.createDirectories()
-                Files.write(output, awr.write(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-            }
+    class AwRemapper(val source: String, val target: String): OutputConsumerPath.ResourceRemapper {
+        override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
+            // read the beginning of the file and see if it begins with "accessWidener"
+            return relativePath.extension.equals("accesswidener", true) ||
+                    relativePath.extension.equals("aw", true)
         }
+
+        override fun transform(
+            destinationDirectory: Path,
+            relativePath: Path,
+            input: InputStream,
+            remapper: TinyRemapper
+        ) {
+            val awr = AccessWidenerWriter()
+            AccessWidenerReader(AccessWidenerRemapper(awr, remapper.environment.remapper, source, target)).read(
+                BufferedReader(InputStreamReader(input))
+            )
+            val output = destinationDirectory.resolve(relativePath)
+            output.parent.createDirectories()
+            Files.write(output, awr.write(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        }
+    }
 
     fun transform(
         accessWidener: Path,
@@ -101,7 +102,7 @@ object AccessWidenerMinecraftTransformer {
         output: Path,
         targetNamespace: MappingNamespace,
         mappingsProvider: MappingsProvider,
-        mcProvider: MinecraftProvider
+        mcProvider: MinecraftConfig
     ): Path {
         val merger = AccessWidenerMerger(targetNamespace.namespace)
 
@@ -124,7 +125,7 @@ object AccessWidenerMinecraftTransformer {
         mappingsProvider: MappingsProvider,
         target: String,
         input: InputStream,
-        mcProvider: MinecraftProvider
+        mcProvider: MinecraftConfig
     ) {
         AccessWidenerReader(AccessWidenerBetterRemapper(awm, mappingsProvider, target, mcProvider)).read(
             BufferedReader(InputStreamReader(input))

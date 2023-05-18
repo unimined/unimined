@@ -18,33 +18,33 @@ import java.util.zip.GZIPInputStream
 import kotlin.io.path.createDirectories
 import kotlin.io.path.inputStream
 
-class AssetsDownloader(val project: Project) {
+object AssetsDownloader {
 
     fun downloadAssets(project: Project, assets: AssetIndex): Path {
-        val dir = assetsDir()
+        val dir = assetsDir(project)
         val index = dir.resolve("indexes").resolve("${assets.id}.json")
 
         index.parent.createDirectories()
 
-        updateIndex(assets, index)
+        updateIndex(project, assets, index)
 
         val assetsJson = index.inputStream().use {
             JsonParser.parseReader(InputStreamReader(it)).asJsonObject
         }
 
-        resolveAssets(assetsJson, dir)
+        resolveAssets(project, assetsJson, dir)
         return dir
     }
 
-    fun assetsDir(): Path {
+    fun assetsDir(project: Project): Path {
         return project.unimined.getGlobalCache().resolve("assets")
     }
 
-    private fun updateIndex(assets: AssetIndex, index: Path) =
+    private fun updateIndex(project: Project, assets: AssetIndex, index: Path) =
         downloadAsset(project, assets.url!!, assets.size, assets.sha1!!, index, "assets index")
 
     @Synchronized
-    private fun resolveAssets(assetsJson: JsonObject, dir: Path) {
+    private fun resolveAssets(project: Project, assetsJson: JsonObject, dir: Path) {
         project.logger.lifecycle("Resolving assets...")
         val copyToResources = assetsJson.get("map_to_resources")?.asBoolean ?: false
         for (key in assetsJson.keySet()) {

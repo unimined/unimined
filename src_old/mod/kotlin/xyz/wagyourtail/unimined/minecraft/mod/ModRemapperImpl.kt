@@ -23,7 +23,7 @@ import xyz.wagyourtail.unimined.api.minecraft.minecraft
 import xyz.wagyourtail.unimined.api.mod.ModProvider
 import xyz.wagyourtail.unimined.api.mod.ModRemapper
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.patch.forge.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.refmap.BetterMixinExtension
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.io.*
@@ -268,7 +268,7 @@ class ModRemapperImpl(
                         remap.second.type.id
                     ),
                     innerJarStripper,
-                    AccessTransformerMinecraftTransformer.atRemapper(project.logger, remapAtToLegacy)
+                    AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapAtToLegacy)
                 ) + NonClassCopyMode.FIX_META_INF.remappers + (
                         if (remapper.second != null) {
                             listOf(remapper.second!!)

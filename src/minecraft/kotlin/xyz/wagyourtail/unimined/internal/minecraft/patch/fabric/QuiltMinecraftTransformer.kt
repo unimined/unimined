@@ -23,6 +23,14 @@ class QuiltMinecraftTransformer(
     override val ENVIRONMENT: String = "Lnet/fabricmc/api/Environment;"
     override val ENV_TYPE: String = "Lnet/fabricmc/api/EnvType;"
 
+    override fun loader(dep: Any, action: Dependency.() -> Unit) {
+        fabric.dependencies.add(
+            (if (dep is String && !dep.contains(":")) {
+                project.dependencies.create("org.quiltmc:quilt-loader:$dep")
+            } else project.dependencies.create(dep)).apply(action)
+        )
+    }
+
     override fun addMavens() {
         project.repositories.maven {
             it.url = URI.create("https://maven.quiltmc.org/repository/release")
@@ -43,13 +51,13 @@ class QuiltMinecraftTransformer(
         jars.add(path)
     }
 
-    override fun applyLaunches() {
-        super.applyLaunches()
+    override fun applyExtraLaunches() {
+        super.applyExtraLaunches()
         //TODO: figure out datagen
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
-        config.mainClass = clientMainClass ?: config.mainClass
+        super.applyClientRunTransform(config)
         config.jvmArgs += listOf(
             "-Dloader.development=true",
             "-Dloader.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.CLIENT)}\""
@@ -57,7 +65,7 @@ class QuiltMinecraftTransformer(
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
-        config.mainClass = serverMainClass ?: config.mainClass
+        super.applyServerRunTransform(config)
         config.jvmArgs += listOf(
             "-Dloader.development=true",
             "-Dloader.remapClasspathFile=\"${getIntermediaryClassPath(EnvType.SERVER)}\""

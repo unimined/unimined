@@ -34,7 +34,7 @@ class ExportMappingsTaskImpl(val mappings: MappingsProvider) : ExportMappingsTas
                     export.targetNamespace?.joinToString(
                         ", "
                     )
-                }}]"
+                }]"
             )
             export.exportFunc(mappings.mappingTree)
         }
