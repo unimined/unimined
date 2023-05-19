@@ -31,6 +31,8 @@ interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
      */
     var mixinConfig: List<String>
 
+    val remapAtToLegacy: Boolean
+
     /**
      * add mixin configs for launch
      */

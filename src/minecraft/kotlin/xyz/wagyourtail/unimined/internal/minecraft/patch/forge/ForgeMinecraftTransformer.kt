@@ -81,6 +81,10 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
         ),
     )
 
+    override val remapAtToLegacy: Boolean by lazy {
+        provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") < 0
+    }
+
     override fun forge(dep: Any, action: Dependency.() -> Unit) {
         forge.dependencies.add(if (dep is String && !dep.contains(":")) {
             if (provider.minecraftData.isPreCombined) {

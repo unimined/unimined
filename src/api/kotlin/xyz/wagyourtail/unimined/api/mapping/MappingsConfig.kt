@@ -67,4 +67,10 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         remap: Pair<MappingNamespace, MappingNamespace>,
         remapLocals: Boolean = false
     ): (IMappingProvider.MappingAcceptor) -> Unit
+
+    @get:ApiStatus.Internal
+    abstract val available: Set<MappingNamespace>
+
+    @get:ApiStatus.Internal
+    abstract val combinedNames: String
 }

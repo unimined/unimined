@@ -53,7 +53,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     override val mappingsDeps = mutableListOf<MappingDepConfig<*>>()
 
-    val available: Set<MappingNamespace> by lazy {
+    override val available: Set<MappingNamespace> by lazy {
         (mappingTree.dstNamespaces.filter { it != "srg" } + mappingTree.srcNamespace).map { MappingNamespace.getNamespace(it) }.toSet()
     }
 
@@ -212,7 +212,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             .resolve("mappings-${side}-${combinedNames}.jar")
 
 
-    val combinedNames: String by lazy {
+    override val combinedNames: String by lazy {
         freeze = true
         val names = mappingsDeps.map { "${it.name}-${it.version}" }.sorted() + (if (hasStubs) listOf("stub-${_stub!!.hash}") else listOf())
         names.joinToString("-")

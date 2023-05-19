@@ -8,7 +8,7 @@ import xyz.wagyourtail.unimined.api.mod.ModsConfig
 
 class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsConfig() {
 
-    private val remapConfigs = mutableMapOf<Configuration, ModRemapSettings.() -> Unit>()
+    private val remapConfigs = mutableMapOf<Set<Configuration>, ModConfig.() -> Unit>()
 
     init {
         project.afterEvaluate {
@@ -16,18 +16,16 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         }
     }
 
-    override fun remap(config: Configuration, action: ModRemapSettings.() -> Unit) {
-        TODO("Not yet implemented")
+    override fun remap(config: List<Configuration>, action: ModRemapSettings.() -> Unit) {
+        remapConfigs[config.toSet()] = action
     }
 
     fun afterEvaluate() {
-        // remove deps from each config
-
-        // retrieve in detached configs
-
-        // remap
-
-        // supply back to original configs
+        for ((config, action) in remapConfigs) {
+            val remapSettings = ModConfig(project, minecraft)
+            remapSettings.action()
+            remapSettings.doRemap(config)
+        }
     }
 
 

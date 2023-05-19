@@ -9,6 +9,7 @@ import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
@@ -125,7 +126,7 @@ abstract class RemapJarTaskImpl(val provider: MinecraftConfig): RemapJarTask() {
                     remapper,
                     listOf(
                         AccessWidenerMinecraftTransformer.AwRemapper(fromNs.namespace, toNs.namespace),
-                        AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.get()),
+                        AccessTransformerMinecraftTransformer.AtRemapper(project.logger, (provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true || remapATToLegacy.get() == true),
                         betterMixinExtension
                     )
                 )

@@ -53,7 +53,7 @@ abstract class RemapJarTask : Jar() {
      */
     @get:Input
     @get:Optional
-    abstract val remapATToLegacy: Property<Boolean>
+    abstract val remapATToLegacy: Property<Boolean?>
 
     /**
      * env type to remap against
@@ -86,7 +86,7 @@ abstract class RemapJarTask : Jar() {
         sourceNamespace.convention(null as MappingNamespace?)
         fallbackFromNamespace.convention(null as MappingNamespace?)
         targetNamespace.convention(null as MappingNamespace?)
-        remapATToLegacy.convention(false)
+        remapATToLegacy.convention(null as Boolean?)
         envType.convention(null as EnvType?)
     }
 
