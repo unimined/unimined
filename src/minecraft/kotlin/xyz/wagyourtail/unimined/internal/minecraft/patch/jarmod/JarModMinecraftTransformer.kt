@@ -8,6 +8,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
@@ -59,7 +60,7 @@ open class JarModMinecraftTransformer(
                 minecraft,
                 patches = minecraft.patches + combinedNames
             )
-            if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            if (target.path.exists() && !project.unimined.forceReload) {
                 return@consumerApply target
             }
 

@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.task
 
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.sources.GenSourcesTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
@@ -7,8 +8,9 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.Sub
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
+import javax.inject.Inject
 
-abstract class GenSourcesTaskImpl(val provider: MinecraftProvider): GenSourcesTask() {
+abstract class GenSourcesTaskImpl @Inject constructor(@get:Internal val provider: MinecraftProvider): GenSourcesTask() {
 
     @TaskAction
     private fun run() {

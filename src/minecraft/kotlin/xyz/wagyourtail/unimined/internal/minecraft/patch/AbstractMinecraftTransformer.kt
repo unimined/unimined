@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixParamAnnotations
 import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
@@ -46,7 +47,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
             patches = listOf("$providerName-merged") + clientjar.patches + serverjar.patches
         )
 
-        if (merged.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+        if (merged.path.exists() && !project.unimined.forceReload) {
             return merged
         }
 
@@ -84,7 +85,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
                     val mergedPath = mergedFS.getPath(path)
                     mergedPath.parent?.createDirectories()
                     if (mergedPath.exists()) {
-                        project.logger.warn("Entry in server jar already exists in client jar: $path, skipping")
+                        project.logger.warn("[Unimined/MappingsProvider] Entry in server jar already exists in client jar: $path, skipping")
                         return@forEachInZip
                     }
                     mergedPath.writeBytes(stream.readBytes())
@@ -129,7 +130,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
             patches = minecraft.patches + listOf("fixed")
         )
 
-        if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+        if (target.path.exists() && !project.unimined.forceReload) {
             return target
         }
 

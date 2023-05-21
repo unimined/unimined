@@ -318,20 +318,20 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
         var forgeTransformer: JarModMinecraftTransformer? = null
         for (vers in ForgeVersion.values()) {
             if (files.containsAll(vers.accept) && files.none { it in vers.deny }) {
-                project.logger.debug("Files $files")
+                project.logger.debug("[Unimined/ForgeTransformer] Files $files")
                 forgeTransformer = when (vers) {
                     ForgeVersion.FG1 -> {
-                        project.logger.lifecycle("Selected FG1")
+                        project.logger.lifecycle("[Unimined/ForgeTransformer] Selected FG1")
                         FG1MinecraftTransformer(project, this)
                     }
 
                     ForgeVersion.FG2 -> {
-                        project.logger.lifecycle("Selected FG2")
+                        project.logger.lifecycle("[Unimined/ForgeTransformer] Selected FG2")
                         FG2MinecraftTransformer(project, this)
                     }
 
                     ForgeVersion.FG3 -> {
-                        project.logger.lifecycle("Selected FG3")
+                        project.logger.lifecycle("[Unimined/ForgeTransformer] Selected FG3")
                         FG3MinecraftTransformer(project, this)
                     }
                 }
@@ -414,7 +414,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
     }
 
     fun applyATs(baseMinecraft: MinecraftJar, ats: List<Path>): MinecraftJar {
-        project.logger.lifecycle("Applying ATs $ats")
+        project.logger.lifecycle("[Unimined/ForgeTransformer] Applying ATs $ats")
         return if (accessTransformer != null) {
             project.logger.lifecycle("[Unimined/ForgeTransformer] Using user access transformer $accessTransformer")
             val output = MinecraftJar(
@@ -422,7 +422,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
                 parentPath = project.unimined.getLocalCache().resolve("forge"),
                 awOrAt = "at+${accessTransformer!!.toPath().getSha1()}"
             )
-            if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
+            if (!output.path.exists() || project.unimined.forceReload) {
                 AccessTransformerMinecraftTransformer.transform(
                     ats + listOf(accessTransformer!!.toPath()),
                     baseMinecraft.path,
@@ -432,7 +432,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
             output
         } else {
             val output = MinecraftJar(baseMinecraft, awOrAt = "at")
-            if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
+            if (!output.path.exists() || project.unimined.forceReload) {
                 AccessTransformerMinecraftTransformer.transform(ats, baseMinecraft.path, output.path)
             }
             output

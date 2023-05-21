@@ -11,4 +11,5 @@ abstract class MinecraftRemapConfig {
 
     @ApiStatus.Experimental
     abstract fun config(remapperBuilder: TinyRemapper.Builder.() -> Unit)
+    abstract var replaceJSRWithJetbrains: Boolean
 }

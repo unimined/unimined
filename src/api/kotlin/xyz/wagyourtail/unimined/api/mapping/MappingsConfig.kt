@@ -36,6 +36,23 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         devFallbackNamespace = MappingNamespace.getNamespace(namespace)
     }
 
+    fun mojmap() {
+        mojmap {}
+    }
+
+    abstract fun mojmap(action: MappingDepConfig<*>.() -> Unit)
+
+    fun mojmap(
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        mojmap {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     fun mapping(
         dependency: Any,
     ) {

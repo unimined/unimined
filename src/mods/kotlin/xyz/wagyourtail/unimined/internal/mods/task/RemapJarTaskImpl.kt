@@ -5,6 +5,7 @@ import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader
 import net.fabricmc.mappingio.format.ZipReader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -19,10 +20,11 @@ import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import javax.inject.Inject
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 
-abstract class RemapJarTaskImpl(val provider: MinecraftConfig): RemapJarTask() {
+abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
 
     @TaskAction
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
@@ -51,7 +53,7 @@ abstract class RemapJarTaskImpl(val provider: MinecraftConfig): RemapJarTask() {
         }
 
         val last = path.last()
-        project.logger.lifecycle("remapping output ${inputFile.get().asFile.name} from $devNs to $prodNs")
+        project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.get().asFile.name} from $devNs to $prodNs")
         var prevTarget = inputFile.get().asFile.toPath()
         var prevNamespace = devNs
         var prevPrevNamespace: MappingNamespace? = null
@@ -71,7 +73,7 @@ abstract class RemapJarTaskImpl(val provider: MinecraftConfig): RemapJarTask() {
                 mcNamespace,
                 mcFallbackNamespace!!
             )
-            remapToInternal(prevTarget, nextTarget, env, prevNamespace, step.second, mc)
+            remapToInternal(prevTarget, nextTarget, prevNamespace, step.second, mc)
             prevTarget = nextTarget
             prevPrevNamespace = prevNamespace
             prevNamespace = step.second
@@ -83,7 +85,6 @@ abstract class RemapJarTaskImpl(val provider: MinecraftConfig): RemapJarTask() {
     protected fun remapToInternal(
         from: Path,
         target: Path,
-        envType: EnvType,
         fromNs: MappingNamespace,
         toNs: MappingNamespace,
         mc: Path
@@ -126,7 +127,7 @@ abstract class RemapJarTaskImpl(val provider: MinecraftConfig): RemapJarTask() {
                     remapper,
                     listOf(
                         AccessWidenerMinecraftTransformer.AwRemapper(fromNs.namespace, toNs.namespace),
-                        AccessTransformerMinecraftTransformer.AtRemapper(project.logger, (provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true || remapATToLegacy.get() == true),
+                        AccessTransformerMinecraftTransformer.AtRemapper(project.logger, (provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true || remapATToLegacy.getOrElse(false)!!),
                         betterMixinExtension
                     )
                 )

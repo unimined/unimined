@@ -7,6 +7,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
+import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -33,6 +34,7 @@ import xyz.wagyourtail.unimined.internal.mods.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.internal.runs.RunsProvider
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
+import java.lang.Exception
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
@@ -40,9 +42,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
-import kotlin.io.path.exists
-import kotlin.io.path.inputStream
-import kotlin.io.path.writeBytes
+import kotlin.io.path.*
 
 class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
     override var mcPatcher: MinecraftPatcher by FinalizeOnRead(ChangeOnce(NoTransformMinecraftTransformer(project, this)))
@@ -58,20 +58,27 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     override val minecraftRemapper = MinecraftRemapper(project, this)
 
     val minecraft: Configuration = project.configurations.maybeCreate("minecraft".withSourceSet(sourceSet)).also {
-        it.extendsFrom(project.configurations.getByName("implementation".withSourceSet(sourceSet)))
+        project.configurations.getByName("implementation".withSourceSet(sourceSet)).extendsFrom(it)
     }
 
     override val minecraftLibraries: Configuration = project.configurations.maybeCreate("minecraftLibraries".withSourceSet(sourceSet)).also {
-        it.extendsFrom(project.configurations.getByName("implementation".withSourceSet(sourceSet)))
+        project.configurations.getByName("implementation".withSourceSet(sourceSet)).extendsFrom(it)
     }
 
     override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit) {
         val remapTask = project.tasks.register(name, RemapJarTaskImpl::class.java, this)
-        remapTask.configure(action)
-        task.dependsOn(remapTask)
+        remapTask.configure {
+            if (task is Jar) {
+                it.inputFile.value(task.archiveFile)
+            }
+            it.action()
+            it.dependsOn(task)
+        }
+        project.tasks.getByName("build").dependsOn(remapTask)
     }
 
     private val minecraftFiles: Map<Pair<MappingNamespace, MappingNamespace>, Path> = defaultedMapOf {
+        project.logger.info("[Unimined/Minecraft] Provinging minecraft files for $it")
         val mc = if (side == EnvType.COMBINED) {
             val client = minecraftData.minecraftClient
             val server = minecraftData.minecraftServer
@@ -113,7 +120,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     val minecraftDepName: String = project.path.replace(":", "_").let { projectPath ->
-        "minecraft${if (projectPath == "_") "" else projectPath}${if (sourceSet.name == "main") "" else "+"+sourceSet.name.capitalized()}"
+        "minecraft${if (projectPath == "_") "" else projectPath}${if (sourceSet.name == "main") "" else "+"+sourceSet.name}"
     }
 
     private val extractDependencies: MutableMap<Dependency, Extract> = mutableMapOf()
@@ -121,7 +128,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     fun addLibraries(libraries: List<Library>) {
         for (library in libraries) {
             if (library.rules.all { it.testRule() }) {
-                project.logger.info("Added dependency ${library.name}")
+                project.logger.info("[Unimined/Minecraft] Added dependency ${library.name}")
                 val native = library.natives[OSUtils.oSId]
                 if (library.url != null || library.downloads?.artifact != null || native == null) {
                     val dep = project.dependencies.create(library.name)
@@ -129,7 +136,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                     library.extract?.let { extractDependencies[dep] = it }
                 }
                 if (native != null) {
-                    project.logger.debug("Added native dependency ${library.name}:$native")
+                    project.logger.info("[Unimined/Minecraft] Added native dependency ${library.name}:$native")
                     val nativeDep = project.dependencies.create("${library.name}:$native")
                     minecraftLibraries.dependencies.add(nativeDep)
                     library.extract?.let { extractDependencies[nativeDep] = it }
@@ -153,7 +160,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     fun apply() {
-        project.logger.lifecycle("[Unimined/Minecraft] Applying minecraft config for source set $sourceSet")
+        project.logger.lifecycle("[Unimined/Minecraft] Applying minecraft config for $sourceSet")
         // ensure minecraft deps are clear
         if (minecraft.dependencies.isNotEmpty()) {
             project.logger.warn("[Unimined/Minecraft] $minecraft dependencies are not empty! clearing...")
@@ -164,8 +171,10 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             minecraftLibraries.dependencies.clear()
         }
 
-        // inject jetbrains annotations into minecraftLibraries
-        minecraftLibraries.dependencies.add(project.dependencies.create("org.jetbrains:annotations:24.0.1"))
+        if (minecraftRemapper.replaceJSRWithJetbrains) {
+            // inject jetbrains annotations into minecraftLibraries
+            minecraftLibraries.dependencies.add(project.dependencies.create("org.jetbrains:annotations:24.0.1"))
+        }
 
         // add minecraft dep
         minecraft.dependencies.add(project.dependencies.create("net.minecraft:$minecraftDepName:$version" + if (side != EnvType.COMBINED) ":${side.classifier}" else ""))
@@ -180,7 +189,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
 
         // apply minecraft patcher changes
-        project.logger.lifecycle("[Unimined/Minecraft] Applying ${mcPatcher.name()} changes")
+        project.logger.lifecycle("[Unimined/Minecraft] Applying ${mcPatcher.name()}")
         (mcPatcher as AbstractMinecraftTransformer).apply()
 
         // create run configs
@@ -191,14 +200,17 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         runs.apply()
 
         // add gen sources task
-        project.tasks.register("genSources".withSourceSet(sourceSet), GenSourcesTaskImpl::class.java, sourceSet).configure(consumerApply {
+        project.tasks.register("genSources".withSourceSet(sourceSet), GenSourcesTaskImpl::class.java, this).configure(consumerApply {
             group = "unimined"
             description = "Generates sources for $sourceSet's minecraft jar"
         })
     }
 
     override val minecraftFileDev: File by lazy {
-        getMinecraft(mappings.devNamespace, mappings.devFallbackNamespace).toFile()
+        project.logger.info("[Unimined/Minecraft] Providing minecraft dev file to $sourceSet")
+        getMinecraft(mappings.devNamespace, mappings.devFallbackNamespace).toFile().also {
+            project.logger.info("[Unimined/Minecraft] Provided minecraft dev file $it")
+        }
     }
 
     override fun isMinecraftJar(path: Path) = minecraftFiles.values.any { it == path }
@@ -289,7 +301,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     @ApiStatus.Internal
     fun provideVanillaRunServerTask(name: String, workingDirectory: File): RunConfig {
         var mainClass: String? = null
-        ZipReader.openZipFileSystem(minecraftFileDev.toPath()).use {
+        ZipReader.openZipFileSystem(minecraftData.minecraftServer.path).use {
             val properties = Properties()
             val metainf = it.getPath("META-INF/MANIFEST.MF")
             if (metainf.exists()) {

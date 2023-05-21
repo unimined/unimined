@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
@@ -103,7 +104,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 }
         }
 
-        if (!patchedMC.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
+        if (!patchedMC.path.exists() || project.unimined.forceReload) {
             patchedMC.path.deleteIfExists()
             FG2TaskApplyBinPatches(project).doTask(
                 minecraft.path.toFile(),
@@ -153,7 +154,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 patches = baseMinecraft.patches + "fixForge",
             )
 
-            if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            if (target.path.exists() && !project.unimined.forceReload) {
                 return target
             }
 

@@ -91,10 +91,6 @@ sourceSets {
             sourceSets["minecraft"]
         )
     }
-    create("old") {
-        inputOf(main.get())
-        this.java.srcDir("src_old/")
-    }
     test {
         inputOf(
             main.get()
@@ -159,6 +155,8 @@ tasks.jar {
         sourceSets["api"].output,
         sourceSets["minecraft"].output,
         sourceSets["mapping"].output,
+        sourceSets["mods"].output,
+        sourceSets["runs"].output,
         sourceSets["main"].output
     )
 

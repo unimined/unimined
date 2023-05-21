@@ -45,14 +45,14 @@ object AssetsDownloader {
 
     @Synchronized
     private fun resolveAssets(project: Project, assetsJson: JsonObject, dir: Path) {
-        project.logger.lifecycle("Resolving assets...")
+        project.logger.lifecycle("[Unimined/AssetDownloader] Resolving assets...")
         val copyToResources = assetsJson.get("map_to_resources")?.asBoolean ?: false
         for (key in assetsJson.keySet()) {
             val keyDir = dir.resolve(key)
             val value = assetsJson.get(key)
             if (value is JsonObject) {
                 val entries = value.entrySet()
-                project.logger.lifecycle("Resolving $key (${entries.size} files)...")
+                project.logger.lifecycle("[Unimined/AssetDownloader] Resolving $key (${entries.size} files)...")
                 var downloaded = AtomicInteger(0)
                 val timeStart = System.currentTimeMillis()
                 entries.parallelStream().forEach { (key, value) ->
@@ -74,14 +74,14 @@ object AssetsDownloader {
                     }
 
                     if (project.logger.isDebugEnabled) {
-                        project.logger.debug("${downloaded.addAndGet(1) * 100 / entries.size}% (${downloaded}/${entries.size})\n")
+                        project.logger.debug("[Unimined/AssetDownloader] ${downloaded.addAndGet(1) * 100 / entries.size}% (${downloaded}/${entries.size})\n")
                     } else {
                         print("${downloaded.addAndGet(1) * 100 / entries.size}% (${downloaded}/${entries.size})\r")
                         System.out.flush()
                     }
                 }
                 val timeEnd = System.currentTimeMillis()
-                project.logger.lifecycle("Finished resolving $key in ${timeEnd - timeStart}ms")
+                project.logger.lifecycle("[Unimined/AssetDownloader] Finished resolving $key in ${timeEnd - timeStart}ms")
             }
         }
     }
@@ -90,11 +90,11 @@ object AssetsDownloader {
         var i = 0
         while (!testSha1(size, hash, path) && i < 3) {
             if (i != 0) {
-                project.logger.warn("Failed to download asset $key : $uri")
+                project.logger.warn("[Unimined/AssetDownloader] Failed to download asset $key : $uri")
             }
             i += 1
             try {
-                project.logger.info("Downloading $key : $uri")
+                project.logger.info("[Unimined/AssetDownloader] Downloading $key : $uri")
                 path.parent.createDirectories()
 
                 val urlConnection = uri.toURL().openConnection() as HttpURLConnection
@@ -114,10 +114,10 @@ object AssetsDownloader {
                         Files.copy(if ("gzip" == urlConnection.contentEncoding) GZIPInputStream(it) else it, path, StandardCopyOption.REPLACE_EXISTING)
                     }
                 } else {
-                    project.logger.error("Failed to download asset $key $uri error code: ${urlConnection.responseCode}")
+                    project.logger.error("[Unimined/AssetDownloader] Failed to download asset $key $uri error code: ${urlConnection.responseCode}")
                 }
             } catch (e: Exception) {
-                project.logger.error("Failed to download asset $key : $uri", e)
+                project.logger.error("[Unimined/AssetDownloader] Failed to download asset $key : $uri", e)
             }
         }
 

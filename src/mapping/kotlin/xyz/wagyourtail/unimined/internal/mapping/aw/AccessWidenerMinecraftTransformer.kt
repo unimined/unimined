@@ -11,7 +11,6 @@ import org.objectweb.asm.Opcodes
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
-import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerBetterRemapper
 import xyz.wagyourtail.unimined.minecraft.patch.fabric.AccessWidenerMerger
 import java.io.BufferedReader
 import java.io.InputStream

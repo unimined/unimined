@@ -21,17 +21,11 @@ import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.toHex
-import java.io.OutputStreamWriter
+import java.io.IOException
 import java.io.StringWriter
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
-import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.outputStream
-import kotlin.io.path.reader
+import kotlin.io.path.*
 
 class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsConfig(project, minecraft) {
 
@@ -54,7 +48,18 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     override val mappingsDeps = mutableListOf<MappingDepConfig<*>>()
 
     override val available: Set<MappingNamespace> by lazy {
+        if (mappingsDeps.isEmpty()) {
+            return@lazy emptySet()
+        }
         (mappingTree.dstNamespaces.filter { it != "srg" } + mappingTree.srcNamespace).map { MappingNamespace.getNamespace(it) }.toSet()
+    }
+
+    override fun mojmap(action: MappingDepConfig<*>.() -> Unit) {
+        val mapping = when (minecraft.side) {
+            EnvType.CLIENT, EnvType.COMBINED -> "client"
+            EnvType.SERVER -> "server"
+        }
+        mapping("net.minecraft:$mapping-mappings:${minecraft.version}", action)
     }
 
     override fun mapping(dependency: Any, action: MappingDepConfig<*>.() -> Unit) {
@@ -89,51 +94,53 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         get() =_stub != null
 
     private fun getOfficialMappings(): MemoryMappingTree {
-        val off = project.configurations.detachedConfiguration(
-            project.dependencies.create(
-                "net.minecraft:minecraft:${minecraft.version}:client-mappings"
-            )
-        )
-        val file = off.resolve().first { it.extension == "txt" }
         val tree = MemoryMappingTree()
-        file.inputStream()
-            .use {
-                ProGuardReader.read(
-                    it.reader(), MappingNamespace.MOJMAP.namespace, MappingNamespace.OFFICIAL.namespace,
-                    MappingSourceNsSwitch(tree, MappingNamespace.OFFICIAL.namespace)
-                )
-            }
-        return tree
-    }
-
-    private fun writeToCache(file: Path, mappingTree: MappingTreeView) {
-        file.parent.createDirectories()
-        ZipOutputStream(file.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use {
-            it.putNextEntry(ZipEntry("mappings/mappings.tiny"))
-            OutputStreamWriter(it).let { writer ->
-                mappingTree.accept(Tiny2Writer2(writer, false))
-                writer.flush()
-            }
-            it.closeEntry()
+        when (minecraft.side) {
+            EnvType.COMBINED, EnvType.CLIENT -> minecraft.minecraftData.officialClientMappingsFile
+            EnvType.SERVER -> minecraft.minecraftData.officialServerMappingsFile
+        }.inputStream().use {
+            ProGuardReader.read(
+                it.reader(), MappingNamespace.MOJMAP.namespace, MappingNamespace.OFFICIAL.namespace,
+                MappingSourceNsSwitch(tree, MappingNamespace.OFFICIAL.namespace)
+            )
         }
+        return tree
     }
 
     private val mappingTreeLazy = lazy {
         project.logger.lifecycle("[Unimined/MappingsProvider] Resolving mappings for ${minecraft.sourceSet}")
         val mappings = MemoryMappingTree()
+        if (freeze == true) throw IllegalStateException("Cannot initialize mapping tree twice")
         freeze = true
+
+        if (mappingsDeps.isEmpty()) {
+            return@lazy mappings
+        }
+
+        project.logger.info("[Unimined/MappingsProvider] Loading mappings: \n    ${mappingsDeps.joinToString("\n    ") { it.dep.toString() }}")
 
         // if has cache and not force reload
         val cacheFile = mappingCacheFile()
-        if (cacheFile.exists() && !project.unimined.forceReload) {
+        cacheFile.parent.createDirectories()
+        val loaded = if (cacheFile.exists() && !project.unimined.forceReload) {
             project.logger.info("[Unimined/MappingsProvider] Loading mappings from cache")
             // load from cache
-            cacheFile.reader().use {
-                Tiny2Reader2.read(it, mappings)
+            try {
+                cacheFile.reader().use {
+                    Tiny2Reader2.read(it, mappings)
+                }
+                true
+            } catch (e: IOException) {
+                project.logger.warn("[Unimined/MappingsProvider] Failed to load mappings from cache, reloading from deps ${e.message}")
+                // delete cache
+                cacheFile.deleteExisting()
+                false
             }
-        } else {
-            val configuration = project.configurations.detachedConfiguration(*mappingsDeps.toTypedArray())
-            configuration.resolve()
+        } else false
+        if (!loaded) {
+            val configuration = project.configurations.detachedConfiguration().also {
+                it.dependencies.addAll(mappingsDeps)
+            }
 
             // parse each dep
             for (dep in mappingsDeps) {
@@ -141,6 +148,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 // resolve dep to files, no pom
                 val files = configuration.files(dep).filter { it.extension != "pom" }
                 // load each file
+                project.logger.info("[Unimined/MappingsProvider] Loading mappings files ${files.joinToString(", ")}")
                 for (file in files) {
                     // detect if file is archive by seeing if it starts with the zip header
                     if (file.inputStream().use { stream -> ByteArray(4).also { stream.read(it, 0, 4) } }
@@ -186,9 +194,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     }
                 }
             }
-            if (mappingTree.dstNamespaces.contains("srg")) {
+            if (mappings.dstNamespaces?.contains("srg") == true) {
                 project.logger.info("[Unimined/MappingsProvider] Detected TSRG2 mappings (1.17+) - converting to have the right class names for runtime forge")
-                if (!mappingTree.dstNamespaces.contains(MappingNamespace.MOJMAP.namespace)) {
+                if (!mappings.dstNamespaces.contains(MappingNamespace.MOJMAP.namespace)) {
                     getOfficialMappings().accept(mappings)
                 }
                 SeargeFromTsrg2.apply("srg", MappingNamespace.MOJMAP.namespace, MappingNamespace.SEARGE.namespace, mappings)
@@ -197,10 +205,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 project.logger.info("[Unimined/MappingsProvider] Loading stub mappings")
                 _stub!!.visit(mappings)
             }
-            writeToCache(cacheFile, mappingTree)
+            cacheFile.bufferedWriter().use {
+                mappings.accept(Tiny2Writer2(it, false))
+            }
         }
 
-        project.logger.lifecycle("[Unimined/MappingsProvider] Mapping tree initialized, ${mappingTree.srcNamespace} -> ${mappingTree.dstNamespaces.filter { it != "srg" }}")
+        project.logger.lifecycle("[Unimined/MappingsProvider] Mapping tree initialized, ${mappings.srcNamespace} -> ${mappings.dstNamespaces.filter { it != "srg" }}")
         mappings
     }
 
@@ -209,7 +219,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     private fun mappingCacheFile(): Path =
         (if (hasStubs) project.unimined.getLocalCache() else project.unimined.getGlobalCache())
-            .resolve("mappings-${side}-${combinedNames}.jar")
+            .resolve("mappings").resolve("mappings-${side}-${combinedNames}.tiny")
 
 
     override val combinedNames: String by lazy {
@@ -297,7 +307,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             var toClassName = classDef.getName(toId)
 
             if (fromClassName == null) {
-                project.logger.info("Target class {} has no name in namespace {}", classDef, srcName)
+                project.logger.info("[Unimined/MappingsProvider] Target class {} has no name in namespace {}", classDef, srcName)
                 fromClassName = toClassName
             }
 
@@ -313,12 +323,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             }
 
             if (toClassName == null) {
-                project.logger.info("Target class {} has no name in namespace {}", classDef, dstName)
+                project.logger.info("[Unimined/MappingsProvider] Target class {} has no name in namespace {}", classDef, dstName)
                 toClassName = fromClassName
             }
 
             if (fromClassName == null) {
-                project.logger.info("Class $classDef has no name in either namespace $srcName or $dstName")
+                project.logger.info("[Unimined/MappingsProvider] Class $classDef has no name in either namespace $srcName or $dstName")
                 continue
             }
 
@@ -333,12 +343,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 val toFieldName = fieldDef.getName(toId)
 
                 if (fromFieldName == null) {
-                    project.logger.info("Target field {} has no name in namespace {}", fieldDef, srcName)
+                    project.logger.info("[Unimined/MappingsProvider] Target field {} has no name in namespace {}", fieldDef, srcName)
                     continue
                 }
 
                 if (toFieldName == null) {
-                    project.logger.info("Target field {} has no name in namespace {}", fieldDef, dstName)
+                    project.logger.info("[Unimined/MappingsProvider] Target field {} has no name in namespace {}", fieldDef, dstName)
                     continue
                 }
 
@@ -354,12 +364,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 val toMethodName = methodDef.getName(toId)
 
                 if (fromMethodName == null) {
-                    project.logger.info("Target method {} has no name in namespace {}", methodDef, srcName)
+                    project.logger.info("[Unimined/MappingsProvider] Target method {} has no name in namespace {}", methodDef, srcName)
                     continue
                 }
 
                 if (toMethodName == null) {
-                    project.logger.info("Target method {} has no name in namespace {}", methodDef, dstName)
+                    project.logger.info("[Unimined/MappingsProvider] Target method {} has no name in namespace {}", methodDef, dstName)
                     continue
                 }
 

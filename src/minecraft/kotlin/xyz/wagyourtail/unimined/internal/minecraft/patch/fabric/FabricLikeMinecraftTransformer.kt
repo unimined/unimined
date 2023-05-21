@@ -49,8 +49,8 @@ abstract class FabricLikeMinecraftTransformer(
         val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
     }
 
-    val fabric: Configuration = project.configurations.maybeCreate(providerName.withSourceSet(provider.sourceSet)).apply {
-        extendsFrom(project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)))
+    val fabric: Configuration = project.configurations.maybeCreate(providerName.withSourceSet(provider.sourceSet)).also {
+        project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)).extendsFrom(it)
     }
 
     private val fabricJson: Configuration = project.configurations.detachedConfiguration()
@@ -200,7 +200,7 @@ abstract class FabricLikeMinecraftTransformer(
                 baseMinecraft,
                 parentPath = project.unimined.getLocalCache().resolve("fabric").createDirectories()
             )
-            if (!output.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
+            if (!output.path.exists() || project.unimined.forceReload) {
                 if (AccessWidenerMinecraftTransformer.transform(
                         accessWidener!!.toPath(),
                         baseMinecraft.mappingNamespace,

@@ -100,7 +100,8 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
 
     val metadata by lazy {
         val versionJson = mcVersionFolder.resolve("version.json")
-        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving version metadata from $metadataURL")
+        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving version metadata")
+        project.logger.info("[Unimined/MinecraftDownloader]     metadata url $metadataURL")
         if (!versionJson.exists() || project.unimined.forceReload) {
             versionJson.parent.createDirectories()
 
@@ -136,7 +137,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     }
 
     val minecraftClient: MinecraftJar by lazy {
-        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving minecraft client jar")
+        project.logger.info("[Unimined/MinecraftDownloader] retrieving minecraft client jar")
         val clientPath = mcVersionFolder.resolve("minecraft-$version-client.jar")
         if (!clientPath.exists() || project.unimined.forceReload) {
             clientPath.parent.createDirectories()
@@ -165,7 +166,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     }
 
     var serverVersionOverride: String by FinalizeOnRead(LazyMutable {
-        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving server version overrides list")
+        project.logger.info("[Unimined/MinecraftDownloader] retrieving server version overrides list")
 
         val versionOverrides = mutableMapOf<String, String>()
         val versionOverridesFile = project.unimined.getGlobalCache().resolve("server-version-overrides.json")
@@ -202,7 +203,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     })
 
     val minecraftServer: MinecraftJar by lazy {
-        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving minecraft server jar")
+        project.logger.info("[Unimined/MinecraftDownloader] retrieving minecraft server jar")
         val serverPath = mcVersionFolder.resolve("minecraft-$version-server.jar")
         if (!serverPath.exists() || project.unimined.forceReload) {
             serverPath.parent.createDirectories()
@@ -248,7 +249,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     }
 
     override val officialClientMappingsFile: File by lazy {
-        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving official client mappings")
+        project.logger.info("[Unimined/MinecraftDownloader] retrieving official client mappings")
         val clientMappingsPath = mcVersionFolder.resolve("client_mappings.txt")
         if (!clientMappingsPath.exists() || project.unimined.forceReload) {
             clientMappingsPath.parent.createDirectories()
@@ -266,7 +267,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     }
 
     override val officialServerMappingsFile: File by lazy {
-        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving official server mappings")
+        project.logger.info("[Unimined/MinecraftDownloader] retrieving official server mappings")
         val serverMappingsPath = mcVersionFolder.resolve("server_mappings.txt")
         if (!serverMappingsPath.exists() || project.unimined.forceReload) {
             serverMappingsPath.parent.createDirectories()

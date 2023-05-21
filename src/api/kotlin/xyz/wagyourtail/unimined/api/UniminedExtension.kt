@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import org.gradle.api.tasks.SourceSetContainer
 
 val Project.unimined
     get() = extensions.getByType(UniminedExtension::class.java)
@@ -18,6 +19,17 @@ abstract class UniminedExtension(val project: Project) {
     var useGlobalCache: Boolean by FinalizeOnRead(true)
     var forceReload: Boolean by FinalizeOnRead(java.lang.Boolean.getBoolean("unimined.forceReload"))
 
+    val sourceSets by lazy {
+        project.extensions.getByType(SourceSetContainer::class.java)
+    }
+    
+    /**
+     * @since 1.0.0
+     */
+    fun minecraft(): MinecraftConfig {
+        return minecraft(sourceSets.getByName("main")) {}
+    }
+
     /**
      * @since 1.0.0
      */
@@ -25,10 +37,29 @@ abstract class UniminedExtension(val project: Project) {
         return minecraft(sourceSet) {}
     }
 
+    fun minecraft(action: MinecraftConfig.() -> Unit): MinecraftConfig {
+        return minecraft(sourceSets.getByName("main"), action)
+    }
+
     /**
      * @since 1.0.0
      */
     abstract fun minecraft(sourceSet: SourceSet, action: MinecraftConfig.() -> Unit): MinecraftConfig
+
+
+    /**
+     * @since 1.0.0
+     */
+    fun minecraft(
+        @DelegatesTo(value = MinecraftConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        minecraft(sourceSets.getByName("main")) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
 
     /**
      * @since 1.0.0

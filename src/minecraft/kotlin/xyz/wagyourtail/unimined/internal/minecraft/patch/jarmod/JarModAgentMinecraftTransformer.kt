@@ -41,8 +41,8 @@ class JarModAgentMinecraftTransformer(
 
     override var compiletimeTransforms: Boolean = false
 
-    override var jarModAgent = project.configurations.maybeCreate("jarModAgent".withSourceSet(provider.sourceSet)).apply {
-        extendsFrom(project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)))
+    override var jarModAgent = project.configurations.maybeCreate("jarModAgent".withSourceSet(provider.sourceSet)).also {
+        project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)).extendsFrom(it)
     }
 
     val jmaFile by lazy {
@@ -92,7 +92,7 @@ class JarModAgentMinecraftTransformer(
     override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
         super.afterRemapJarTask(remapJarTask, output)
         if (compiletimeTransforms && transforms != null) {
-            project.logger.lifecycle("Running compile time transforms for ${remapJarTask.name}...")
+            project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${remapJarTask.name}...")
 
             val envType = remapJarTask.envType
             val mappings = remapJarTask.targetNamespace.getOrElse(this.prodNamespace)!!
@@ -114,8 +114,8 @@ class JarModAgentMinecraftTransformer(
             //TODO: remove and add back mods with correct mappings
             val classLoader = URLClassLoader(classpath.map { it.toURI().toURL() }.toTypedArray())
 
-            project.logger.lifecycle("Loading transforms for $output from $transforms")
-            project.logger.info("Classpath: $classpath")
+            project.logger.lifecycle("[Unimined/JarModAgentTransformer] Loading transforms for $output from $transforms")
+            project.logger.info("[Unimined/JarModAgentTransformer] Classpath: $classpath")
 
             val transformer = TransformerManager(object : IClassProvider {
                 override fun getClass(name: String): ByteArray? {
@@ -133,7 +133,7 @@ class JarModAgentMinecraftTransformer(
                 if (`is` == null) {
                     throw IOException("Could not find transform file: $transforms")
                 }
-                project.logger.info("Loading transforms: $transforms")
+                project.logger.info("[Unimined/JarModAgentTransformer] Loading transforms: $transforms")
                 BufferedReader(InputStreamReader(`is`)).use { reader ->
                     var line: String?
                     while (reader.readLine().also { line = it } != null) {
@@ -146,7 +146,7 @@ class JarModAgentMinecraftTransformer(
                 try {
                     transformer.addTransformer(tf)
                 } catch (e: Exception) {
-                    project.logger.error("Failed to load transform: $transformer")
+                    project.logger.error("[Unimined/JarModAgentTransformer] Failed to load transform: $transformer")
                     e.printStackTrace()
                     fail++
                 }
@@ -156,7 +156,7 @@ class JarModAgentMinecraftTransformer(
             }
 
             // transform
-            project.logger.lifecycle("Transforming...")
+            project.logger.lifecycle("[Unimined/JarModAgentTransformer] Transforming...")
             ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { out ->
                 val fd = TransformerManager::class.java.getDeclaredField("transformedClasses")
                 fd.isAccessible = true
@@ -164,10 +164,10 @@ class JarModAgentMinecraftTransformer(
                 for (name in transformedClasses) {
                     val bytes = classLoader.getResourceAsStream(name.replace('.', '/') + ".class")?.readBytes()
                     if (bytes == null) {
-                        project.logger.warn("Failed to find class $name")
+                        project.logger.warn("[Unimined/JarModAgentTransformer] Failed to find class $name")
                         continue
                     }
-                    project.logger.info("Transforming $name")
+                    project.logger.info("[Unimined/JarModAgentTransformer] Transforming $name")
                     val path = out.getPath(name.replace('.', '/') + ".class");
                     path.parent?.createDirectories()
                     path.writeBytes(transformer.transform(name, bytes))

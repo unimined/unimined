@@ -5,6 +5,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.runs.RunsConfig
 import xyz.wagyourtail.unimined.util.defaultedMapOf
+import xyz.wagyourtail.unimined.util.withSourceSet
 
 class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsConfig() {
     private var freeze = false
@@ -44,17 +45,18 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
 
     fun apply() {
         freeze = true
-        (transformers.keys-runConfigs.keys).apply {
-            if (isNotEmpty()) throw IllegalStateException("You have transformers for run configs that don't exist: $this")
-        }
         if (!off) {
+            (transformers.keys-runConfigs.keys).apply {
+                if (isNotEmpty()) throw IllegalStateException("You have transformers for run configs that don't exist: $this")
+            }
+            project.logger.lifecycle("[Unimined/Runs] Applying runs")
             genIntellijRunsTask()
             createGradleRuns()
         }
     }
 
     private fun genIntellijRunsTask() {
-        val genIntellijRuns = project.tasks.register("genIntellijRuns") {
+        val genIntellijRuns = project.tasks.register("genIntellijRuns".withSourceSet(minecraft.sourceSet)) {
             it.group = "unimined_runs"
             it.doLast {
                 for (configName in runConfigs.keys) {
@@ -62,12 +64,12 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
                 }
             }
         }
-
-        project.tasks.named("idea").configure { it.finalizedBy(genIntellijRuns) }
+//        project.tasks.named("idea").configure { it.finalizedBy(genIntellijRuns) }
     }
 
     private fun createGradleRuns() {
         for (configName in runConfigs.keys) {
+            project.logger.info("[Unimined/Runs] Creating gradle task for $configName")
             transformedRunConfig[configName].createGradleTask(project.tasks, "unimined_runs")
         }
     }

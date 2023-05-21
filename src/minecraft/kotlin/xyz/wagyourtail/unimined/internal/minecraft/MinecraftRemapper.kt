@@ -24,6 +24,8 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
 
     override var tinyRemapperConf: TinyRemapper.Builder.() -> Unit by FinalizeOnRead {}
 
+    override var replaceJSRWithJetbrains: Boolean by FinalizeOnRead(true)
+
     val MC_LV_PATTERN = Regex("\\$\\$\\d+")
 
     val JSR_TO_JETBRAINS = mapOf(
@@ -53,7 +55,7 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
                 fallbackNamespace = remapFallback
             )
 
-            if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            if (target.path.exists() && !project.unimined.forceReload) {
                 return@consumerApply target
             }
 
@@ -75,7 +77,7 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
             var prevTarget = minecraft.path
             var prevNamespace = minecraft.mappingNamespace
             for (step in path) {
-                project.logger.info("  $prevNamespace -> $step")
+                project.logger.info("[Unimined/McRemapper] $prevNamespace -> $step")
                 val targetFile = if (step == last) {
                     target.path
                 } else if (step.first) {
@@ -105,7 +107,6 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
                     true
                 )
             )
-            .withMappings { JSR_TO_JETBRAINS.forEach(it::acceptClass) }
             .threads(Runtime.getRuntime().availableProcessors())
             .renameInvalidLocals(true)
             .rebuildSourceFilenames(true)
@@ -113,6 +114,9 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
             .inferNameFromSameLvIndex(true)
             .checkPackageAccess(true)
             .fixPackageAccess(true)
+        if (replaceJSRWithJetbrains) {
+            remapperB.withMappings { JSR_TO_JETBRAINS.forEach(it::acceptClass) }
+        }
         tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         remapper.readClassPathAsync(*provider.minecraftLibraries.files.map { it.toPath() }.toTypedArray())

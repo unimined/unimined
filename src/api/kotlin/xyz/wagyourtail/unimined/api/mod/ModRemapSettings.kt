@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.util.LazyMutable
 abstract class ModRemapSettings {
 
     abstract var prodNamespace: MappingNamespace
+    abstract var prodFallbackNamespace: MappingNamespace
 
     abstract var devNamespace: MappingNamespace
     abstract var devFallbackNamespace: MappingNamespace

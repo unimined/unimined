@@ -8,6 +8,7 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.runs.RunConfig
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
@@ -51,8 +52,8 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         super.apply()
     }
 
-    private val forgeDeps: Configuration = project.configurations.maybeCreate("forgeDeps".withSourceSet(provider.sourceSet)).apply {
-        extendsFrom(project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)))
+    private val forgeDeps: Configuration = project.configurations.maybeCreate("forgeDeps".withSourceSet(provider.sourceSet)).also {
+        project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)).extendsFrom(it)
     }
 
 
@@ -202,7 +203,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 patches = baseMinecraft.patches + "fixForge",
             )
 
-            if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            if (target.path.exists() && !project.unimined.forceReload) {
                 return target
             }
 
@@ -241,7 +242,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun getDynLibs(stream: InputStream): Set<String> {
-        project.logger.lifecycle("Getting dynamic libraries from FML")
+        project.logger.lifecycle("[Unimined/ForgeTransformer] Getting dynamic libraries from FML")
         val classReader = ClassReader(stream)
 
         val classNode = ClassNode()

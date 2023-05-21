@@ -13,6 +13,7 @@ import net.fabricmc.tinyremapper.extension.mixin.MixinExtension
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ResolvedArtifact
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
@@ -24,17 +25,19 @@ import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransf
 import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
 import kotlin.io.path.name
 
 class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapSettings() {
 
     override var prodNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
+
+    override var prodFallbackNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { MappingNamespace.OFFICIAL })
 
     override var devNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mappings.devNamespace })
 
@@ -159,9 +162,8 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
                 mods[r] = r.file
             }
         }
-        val preTransform = mods.values.toList()
         var prevNamespace = prodNamespace
-        var prevPrevNamespace = MappingNamespace.OFFICIAL
+        var prevPrevNamespace = prodFallbackNamespace
         for (i in path.indices) {
             val step = path[i]
             val mcNamespace = prevNamespace
@@ -174,16 +176,35 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
                 mcNamespace,
                 mcFallbackNamespace
             )
+            val namespaceKey = if (step.first) {
+                "${step.second}-${prevPrevNamespace}"
+            } else {
+                "${step.second}-${prevNamespace}"
+            }
+            val forceReload = project.unimined.forceReload
+            val targets = mods.mapValues {
+                it.value to modTransformFolder().resolve("${it.key.file.nameWithoutExtension}-mapped-${provider.mappings.combinedNames}-${namespaceKey}.${it.key.file.extension}").let { it to (it.exists() && !forceReload) }
+            }
+            if (targets.values.none { !it.second.second }) {
+                project.logger.info("[Unimined/ModRemapper] Skipping remap step $i as all mods are already remapped")
+                mods.clear()
+                mods.putAll(targets.mapValues { it.value.second.first.toFile() })
+                prevNamespace = step.second
+                prevPrevNamespace = mcNamespace
+                continue
+            }
             val remapper = constructRemapper(prevNamespace, step.second, mc)
-            val tags = preRemapInternal(remapper.first, mods)
+            val tags = preRemapInternal(remapper.first, targets)
             mods.clear()
             mods.putAll(
                 remapInternal(
                     remapper,
-                    tags,
-                    step.second == devNamespace,
+                    tags.filterValues { it != null } as Map<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>>,
                     prevNamespace to step.second
                 )
+            )
+            mods.putAll(
+                tags.filterValues { it == null }.mapValues { targets[it.key]!!.second.first.toFile() }
             )
             prevNamespace = step.second
             prevPrevNamespace = mcNamespace
@@ -204,30 +225,38 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
 
     private fun preRemapInternal(
         remapper: TinyRemapper,
-        deps: Map<ResolvedArtifact, File>
-    ): Map<ResolvedArtifact, Pair<InputTag, File>> {
-        val output = mutableMapOf<ResolvedArtifact, Pair<InputTag, File>>()
-        for ((artifact, file) in deps) {
+        deps: Map<ResolvedArtifact, Pair<File, Pair<Path, Boolean>>>
+    ): Map<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>?> {
+        val output = mutableMapOf<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>?>()
+        for ((artifact, data) in deps) {
+            val file = data.first
+            val target = data.second.first
+            val needsRemap = data.second.second
             val tag = remapper.createInputTag()
             if (file.isDirectory) {
                 throw InvalidUserDataException("Cannot remap directory ${file.absolutePath}")
             } else {
-                remapper.readInputsAsync(tag, file.toPath())
+                if (needsRemap) {
+                    remapper.readInputsAsync(tag, file.toPath())
+                    output[artifact] = tag to (file to target)
+                } else {
+                    remapper.readClassPathAsync(file.toPath())
+                    output[artifact] = null
+                }
             }
-            output[artifact] = tag to file
         }
         return output
     }
 
     private fun remapInternal(
         remapper: Pair<TinyRemapper, BetterMixinExtension?>,
-        deps: Map<ResolvedArtifact, Pair<InputTag, File>>,
-        final: Boolean,
+        deps: Map<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>>,
         remap: Pair<MappingNamespace, MappingNamespace>
     ): Map<ResolvedArtifact, File> {
         val output = mutableMapOf<ResolvedArtifact, File>()
         for ((artifact, tag) in deps) {
-            output[artifact] = remapModInternal(remapper, artifact, tag, final, remap).toFile()
+            remapModInternal(remapper, artifact, tag, remap)
+            output[artifact] = tag.second.first
         }
         remapper.first.finish()
         return output
@@ -236,22 +265,18 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
     private fun remapModInternal(
         remapper: Pair<TinyRemapper, BetterMixinExtension?>,
         dep: ResolvedArtifact,
-        input: Pair<InputTag, File>,
-        final: Boolean,
-        remap: Pair<MappingNamespace, MappingNamespace>
-    ): Path {
-        val combinedNames = provider.mappings.combinedNames
-        val target = if (final) {
-            modTransformFolder().resolve("${dep.file.nameWithoutExtension}-mapped-${combinedNames}-${provider.mappings.devNamespace}-${provider.mappings.devFallbackNamespace}.${dep.file.extension}")
-        } else {
-            getTempFilePath(dep.file.nameWithoutExtension, ".jar")
-        }
+        input: Pair<InputTag, Pair<File, Path>>,
+        remap: Pair<MappingNamespace, MappingNamespace>,
+    ) {
         if (remapper.second != null) {
             remapper.second!!.reset(dep.name + ".mixin-refmap.json")
         }
-        OutputConsumerPath.Builder(target).build().use {
+        val inpTag = input.first
+        val inpFile = input.second.first
+        val targetFile = input.second.second
+        OutputConsumerPath.Builder(targetFile).build().use {
             it.addNonClassFiles(
-                input.second.toPath(),
+                inpFile.toPath(),
                 remapper.first,
                 listOf(
                     AccessWidenerMinecraftTransformer.AwRemapper(
@@ -271,11 +296,10 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
             remapper.first.apply(it, input.first)
         }
         if (remapper.second != null) {
-            ZipReader.openZipFileSystem(target, mapOf("mutable" to true)).use {
+            ZipReader.openZipFileSystem(targetFile, mapOf("mutable" to true)).use {
                 remapper.second!!.write(it)
             }
         }
-        return target
     }
 
     private fun modTransformFolder(): Path {

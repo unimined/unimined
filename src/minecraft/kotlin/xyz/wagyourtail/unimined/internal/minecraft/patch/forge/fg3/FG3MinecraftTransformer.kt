@@ -44,8 +44,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     val forgeUd = project.configurations.detachedConfiguration()
 
     @ApiStatus.Internal
-    val clientExtra = project.configurations.maybeCreate("clientExtra".withSourceSet(provider.sourceSet)).apply {
-        extendsFrom(project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)))
+    val clientExtra = project.configurations.maybeCreate("clientExtra".withSourceSet(provider.sourceSet)).also {
+        project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)).extendsFrom(it)
     }
 
     lateinit var mcpConfig: Dependency
@@ -85,7 +85,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             val mcpConfigUserSpecified = mappingsDeps.firstOrNull { it.group == "de.oceanlabs.mcp" && it.name == "mcp_config" }
             if (mcpConfigUserSpecified != null) {
                 if (mcpConfigUserSpecified.version != mcpConfig.version) {
-                    project.logger.warn("FG3 does not support custom mcp_config version specification. Using ${mcpConfig.version} from userdev.")
+                    project.logger.warn("[Unimined/ForgeTransformer] FG3 does not support custom mcp_config version specification. Using ${mcpConfig.version} from userdev.")
                 }
                 mappingsDeps.remove(mcpConfigUserSpecified)
             }
@@ -115,17 +115,17 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         // get forge userdev jar
         val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
         if (userdevCfg.has("inject")) {
-            project.logger.lifecycle("injecting forge userdev into minecraft jar")
+            project.logger.lifecycle("[Unimined/ForgeTransformer] Injecting forge userdev into minecraft jar")
             this.addTransform { outputJar ->
                 ZipReader.openZipFileSystem(forgeUd.toPath()).use { inputJar ->
                     val inject = inputJar.getPath("/" + userdevCfg.get("inject").asString)
                     if (Files.exists(inject)) {
-                        project.logger.info("injecting forge userdev into minecraft jar")
+                        project.logger.info("[Unimined/ForgeTransformer] Injecting forge userdev into minecraft jar")
                         Files.walk(inject).forEach { path ->
-                            project.logger.debug("testing $path")
+                            project.logger.debug("[Unimined/ForgeTransformer] Testing $path")
                             if (!Files.isDirectory(path)) {
                                 val target = outputJar.getPath("/${path.relativeTo(inject)}")
-                                project.logger.debug("injecting $path into minecraft jar")
+                                project.logger.debug("[Unimined/ForgeTransformer] Injecting $path into minecraft jar")
                                 Files.createDirectories(target.parent)
                                 Files.copy(path, target, StandardCopyOption.REPLACE_EXISTING)
                             }
@@ -138,7 +138,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
             val mainClass = get("main").asString
             if (!mainClass.startsWith("net.minecraftforge.legacydev")) {
-                project.logger.info("inserting mcp mappings")
+                project.logger.info("[Unimined/ForgeTransformer] Inserting mcp mappings")
                 provider.minecraftLibraries.dependencies.add(
                     project.dependencies.create(project.files(parent.srgToMCPAsMCP))
                 )
@@ -187,7 +187,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             fallbackNamespace = MappingNamespace.OFFICIAL
         )
         createClientExtra(clientjar, serverjar, output.path)
-        if (output.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+        if (output.path.exists() && !project.unimined.forceReload) {
             return output
         }
         if (userdevCfg["notchObf"]?.asBoolean == true) {
@@ -215,7 +215,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
 
         if (clientExtra.exists()) {
-            if (project.gradle.startParameter.isRefreshDependencies) {
+            if (project.unimined.forceReload) {
                 clientExtra.deleteExisting()
             } else {
                 return
@@ -268,7 +268,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             }
         }
 
-        if (!patchedMC.path.exists() || project.gradle.startParameter.isRefreshDependencies) {
+        if (!patchedMC.path.exists() || project.unimined.forceReload) {
             patchedMC.path.deleteIfExists()
             val args = (userdevCfg["binpatcher"].asJsonObject["args"].asJsonArray.map {
                 when (it.asString) {
@@ -446,7 +446,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 patches = baseMinecraft.patches + "fixForge",
             )
 
-            if (target.path.exists() && !project.gradle.startParameter.isRefreshDependencies) {
+            if (target.path.exists() && !project.unimined.forceReload) {
                 return target
             }
 

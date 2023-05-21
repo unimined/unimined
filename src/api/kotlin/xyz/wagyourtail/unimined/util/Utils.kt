@@ -220,3 +220,5 @@ operator fun StringBuilder.plusAssign(other: String) {
 
 fun String.withSourceSet(sourceSet: SourceSet) =
     if (sourceSet.name == "main") this else "${sourceSet.name}${this.capitalized()}"
+
+fun String.decapitalized(): String = if (this.isEmpty()) this else this[0].lowercase() + this.substring(1)
