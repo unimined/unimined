@@ -45,7 +45,10 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
             .resolve(version)
     }
 
-    fun mcVersionCompare(vers1: String, vers2: String): Int {
+    /**
+     * @return 1 in vers1 is newer, -1 if vers2 is newer, 0 if they are the same
+     */
+    override fun mcVersionCompare(vers1: String, vers2: String): Int {
         if (vers1 == vers2) return 0
         for (i in launcherMeta) {
             if (i.asJsonObject["id"].asString == vers1) {
@@ -216,8 +219,6 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
 
                 if (serverJar == null) {
                     // attempt to get off betacraft
-                    val serverVersion = serverVersionOverride
-
                     val uriPart = if (version.startsWith("b")) {
                         "beta/${serverVersionOverride}"
                     } else if (version.startsWith("a")) {
@@ -287,16 +288,15 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     fun getMinecraft(envType: EnvType): MinecraftJar {
         return when (envType) {
             EnvType.CLIENT -> minecraftClient
-            EnvType.SERVER -> minecraftServer
+            EnvType.SERVER, EnvType.DATAGEN -> minecraftServer
             EnvType.COMBINED -> throw IllegalStateException("This should be handled at mcprovider by calling transformer merge")
         }
     }
 
     fun getMappings(envType: EnvType): File {
         return when (envType) {
-            EnvType.CLIENT -> officialClientMappingsFile
-            EnvType.SERVER -> officialServerMappingsFile
-            EnvType.COMBINED -> officialClientMappingsFile
+            EnvType.CLIENT, EnvType.COMBINED -> officialClientMappingsFile
+            EnvType.SERVER, EnvType.DATAGEN -> officialServerMappingsFile
         }
     }
 

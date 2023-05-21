@@ -145,17 +145,33 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
+    private fun clientRun() {
+        project.logger.info("[Unimined/Minecraft] client config")
+        runs.addTarget(provideVanillaRunClientTask("client", project.file("run/client")))
+        runs.configFirst("client", (mcPatcher as AbstractMinecraftTransformer)::applyClientRunTransform)
+    }
+
+    private fun serverRun() {
+        project.logger.info("[Unimined/Minecraft] server config")
+        runs.addTarget(provideVanillaRunServerTask("server", project.file("run/server")))
+        runs.configFirst("server", (mcPatcher as AbstractMinecraftTransformer)::applyServerRunTransform)
+    }
+
     fun applyRunConfigs() {
         project.logger.lifecycle("[Unimined/Minecraft] Applying run configs")
-        if (side != EnvType.SERVER) {
-            project.logger.info("[Unimined/Minecraft] client config")
-            runs.addTarget(provideVanillaRunClientTask("client", project.file("run/client")))
-            runs.configFirst("client", (mcPatcher as AbstractMinecraftTransformer)::applyClientRunTransform)
-        }
-        if (side != EnvType.CLIENT) {
-            project.logger.info("[Unimined/Minecraft] server config")
-            runs.addTarget(provideVanillaRunServerTask("server", project.file("run/server")))
-            runs.configFirst("server", (mcPatcher as AbstractMinecraftTransformer)::applyServerRunTransform)
+        when (side) {
+            EnvType.CLIENT -> {
+                clientRun()
+            }
+            EnvType.SERVER -> {
+                serverRun()
+            }
+            EnvType.COMBINED -> {
+                clientRun()
+                serverRun()
+            }
+            else -> {
+            }
         }
     }
 

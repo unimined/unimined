@@ -54,12 +54,54 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         (mappingTree.dstNamespaces.filter { it != "srg" } + mappingTree.srcNamespace).map { MappingNamespace.getNamespace(it) }.toSet()
     }
 
+    override fun intermediary(action: MappingDepConfig<*>.() -> Unit) {
+        val group = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.14") >= 0) {
+            "net.fabricmc"
+        } else {
+            "net.legacyfabric"
+        }
+        mapping("${group}:intermediary:${minecraft.version}:v2", action)
+    }
+
+    override fun searge(version: String, action: MappingDepConfig<*>.() -> Unit) {
+        val mappings = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.12.2") < 0) {
+            "de.oceanlabs.mcp:mcp:${version}:srg@zip"
+        } else {
+            "de.oceanlabs.mcp:mcp_config:${version}@zip"
+        }
+        mapping(mappings, action)
+    }
+
+    override fun hashed(action: MappingDepConfig<*>.() -> Unit) {
+        mapping("org.quiltmc:hashed:${minecraft.version}", action)
+    }
+
     override fun mojmap(action: MappingDepConfig<*>.() -> Unit) {
         val mapping = when (minecraft.side) {
             EnvType.CLIENT, EnvType.COMBINED -> "client"
-            EnvType.SERVER -> "server"
+            EnvType.SERVER, EnvType.DATAGEN -> "server"
         }
         mapping("net.minecraft:$mapping-mappings:${minecraft.version}", action)
+    }
+
+    override fun mcp(channel: String, version: String, action: MappingDepConfig<*>.() -> Unit) {
+        mapping("de.oceanlabs.mcp:mcp_${channel}:${version}@zip", action)
+    }
+
+    override fun yarn(build: Int, action: MappingDepConfig<*>.() -> Unit) {
+        val group = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.14") >= 0) {
+            "net.fabricmc"
+        } else {
+            "net.legacyfabric"
+        }
+        mapping("${group}:yarn:${minecraft.version}+build.${build}:v2", action)
+    }
+
+    override fun quilt(build: Int, classifier: String, action: MappingDepConfig<*>.() -> Unit) {
+        mapping("org.quiltmc:quilt-mappings:${minecraft.version}+build.${build}:${classifier}") {
+            mapNamespace["named"] = MappingNamespace.QUILT
+            action()
+        }
     }
 
     override fun mapping(dependency: Any, action: MappingDepConfig<*>.() -> Unit) {
@@ -97,7 +139,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         val tree = MemoryMappingTree()
         when (minecraft.side) {
             EnvType.COMBINED, EnvType.CLIENT -> minecraft.minecraftData.officialClientMappingsFile
-            EnvType.SERVER -> minecraft.minecraftData.officialServerMappingsFile
+            EnvType.SERVER, EnvType.DATAGEN -> minecraft.minecraftData.officialServerMappingsFile
         }.inputStream().use {
             ProGuardReader.read(
                 it.reader(), MappingNamespace.MOJMAP.namespace, MappingNamespace.OFFICIAL.namespace,

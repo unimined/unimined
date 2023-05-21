@@ -85,7 +85,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             val mcpConfigUserSpecified = mappingsDeps.firstOrNull { it.group == "de.oceanlabs.mcp" && it.name == "mcp_config" }
             if (mcpConfigUserSpecified != null) {
                 if (mcpConfigUserSpecified.version != mcpConfig.version) {
-                    project.logger.warn("[Unimined/ForgeTransformer] FG3 does not support custom mcp_config version specification. Using ${mcpConfig.version} from userdev.")
+                    project.logger.warn("[Unimined/ForgeTransformer] FG3 does not support custom mcp_config (searge) version specification. Using ${mcpConfig.version} from userdev.")
                 }
                 mappingsDeps.remove(mcpConfigUserSpecified)
             }
@@ -163,6 +163,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             EnvType.CLIENT -> "client"
             EnvType.SERVER -> "server"
             EnvType.COMBINED -> "joined"
+            EnvType.DATAGEN -> "server"
         }
         val steps: List<McpConfigStep> = mcpConfigData.steps[type]!!
         val executor = McpExecutor(
@@ -427,6 +428,13 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 config.env += mapOf("FORGE_SPEC" to userdevCfg.get("spec").asNumber.toString())
                 config.env += env.map { it.key to getArgValue(config, it.value) }
             }
+        }
+    }
+
+    override fun applyExtraLaunches() {
+        super.applyExtraLaunches()
+        if (provider.side == EnvType.DATAGEN) {
+            TODO("DATAGEN not supported yet")
         }
     }
 

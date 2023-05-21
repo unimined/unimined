@@ -21,4 +21,5 @@ abstract class MinecraftData {
     @get:ApiStatus.Internal
     abstract val officialServerMappingsFile: File
 
+    abstract fun mcVersionCompare(vers1: String, vers2: String): Int
 }

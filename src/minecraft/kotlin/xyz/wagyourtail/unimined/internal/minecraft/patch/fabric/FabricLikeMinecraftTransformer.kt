@@ -118,8 +118,8 @@ abstract class FabricLikeMinecraftTransformer(
     var mainClass: JsonObject? = null
 
     override fun apply() {
-        val client = provider.side != EnvType.SERVER
-        val server = provider.side != EnvType.CLIENT
+        val client = provider.side == EnvType.CLIENT || provider.side == EnvType.COMBINED
+        val server = provider.side == EnvType.SERVER || provider.side == EnvType.COMBINED
 
         val dependencies = fabric.dependencies
 

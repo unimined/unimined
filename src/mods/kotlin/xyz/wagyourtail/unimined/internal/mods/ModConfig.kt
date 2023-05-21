@@ -37,7 +37,7 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
 
     override var prodNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
 
-    override var prodFallbackNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { MappingNamespace.OFFICIAL })
+    override var prodFallbackNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
 
     override var devNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mappings.devNamespace })
 

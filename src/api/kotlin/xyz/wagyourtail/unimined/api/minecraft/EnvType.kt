@@ -7,5 +7,6 @@ enum class EnvType(val classifier: String?) {
     CLIENT("client"),
     SERVER("server"),
     COMBINED(null),
+    DATAGEN("server")
     ;
 }

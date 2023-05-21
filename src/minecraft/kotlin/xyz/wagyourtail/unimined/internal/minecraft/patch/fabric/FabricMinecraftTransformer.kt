@@ -51,7 +51,9 @@ abstract class FabricMinecraftTransformer(
 
     override fun applyExtraLaunches() {
         super.applyExtraLaunches()
-        //TODO: figure out datagen
+        if (provider.side == EnvType.DATAGEN) {
+            TODO("DATAGEN not supported yet")
+        }
     }
 
     override fun applyClientRunTransform(config: RunConfig) {

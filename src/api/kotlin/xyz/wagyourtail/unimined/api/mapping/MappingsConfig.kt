@@ -36,6 +36,61 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         devFallbackNamespace = MappingNamespace.getNamespace(namespace)
     }
 
+    fun intermediary() {
+        intermediary {}
+    }
+
+    abstract fun intermediary(action: MappingDepConfig<*>.() -> Unit)
+
+    fun intermediary(
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        intermediary {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun searge() {
+        searge {}
+    }
+
+    fun searge(action: MappingDepConfig<*>.() -> Unit) {
+        searge(minecraft.version, action)
+    }
+
+    abstract fun searge(version: String, action: MappingDepConfig<*>.() -> Unit)
+
+    fun searge(
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        searge {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun hashed() {
+        hashed {}
+    }
+
+    abstract fun hashed(action: MappingDepConfig<*>.() -> Unit)
+
+    fun hashed(
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        hashed {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     fun mojmap() {
         mojmap {}
     }
@@ -47,6 +102,65 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         action: Closure<*>
     ) {
         mojmap {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun mcp(channel: String, version: String) {
+        mcp(channel, version) {}
+    }
+
+    abstract fun mcp(channel: String, version: String, action: MappingDepConfig<*>.() -> Unit)
+
+    fun mcp(
+        channel: String,
+        version: String,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        mcp(channel, version) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun yarn(build: Int) {
+        yarn(build) {}
+    }
+
+    abstract fun yarn(build: Int, action: MappingDepConfig<*>.() -> Unit)
+
+    fun yarn(
+        build: Int,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        yarn(build) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun quilt(build: Int) {
+        quilt(build) {}
+    }
+
+    fun quilt(build: Int, action: MappingDepConfig<*>.() -> Unit) {
+        quilt(build, "intermediary-v2", action)
+    }
+
+    abstract fun quilt(build: Int, classifier: String, action: MappingDepConfig<*>.() -> Unit)
+
+    fun quilt(
+        build: Int,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        quilt(build) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
