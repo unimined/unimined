@@ -143,7 +143,6 @@ class ClassMerger(
         fun areFieldNodesEqual(a: FieldNode, b: FieldNode): Boolean {
             if (a.name != b.name) return false
             if (a.desc != b.desc) return false
-            if (a.signature != b.signature) return false
             if (a.value != b.value) return false
             // check static part of access
             if (a.access and Opcodes.ACC_STATIC != b.access and Opcodes.ACC_STATIC) return false
@@ -228,7 +227,6 @@ class ClassMerger(
         fun areMethodNodesEqual(a: MethodNode, b: MethodNode): Boolean {
             if (a.name != b.name) return false
             if (a.desc != b.desc) return false
-            if (a.signature != b.signature) return false
             // check static part of access
             if (a.access and Opcodes.ACC_STATIC != b.access and Opcodes.ACC_STATIC) return false
 //            val aParameters = a.parameters?.toMutableList() ?: mutableListOf()
@@ -370,7 +368,6 @@ class ClassMerger(
             // require equal static
             if (a.access and Opcodes.ACC_STATIC != b.access and Opcodes.ACC_STATIC) return false
             if (a.name != b.name) return false
-            if (a.signature != b.signature) return false
             if (a.superName != b.superName) return false
             if (a.outerClass != b.outerClass) return false
             if (a.outerMethod != b.outerMethod) return false
@@ -390,7 +387,6 @@ class ClassMerger(
         fun areRecordComponentNodesEqual(a: RecordComponentNode, b: RecordComponentNode): Boolean {
             if (a.name != b.name) return false
             if (a.descriptor != b.descriptor) return false
-            if (a.signature != b.signature) return false
             val aVisibleAnnotations = a.visibleAnnotations?.toMutableList() ?: mutableListOf()
             val bVisibleAnnotations = b.visibleAnnotations?.toMutableList() ?: mutableListOf()
             if (aVisibleAnnotations.size != bVisibleAnnotations.size) return false
