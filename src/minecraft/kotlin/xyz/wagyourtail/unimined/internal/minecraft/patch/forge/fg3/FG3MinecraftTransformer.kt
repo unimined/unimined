@@ -45,7 +45,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     @ApiStatus.Internal
     val clientExtra = project.configurations.maybeCreate("clientExtra".withSourceSet(provider.sourceSet)).also {
-        project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)).extendsFrom(it)
+        provider.minecraft.extendsFrom(it)
     }
 
     lateinit var mcpConfig: Dependency

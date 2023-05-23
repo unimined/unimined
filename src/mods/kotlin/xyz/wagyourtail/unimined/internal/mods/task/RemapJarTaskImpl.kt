@@ -8,7 +8,6 @@ import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
@@ -29,9 +28,9 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     @TaskAction
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
     fun run() {
-        val prodNs = targetNamespace.getOrElse(provider.mcPatcher.prodNamespace)!!
-        val devNs = sourceNamespace.getOrElse(provider.mappings.devNamespace)!!
-        val devFNs = fallbackFromNamespace.getOrElse(provider.mappings.devFallbackNamespace)!!
+        val prodNs = prodNamespace.getOrElse(provider.mcPatcher.prodNamespace)!!
+        val devNs = devNamespace.getOrElse(provider.mappings.devNamespace)!!
+        val devFNs = devFallbackNamespace.getOrElse(provider.mappings.devFallbackNamespace)!!
 
         val env = envType.getOrElse(provider.side)!!
 

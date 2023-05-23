@@ -4,7 +4,6 @@ import net.fabricmc.mappingio.format.ZipReader
 import net.lenni0451.classtransform.TransformerManager
 import net.lenni0451.classtransform.utils.tree.IClassProvider
 import org.gradle.api.Project
-import org.gradle.api.tasks.SourceSetContainer
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
@@ -42,7 +41,7 @@ class JarModAgentMinecraftTransformer(
     override var compiletimeTransforms: Boolean = false
 
     override var jarModAgent = project.configurations.maybeCreate("jarModAgent".withSourceSet(provider.sourceSet)).also {
-        project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)).extendsFrom(it)
+        provider.minecraft.extendsFrom(it)
     }
 
     val jmaFile by lazy {
@@ -95,14 +94,14 @@ class JarModAgentMinecraftTransformer(
             project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${remapJarTask.name}...")
 
             val envType = remapJarTask.envType
-            val mappings = remapJarTask.targetNamespace.getOrElse(this.prodNamespace)!!
+            val mappings = remapJarTask.prodNamespace.getOrElse(this.prodNamespace)!!
 
             val classpath = (remapJarTask as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
 
             // remove minecraft
             classpath.removeIf { provider.isMinecraftJar(it.toPath()) }
             // add back with correct mappings
-            val targetNamespace = remapJarTask.targetNamespace.get() ?: this.prodNamespace
+            val targetNamespace = remapJarTask.prodNamespace.get() ?: this.prodNamespace
             classpath.add(provider.getMinecraft(targetNamespace, targetNamespace).toFile())
             // add input jar
             // copy output to temp

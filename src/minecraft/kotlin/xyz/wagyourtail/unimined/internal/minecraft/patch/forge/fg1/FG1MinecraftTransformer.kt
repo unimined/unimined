@@ -53,7 +53,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private val forgeDeps: Configuration = project.configurations.maybeCreate("forgeDeps".withSourceSet(provider.sourceSet)).also {
-        project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)).extendsFrom(it)
+        provider.minecraft.extendsFrom(it)
     }
 
 

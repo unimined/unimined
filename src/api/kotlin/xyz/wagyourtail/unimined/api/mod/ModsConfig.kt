@@ -3,8 +3,6 @@ package xyz.wagyourtail.unimined.api.mod
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.artifacts.Configuration
-import org.jetbrains.annotations.ApiStatus
-import java.io.File
 
 abstract class ModsConfig {
 
@@ -22,24 +20,24 @@ abstract class ModsConfig {
 
     fun remap(
         config: Configuration,
-        action: ModRemapSettings.() -> Unit
+        action: ModRemapConfig.() -> Unit
     ) {
         remap(listOf(config), action)
     }
 
     fun remap(
         vararg config: Configuration,
-        action: ModRemapSettings.() -> Unit
+        action: ModRemapConfig.() -> Unit
     ) {
         remap(config.toList(), action)
     }
 
-    abstract fun remap(config: List<Configuration>, action: ModRemapSettings.() -> Unit)
+    abstract fun remap(config: List<Configuration>, action: ModRemapConfig.() -> Unit)
 
 
     fun remap(
         config: Configuration,
-        @DelegatesTo(value = ModRemapSettings::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = ModRemapConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         remap(config) {
@@ -51,7 +49,7 @@ abstract class ModsConfig {
 
     fun remap(
         config: List<Configuration>,
-        @DelegatesTo(value = ModRemapSettings::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = ModRemapConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         remap(config) {

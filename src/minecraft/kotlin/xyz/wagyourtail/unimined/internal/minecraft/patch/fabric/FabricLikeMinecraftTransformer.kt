@@ -50,7 +50,7 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     val fabric: Configuration = project.configurations.maybeCreate(providerName.withSourceSet(provider.sourceSet)).also {
-        project.configurations.getByName("implementation".withSourceSet(provider.sourceSet)).extendsFrom(it)
+        provider.minecraft.extendsFrom(it)
     }
 
     private val fabricJson: Configuration = project.configurations.detachedConfiguration()

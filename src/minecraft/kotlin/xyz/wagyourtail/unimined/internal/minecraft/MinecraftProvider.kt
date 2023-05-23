@@ -58,11 +58,12 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     override val minecraftRemapper = MinecraftRemapper(project, this)
 
     val minecraft: Configuration = project.configurations.maybeCreate("minecraft".withSourceSet(sourceSet)).also {
-        project.configurations.getByName("implementation".withSourceSet(sourceSet)).extendsFrom(it)
+        sourceSet.compileClasspath += it
+        sourceSet.runtimeClasspath += it
     }
 
     override val minecraftLibraries: Configuration = project.configurations.maybeCreate("minecraftLibraries".withSourceSet(sourceSet)).also {
-        project.configurations.getByName("implementation".withSourceSet(sourceSet)).extendsFrom(it)
+        minecraft.extendsFrom(it)
     }
 
     override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit) {

@@ -18,13 +18,14 @@ import org.gradle.api.artifacts.ResolvedArtifact
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.mod.ModRemapSettings
+import xyz.wagyourtail.unimined.api.mod.ModRemapConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
+import xyz.wagyourtail.unimined.util.defaultedMapOf
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -33,15 +34,11 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.name
 
-class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapSettings() {
+class ModRemapProvider(config: Set<Configuration>, val project: Project, val provider: MinecraftConfig) : ModRemapConfig(config) {
 
     override var prodNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
 
     override var prodFallbackNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
-
-    override var devNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mappings.devNamespace })
-
-    override var devFallbackNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mappings.devFallbackNamespace })
 
     override var remapAtToLegacy: Boolean by FinalizeOnRead(LazyMutable { (provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true })
 
@@ -129,9 +126,17 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
         tinyRemapSettings = remapperBuilder
     }
 
-    fun doRemap(config: Set<Configuration>) {
+    fun untransformDep(r: ResolvedArtifact): Artifact {
+        val classifier = if (r.moduleVersion.id.group.startsWith("remapped_")) {
+            r.classifier!!.let { it.substringBefore("mapped-${provider.mappings.combinedNames}") }!!
+                .let { if (it.isEmpty()) null else ":${it.substringBeforeLast("-")}" }
+        } else r.classifier
+        return Artifact(r.moduleVersion.id.group.substringAfter("remapped_"), r.name, r.moduleVersion.id.version, classifier, r.extension)
+    }
+
+    fun doRemap(devNamespace: MappingNamespace = provider.mappings.devNamespace, devFallbackNamespace: MappingNamespace = provider.mappings.devFallbackNamespace, targetConfigurations: Map<Configuration, Configuration> = defaultedMapOf { it }) {
         project.logger.lifecycle("[Unimined/ModRemapper] Remapping mods")
-        val count = config.sumOf { it.dependencies.size }
+        val count = configurations.sumOf { it.dependencies.size }
         if (count == 0) {
             project.logger.lifecycle("[Unimined/ModRemapper] No mods found for remapping")
             return
@@ -147,7 +152,7 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
         )
         project.logger.info("[Unimined/ModRemapper] Remapping from $prodNamespace to ${devNamespace}/${devFallbackNamespace} using $prodNamespace -> ${path.map { it.second }.joinToString(" -> ")}")
         val configs = mutableMapOf<Configuration, Configuration>()
-        for (c in config) {
+        for (c in configurations) {
             val newC = project.configurations.detachedConfiguration().apply(this.config)
             configs[newC] = c
             // copy out dependencies
@@ -156,11 +161,18 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
             c.dependencies.clear()
         }
         val mods = mutableMapOf<ResolvedArtifact, File>()
+        val untransformConfig = project.configurations.detachedConfiguration()
         for (c in configs.keys) {
             for (r in c.resolvedConfiguration.resolvedArtifacts) {
-                if (r.extension != "jar") continue
+                if (r.extension == "pom") continue
+                if (r.moduleVersion.id.group.startsWith("remapped_")) {
+                    untransformConfig.dependencies.add(untransformDep(r).create(project))
+                }
                 mods[r] = r.file
             }
+        }
+        for (r in untransformConfig.resolvedConfiguration.resolvedArtifacts) {
+            mods[r] = r.file
         }
         var prevNamespace = prodNamespace
         var prevPrevNamespace = prodFallbackNamespace
@@ -209,12 +221,13 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
             prevNamespace = step.second
             prevPrevNamespace = mcNamespace
         }
-        // supply back to original configs
+        // supply back to proper configs
         for ((newC, c) in configs) {
             for (artifact in newC.resolvedConfiguration.resolvedArtifacts) {
-                val classifier = artifact.classifier?.let { "$it-" } ?: ""
-                val output = "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${provider.mappings.combinedNames}-${provider.mappings.devNamespace}-${provider.mappings.devFallbackNamespace}"
-                c.dependencies.add(
+                val untransformed = untransformDep(artifact)
+                val classifier = untransformed.classifier?.let { "$it-" } ?: ""
+                val output = "remapped_${untransformed.group}:${untransformed.name}:${untransformed.version}:${classifier}mapped-${provider.mappings.combinedNames}-${provider.mappings.devNamespace}-${provider.mappings.devFallbackNamespace}".let { if (artifact.extension != null) "$it@${artifact.extension}" else it }
+                targetConfigurations[c]!!.dependencies.add(
                     project.dependencies.create(
                         output
                     )
@@ -337,6 +350,20 @@ class ModConfig(val project: Project, val provider: MinecraftConfig) : ModRemapS
                     GsonBuilder().setPrettyPrinting().create().toJson(json, writer)
                 }
             }
+        }
+    }
+
+    data class Artifact(val group: String, val name: String, val version: String, val classifier: String?, val extension: String?) {
+
+        fun create(project: Project): Dependency {
+            var str = "${group}:${name}:${version}"
+            if (classifier != null) {
+                str += ":${classifier}"
+            }
+            if (extension != null) {
+                str += "@${extension}"
+            }
+            return project.dependencies.create(str)
         }
     }
 }
