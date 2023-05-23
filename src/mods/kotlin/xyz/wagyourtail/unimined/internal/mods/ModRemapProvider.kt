@@ -36,9 +36,9 @@ import kotlin.io.path.name
 
 class ModRemapProvider(config: Set<Configuration>, val project: Project, val provider: MinecraftConfig) : ModRemapConfig(config) {
 
-    override var prodNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
+    override var namespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
 
-    override var prodFallbackNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
+    override var fallbackNamespace: MappingNamespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
 
     override var remapAtToLegacy: Boolean by FinalizeOnRead(LazyMutable { (provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true })
 
@@ -128,7 +128,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
 
     fun untransformDep(r: ResolvedArtifact): Artifact {
         val classifier = if (r.moduleVersion.id.group.startsWith("remapped_")) {
-            r.classifier!!.let { it.substringBefore("mapped-${provider.mappings.combinedNames}") }!!
+            r.classifier!!.substringBefore("mapped-${provider.mappings.combinedNames}")
                 .let { if (it.isEmpty()) null else ":${it.substringBeforeLast("-")}" }
         } else r.classifier
         return Artifact(r.moduleVersion.id.group.substringAfter("remapped_"), r.name, r.moduleVersion.id.version, classifier, r.extension)
@@ -144,13 +144,13 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
 
         project.logger.lifecycle("[Unimined/ModRemapper] Found $count mods for remapping")
         val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
-            prodNamespace,
-            prodNamespace,
+            namespace,
+            namespace,
             devFallbackNamespace,
             devNamespace,
             provider.mappings.available
         )
-        project.logger.info("[Unimined/ModRemapper] Remapping from $prodNamespace to ${devNamespace}/${devFallbackNamespace} using $prodNamespace -> ${path.map { it.second }.joinToString(" -> ")}")
+        project.logger.info("[Unimined/ModRemapper] Remapping from $namespace to ${devNamespace}/${devFallbackNamespace} using $namespace -> ${path.map { it.second }.joinToString(" -> ")}")
         val configs = mutableMapOf<Configuration, Configuration>()
         for (c in configurations) {
             val newC = project.configurations.detachedConfiguration().apply(this.config)
@@ -174,8 +174,8 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         for (r in untransformConfig.resolvedConfiguration.resolvedArtifacts) {
             mods[r] = r.file
         }
-        var prevNamespace = prodNamespace
-        var prevPrevNamespace = prodFallbackNamespace
+        var prevNamespace = namespace
+        var prevPrevNamespace = fallbackNamespace
         for (i in path.indices) {
             val step = path[i]
             val mcNamespace = prevNamespace
@@ -223,11 +223,12 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         }
         // supply back to proper configs
         for ((newC, c) in configs) {
+            val outConf = targetConfigurations[c]
             for (artifact in newC.resolvedConfiguration.resolvedArtifacts) {
                 val untransformed = untransformDep(artifact)
                 val classifier = untransformed.classifier?.let { "$it-" } ?: ""
                 val output = "remapped_${untransformed.group}:${untransformed.name}:${untransformed.version}:${classifier}mapped-${provider.mappings.combinedNames}-${provider.mappings.devNamespace}-${provider.mappings.devFallbackNamespace}".let { if (artifact.extension != null) "$it@${artifact.extension}" else it }
-                targetConfigurations[c]!!.dependencies.add(
+                outConf!!.dependencies.add(
                     project.dependencies.create(
                         output
                     )

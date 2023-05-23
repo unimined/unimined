@@ -9,8 +9,19 @@ import xyz.wagyourtail.unimined.util.LazyMutable
 
 abstract class ModRemapConfig(val configurations: Set<Configuration>) {
 
-    abstract var prodNamespace: MappingNamespace
-    abstract var prodFallbackNamespace: MappingNamespace
+    @set:ApiStatus.Internal
+    abstract var namespace: MappingNamespace
+
+    @set:ApiStatus.Internal
+    abstract var fallbackNamespace: MappingNamespace
+
+    fun namespace(ns: String) {
+        namespace = MappingNamespace.getNamespace(ns)
+    }
+
+    fun fallbackNamespace(ns: String) {
+        fallbackNamespace = MappingNamespace.getNamespace(ns)
+    }
 
     @set:ApiStatus.Experimental
     abstract var remapAtToLegacy: Boolean
