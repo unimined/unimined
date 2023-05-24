@@ -59,8 +59,6 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
                         return Artifact.none()
                     }
 
-                    project.logger.info("[Unimined/ArtifactProvider] $info")
-
                     if (info.extension == "pom") {
                         return Artifact.none()
                     }
@@ -68,10 +66,12 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
                     when (info.name) {
                         "client_mappings", "client-mappings", "mappings" -> {
                             val mc = minecrafts.values.first { it.version == info.version }
+                            project.logger.info("[Unimined/ArtifactProvider] providing client mappings")
                             return StreamableArtifact.ofFile(info, ArtifactType.BINARY, mc.minecraftData.officialClientMappingsFile)
                         }
                         "server_mappings", "server-mappings" -> {
                             val mc = minecrafts.values.first { it.version == info.version }
+                            project.logger.info("[Unimined/ArtifactProvider] providing server mappings")
                             return StreamableArtifact.ofFile(info, ArtifactType.BINARY, mc.minecraftData.officialServerMappingsFile)
                         }
                         else -> {

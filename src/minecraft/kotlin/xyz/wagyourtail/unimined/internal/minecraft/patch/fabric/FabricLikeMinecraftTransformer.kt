@@ -101,9 +101,8 @@ abstract class FabricLikeMinecraftTransformer(
                 val export = ExportMappingsTaskImpl.ExportImpl().apply {
                     location = toFile()
                     type = ExportMappingsTask.MappingExportTypes.TINY_V2
-                    sourceNamespace = MappingNamespace.OFFICIAL
-                    //TODO: make this work properly with different devFallback than prod
-                    targetNamespace = listOf(prodNamespace, provider.mappings.devNamespace)
+                    sourceNamespace = prodNamespace
+                    targetNamespace = listOf(provider.mappings.devNamespace)
                     renameNs[provider.mappings.devNamespace] = "named"
                 }
                 export.validate()

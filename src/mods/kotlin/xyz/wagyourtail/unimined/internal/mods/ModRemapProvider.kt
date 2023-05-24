@@ -67,7 +67,10 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
     }
 
     private val originalDeps = defaultedMapOf<Configuration, Set<Dependency>> {
-        project.logger.info("[Unimined/ModRemapper] Original Deps: $it -> ${it.dependencies.toSet()}")
+        project.logger.info("[Unimined/ModRemapper] Original Deps: $it")
+        for (dep in it.dependencies) {
+            project.logger.info("[Unimined/ModRemapper]    $dep")
+        }
         it.dependencies.toSet()
     }
 
@@ -75,7 +78,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         val detached = project.configurations.detachedConfiguration().apply(this.config)
         detached.dependencies.addAll(originalDeps[it])
         val resolved = mutableMapOf<ResolvedArtifact, File>()
-        project.logger.info("[Unimined/ModRemapper] Original Dep Files: $it ->")
+        project.logger.info("[Unimined/ModRemapper] Original Dep Files: $it")
         for (r in detached.resolvedConfiguration.resolvedArtifacts) {
             if (r.extension == "pom") continue
             project.logger.info("[Unimined/ModRemapper]    $r -> ${r.file}")
@@ -89,7 +92,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         for ((c, artifacts) in originalDepsFiles) {
             for (r in artifacts.values) {
                 if (r.nameWithoutExtension == name) {
-                    project.logger.info("[Unimined/ModRemapper] $file is an output of $c")
+                    project.logger.debug("[Unimined/ModRemapper] $file is an output of $c")
                     return c
                 }
             }
@@ -218,7 +221,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 }
                 project.logger.info("[Unimined/ModRemapper] Remapping Mods $step: ")
                 if (targets.values.none { !it.second.second }) {
-                    project.logger.info("[Unimined/ModRemapper] Skipping remap step $step as all mods are already remapped")
+                    project.logger.info("[Unimined/ModRemapper]    Skipping remap step $step as all mods are already remapped")
                     mods.clear()
                     mods.putAll(targets.mapValues { it.value.second.first.toFile() })
                     prevNamespace = step.second
