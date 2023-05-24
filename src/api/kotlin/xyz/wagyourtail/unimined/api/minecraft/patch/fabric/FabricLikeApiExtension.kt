@@ -1,18 +1,29 @@
 package xyz.wagyourtail.unimined.api.minecraft.patch.fabric
 
+import org.w3c.dom.Document
+import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.stream
 import java.net.URI
 import javax.xml.parsers.DocumentBuilderFactory
 
-abstract class FabricLikeApiExtension(val name: String) {
+open class FabricLikeApiExtension {
 
-    fun module(moduleName: String, version: String): String {
-        val url = URI(getUrl(version))
-        url.stream().use {
-            val dbf = DocumentBuilderFactory.newInstance()
-            val db = dbf.newDocumentBuilder()
-            val doc = db.parse(it)
-            val elements = doc.getElementsByTagName("dependency")
+    abstract class APILocations {
+
+        private val xmlDoc = defaultedMapOf<String, Document> { version ->
+            val url = URI(getUrl(version))
+            url.stream().use {
+                val dbf = DocumentBuilderFactory.newInstance()
+                val db = dbf.newDocumentBuilder()
+                db.parse(it)
+            }
+        }
+
+        abstract fun getUrl(version: String): String
+        abstract fun getArtifactName(moduleName: String, version: String?): String
+
+        fun module(moduleName: String, version: String): String? {
+            val elements = xmlDoc[version].getElementsByTagName("dependency")
             for (i in 0 until elements.length) {
                 val element = elements.item(i)
                 var correct = false
@@ -30,11 +41,53 @@ abstract class FabricLikeApiExtension(val name: String) {
                     return getArtifactName(moduleName, vers)
                 }
             }
+            return null
         }
-        throw IllegalStateException("Could not find module $moduleName in $name $version")
+
     }
 
-    abstract fun getUrl(version: String): String
-    abstract fun getArtifactName(moduleName: String, version: String?): String
+    val locations = mapOf<String, APILocations>(
+        "fabric" to object : APILocations() {
+            override fun getUrl(version: String): String {
+                return "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$version/fabric-api-$version.pom"
+            }
+
+            override fun getArtifactName(moduleName: String, version: String?): String {
+                return "net.fabricmc.fabric-api:$moduleName:$version"
+            }
+        },
+        "legacyFabric" to object : APILocations() {
+            override fun getUrl(version: String): String {
+                return "https://repo.legacyfabric.net/repository/legacyfabric/net/legacyfabric/legacy-fabric-api/legacy-fabric-api/$version/legacy-fabric-api-$version.pom"
+            }
+
+            override fun getArtifactName(moduleName: String, version: String?): String {
+                return "net.legacyfabric.legacy-fabric-api:$moduleName:$version"
+            }
+        }
+    )
+
+    @Deprecated(message = "use fabricModule or legacyFabricModule instead", replaceWith = ReplaceWith("fabricModule"))
+    fun module(moduleName: String, version: String): String {
+        return locations.values.firstNotNullOfOrNull { it.module(moduleName, version) } ?: throw IllegalStateException("Could not find module $moduleName:$version")
+    }
+
+
+    /**
+     * @since 1.0.0
+     */
+    fun fabricModule(moduleName: String, version: String): String {
+        return locations["fabric"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
+    }
+
+
+    /**
+     * @since 1.0.0
+     */
+    fun legacyFabricModule(moduleName: String, version: String): String {
+        return locations["legacyFabric"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
+    }
+
+    //TODO: figure out quilted fabric / qsl, would then want to rename extension from fabricApi
 
 }

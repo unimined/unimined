@@ -5,7 +5,6 @@ import com.google.gson.JsonObject
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricApiExtension
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import java.net.URI
@@ -23,14 +22,6 @@ abstract class FabricMinecraftTransformer(
 
     override val ENVIRONMENT: String = "Lnet/fabricmc/api/Environment;"
     override val ENV_TYPE: String = "Lnet/fabricmc/api/EnvType;"
-
-    init {
-        setupApiExtension()
-    }
-
-    open fun setupApiExtension() {
-        FabricApiExtension.apply(project)
-    }
 
     override fun addMavens() {
         project.repositories.maven {

@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import org.gradle.api.tasks.SourceSetContainer
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikeApiExtension
 
 val Project.unimined
     get() = extensions.getByType(UniminedExtension::class.java)
@@ -40,6 +41,8 @@ abstract class UniminedExtension(val project: Project) {
 
     var useGlobalCache: Boolean by FinalizeOnRead(true)
     var forceReload: Boolean by FinalizeOnRead(java.lang.Boolean.getBoolean("unimined.forceReload"))
+
+    var fabricApi = project.extensions.create("fabricApi", FabricLikeApiExtension::class.java)
 
     private val sourceSets by lazy {
         project.extensions.getByType(SourceSetContainer::class.java)
