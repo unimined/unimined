@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.sources
+package xyz.wagyourtail.unimined.api.task
 
 import org.gradle.api.internal.ConventionTask
 import org.gradle.api.provider.Property

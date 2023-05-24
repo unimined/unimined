@@ -17,7 +17,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ResolvedArtifact
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.mod.ModRemapConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer

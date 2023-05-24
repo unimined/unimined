@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.minecraft.transform.patch
+package xyz.wagyourtail.unimined.api.minecraft.patch
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo

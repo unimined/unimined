@@ -3,10 +3,13 @@ package xyz.wagyourtail.unimined.api.minecraft
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.JarModAgentPatcher
 
 /**
+ * usage:
+ *
+ *
  * @since 0.4.10
  */
 interface PatchProviders {
@@ -14,6 +17,7 @@ interface PatchProviders {
     /**
      * enables the fabric patcher.
      * @param action the action to configure the patcher.
+     * @see FabricLikePatcher
      * @since 0.1.0
      */
     fun fabric(action: (FabricLikePatcher) -> Unit)
@@ -47,6 +51,7 @@ interface PatchProviders {
     /**
      * enables the fabric patcher with additional tweaks for LegacyFabric.
      * @param action the action to perform on the patcher.
+     * @see FabricLikePatcher
      * @since 0.4.2
      */
     fun legacyFabric(action: (FabricLikePatcher) -> Unit)
@@ -80,6 +85,7 @@ interface PatchProviders {
     /**
      * enables the quilt patcher.
      * @param action the action to configure the patcher.
+     * @see FabricLikePatcher
      * @since 0.3.4
      */
     fun quilt(action: (FabricLikePatcher) -> Unit)
@@ -114,6 +120,7 @@ interface PatchProviders {
     /**
      * enables the forge patcher.
      * @param action the action to configure the patcher.
+     * @see ForgePatcher
      * @since 0.1.0
      */
     fun forge(action: (ForgePatcher) -> Unit)
@@ -147,6 +154,7 @@ interface PatchProviders {
     /**
      * enables the jar mod patcher.
      * @param action the action to configure the patcher.
+     * @see JarModAgentPatcher
      * @since 0.1.0
      */
     fun jarMod(action: (JarModAgentPatcher) -> Unit)

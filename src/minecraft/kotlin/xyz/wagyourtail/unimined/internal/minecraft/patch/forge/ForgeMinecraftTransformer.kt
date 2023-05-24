@@ -12,7 +12,7 @@ import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
@@ -27,7 +27,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.getSha1
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File

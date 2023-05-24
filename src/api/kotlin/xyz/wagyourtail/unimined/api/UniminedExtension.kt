@@ -15,27 +15,34 @@ import org.gradle.api.tasks.SourceSetContainer
 val Project.unimined
     get() = extensions.getByType(UniminedExtension::class.java)
 
+/**
+ * the main entrypoint.
+ *
+ * usage:
+ * ```groovy
+ *
+ * unimined.useGlobalCache = false
+ *
+ * unimined.minecraft {
+ *     // See MinecraftConfig
+ * }
+ *
+ * // optional second config for another sourceSet
+ * unimined.minecraft(sourceSets.other) {
+ *     // See MinecraftConfig
+ * }
+ * ```
+ *
+ * @see MinecraftConfig
+ * @since 1.0.0
+ */
 abstract class UniminedExtension(val project: Project) {
 
     var useGlobalCache: Boolean by FinalizeOnRead(true)
     var forceReload: Boolean by FinalizeOnRead(java.lang.Boolean.getBoolean("unimined.forceReload"))
 
-    val sourceSets by lazy {
+    private val sourceSets by lazy {
         project.extensions.getByType(SourceSetContainer::class.java)
-    }
-    
-    /**
-     * @since 1.0.0
-     */
-    fun minecraft(): MinecraftConfig {
-        return minecraft(sourceSets.getByName("main")) {}
-    }
-
-    /**
-     * @since 1.0.0
-     */
-    fun minecraft(sourceSet: SourceSet): MinecraftConfig {
-        return minecraft(sourceSet) {}
     }
 
     fun minecraft(action: MinecraftConfig.() -> Unit): MinecraftConfig {

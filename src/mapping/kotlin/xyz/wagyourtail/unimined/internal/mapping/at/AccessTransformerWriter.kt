@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft.patch.forge
+package xyz.wagyourtail.unimined.internal.mapping.at
 
 import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor

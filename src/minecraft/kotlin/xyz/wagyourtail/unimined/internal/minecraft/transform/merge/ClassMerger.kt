@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.minecraft.transform.merge
+package xyz.wagyourtail.unimined.internal.minecraft.transform.merge
 
 import org.objectweb.asm.Attribute
 import org.objectweb.asm.Opcodes

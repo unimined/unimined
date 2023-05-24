@@ -4,7 +4,7 @@ import net.fabricmc.mappingio.format.ZipReader
 import net.lenni0451.classtransform.TransformerManager
 import net.lenni0451.classtransform.utils.tree.IClassProvider
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider

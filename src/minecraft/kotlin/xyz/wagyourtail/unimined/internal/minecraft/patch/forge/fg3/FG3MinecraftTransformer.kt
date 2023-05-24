@@ -20,7 +20,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.Mcp
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.getFile
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File

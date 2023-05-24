@@ -2,7 +2,6 @@ package xyz.wagyourtail.unimined.api.minecraft
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
@@ -14,7 +13,7 @@ import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.remap.MinecraftRemapConfig
 import xyz.wagyourtail.unimined.api.minecraft.resolver.MinecraftData
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.mod.ModsConfig
 import xyz.wagyourtail.unimined.api.runs.RunsConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
@@ -22,10 +21,48 @@ import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.MustSet
 import java.io.File
-import java.net.URI
 import java.nio.file.Path
 
 /**
+ * add minecraft to a sourceSet
+ *
+ * usage:
+ * ```groovy
+ * unimined.minecraft {
+ *
+ *     version "1.12.2"
+ *
+ *     // auto-set to combined on 1.3+
+ *     side "combined"
+ *
+ *     mappings {
+ *         // see MappingsConfig
+ *     }
+ *
+ *
+ *     // select mod loader, for full options, see PatchProviders
+ *     /*
+ *     forge {
+ *         // see ForgePatcher
+ *     }
+ *     */
+ *     /*
+ *     fabric {
+ *         // see FabricLikePatcher
+ *     }
+ *     */
+ *     /*
+ *     merged {
+ *         // see MergedPatcher
+ *     }
+ *     */
+ *
+ *
+ * }
+ * ```
+ *
+ * @see MappingsConfig
+ * @see PatchProviders
  * @since 1.0.0
  */
 abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) : PatchProviders {

@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.minecraft.transform.patch
+package xyz.wagyourtail.unimined.api.minecraft.patch
 
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import java.io.File

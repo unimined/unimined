@@ -9,7 +9,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer

@@ -12,7 +12,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File

@@ -13,7 +13,7 @@ import org.gradle.api.artifacts.ExternalModuleDependency
 import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
-import xyz.wagyourtail.unimined.api.mappings.MemoryMapping
+import xyz.wagyourtail.unimined.api.mapping.MemoryMapping
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.unimined

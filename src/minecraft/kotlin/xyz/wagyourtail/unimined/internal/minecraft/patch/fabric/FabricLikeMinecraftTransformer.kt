@@ -21,7 +21,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransf
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
-import xyz.wagyourtail.unimined.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.withSourceSet

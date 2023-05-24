@@ -2,12 +2,9 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod
 
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.configurationcache.extensions.capitalized
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.JarModPatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
