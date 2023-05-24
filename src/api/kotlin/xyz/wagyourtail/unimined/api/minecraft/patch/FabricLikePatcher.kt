@@ -1,10 +1,14 @@
-package xyz.wagyourtail.unimined.api.minecraft.transform.patch
+package xyz.wagyourtail.unimined.api.minecraft.patch
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.artifacts.Dependency
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.AccessTransformablePatcher
+import xyz.wagyourtail.unimined.api.minecraft.transform.patch.MinecraftPatcher
 import java.io.File
+import java.nio.file.Path
 
 /**
  * The class responsible for patching minecraft for fabric.
@@ -17,6 +21,10 @@ interface FabricLikePatcher: MinecraftPatcher, AccessTransformablePatcher {
      * @since 0.2.3
      */
     override var prodNamespace: MappingNamespace
+
+    @get:ApiStatus.Internal
+    @set:ApiStatus.Experimental
+    var devMappings: Path?
 
     fun loader(dep: Any) {
         loader(dep) {}

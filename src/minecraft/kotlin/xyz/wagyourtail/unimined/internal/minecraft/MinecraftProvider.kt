@@ -5,7 +5,6 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
-import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
@@ -13,6 +12,7 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.*
 import xyz.wagyourtail.unimined.api.runs.RunConfig
@@ -35,7 +35,6 @@ import xyz.wagyourtail.unimined.internal.mods.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.internal.runs.RunsProvider
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
-import java.lang.Exception
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder

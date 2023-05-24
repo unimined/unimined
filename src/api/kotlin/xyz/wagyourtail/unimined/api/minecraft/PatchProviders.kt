@@ -2,10 +2,9 @@ package xyz.wagyourtail.unimined.api.minecraft
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModAgentPatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
 
 /**
  * @since 0.4.10

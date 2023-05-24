@@ -10,7 +10,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
@@ -31,7 +31,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.writeText
@@ -91,8 +90,8 @@ abstract class FabricLikeMinecraftTransformer(
     override var prodNamespace by FinalizeOnRead(MappingNamespace.INTERMEDIARY)
 
     @get:ApiStatus.Internal
-    @set:ApiStatus.Internal
-    var devMappings: Path? by FinalizeOnRead(LazyMutable {
+    @set:ApiStatus.Experimental
+    override var devMappings: Path? by FinalizeOnRead(LazyMutable {
         project.unimined.getLocalCache()
             .resolve("mappings")
             .createDirectories()
