@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.util
 
+@Suppress("UNCHECKED_CAST")
 class ParentOrSet<T> private constructor() {
     private object EMPTY
 

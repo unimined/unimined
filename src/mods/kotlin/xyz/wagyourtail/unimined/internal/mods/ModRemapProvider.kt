@@ -26,6 +26,7 @@ import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtensi
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.defaultedMapOf
+import xyz.wagyourtail.unimined.util.nonNullValues
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -65,6 +66,37 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         )
     }
 
+    private val originalDeps = defaultedMapOf<Configuration, Set<Dependency>> {
+        project.logger.info("[Unimined/ModRemapper] Original Deps: $it -> ${it.dependencies.toSet()}")
+        it.dependencies.toSet()
+    }
+
+    private val originalDepsFiles = defaultedMapOf<Configuration, Map<ResolvedArtifact, File>> {
+        val detached = project.configurations.detachedConfiguration().apply(this.config)
+        detached.dependencies.addAll(originalDeps[it])
+        val resolved = mutableMapOf<ResolvedArtifact, File>()
+        project.logger.info("[Unimined/ModRemapper] Original Dep Files: $it ->")
+        for (r in detached.resolvedConfiguration.resolvedArtifacts) {
+            if (r.extension == "pom") continue
+            project.logger.info("[Unimined/ModRemapper]    $r -> ${r.file}")
+            resolved[r] = r.file
+        }
+        resolved
+    }
+
+    fun getConfigForFile(file: File): Configuration? {
+        val name = file.nameWithoutExtension.substringBefore("-mapped-${provider.mappings.combinedNames}")
+        for ((c, artifacts) in originalDepsFiles) {
+            for (r in artifacts.values) {
+                if (r.nameWithoutExtension == name) {
+                    project.logger.info("[Unimined/ModRemapper] $file is an output of $c")
+                    return c
+                }
+            }
+        }
+        return null
+    }
+
     private fun constructRemapper(
         fromNs: MappingNamespace,
         toNs: MappingNamespace,
@@ -94,6 +126,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 remapperB.extension(mixin)
                 mixin
             }
+
             MixinRemap.NONE -> null
             MixinRemap.TINY_HARD, MixinRemap.TINY_HARDSOFT -> {
                 remapperB.extension(
@@ -111,6 +144,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 )
                 null
             }
+
             else -> throw InvalidUserDataException("Invalid MixinRemap value: $mixinRemap")
         }
         tinyRemapSettings(remapperB)
@@ -126,113 +160,110 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         tinyRemapSettings = remapperBuilder
     }
 
-    fun untransformDep(r: ResolvedArtifact): Artifact {
-        val classifier = if (r.moduleVersion.id.group.startsWith("remapped_")) {
-            r.classifier!!.substringBefore("mapped-${provider.mappings.combinedNames}")
-                .let { if (it.isEmpty()) null else ":${it.substringBeforeLast("-")}" }
-        } else r.classifier
-        return Artifact(r.moduleVersion.id.group.substringAfter("remapped_"), r.name, r.moduleVersion.id.version, classifier, r.extension)
-    }
-
-    fun doRemap(devNamespace: MappingNamespace = provider.mappings.devNamespace, devFallbackNamespace: MappingNamespace = provider.mappings.devFallbackNamespace, targetConfigurations: Map<Configuration, Configuration> = defaultedMapOf { it }) {
-        project.logger.lifecycle("[Unimined/ModRemapper] Remapping mods")
-        val count = configurations.sumOf { it.dependencies.size }
-        if (count == 0) {
-            project.logger.lifecycle("[Unimined/ModRemapper] No mods found for remapping")
-            return
-        }
-
-        project.logger.lifecycle("[Unimined/ModRemapper] Found $count mods for remapping")
+    fun doRemap(
+        devNamespace: MappingNamespace = provider.mappings.devNamespace,
+        devFallbackNamespace: MappingNamespace = provider.mappings.devFallbackNamespace,
+        targetConfigurations: Map<Configuration, Configuration> = defaultedMapOf { it }
+    ) {
         val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
             namespace,
-            namespace,
+            fallbackNamespace,
             devFallbackNamespace,
             devNamespace,
             provider.mappings.available
         )
-        project.logger.info("[Unimined/ModRemapper] Remapping from $namespace to ${devNamespace}/${devFallbackNamespace} using $namespace -> ${path.map { it.second }.joinToString(" -> ")}")
-        val configs = mutableMapOf<Configuration, Configuration>()
-        for (c in configurations) {
-            val newC = project.configurations.detachedConfiguration().apply(this.config)
-            configs[newC] = c
-            // copy out dependencies
-            newC.dependencies.addAll(c.dependencies)
-            // remove from original
-            c.dependencies.clear()
-        }
-        val mods = mutableMapOf<ResolvedArtifact, File>()
-        val untransformConfig = project.configurations.detachedConfiguration()
-        for (c in configs.keys) {
-            for (r in c.resolvedConfiguration.resolvedArtifacts) {
-                if (r.extension == "pom") continue
-                if (r.moduleVersion.id.group.startsWith("remapped_")) {
-                    untransformConfig.dependencies.add(untransformDep(r).create(project))
+        if (path.isNotEmpty()) {
+            project.logger.lifecycle("[Unimined/ModRemapper] Remapping mods from $namespace/$fallbackNamespace to $devNamespace/$devFallbackNamespace")
+
+            // resolve original dep files
+            val count = configurations.sumOf { originalDepsFiles[it].size }
+            if (count == 0) {
+                project.logger.lifecycle("[Unimined/ModRemapper] No mods found for remapping")
+                return
+            }
+            project.logger.lifecycle("[Unimined/ModRemapper] Found $count mods for remapping")
+            project.logger.info(
+                "[Unimined/ModRemapper] Remap path $namespace -> ${
+                    path.map { it.second }.joinToString(" -> ")
+                }"
+            )
+            val mods = mutableMapOf<ResolvedArtifact, File>()
+            for (map in originalDepsFiles.values) {
+                mods.putAll(map)
+            }
+            var prevNamespace = namespace
+            var prevPrevNamespace = fallbackNamespace
+            for (i in path.indices) {
+                val step = path[i]
+                val mcNamespace = prevNamespace
+                val mcFallbackNamespace = if (step.first) {
+                    step.second
+                } else {
+                    prevPrevNamespace
                 }
-                mods[r] = r.file
-            }
-        }
-        for (r in untransformConfig.resolvedConfiguration.resolvedArtifacts) {
-            mods[r] = r.file
-        }
-        var prevNamespace = namespace
-        var prevPrevNamespace = fallbackNamespace
-        for (i in path.indices) {
-            val step = path[i]
-            val mcNamespace = prevNamespace
-            val mcFallbackNamespace = if (step.first) {
-                step.second
-            } else {
-                prevPrevNamespace
-            }
-            val mc = provider.getMinecraft(
-                mcNamespace,
-                mcFallbackNamespace
-            )
-            val namespaceKey = if (step.first) {
-                "${step.second}-${prevPrevNamespace}"
-            } else {
-                "${step.second}-${prevNamespace}"
-            }
-            val forceReload = project.unimined.forceReload
-            val targets = mods.mapValues {
-                it.value to (provider.mods as ModsProvider).modTransformFolder().resolve("${it.key.file.nameWithoutExtension}-mapped-${provider.mappings.combinedNames}-${namespaceKey}.${it.key.file.extension}").let { it to (it.exists() && !forceReload) }
-            }
-            if (targets.values.none { !it.second.second }) {
-                project.logger.info("[Unimined/ModRemapper] Skipping remap step $i as all mods are already remapped")
-                mods.clear()
-                mods.putAll(targets.mapValues { it.value.second.first.toFile() })
-                prevNamespace = step.second
-                prevPrevNamespace = mcNamespace
-                continue
-            }
-            val remapper = constructRemapper(prevNamespace, step.second, mc)
-            val tags = preRemapInternal(remapper.first, targets)
-            mods.clear()
-            mods.putAll(
-                remapInternal(
-                    remapper,
-                    tags.filterValues { it != null } as Map<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>>,
-                    prevNamespace to step.second
+                val mc = provider.getMinecraft(
+                    mcNamespace,
+                    mcFallbackNamespace
                 )
-            )
-            mods.putAll(
-                tags.filterValues { it == null }.mapValues { targets[it.key]!!.second.first.toFile() }
-            )
-            prevNamespace = step.second
-            prevPrevNamespace = mcNamespace
-        }
-        // supply back to proper configs
-        for ((newC, c) in configs) {
-            val outConf = targetConfigurations[c]
-            for (artifact in newC.resolvedConfiguration.resolvedArtifacts) {
-                val untransformed = untransformDep(artifact)
-                val classifier = untransformed.classifier?.let { "$it-" } ?: ""
-                val output = "remapped_${untransformed.group}:${untransformed.name}:${untransformed.version}:${classifier}mapped-${provider.mappings.combinedNames}-${provider.mappings.devNamespace}-${provider.mappings.devFallbackNamespace}".let { if (artifact.extension != null) "$it@${artifact.extension}" else it }
-                outConf!!.dependencies.add(
-                    project.dependencies.create(
-                        output
+                val namespaceKey = if (step.first) {
+                    "${step.second}-${prevPrevNamespace}"
+                } else {
+                    "${step.second}-${prevNamespace}"
+                }
+                val forceReload = project.unimined.forceReload
+                val targets = mods.mapValues {
+                    it.value to (provider.mods as ModsProvider).modTransformFolder()
+                        .resolve("${it.key.file.nameWithoutExtension}-mapped-${provider.mappings.combinedNames}-${namespaceKey}.${it.key.file.extension}")
+                        .let { it to (it.exists() && !forceReload) }
+                }
+                project.logger.info("[Unimined/ModRemapper] Remapping Mods $step: ")
+                if (targets.values.none { !it.second.second }) {
+                    project.logger.info("[Unimined/ModRemapper] Skipping remap step $step as all mods are already remapped")
+                    mods.clear()
+                    mods.putAll(targets.mapValues { it.value.second.first.toFile() })
+                    prevNamespace = step.second
+                    prevPrevNamespace = mcNamespace
+                    continue
+                }
+                for (mod in targets) {
+                    project.logger.info("[Unimined/ModRemapper]  ${if (mod.value.second.second) "skipping" else "        " } ${mod.value.first} -> ${mod.value.second.first}")
+                }
+                val remapper = constructRemapper(prevNamespace, step.second, mc)
+                val tags = preRemapInternal(remapper.first, targets)
+                mods.clear()
+                mods.putAll(
+                    remapInternal(
+                        remapper,
+                        tags.nonNullValues(),
+                        prevNamespace to step.second
                     )
                 )
+                mods.putAll(
+                    tags.filterValues { it == null }.mapValues { targets[it.key]!!.second.first.toFile() }
+                )
+                prevNamespace = step.second
+                prevPrevNamespace = mcNamespace
+            }
+            // supply back to proper configs
+            for (c in configurations) {
+                val outConf = targetConfigurations[c]
+                outConf!!.dependencies.clear()
+                for (artifact in originalDepsFiles[c].keys) {
+                    if (artifact.extension == "pom") continue
+                    val classifier = artifact.classifier?.let { "$it-" } ?: ""
+                    val output = "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${provider.mappings.combinedNames}-${provider.mappings.devNamespace}-${provider.mappings.devFallbackNamespace}@${artifact.extension ?: "jar"}"
+                    outConf.dependencies.add(
+                        project.dependencies.create(
+                            output
+                        )
+                    )
+                }
+            }
+        } else {
+            for (c in configurations) {
+                val outConf = targetConfigurations[c]
+                outConf!!.dependencies.clear()
+                outConf.dependencies.addAll(originalDeps[c])
             }
         }
     }
@@ -245,12 +276,13 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         for ((artifact, data) in deps) {
             val file = data.first
             val target = data.second.first
-            val needsRemap = data.second.second
-            val tag = remapper.createInputTag()
+            val needsRemap = !data.second.second
+            project.logger.info("[Unimined/ModRemapper] remap ${needsRemap}; ${file} -> ${target}")
             if (file.isDirectory) {
                 throw InvalidUserDataException("Cannot remap directory ${file.absolutePath}")
             } else {
                 if (needsRemap) {
+                    val tag = remapper.createInputTag()
                     remapper.readInputsAsync(tag, file.toPath())
                     output[artifact] = tag to (file to target)
                 } else {
@@ -268,6 +300,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         remap: Pair<MappingNamespace, MappingNamespace>
     ): Map<ResolvedArtifact, File> {
         val output = mutableMapOf<ResolvedArtifact, File>()
+        project.logger.info("[Unimined/ModRemapper] Remapping mods to ${remap.first}/${remap.second}")
         for ((artifact, tag) in deps) {
             remapModInternal(remapper, artifact, tag, remap)
             output[artifact] = tag.second.first
@@ -285,9 +318,9 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         if (remapper.second != null) {
             remapper.second!!.reset(dep.name + ".mixin-refmap.json")
         }
-        val inpTag = input.first
         val inpFile = input.second.first
         val targetFile = input.second.second
+        project.logger.info("[Unimined/ModRemapper] Remapping mod from $inpFile -> $targetFile with mapping target ${remap.first}/${remap.second}")
         OutputConsumerPath.Builder(targetFile).build().use {
             it.addNonClassFiles(
                 inpFile.toPath(),
@@ -316,7 +349,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         }
     }
 
-    private val innerJarStripper: OutputConsumerPath.ResourceRemapper = object: OutputConsumerPath.ResourceRemapper {
+    private val innerJarStripper: OutputConsumerPath.ResourceRemapper = object : OutputConsumerPath.ResourceRemapper {
         override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
             return relativePath.name.contains(".mod.json")
         }
@@ -347,20 +380,6 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                     GsonBuilder().setPrettyPrinting().create().toJson(json, writer)
                 }
             }
-        }
-    }
-
-    data class Artifact(val group: String, val name: String, val version: String, val classifier: String?, val extension: String?) {
-
-        fun create(project: Project): Dependency {
-            var str = "${group}:${name}:${version}"
-            if (classifier != null) {
-                str += ":${classifier}"
-            }
-            if (extension != null) {
-                str += "@${extension}"
-            }
-            return project.dependencies.create(str)
         }
     }
 }

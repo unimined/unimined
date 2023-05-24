@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.util
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
+@Suppress("UNCHECKED_CAST")
 class FinalizeOnRead<T>(value: T) : ReadWriteProperty<Any?, T> {
 
     var finalized = false

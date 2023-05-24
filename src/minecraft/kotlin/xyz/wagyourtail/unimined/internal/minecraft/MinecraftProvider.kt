@@ -203,7 +203,10 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         // create remapjar task
         val task = project.tasks.findByName("jar".withSourceSet(sourceSet))
-        if (task != null) {
+        if (task != null && task is Jar) {
+            task.apply {
+                archiveClassifier.set("dev")
+            }
             remap(task)
         }
 

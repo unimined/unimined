@@ -349,7 +349,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             var toClassName = classDef.getName(toId)
 
             if (fromClassName == null) {
-                project.logger.info("[Unimined/MappingsProvider] Target class {} has no name in namespace {}", classDef, srcName)
+                project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in namespace {}", classDef, srcName)
                 fromClassName = toClassName
             }
 
@@ -365,12 +365,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             }
 
             if (toClassName == null) {
-                project.logger.info("[Unimined/MappingsProvider] Target class {} has no name in namespace {}", classDef, dstName)
+                project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in namespace {}", classDef, dstName)
                 toClassName = fromClassName
             }
 
             if (fromClassName == null) {
-                project.logger.info("[Unimined/MappingsProvider] Class $classDef has no name in either namespace $srcName or $dstName")
+                project.logger.debug("[Unimined/MappingsProvider] Class $classDef has no name in either namespace $srcName or $dstName")
                 continue
             }
 
@@ -385,12 +385,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 val toFieldName = fieldDef.getName(toId)
 
                 if (fromFieldName == null) {
-                    project.logger.info("[Unimined/MappingsProvider] Target field {} has no name in namespace {}", fieldDef, srcName)
+                    project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in namespace {}", fieldDef, srcName)
                     continue
                 }
 
                 if (toFieldName == null) {
-                    project.logger.info("[Unimined/MappingsProvider] Target field {} has no name in namespace {}", fieldDef, dstName)
+                    project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in namespace {}", fieldDef, dstName)
                     continue
                 }
 
@@ -406,12 +406,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 val toMethodName = methodDef.getName(toId)
 
                 if (fromMethodName == null) {
-                    project.logger.info("[Unimined/MappingsProvider] Target method {} has no name in namespace {}", methodDef, srcName)
+                    project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in namespace {}", methodDef, srcName)
                     continue
                 }
 
                 if (toMethodName == null) {
-                    project.logger.info("[Unimined/MappingsProvider] Target method {} has no name in namespace {}", methodDef, dstName)
+                    project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in namespace {}", methodDef, dstName)
                     continue
                 }
 

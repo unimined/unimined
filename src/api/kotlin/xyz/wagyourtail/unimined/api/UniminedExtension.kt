@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.api
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.Project
+import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.tasks.SourceSet
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
@@ -90,4 +91,5 @@ abstract class UniminedExtension(val project: Project) {
         }
     }
 
+    abstract val modsRemapRepo: FlatDirectoryArtifactRepository
 }

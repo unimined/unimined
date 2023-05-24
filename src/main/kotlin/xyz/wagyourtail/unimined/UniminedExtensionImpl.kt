@@ -14,6 +14,7 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.util.decapitalized
 import java.net.URI
@@ -102,12 +103,16 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
             })
     )
 
+    override val modsRemapRepo = project.repositories.flatDir {
+        it.dir(getLocalCache().resolve("modTransform").toFile())
+        it.content {
+            it.includeGroupByRegex("remapped_.+")
+        }
+    }
+
     init {
         project.repositories.maven {
             it.url = URI.create("https://libraries.minecraft.net/")
-        }
-        project.repositories.flatDir {
-            it.dir(getLocalCache().resolve("modTransform").toFile())
         }
         GradleRepositoryAdapter.add(
             project.repositories,
@@ -115,6 +120,13 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
             getLocalCache().resolve("synthetic-resource-provider").toFile(),
             repo
         )
+        project.repositories.all { repo ->
+            if (repo != modsRemapRepo) {
+                repo.content {
+                    it.excludeGroupByRegex("remapped_.+")
+                }
+            }
+        }
         project.afterEvaluate {
             afterEvaluate()
         }

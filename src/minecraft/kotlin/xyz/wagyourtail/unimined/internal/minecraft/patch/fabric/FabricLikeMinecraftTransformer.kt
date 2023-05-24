@@ -31,8 +31,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
+import kotlin.io.path.writeText
 
 abstract class FabricLikeMinecraftTransformer(
     project: Project,
@@ -111,6 +113,9 @@ abstract class FabricLikeMinecraftTransformer(
 
     init {
         addMavens()
+        project.afterEvaluate {
+            afterEvaluate()
+        }
     }
 
     protected abstract fun addMavens()
@@ -219,17 +224,18 @@ abstract class FabricLikeMinecraftTransformer(
             }
         } else baseMinecraft
 
-    protected fun getIntermediaryClassPath(envType: EnvType): String {
-        TODO("FIX THIS")
-//        val remapClasspath = project.unimined.getLocalCache().resolve("remapClasspath.txt")
-//        val s = arrayOf(
-//            provider.minecraftLibraries.files.joinToString(File.pathSeparator),
-//            provider.mods.modRemapper.preTransform(envType).joinToString(File.pathSeparator),
-//            provider.getMinecraftWithMapping(envType, prodNamespace, prodNamespace).toString()
-//        ).filter { it.isNotEmpty() }.joinToString(File.pathSeparator)
+    val intermediaryClasspath = project.unimined.getLocalCache().resolve("remapClasspath.txt".withSourceSet(provider.sourceSet))
 
-//        remapClasspath.writeText(s, options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
-//        return remapClasspath.absolutePathString()
+    private fun afterEvaluate() {
+        project.logger.lifecycle("[Unimined/Fabric] Generating intermediary classpath.")
+        // resolve intermediary classpath
+        val classpath = provider.mods.getClasspathAs(
+            prodNamespace,
+            prodNamespace,
+            provider.sourceSet.runtimeClasspath.filter { !provider.isMinecraftJar(it.toPath()) }.toSet()
+        ) + provider.getMinecraft(prodNamespace, prodNamespace)
+        // write to file
+        intermediaryClasspath.writeText(classpath.joinToString(File.pathSeparator), options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
     }
 
     override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {

@@ -222,3 +222,15 @@ fun String.withSourceSet(sourceSet: SourceSet) =
     if (sourceSet.name == "main") this else "${sourceSet.name}${this.capitalized()}"
 
 fun String.decapitalized(): String = if (this.isEmpty()) this else this[0].lowercase() + this.substring(1)
+
+fun <K, V> Map<K, V?>.nonNullValues(): Map<K, V> = filterValues { it != null } as Map<K, V>
+
+fun <E, K, V> Iterable<E>.associateNonNull(apply: (E) -> Pair<K, V>?): Map<K, V> {
+    val mut = mutableMapOf<K, V>()
+    for (e in this) {
+        apply(e)?.let {
+            mut.put(it.first, it.second)
+        }
+    }
+    return mut
+}
