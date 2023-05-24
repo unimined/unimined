@@ -10,7 +10,6 @@ import net.minecraftforge.accesstransformer.AccessTransformer.Modifier
 import net.minecraftforge.accesstransformer.Target
 import net.minecraftforge.accesstransformer.parser.AccessTransformerList
 import org.gradle.api.logging.Logger
-import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerWriter
 import java.io.*
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files

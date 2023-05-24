@@ -3,7 +3,10 @@ package xyz.wagyourtail.unimined.api.minecraft.patch
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.artifacts.Dependency
+import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.minecraft.patch.JarModPatcher
 import java.io.File
+import java.nio.file.Path
 
 /**
  * The class responsible for patching minecraft for forge.
@@ -17,30 +20,34 @@ interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
     var accessTransformer: File?
 
     /**
-     * set mcp version to use for remapping.
-     */
-    var mcpVersion: String?
-
-    /**
-     * set mcp channel to use for remapping.
-     */
-    var mcpChannel: String?
-
-    /**
      * add mixin configs for launch
      */
     var mixinConfig: List<String>
 
+    @get:ApiStatus.Internal
     val remapAtToLegacy: Boolean
 
     /**
      * add mixin configs for launch
      */
+    @Deprecated(message = "", replaceWith = ReplaceWith("mixinConfig"))
     var mixinConfigs: List<String>
         get() = mixinConfig
         set(value) {
             mixinConfig = value
         }
+
+    fun mixinConfig(config: String) {
+        mixinConfig = listOf(config)
+    }
+
+    fun mixinConfig(configs: List<String>) {
+        mixinConfig = configs
+    }
+
+    fun mixinConfig(vararg configs: String) {
+        mixinConfig = configs.toList()
+    }
 
     fun forge(dep: Any) {
         forge(dep) {}
@@ -71,8 +78,33 @@ interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
     /**
      * set the access transformer file to apply to the minecraft jar.
      */
+    @Deprecated(message = "", replaceWith = ReplaceWith("accessTransformer(file)"))
     fun setAccessTransformer(file: String) {
         accessTransformer = File(file)
+    }
+
+    /**
+     * set the access transformer file to apply to the minecraft jar.
+     * @since 1.0.0
+     */
+    fun accessTransformer(file: String) {
+        accessTransformer = File(file)
+    }
+
+    /**
+     * set the access transformer file to apply to the minecraft jar.
+     * @since 1.0.0
+     */
+    fun accessTransformer(file: Path) {
+        accessTransformer = file.toFile()
+    }
+
+    /**
+     * set the access transformer file to apply to the minecraft jar.
+     * @since 1.0.0
+     */
+    fun accessTransformer(file: File) {
+        accessTransformer = file
     }
 
     /**

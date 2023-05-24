@@ -32,8 +32,6 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         val devNs = devNamespace.getOrElse(provider.mappings.devNamespace)!!
         val devFNs = devFallbackNamespace.getOrElse(provider.mappings.devFallbackNamespace)!!
 
-        val env = envType.getOrElse(provider.side)!!
-
         val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
             devNs,
             devFNs,

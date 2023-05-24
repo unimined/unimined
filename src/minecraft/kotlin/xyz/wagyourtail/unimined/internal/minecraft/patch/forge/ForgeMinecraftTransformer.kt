@@ -89,10 +89,10 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
         forge.dependencies.add(if (dep is String && !dep.contains(":")) {
             if (provider.minecraftData.isPreCombined) {
                 if (provider.side == EnvType.COMBINED) throw IllegalStateException("Cannot use forge dependency pre 1.3 without specifying non-combined side")
-                project.dependencies.create("net.minecraftforge:forge:${dep}:${provider.side.classifier}@zip")
+                project.dependencies.create("net.minecraftforge:forge:${provider.version}-${dep}:${provider.side.classifier}@zip")
             } else {
                 val zip = provider.minecraftData.mcVersionCompare(provider.version, "1.6") < 0
-                project.dependencies.create("net.minecraftforge:forge:${dep}:universal@${if (zip) "zip" else "jar"}")
+                project.dependencies.create("net.minecraftforge:forge:${provider.version}-${dep}:universal@${if (zip) "zip" else "jar"}")
             }
         } else {
             project.dependencies.create(dep)

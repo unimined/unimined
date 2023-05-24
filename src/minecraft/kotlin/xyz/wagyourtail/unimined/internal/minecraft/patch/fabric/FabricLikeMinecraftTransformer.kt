@@ -60,6 +60,8 @@ abstract class FabricLikeMinecraftTransformer(
 
     override var accessWidener: File? by FinalizeOnRead(null)
 
+    override var customIntermediaries: Boolean by FinalizeOnRead(false)
+
     protected abstract val ENVIRONMENT: String
     protected abstract val ENV_TYPE: String
 
@@ -121,6 +123,12 @@ abstract class FabricLikeMinecraftTransformer(
     var mainClass: JsonObject? = null
 
     override fun apply() {
+        if (!customIntermediaries) {
+            provider.mappings {
+                intermediary()
+            }
+        }
+
         val client = provider.side == EnvType.CLIENT || provider.side == EnvType.COMBINED
         val server = provider.side == EnvType.SERVER || provider.side == EnvType.COMBINED
 

@@ -44,6 +44,9 @@ interface FabricLikePatcher: MinecraftPatcher, AccessTransformablePatcher {
     @set:ApiStatus.Experimental
     var devMappings: Path?
 
+    @set:ApiStatus.Experimental
+    var customIntermediaries: Boolean
+
     /**
      * @since 1.0.0
      */
