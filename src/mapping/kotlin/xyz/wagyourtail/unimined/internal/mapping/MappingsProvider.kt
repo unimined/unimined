@@ -55,12 +55,20 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun intermediary(action: MappingDepConfig<*>.() -> Unit) {
-        val group = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.14") >= 0) {
-            "net.fabricmc"
-        } else {
+        mapping("net.fabricmc:intermediary:${minecraft.version}:v2", action)
+    }
+
+    override fun legacyIntermediary(revision: Int, action: MappingDepConfig<*>.() -> Unit) {
+        val group = if (revision < 2) {
             "net.legacyfabric"
+        } else {
+            "net.legacyfabric.v${revision}"
         }
         mapping("${group}:intermediary:${minecraft.version}:v2", action)
+    }
+
+    override fun babricIntermediary(action: MappingDepConfig<*>.() -> Unit) {
+        mapping("babric:intermediary:${minecraft.version}:v2", action)
     }
 
     override fun searge(version: String, action: MappingDepConfig<*>.() -> Unit) {
@@ -89,12 +97,20 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun yarn(build: Int, action: MappingDepConfig<*>.() -> Unit) {
-        val group = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.14") >= 0) {
-            "net.fabricmc"
-        } else {
+        mapping("net.fabricmc:yarn:${minecraft.version}+build.${build}:v2", action)
+    }
+
+    override fun legacyYarn(build: Int, revision: Int, action: MappingDepConfig<*>.() -> Unit) {
+        val group = if (revision < 2) {
             "net.legacyfabric"
+        } else {
+            "net.legacyfabric.v${revision}"
         }
         mapping("${group}:yarn:${minecraft.version}+build.${build}:v2", action)
+    }
+
+    override fun barn(build: Int, action: MappingDepConfig<*>.() -> Unit) {
+        mapping("babric:barn:${minecraft.version}+build.${build}:v2", action)
     }
 
     override fun quilt(build: Int, classifier: String, action: MappingDepConfig<*>.() -> Unit) {

@@ -53,6 +53,52 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    fun legacyIntermediary() {
+        legacyIntermediary(1)
+    }
+
+    fun legacyIntermediary(revision: Int) {
+        legacyIntermediary(revision) {}
+    }
+
+    abstract fun legacyIntermediary(revision: Int, action: MappingDepConfig<*>.() -> Unit)
+
+    fun legacyIntermediary(
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        legacyIntermediary(1, action)
+    }
+
+    fun legacyIntermediary(
+        revision: Int,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        legacyIntermediary(revision) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun babricIntermediary() {
+        babricIntermediary {}
+    }
+
+    abstract fun babricIntermediary(action: MappingDepConfig<*>.() -> Unit)
+
+    fun babricIntermediary(
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        babricIntermediary {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     fun searge() {
         searge {}
     }
@@ -139,6 +185,55 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         action: Closure<*>
     ) {
         yarn(build) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun legacyYarn(build: Int) {
+        legacyYarn(build, 1)
+    }
+
+    fun legacyYarn(build: Int, revision: Int) {
+        legacyYarn(build, revision) {}
+    }
+
+    abstract fun legacyYarn(build: Int, revision: Int, action: MappingDepConfig<*>.() -> Unit)
+
+    fun legacyYarn(
+        build: Int,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        legacyYarn(build, 1, action)
+    }
+
+    fun legacyYarn(
+        build: Int,
+        revision: Int,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        legacyYarn(build, revision) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun barn(build: Int) {
+        barn(build) {}
+    }
+
+    abstract fun barn(build: Int, action: MappingDepConfig<*>.() -> Unit)
+
+    fun barn(
+        build: Int,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        barn(build) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
