@@ -195,7 +195,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             }
             val forceReload = project.unimined.forceReload
             val targets = mods.mapValues {
-                it.value to modTransformFolder().resolve("${it.key.file.nameWithoutExtension}-mapped-${provider.mappings.combinedNames}-${namespaceKey}.${it.key.file.extension}").let { it to (it.exists() && !forceReload) }
+                it.value to (provider.mods as ModsProvider).modTransformFolder().resolve("${it.key.file.nameWithoutExtension}-mapped-${provider.mappings.combinedNames}-${namespaceKey}.${it.key.file.extension}").let { it to (it.exists() && !forceReload) }
             }
             if (targets.values.none { !it.second.second }) {
                 project.logger.info("[Unimined/ModRemapper] Skipping remap step $i as all mods are already remapped")
@@ -314,10 +314,6 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 remapper.second!!.write(it)
             }
         }
-    }
-
-    private fun modTransformFolder(): Path {
-        return project.unimined.getLocalCache().resolve("modTransform").createDirectories()
     }
 
     private val innerJarStripper: OutputConsumerPath.ResourceRemapper = object: OutputConsumerPath.ResourceRemapper {

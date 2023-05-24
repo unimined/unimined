@@ -81,7 +81,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     private val minecraftFiles: Map<Pair<MappingNamespace, MappingNamespace>, Path> = defaultedMapOf {
-        project.logger.info("[Unimined/Minecraft] Provinging minecraft files for $it")
+        project.logger.info("[Unimined/Minecraft] Providing minecraft files for $it")
         val mc = if (side == EnvType.COMBINED) {
             val client = minecraftData.minecraftClient
             val server = minecraftData.minecraftServer
