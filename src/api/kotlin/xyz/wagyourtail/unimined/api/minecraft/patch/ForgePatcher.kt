@@ -28,6 +28,12 @@ interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
     val remapAtToLegacy: Boolean
 
     /**
+     * custom searge, also disables auto mcp in pre 1.7 as they are in the same file
+     */
+    @set:ApiStatus.Experimental
+    var customSearge: Boolean
+
+    /**
      * add mixin configs for launch
      */
     @Deprecated(message = "", replaceWith = ReplaceWith("mixinConfig"))
@@ -146,5 +152,4 @@ interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
      * convert access widener to legacy access transformer (mc version <= 1.7.10).
      */
     fun aw2atLegacy(input: File, output: File): File
-
 }

@@ -205,7 +205,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                                 dep.mapNamespace["named"] = MappingNamespace.YARN
                             }
                         }
-                        ZipReader.readMappings(dep.side, file.toPath(), contents, mappings, dep.mapNamespace)
+                        val childMappings = MemoryMappingTree()
+                        ZipReader.readMappings(dep.side, file.toPath(), contents, childMappings, dep.mapNamespace)
+                        childMappings.accept(if (dep.filterNamespaces.isNotEmpty()) MappingDstNsFilter(mappings, dep.filterNamespaces.map { it.namespace }) else mappings)
                     } else {
                         // load from file
                         val format = MappingReader.detectFormat(file.toPath())
@@ -228,10 +230,14 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                                     )
                                 }
                             } else {
-                                MappingReader.read(file.toPath(), format, MappingNsRenamer(mappings, dep.mapNamespace.mapValues { it.value.namespace }))
+                                val childMappings = MemoryMappingTree()
+                                MappingReader.read(file.toPath(), format, MappingNsRenamer(childMappings, dep.mapNamespace.mapValues { it.value.namespace }))
+                                childMappings.accept(if (dep.filterNamespaces.isNotEmpty()) MappingDstNsFilter(mappings, dep.filterNamespaces.map { it.namespace }) else mappings)
                             }
                         } else {
+                            val childMappings = MemoryMappingTree()
                             MappingReader.read(file.toPath(), format, MappingNsRenamer(mappings, dep.mapNamespace.mapValues { it.value.namespace }))
+                            childMappings.accept(if (dep.filterNamespaces.isNotEmpty()) MappingDstNsFilter(mappings, dep.filterNamespaces.map { it.namespace }) else mappings)
                         }
                     }
                 }

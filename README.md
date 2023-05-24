@@ -98,10 +98,6 @@ unimined.minecraft(sourceSets.main) {
         customIntermediaries = true
         prodNamespace "official"
         devMappings = null
-
-        // auto-genned, default to `configuration.${sourceSet.name}Include` (or just include if main),
-        // these are additive, so always has at least this configuration
-        include(configurations.include)
     }
     */
     /*
@@ -161,7 +157,7 @@ unimined.minecraft(sourceSets.main) {
 }
 
 dependencies {
-    // will just be mc for main and `mods${sourceSet.capitalized()}` for the others
+    // these get prepended with the sourceSet name for the mc config
     modImplementation "mod:identifier:stuff"
     include "mod:identifier:stuff"
 

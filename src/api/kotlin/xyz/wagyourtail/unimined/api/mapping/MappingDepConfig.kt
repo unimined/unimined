@@ -29,4 +29,14 @@ abstract class MappingDepConfig<T : Dependency>(val dep: T, val mappingsConfig: 
         mappingsConfig.side
     }
 
+    /**
+     * if this isn't empty, only the namespaces in this set are allowed...
+     * this is only effective on types with more than 1 target mapping
+     */
+    val filterNamespaces = mutableSetOf<MappingNamespace>()
+
+    fun addFilterNamespace(namespace: String) {
+        filterNamespaces.add(MappingNamespace.getNamespace(namespace))
+    }
+
 }

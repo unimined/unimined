@@ -45,7 +45,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
 
         provider.mappings.mappingsDeps.apply {
-            if (isEmpty())
+            if (isEmpty() && !parent.customSearge)
                 provider.mappings.mapping("${forge.group}:${forge.name}:${forge.version}:src@zip")
         }
 

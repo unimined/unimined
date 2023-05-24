@@ -83,23 +83,16 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 userdevCfg["mcp"]?.asString ?: "de.oceanlabs.mcp:mcp_config:${provider.version}@zip"
             )
             val mcpConfigUserSpecified = mappingsDeps.firstOrNull { it.group == "de.oceanlabs.mcp" && it.name == "mcp_config" }
-            if (mcpConfigUserSpecified != null) {
+            if (mcpConfigUserSpecified != null && !parent.customSearge) {
                 if (mcpConfigUserSpecified.version != mcpConfig.version) {
                     project.logger.warn("[Unimined/ForgeTransformer] FG3 does not support custom mcp_config (searge) version specification. Using ${mcpConfig.version} from userdev.")
                 }
                 mappingsDeps.remove(mcpConfigUserSpecified)
             }
-            val empty = mappingsDeps.isEmpty()
-            if (empty) {
-                if (parent.mcpVersion == null || parent.mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
-                mapping(mcpConfig)
-                mapping("de.oceanlabs.mcp:mcp_${parent.mcpChannel}:${parent.mcpVersion}@zip")
-            } else {
-                val deps = mappingsDeps.toList()
-                mappingsDeps.clear()
-                mapping(mcpConfig)
-                deps.forEach(::mapping)
-            }
+            val deps = mappingsDeps.toList()
+            mappingsDeps.clear()
+            if (!parent.customSearge) mapping(mcpConfig)
+            deps.forEach(::mapping)
         }
 
         for (element in userdevCfg.get("libraries")?.asJsonArray ?: listOf()) {

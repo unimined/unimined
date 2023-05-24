@@ -46,21 +46,16 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         provider.mappings.apply {
             val empty = mappingsDeps.isEmpty()
             if (empty) {
-                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1) {
+                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1 && !parent.customSearge) {
                     mapping("de.oceanlabs.mcp:mcp:${provider.version}:srg@zip")
                 }
-                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7") == -1) {
+                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7") == -1 && !parent.customSearge) {
                     mapping(forgeSrc)
-                } else if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") == -1) {
-                    throw UnsupportedOperationException("Forge 1.7-1.7.9 don't have automatic mappings support. please supply the mcp mappings or whatever manually")
-                } else {
-                    if (parent.mcpVersion == null || parent.mcpChannel == null) throw IllegalStateException("mcpVersion and mcpChannel must be set in forge block for 1.7+")
-                    mapping("de.oceanlabs.mcp:mcp_${parent.mcpChannel}:${parent.mcpVersion}@zip")
                 }
             } else {
                 val deps = mappingsDeps.toList()
                 mappingsDeps.clear()
-                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1) {
+                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1 && !parent.customSearge) {
                     mapping("de.oceanlabs.mcp:mcp:${provider.version}:srg@zip")
                 }
                 mappingsDeps.addAll(deps)

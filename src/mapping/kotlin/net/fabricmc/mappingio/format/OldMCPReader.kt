@@ -64,11 +64,6 @@ object OldMCPReader {
             visitor.visitNamespaces(notchNamespace, listOf(seargeNamespace, targetNamespace))
         }
 
-        val notchNamespaceId = parentVisitor.getNamespaceId(notchNamespace)
-        if (notchNamespaceId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw IllegalStateException("Namespace $notchNamespace not found")
-        }
-
         if (visitor.visitContent()) {
             var lastClass: String? = null
             var visitLastClass = false
@@ -151,11 +146,6 @@ object OldMCPReader {
 
         if (visitHeader) {
             visitor.visitNamespaces(notchNamespace, listOf(seargeNamespace, targetNamespace))
-        }
-
-        val notchNamespaceId = parentVisitor.getNamespaceId(notchNamespace)
-        if (notchNamespaceId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw IllegalStateException("Namespace $notchNamespace not found")
         }
 
         if (visitor.visitContent()) {
@@ -290,12 +280,6 @@ object OldMCPReader {
 
         if (visitHeader) {
             visitor.visitNamespaces(notchNamespace, listOf(seargeNamespace, targetNamespace))
-        }
-
-        val notchNamespaceId = visitor.getNamespaceId(notchNamespace)
-
-        if (notchNamespaceId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw IllegalStateException("Namespace $notchNamespace not found")
         }
 
         var visitLastClass: Boolean

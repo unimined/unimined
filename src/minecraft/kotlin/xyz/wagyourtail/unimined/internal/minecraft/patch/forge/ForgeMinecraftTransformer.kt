@@ -28,6 +28,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.getSha1
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
@@ -46,8 +47,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
     lateinit var forgeTransformer: JarModMinecraftTransformer
 
     override var accessTransformer: File? = null
-    override var mcpVersion: String? = null
-    override var mcpChannel: String? = null
+
+    override var customSearge: Boolean by FinalizeOnRead(false)
 
     override val prodNamespace: MappingNamespace
         get() = forgeTransformer.prodNamespace
