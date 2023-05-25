@@ -257,6 +257,7 @@ class ModRemapperImpl(
         }
         if (remapper.second != null) {
             remapper.second!!.reset(dep.name + ".mixin-refmap.json")
+            remapper.second!!.preRead(input.second.toPath())
         }
         OutputConsumerPath.Builder(target).build().use {
             it.addNonClassFiles(

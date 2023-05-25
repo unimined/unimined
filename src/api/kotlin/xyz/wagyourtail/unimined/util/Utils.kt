@@ -196,6 +196,15 @@ fun Path.deleteRecursively() {
     })
 }
 
+fun Path.forEachFile(action: (Path) -> Unit) {
+    Files.walkFileTree(this, object: SimpleFileVisitor<Path>() {
+        override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+            action(file)
+            return FileVisitResult.CONTINUE
+        }
+    })
+}
+
 fun ByteArray.toHex() = joinToString(separator = "") { byte -> "%02x".format(byte) }
 
 fun <T> Optional<T>.orElse(invoke: () -> Optional<T>): Optional<T> {

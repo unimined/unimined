@@ -121,7 +121,7 @@ abstract class RemapJarTaskImpl: RemapJarTask() {
                 .toTypedArray()
         )
         remapper.readClassPathAsync(mc)
-
+        betterMixinExtension.preRead(from)
         remapper.readInputsAsync(from)
 
         try {
