@@ -119,16 +119,14 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     protected abstract fun addMavens()
+    protected abstract fun addIntermediaryMappings()
 
     var mainClass: JsonObject? = null
 
     override fun apply() {
         if (!customIntermediaries) {
-            provider.mappings {
-                intermediary()
-            }
+            addIntermediaryMappings()
         }
-
         val client = provider.side == EnvType.CLIENT || provider.side == EnvType.COMBINED
         val server = provider.side == EnvType.SERVER || provider.side == EnvType.COMBINED
 

@@ -10,7 +10,11 @@ class LegacyFabricMinecraftTransformer(
     provider: MinecraftProvider
 ): FabricMinecraftTransformer(project, provider) {
 
-
+    override fun addIntermediaryMappings() {
+        provider.mappings {
+            legacyIntermediary()
+        }
+    }
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         fabric.dependencies.add(
             (if (dep is String && !dep.contains(":")) {

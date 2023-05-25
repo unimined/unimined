@@ -7,6 +7,7 @@ import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
 /**
  * @since 1.0.0
@@ -27,6 +28,9 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     abstract var side: EnvType
 
     abstract val hasStubs: Boolean
+
+    protected val legacyFabricMappingsVersionFinalize = FinalizeOnRead(1)
+    var legacyFabricMappingsVersion by legacyFabricMappingsVersionFinalize
 
     fun devNamespace(namespace: String) {
         devNamespace = MappingNamespace.getNamespace(namespace)
@@ -67,7 +71,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        legacyIntermediary(1, action)
+        legacyIntermediary(legacyFabricMappingsVersion, action)
     }
 
     fun legacyIntermediary(
@@ -192,7 +196,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     fun legacyYarn(build: Int) {
-        legacyYarn(build, 1)
+        legacyYarn(build, legacyFabricMappingsVersion)
     }
 
     fun legacyYarn(build: Int, revision: Int) {
@@ -206,7 +210,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        legacyYarn(build, 1, action)
+        legacyYarn(build, legacyFabricMappingsVersion, action)
     }
 
     fun legacyYarn(

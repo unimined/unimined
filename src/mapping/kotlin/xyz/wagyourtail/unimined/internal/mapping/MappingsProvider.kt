@@ -59,6 +59,14 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun legacyIntermediary(revision: Int, action: MappingDepConfig<*>.() -> Unit) {
+        if (legacyFabricMappingsVersionFinalize.value != revision) {
+            if (!legacyFabricMappingsVersionFinalize.finalized) {
+                legacyFabricMappingsVersion = revision
+                legacyFabricMappingsVersionFinalize.finalized = true
+            } else {
+                project.logger.warn("[Unimined/MappingsProvider] Different revisions of legacy fabric mappings were used. This will most likely cause issues.")
+            }
+        }
         val group = if (revision < 2) {
             "net.legacyfabric"
         } else {
@@ -101,6 +109,14 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun legacyYarn(build: Int, revision: Int, action: MappingDepConfig<*>.() -> Unit) {
+        if (legacyFabricMappingsVersionFinalize.value != revision) {
+            if (!legacyFabricMappingsVersionFinalize.finalized) {
+                legacyFabricMappingsVersion = revision
+                legacyFabricMappingsVersionFinalize.finalized = true
+            } else {
+                project.logger.warn("[Unimined/MappingsProvider] Different revisions of legacy fabric mappings were used. This will most likely cause issues.")
+            }
+        }
         val group = if (revision < 2) {
             "net.legacyfabric"
         } else {

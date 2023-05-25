@@ -23,6 +23,12 @@ class QuiltMinecraftTransformer(
     override val ENVIRONMENT: String = "Lnet/fabricmc/api/Environment;"
     override val ENV_TYPE: String = "Lnet/fabricmc/api/EnvType;"
 
+    override fun addIntermediaryMappings() {
+        provider.mappings {
+            intermediary()
+        }
+    }
+
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         fabric.dependencies.add(
             (if (dep is String && !dep.contains(":")) {
