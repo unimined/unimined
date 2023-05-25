@@ -48,7 +48,7 @@ object ZipReader {
         zip: Path,
         zipContents: List<String>,
         mappingTree: MemoryMappingTree,
-        nameMap: Map<String, MappingNamespace>
+        nameMap: Map<String, MappingNamespace>,
     ) {
         val mcpConfigVersion = getZipTypeFromContentList(zipContents)
         println("Detected Zip Format: ${mcpConfigVersion.name} & envType: $envType")

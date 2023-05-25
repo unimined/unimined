@@ -93,9 +93,6 @@ class JarModAgentMinecraftTransformer(
         if (compiletimeTransforms && transforms != null) {
             project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${remapJarTask.name}...")
 
-            val envType = remapJarTask.envType
-            val mappings = remapJarTask.prodNamespace.getOrElse(this.prodNamespace)!!
-
             val classpath = (remapJarTask as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
 
             // remove minecraft

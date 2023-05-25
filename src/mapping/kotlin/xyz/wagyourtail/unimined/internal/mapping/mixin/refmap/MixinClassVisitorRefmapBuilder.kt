@@ -6,7 +6,6 @@ import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.CommonData
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
-import org.gradle.internal.impldep.org.bouncycastle.asn1.x509.Target.targetName
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
@@ -548,7 +547,7 @@ class MixinClassVisitorRefmapBuilder(
                                 }
                             }
                             logger.warn(
-                                "Failed to resolve ModifyArg(s)/Redirect $targetName ($name$descriptor) in mixin ${
+                                "Failed to resolve ModifyArg(s)/Redirect $targetMethod ($name$descriptor) in mixin ${
                                     mixinName.replace(
                                         '/',
                                         '.'
@@ -649,7 +648,7 @@ class MixinClassVisitorRefmapBuilder(
                                     }
                                 }
                                 logger.warn(
-                                    "Failed to resolve ModifyConstant $targetName ($name$descriptor) in mixin ${
+                                    "Failed to resolve ModifyConstant $targetMethod ($name$descriptor) in mixin ${
                                         mixinName.replace(
                                             '/',
                                             '.'

@@ -168,7 +168,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     private val mappingTreeLazy = lazy {
         project.logger.lifecycle("[Unimined/MappingsProvider] Resolving mappings for ${minecraft.sourceSet}")
         val mappings = MemoryMappingTree()
-        if (freeze == true) throw IllegalStateException("Cannot initialize mapping tree twice")
+        if (freeze) throw IllegalStateException("Cannot initialize mapping tree twice")
         freeze = true
 
         if (mappingsDeps.isEmpty()) {
@@ -196,17 +196,20 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             }
         } else false
         if (!loaded) {
+            val loadMappings = MemoryMappingTree()
             val configuration = project.configurations.detachedConfiguration().also {
                 it.dependencies.addAll(mappingsDeps)
             }
 
             // parse each dep
+            val filterNamespaces = mutableSetOf<String>()
             for (dep in mappingsDeps) {
                 project.logger.info("[Unimined/MappingsProvider] Loading mappings from ${dep.name}")
                 // resolve dep to files, no pom
                 val files = configuration.files(dep).filter { it.extension != "pom" }
                 // load each file
                 project.logger.info("[Unimined/MappingsProvider] Loading mappings files ${files.joinToString(", ")}")
+                val beforeNs = mappings.dstNamespaces ?: emptySet()
                 for (file in files) {
                     // detect if file is archive by seeing if it starts with the zip header
                     if (file.inputStream().use { stream -> ByteArray(4).also { stream.read(it, 0, 4) } }
@@ -221,9 +224,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                                 dep.mapNamespace["named"] = MappingNamespace.YARN
                             }
                         }
-                        val childMappings = MemoryMappingTree()
-                        ZipReader.readMappings(dep.side, file.toPath(), contents, childMappings, dep.mapNamespace)
-                        childMappings.accept(if (dep.filterNamespaces.isNotEmpty()) MappingDstNsFilter(mappings, dep.filterNamespaces.map { it.namespace }) else mappings)
+                        ZipReader.readMappings(dep.side, file.toPath(), contents, loadMappings, dep.mapNamespace)
                     } else {
                         // load from file
                         val format = MappingReader.detectFormat(file.toPath())
@@ -240,35 +241,39 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                                 file.reader().use {
                                     ProGuardReader.read(it, MappingNsRenamer(
                                             MappingSourceNsSwitch(
-                                                mappings,
+                                                loadMappings,
                                                 MappingNamespace.OFFICIAL.namespace
                                             ), dep.mapNamespace.mapValues { it.value.namespace })
                                     )
                                 }
                             } else {
-                                val childMappings = MemoryMappingTree()
-                                MappingReader.read(file.toPath(), format, MappingNsRenamer(childMappings, dep.mapNamespace.mapValues { it.value.namespace }))
-                                childMappings.accept(if (dep.filterNamespaces.isNotEmpty()) MappingDstNsFilter(mappings, dep.filterNamespaces.map { it.namespace }) else mappings)
+                                MappingReader.read(file.toPath(), format, MappingNsRenamer(loadMappings, dep.mapNamespace.mapValues { it.value.namespace }))
                             }
                         } else {
-                            val childMappings = MemoryMappingTree()
-                            MappingReader.read(file.toPath(), format, MappingNsRenamer(mappings, dep.mapNamespace.mapValues { it.value.namespace }))
-                            childMappings.accept(if (dep.filterNamespaces.isNotEmpty()) MappingDstNsFilter(mappings, dep.filterNamespaces.map { it.namespace }) else mappings)
+                            MappingReader.read(file.toPath(), format, MappingNsRenamer(loadMappings, dep.mapNamespace.mapValues { it.value.namespace }))
                         }
                     }
                 }
+                val afterNs = loadMappings.dstNamespaces ?: emptySet()
+                val diff = afterNs - beforeNs
+                if (dep.filterNamespaces.isEmpty()) {
+                    filterNamespaces.addAll(diff)
+                } else {
+                    filterNamespaces.addAll(afterNs.intersect(dep.filterNamespaces.map { it.namespace }.toSet()))
+                }
             }
-            if (mappings.dstNamespaces?.contains("srg") == true) {
+            if (loadMappings.dstNamespaces?.contains("srg") == true) {
                 project.logger.info("[Unimined/MappingsProvider] Detected TSRG2 mappings (1.17+) - converting to have the right class names for runtime forge")
-                if (!mappings.dstNamespaces.contains(MappingNamespace.MOJMAP.namespace)) {
-                    getOfficialMappings().accept(mappings)
+                if (!loadMappings.dstNamespaces.contains(MappingNamespace.MOJMAP.namespace)) {
+                    getOfficialMappings().accept(loadMappings)
                 }
                 SeargeFromTsrg2.apply("srg", MappingNamespace.MOJMAP.namespace, MappingNamespace.SEARGE.namespace, mappings)
             }
             if (hasStubs) {
                 project.logger.info("[Unimined/MappingsProvider] Loading stub mappings")
-                _stub!!.visit(mappings)
+                _stub!!.visit(loadMappings)
             }
+            loadMappings.accept(MappingDstNsFilter(mappings, filterNamespaces.toList()))
             cacheFile.bufferedWriter().use {
                 mappings.accept(Tiny2Writer2(it, false))
             }
