@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.mapping.mixin.refmap
 
+import net.fabricmc.tinyremapper.extension.mixin.common.Logger
 import net.fabricmc.tinyremapper.extension.mixin.common.MapUtility
 import net.fabricmc.tinyremapper.extension.mixin.common.data.*
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
@@ -16,7 +17,8 @@ import java.util.function.Consumer
 class HarderTargetMixinClassVisitor(
     private val tasks: MutableList<Consumer<CommonData>>,
     delegate: ClassVisitor?,
-    private val existingMappings: Map<String, String>
+    private val existingMappings: Map<String, String>,
+    private val logger: Logger
 ):
         ClassVisitor(Constant.ASM_VERSION, delegate) {
     private var _class: MxClass? = null
@@ -50,7 +52,7 @@ class HarderTargetMixinClassVisitor(
     override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
         var av = super.visitAnnotation(descriptor, visible)
         if (Annotation.MIXIN == descriptor) {
-            av = MixinAnnotationVisitor(av, remap, targets, existingMappings)
+            av = MixinAnnotationVisitor(av, remap, targets, existingMappings, logger)
             for (target in targets.toSet()) {
                 existingMappings[target]?.let {
                     targets.remove(target)
@@ -79,7 +81,7 @@ class HarderTargetMixinClassVisitor(
         return if (targets.isEmpty()) {
             fv
         } else {
-            HardTargetMixinFieldVisitor(tasks, fv, field, remap.get(), Collections.unmodifiableList(targets))
+            HardTargetMixinFieldVisitor(tasks, fv, field, remap.get(), Collections.unmodifiableList(targets), logger)
         }
     }
 
@@ -98,7 +100,7 @@ class HarderTargetMixinClassVisitor(
         return if (targets.isEmpty()) {
             mv
         } else {
-            HarderTargetMixinMethodVisitor(tasks, mv, method, remap.get(), Collections.unmodifiableList(targets))
+            HarderTargetMixinMethodVisitor(tasks, mv, method, remap.get(), Collections.unmodifiableList(targets), logger)
         }
     }
 
@@ -108,15 +110,18 @@ class HarderTargetMixinClassVisitor(
         delegate: MethodVisitor?,
         private val method: MxMember,
         private val remap: Boolean,
-        private val targets: List<String>
+        private val targets: List<String>,
+        private val logger: Logger
     ):
             MethodVisitor(Constant.ASM_VERSION, delegate) {
 
         override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
             var av = super.visitAnnotation(descriptor, visible)
             if (Annotation.SHADOW == descriptor) {
+                logger.info("Found shadow annotation on method ${method.name}")
                 av = ShadowAnnotationVisitor(data, av, method, remap, targets)
             } else if (Annotation.OVERWRITE == descriptor) {
+                logger.info("Found overwrite annotation on method ${method.name}")
                 av = OverwriteAnnotationVisitor(data, av, method, remap, targets)
             }
             return av
@@ -125,13 +130,15 @@ class HarderTargetMixinClassVisitor(
 
     internal class HardTargetMixinFieldVisitor(
         private val tasks: MutableList<Consumer<CommonData>>, delegate: FieldVisitor?, private val field: MxMember,
-        private val remap: Boolean, private val targets: List<String>
+        private val remap: Boolean, private val targets: List<String>,
+        private val logger: Logger
     ): FieldVisitor(Constant.ASM_VERSION, delegate) {
 
 
         override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
             var av = super.visitAnnotation(descriptor, visible)
             if (Annotation.SHADOW == descriptor) {
+                logger.info("Found shadow annotation on field ${field.name}")
                 av = ShadowAnnotationVisitor(tasks, av, field, remap, targets)
             }
             return av
@@ -142,7 +149,8 @@ class HarderTargetMixinClassVisitor(
         delegate: AnnotationVisitor?,
         remapOut: AtomicBoolean,
         targetsOut: MutableList<String>,
-        val existingMappings: Map<String, String>
+        val existingMappings: Map<String, String>,
+        private val logger: Logger
     ):
             AnnotationVisitor(Constant.ASM_VERSION, delegate) {
         private val remap0: AtomicBoolean
@@ -168,6 +176,7 @@ class HarderTargetMixinClassVisitor(
                     override fun visit(name: String?, value: Any) {
                         var value = (value as String)
                         val srcName = existingMappings[value] ?: value.replace("\\s".toRegex(), "").replace('.', '/')
+                        logger.info("Found mixin annotation target $srcName")
                         targets.add(srcName)
                         super.visit(name, value)
                     }
@@ -177,6 +186,7 @@ class HarderTargetMixinClassVisitor(
                     override fun visit(name: String?, value: Any) {
                         val srcType = Objects.requireNonNull(value as Type)
                         targets.add(srcType.internalName)
+                        logger.info("Found mixin annotation target $srcType")
                         super.visit(name, value)
                     }
                 }

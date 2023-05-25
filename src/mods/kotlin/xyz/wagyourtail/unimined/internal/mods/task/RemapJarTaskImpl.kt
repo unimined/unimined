@@ -50,12 +50,14 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         }
 
         val last = path.last()
-        project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.get().asFile.name} from $devNs to $prodNs")
+        project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.get().asFile.name} from $devNs/$devFNs to $prodNs")
+        project.logger.info("[Unimined/RemapJar]    $devNs -> ${path.joinToString(" -> ") { it.second.namespace }}")
         var prevTarget = inputFile.get().asFile.toPath()
         var prevNamespace = devNs
         var prevPrevNamespace: MappingNamespace? = null
         for (i in path.indices) {
             val step = path[i]
+            project.logger.info("[Unimined/RemapJar]    $step")
             val nextTarget = if (step != last)
                 getTempFilePath("${inputFile.get().asFile.nameWithoutExtension}-temp-${step.second.namespace}", ".jar")
             else
@@ -114,9 +116,8 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                 .toTypedArray()
         )
         remapper.readClassPathAsync(mc)
-
+        betterMixinExtension.preRead(from)
         remapper.readInputsAsync(from)
-
         try {
             OutputConsumerPath.Builder(target).build().use {
                 it.addNonClassFiles(
@@ -124,7 +125,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                     remapper,
                     listOf(
                         AccessWidenerMinecraftTransformer.AwRemapper(fromNs.namespace, toNs.namespace),
-                        AccessTransformerMinecraftTransformer.AtRemapper(project.logger, (provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true || remapATToLegacy.getOrElse(false)!!),
+                        AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.getOrElse((provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true)!!),
                         betterMixinExtension
                     )
                 )

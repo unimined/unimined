@@ -318,11 +318,12 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         input: Pair<InputTag, Pair<File, Path>>,
         remap: Pair<MappingNamespace, MappingNamespace>,
     ) {
-        if (remapper.second != null) {
-            remapper.second!!.reset(dep.name + ".mixin-refmap.json")
-        }
         val inpFile = input.second.first
         val targetFile = input.second.second
+        if (remapper.second != null) {
+            remapper.second!!.reset(dep.name + ".mixin-refmap.json")
+            remapper.second!!.preRead(inpFile.toPath())
+        }
         project.logger.info("[Unimined/ModRemapper] Remapping mod from $inpFile -> $targetFile with mapping target ${remap.first}/${remap.second}")
         OutputConsumerPath.Builder(targetFile).build().use {
             it.addNonClassFiles(
