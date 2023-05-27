@@ -1,11 +1,28 @@
 package xyz.wagyourtail.unimined.api.mapping
 
-import kotlin.math.abs
+import org.jetbrains.annotations.ApiStatus
 
 /**
  * @since 1.0.0
  */
-class MappingNamespace(val namespace: String, val type: Type) {
+
+class MappingNamespace
+
+@ApiStatus.Internal
+constructor(val namespace: String, val type: Type,
+    @set:ApiStatus.Internal
+    var canRemapTo: MappingNamespace.(MappingNamespace) -> Pair<Boolean, Boolean> = {
+        (
+            if (type.ordinal != 2) {
+                Type.values()[type.ordinal + 1].let { byType[it] }!!
+            } else { emptyList() } +
+            if (type.ordinal != 0) {
+                Type.values()[type.ordinal - 1].let { byType[it] }!!
+            } else { emptyList() }
+        ).contains(it) to shouldReverse(it)
+
+    }
+) {
     enum class Type(val id: String) {
         NAMED("named"),
         INT("intermediary"),
@@ -24,11 +41,7 @@ class MappingNamespace(val namespace: String, val type: Type) {
     }
 
     fun shouldReverse(target: MappingNamespace): Boolean {
-        val type = target.type
-        if (abs(type.ordinal - this.type.ordinal) == 1) {
-            return type.ordinal > this.type.ordinal
-        }
-        throw IllegalArgumentException("Invalid target $target for $this")
+        return target.type.ordinal > this.type.ordinal
     }
 
     companion object {
@@ -66,35 +79,18 @@ class MappingNamespace(val namespace: String, val type: Type) {
             current: MutableList<Pair<Boolean, MappingNamespace>>
         ): MutableList<Pair<Boolean, MappingNamespace>>? {
             val results = mutableListOf<MutableList<Pair<Boolean, MappingNamespace>>>()
-
-            if (from.type.ordinal != 2) {
-                for (target in Type.values()[from.type.ordinal + 1].let { byType[it] }!!) {
-                    if (!available.contains(target)) continue
-                    if (current.any { it.second == target }) continue
-                    if (target == to) {
-                        current.add(true to target)
-                        return current
-                    }
-                    val newCurrent = current.toMutableList()
-                    newCurrent.add(true to target)
-                    val result = calculateShortestRemapPathInternal(target, to, available, newCurrent)
-                    if (result != null) results.add(result)
+            val canRemapTo = from.canRemapTo
+            val targets = available.associateWith { from.canRemapTo(it) }.filterValues { it.first }.mapValues { it.value.second }
+            for (target in targets) {
+                if (current.any { it.second == target.key }) continue
+                if (target.key == to) {
+                    current.add(target.value to target.key)
+                    return current
                 }
-            }
-
-            if (from.type.ordinal != 0) {
-                for (target in Type.values()[from.type.ordinal - 1].let { byType[it] }!!) {
-                    if (!available.contains(target)) continue
-                    if (current.any { it.second == target }) continue
-                    if (target == to) {
-                        current.add(false to target)
-                        return current
-                    }
-                    val newCurrent = current.toMutableList()
-                    newCurrent.add(false to target)
-                    val result = calculateShortestRemapPathInternal(target, to, available, newCurrent)
-                    if (result != null) results.add(result)
-                }
+                val newCurrent = current.toMutableList()
+                newCurrent.add(target.value to target.key)
+                val result = calculateShortestRemapPathInternal(target.key, to, available, newCurrent)
+                if (result != null) results.add(result)
             }
             return results.minByOrNull { it.size }
         }
