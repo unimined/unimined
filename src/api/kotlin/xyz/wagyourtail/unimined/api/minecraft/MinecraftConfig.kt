@@ -68,7 +68,7 @@ import java.nio.file.Path
 abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) : PatchProviders {
 
     @set:ApiStatus.Internal
-    var side by FinalizeOnRead(LazyMutable { if (minecraftData.isPreCombined) error("must set \"side\" for minecraft to either \"client\" or \"server\"") else EnvType.COMBINED })
+    var side by FinalizeOnRead(LazyMutable { if (!mcPatcher.canCombine) error("must set \"side\" for minecraft to either \"client\" or \"server\"") else EnvType.COMBINED })
 
     fun side(sideConf: String) {
         side = EnvType.valueOf(sideConf.uppercase())
@@ -89,9 +89,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     abstract val minecraftData: MinecraftData
     abstract val minecraftRemapper: MinecraftRemapConfig
 
-    fun mappings(action: MappingsConfig.() -> Unit) {
-        mappings.action()
-    }
+    abstract fun mappings(action: MappingsConfig.() -> Unit)
 
     fun mappings(
         @DelegatesTo(value = MappingsConfig::class, strategy = Closure.DELEGATE_FIRST)

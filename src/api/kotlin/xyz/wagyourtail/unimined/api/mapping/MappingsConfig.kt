@@ -217,7 +217,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
 
     fun retroMCP() {
         retroMCP {
-            if (minecraft.minecraftData.isPreCombined) {
+            if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.3") < 0) {
                 if (side == EnvType.COMBINED) throw IllegalStateException("Cannot use retroMCP with side COMBINED")
                 mapNamespace(side.classifier!!, "official")
             }

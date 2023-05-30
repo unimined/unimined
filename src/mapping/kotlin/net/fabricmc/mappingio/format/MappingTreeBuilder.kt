@@ -235,9 +235,10 @@ class MappingTreeBuilder {
                     else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
                 }
             }
-            BetterMappingFormat.SRG -> SrgReader.read(reader, visitor)
-            BetterMappingFormat.TSRG, BetterMappingFormat.TSRG_2 -> TsrgReader.read(reader, visitor)
-            BetterMappingFormat.RETROGUARD -> RGSReader.read(reader, visitor)
+            BetterMappingFormat.SRG -> SrgReader.read(reader, "official", "searge", visitor)
+            BetterMappingFormat.TSRG -> TsrgReader.read(reader, "official", "searge", visitor)
+            BetterMappingFormat.TSRG_2 -> TsrgReader.read(reader, visitor)
+            BetterMappingFormat.RETROGUARD -> RGSReader.read(reader, "official", "searge", visitor)
             BetterMappingFormat.PROGUARD -> ProGuardReader.read(reader, "mojmap", "official", visitor)
             BetterMappingFormat.PARCHMENT -> ParchmentReader.read(reader, "mojmap", visitor)
             else -> {

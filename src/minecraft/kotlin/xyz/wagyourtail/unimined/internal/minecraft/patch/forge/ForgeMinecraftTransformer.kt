@@ -84,7 +84,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     override fun forge(dep: Any, action: Dependency.() -> Unit) {
         forge.dependencies.add(if (dep is String && !dep.contains(":")) {
-            if (provider.minecraftData.isPreCombined) {
+            if (!canCombine) {
                 if (provider.side == EnvType.COMBINED) throw IllegalStateException("Cannot use forge dependency pre 1.3 without specifying non-combined side")
                 project.dependencies.create("net.minecraftforge:forge:${provider.version}-${dep}:${provider.side.classifier}@zip")
             } else {

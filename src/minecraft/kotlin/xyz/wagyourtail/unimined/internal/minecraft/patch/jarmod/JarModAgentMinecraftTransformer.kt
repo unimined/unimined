@@ -40,6 +40,7 @@ class JarModAgentMinecraftTransformer(
 
     override var transforms: String? = null
 
+    @Deprecated("may violate mojang's EULA... use at your own risk. this is not recommended and is only here for legacy reasons and testing.")
     override var compiletimeTransforms: Boolean = false
 
     override var jarModAgent = project.configurations.maybeCreate("jarModAgent".withSourceSet(provider.sourceSet)).also {

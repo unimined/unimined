@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.internal.minecraft
 
-import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
@@ -10,6 +9,7 @@ import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
@@ -41,7 +41,10 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
-import kotlin.io.path.*
+import kotlin.collections.ArrayDeque
+import kotlin.io.path.exists
+import kotlin.io.path.inputStream
+import kotlin.io.path.writeBytes
 
 class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
     override val minecraftData = MinecraftDownloader(project, this)
@@ -55,6 +58,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     override val runs = RunsProvider(project, this)
 
     override val minecraftRemapper = MinecraftRemapper(project, this)
+
+    private val lateActions = mutableListOf<() -> Unit>()
+    private var lateActionsRunning by FinalizeOnWrite(false)
 
     val minecraft: Configuration = project.configurations.maybeCreate("minecraft".withSourceSet(sourceSet)).also {
         sourceSet.compileClasspath += it
@@ -96,32 +102,66 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         return minecraftFiles[namespace to fallbackNamespace] ?: error("minecraft file not found for $namespace")
     }
 
+    override fun mappings(action: MappingsConfig.() -> Unit) {
+        if (lateActionsRunning) {
+            mappings.action()
+        } else {
+            lateActions.add {
+                mappings.action()
+            }
+        }
+    }
+
     override fun merged(action: (MergedPatcher) -> Unit) {
         TODO("Not yet implemented")
     }
 
     override fun fabric(action: (FabricLikePatcher) -> Unit) {
-        mcPatcher = OfficialFabricMinecraftTransformer(project, this).also(action)
+        mcPatcher = OfficialFabricMinecraftTransformer(project, this).also {
+            lateActions.add {
+                action(it)
+            }
+        }
     }
 
     override fun legacyFabric(action: (FabricLikePatcher) -> Unit) {
-        mcPatcher = LegacyFabricMinecraftTransformer(project, this).also(action)
+        mcPatcher = LegacyFabricMinecraftTransformer(project, this).also {
+            lateActions.add {
+                action(it)
+            }
+        }
     }
 
     override fun babic(action: (FabricLikePatcher) -> Unit) {
-        mcPatcher = BabricMinecraftTransformer(project, this).also(action)
+        mcPatcher = BabricMinecraftTransformer(project, this).also {
+            lateActions.add {
+                action(it)
+            }
+        }
     }
 
     override fun quilt(action: (FabricLikePatcher) -> Unit) {
-        mcPatcher = QuiltMinecraftTransformer(project, this).also(action)
+        mcPatcher = QuiltMinecraftTransformer(project, this).also {
+            lateActions.add {
+                action(it)
+            }
+        }
     }
 
     override fun forge(action: (ForgePatcher) -> Unit) {
-        mcPatcher = ForgeMinecraftTransformer(project, this).also(action)
+        mcPatcher = ForgeMinecraftTransformer(project, this).also {
+            lateActions.add {
+                action(it)
+            }
+        }
     }
 
     override fun jarMod(action: (JarModAgentPatcher) -> Unit) {
-        mcPatcher = JarModAgentMinecraftTransformer(project, this).also(action)
+        mcPatcher = JarModAgentMinecraftTransformer(project, this).also {
+            lateActions.add {
+                action(it)
+            }
+        }
     }
 
     val minecraftDepName: String = project.path.replace(":", "_").let { projectPath ->
@@ -182,6 +222,10 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     fun apply() {
         project.logger.lifecycle("[Unimined/Minecraft] Applying minecraft config for $sourceSet")
+        lateActionsRunning = true
+        while (lateActions.isNotEmpty()) {
+            lateActions.removeFirst().invoke()
+        }
         // ensure minecraft deps are clear
         if (minecraft.dependencies.isNotEmpty()) {
             project.logger.warn("[Unimined/Minecraft] $minecraft dependencies are not empty! clearing...")
