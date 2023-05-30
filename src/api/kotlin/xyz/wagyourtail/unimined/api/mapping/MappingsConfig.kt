@@ -12,15 +12,15 @@ import xyz.wagyourtail.unimined.util.FinalizeOnRead
 /**
  * @since 1.0.0
  */
-abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConfig) {
+abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConfig) : MappingNamespaceTree() {
 
     @set:ApiStatus.Internal
     @get:ApiStatus.Internal
-    abstract var devNamespace: MappingNamespace
+    abstract var devNamespace: Namespace
 
     @set:ApiStatus.Internal
     @get:ApiStatus.Internal
-    abstract var devFallbackNamespace: MappingNamespace
+    abstract var devFallbackNamespace: Namespace
 
     @get:ApiStatus.Internal
     abstract val mappingsDeps: MutableList<MappingDepConfig<*>>
@@ -33,15 +33,17 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     var legacyFabricMappingsVersion by legacyFabricMappingsVersionFinalize
 
     fun devNamespace(namespace: String) {
-        devNamespace = MappingNamespace.getNamespace(namespace)
+        devNamespace = getNamespace(namespace)
     }
 
     fun devFallbackNamespace(namespace: String) {
-        devFallbackNamespace = MappingNamespace.getNamespace(namespace)
+        devFallbackNamespace = getNamespace(namespace)
     }
 
     fun intermediary() {
-        intermediary {}
+        intermediary {
+            outputs("intermediary", false) { listOf("official") }
+        }
     }
 
     abstract fun intermediary(action: MappingDepConfig<*>.() -> Unit)
@@ -62,7 +64,9 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     fun legacyIntermediary(revision: Int) {
-        legacyIntermediary(revision) {}
+        legacyIntermediary(revision) {
+            outputs("intermediary", false) { listOf("official") }
+        }
     }
 
     abstract fun legacyIntermediary(revision: Int, action: MappingDepConfig<*>.() -> Unit)
@@ -87,7 +91,11 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     fun babricIntermediary() {
-        babricIntermediary {}
+        babricIntermediary {
+            if (side == EnvType.COMBINED) throw IllegalStateException("Cannot use babricIntermediary with side COMBINED")
+            mapNamespace(side.classifier!!, "official")
+            outputs("intermediary", false) { listOf("official") }
+        }
     }
 
     abstract fun babricIntermediary(action: MappingDepConfig<*>.() -> Unit)
@@ -104,11 +112,17 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     fun searge() {
-        searge {}
+        searge(minecraft.version)
     }
 
     fun searge(action: MappingDepConfig<*>.() -> Unit) {
         searge(minecraft.version, action)
+    }
+
+    fun searge(version: String) {
+        searge(version)  {
+            outputs("searge", false) { listOf("official") }
+        }
     }
 
     abstract fun searge(version: String, action: MappingDepConfig<*>.() -> Unit)
@@ -124,8 +138,22 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    fun searge(
+        version: String,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        searge(version) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     fun hashed() {
-        hashed {}
+        hashed {
+            outputs("hashed", false) { listOf("official") }
+        }
     }
 
     abstract fun hashed(action: MappingDepConfig<*>.() -> Unit)
@@ -142,7 +170,15 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     fun mojmap() {
-        mojmap {}
+        mojmap {
+            outputs("mojmap", true) {
+                // check if we have searge or intermediary or hashed mappings
+                val searge = if ("searge" in getNamespaces()) listOf("searge") else emptyList()
+                val intermediary = if ("intermediary" in getNamespaces()) listOf("intermediary") else emptyList()
+                val hashed = if ("hashed" in getNamespaces()) listOf("hashed") else emptyList()
+                listOf("official") + intermediary + searge + hashed
+            }
+        }
     }
 
     abstract fun mojmap(action: MappingDepConfig<*>.() -> Unit)
@@ -159,7 +195,9 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     fun mcp(channel: String, version: String) {
-        mcp(channel, version) {}
+        mcp(channel, version) {
+            outputs("mcp", true) { listOf("searge") }
+        }
     }
 
     abstract fun mcp(channel: String, version: String, action: MappingDepConfig<*>.() -> Unit)
@@ -177,8 +215,34 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    fun retroMCP() {
+        retroMCP {
+            if (minecraft.minecraftData.isPreCombined) {
+                if (side == EnvType.COMBINED) throw IllegalStateException("Cannot use retroMCP with side COMBINED")
+                mapNamespace(side.classifier!!, "official")
+            }
+            mapNamespace("named", "mcp")
+            outputs("mcp", true) { listOf("official") }
+        }
+    }
+
+    abstract fun retroMCP(action: MappingDepConfig<*>.() -> Unit)
+
+    fun retroMCP(
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        retroMCP {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     fun yarn(build: Int) {
-        yarn(build) {}
+        yarn(build) {
+            outputs("yarn", true) { listOf("intermediary") }
+        }
     }
 
     abstract fun yarn(build: Int, action: MappingDepConfig<*>.() -> Unit)
@@ -200,7 +264,9 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     fun legacyYarn(build: Int, revision: Int) {
-        legacyYarn(build, revision) {}
+        legacyYarn(build, revision) {
+            outputs("yarn", true) { listOf("intermediary") }
+        }
     }
 
     abstract fun legacyYarn(build: Int, revision: Int, action: MappingDepConfig<*>.() -> Unit)
@@ -227,7 +293,9 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     fun barn(build: Int) {
-        barn(build) {}
+        barn(build) {
+            outputs("barn", true) { listOf("intermediary") }
+        }
     }
 
     abstract fun barn(build: Int, action: MappingDepConfig<*>.() -> Unit)
@@ -245,11 +313,22 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     fun quilt(build: Int) {
-        quilt(build) {}
+        quilt(build, "intermediary-v2")
     }
 
     fun quilt(build: Int, action: MappingDepConfig<*>.() -> Unit) {
         quilt(build, "intermediary-v2", action)
+    }
+
+    fun quilt(build: Int, classifier: String) {
+        quilt(build, classifier) {
+            mapNamespace("named", "quilt")
+            outputs("quilt", true) {
+                val intermediary = if (classifier.contains("intermediary")) listOf("intermediary") else emptyList()
+                val hashed = if (intermediary.isEmpty()) listOf("hashed") else emptyList()
+                intermediary + hashed
+            }
+        }
     }
 
     abstract fun quilt(build: Int, classifier: String, action: MappingDepConfig<*>.() -> Unit)
@@ -266,10 +345,25 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
-    fun mapping(
-        dependency: Any,
+    fun forgeBuiltinMCP(version: String) {
+        forgeBuiltinMCP(version) {
+            outputs("searge", false) { listOf("official") }
+            outputs("mcp", true) { listOf("searge") }
+        }
+    }
+
+    abstract fun forgeBuiltinMCP(version: String, action: MappingDepConfig<*>.() -> Unit)
+
+    fun forgeBuiltinMCP(
+        version: String,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
     ) {
-        mapping(dependency) {}
+        forgeBuiltinMCP(version) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
     }
 
     abstract fun mapping(
@@ -289,17 +383,11 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
-    @ApiStatus.Experimental
-    fun newNamespace(namespace: String, type: String) = MappingNamespace(namespace, MappingNamespace.Type.fromId(type))
-
     @ApiStatus.Internal
     abstract fun getTRMappings(
-        remap: Pair<MappingNamespace, MappingNamespace>,
+        remap: Pair<Namespace, Namespace>,
         remapLocals: Boolean = false
     ): (IMappingProvider.MappingAcceptor) -> Unit
-
-    @get:ApiStatus.Internal
-    abstract val available: Set<MappingNamespace>
 
     @get:ApiStatus.Internal
     abstract val combinedNames: String

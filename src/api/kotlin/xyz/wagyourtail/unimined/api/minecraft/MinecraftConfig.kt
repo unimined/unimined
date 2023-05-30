@@ -8,7 +8,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.remap.MinecraftRemapConfig
@@ -190,8 +190,8 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
 
     @ApiStatus.Internal
     abstract fun getMinecraft(
-        namespace: MappingNamespace,
-        fallbackNamespace: MappingNamespace
+        namespace: MappingNamespaceTree.Namespace,
+        fallbackNamespace: MappingNamespaceTree.Namespace
     ): Path
 
     @get:ApiStatus.Internal

@@ -9,7 +9,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.LogLevel
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.*
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -35,7 +35,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     project, parent.provider, providerName = "FG3"
 ) {
 
-    override val prodNamespace = MappingNamespace.SEARGE
+    override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }
 
     override val merger: ClassMerger
         get() = throw UnsupportedOperationException("ForgeGradle 3 does not support merging with unofficial merger.")
@@ -78,10 +78,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 //        val installer = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:installer"
 //        forgeInstaller.dependencies.add(project.dependencies.create(installer))
 
+        mcpConfig = project.dependencies.create(
+            userdevCfg["mcp"]?.asString ?: "de.oceanlabs.mcp:mcp_config:${provider.version}@zip"
+        )
+
         provider.mappings.apply {
-            mcpConfig = project.dependencies.create(
-                userdevCfg["mcp"]?.asString ?: "de.oceanlabs.mcp:mcp_config:${provider.version}@zip"
-            )
             val mcpConfigUserSpecified = mappingsDeps.firstOrNull { it.group == "de.oceanlabs.mcp" && it.name == "mcp_config" }
             if (mcpConfigUserSpecified != null && !parent.customSearge) {
                 if (mcpConfigUserSpecified.version != mcpConfig.version) {
@@ -91,8 +92,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             }
             val deps = mappingsDeps.toList()
             mappingsDeps.clear()
-            if (!parent.customSearge) mapping(mcpConfig)
-            deps.forEach(::mapping)
+            if (!parent.customSearge) searge(mcpConfig.version!!)
+            mappingsDeps.addAll(deps)
         }
 
         for (element in userdevCfg.get("libraries")?.asJsonArray ?: listOf()) {
@@ -177,8 +178,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             parentPath = provider.minecraftData.mcVersionFolder
                 .resolve("forge"),
             envType = EnvType.COMBINED,
-            mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) MappingNamespace.OFFICIAL else MappingNamespace.SEARGE,
-            fallbackNamespace = MappingNamespace.OFFICIAL
+            mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) provider.mappings.OFFICIAL else provider.mappings.getNamespace("searge"),
+            fallbackNamespace = provider.mappings.OFFICIAL
         )
         createClientExtra(clientjar, serverjar, output.path)
         if (output.path.exists() && !project.unimined.forceReload) {
@@ -292,7 +293,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         //   shade in forge jar
         val shadedForge = super.transform(patchedMC)
         return if (userdevCfg["notchObf"]?.asBoolean == true) {
-            provider.minecraftRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.SEARGE)
+            provider.minecraftRemapper.provide(shadedForge, provider.mappings.getNamespace("searge"), provider.mappings.OFFICIAL)
         } else {
             shadedForge
         }
@@ -441,7 +442,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (baseMinecraft.mappingNamespace.type == MappingNamespace.Type.NAMED) {
+        if (!baseMinecraft.patches.contains("fixForge")) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",

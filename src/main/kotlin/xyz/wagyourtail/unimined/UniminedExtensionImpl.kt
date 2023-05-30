@@ -10,13 +10,13 @@ import net.minecraftforge.artifactural.base.repository.ArtifactProviderBuilder
 import net.minecraftforge.artifactural.base.repository.SimpleRepository
 import net.minecraftforge.artifactural.gradle.GradleRepositoryAdapter
 import org.gradle.api.Project
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.util.decapitalized
+import xyz.wagyourtail.unimined.util.defaultedMapOf
 import java.net.URI
 
 open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) {
@@ -104,14 +104,103 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     )
 
     override val modsRemapRepo = project.repositories.flatDir {
+        it.name = "modsRemap"
         it.dir(getLocalCache().resolve("modTransform").toFile())
         it.content {
             it.includeGroupByRegex("remapped_.+")
         }
     }
 
+    val forgeMaven by lazy {
+        project.repositories.maven {
+            it.name = "forge"
+            it.url = URI("https://maven.minecraftforge.net/")
+            it.metadataSources {
+                it.mavenPom()
+                it.artifact()
+            }
+        }
+    }
+
+    override fun forgeMaven() {
+        project.logger.info("[Unimined] adding forge maven: $forgeMaven")
+    }
+
+    val fabricMaven by lazy {
+        project.repositories.maven {
+            it.name = "fabric"
+            it.url = URI.create("https://maven.fabricmc.net")
+        }
+    }
+
+    override fun fabricMaven() {
+        project.logger.info("[Unimined] adding fabric maven: $fabricMaven")
+    }
+
+    val legacyFabricMaven by lazy {
+        project.repositories.maven {
+            it.name = "legacyFabric"
+            it.url = URI.create("https://repo.legacyfabric.net/repository/legacyfabric")
+        }
+    }
+
+    override fun legacyFabricMaven() {
+        project.logger.info("[Unimined] adding legacy fabric maven: $legacyFabricMaven")
+    }
+
+    val quiltMaven by lazy {
+        project.repositories.maven {
+            it.name = "quilt"
+            it.url = URI.create("https://maven.quiltmc.org/repository/release")
+        }
+    }
+
+    override fun quiltMaven() {
+        project.logger.info("[Unimined] adding quilt maven: $quiltMaven")
+    }
+
+    val babricMaven by lazy {
+        project.repositories.maven {
+            it.name = "babric"
+            it.url = URI.create("https://maven.glass-launcher.net/babric/")
+        }
+    }
+
+    override fun babricMaven() {
+        project.logger.info("[Unimined] adding babric maven: $babricMaven")
+    }
+
+    val wagYourMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
+        project.repositories.maven {
+            it.name = "WagYourTail (${name.capitalized()})"
+            it.url = project.uri("https://maven.wagyourtail.xyz/$name/")
+        }
+    }
+
+    override fun wagYourMaven(name: String) {
+        project.logger.info("[Unimined] adding wagyourtail maven: ${wagYourMaven[name]}")
+    }
+
+    val mcphackersIvy by lazy {
+        project.repositories.ivy { ivy ->
+            ivy.name = "mcphackers"
+            ivy.url = URI.create("https://mcphackers.github.io/versionsV2/")
+            ivy.patternLayout {
+                it.artifact("[revision].[ext]")
+            }
+            ivy.content {
+                it.includeModule("io.github.mcphackers", "mcp")
+            }
+        }
+    }
+
+    override fun mcphackersIvy() {
+        project.logger.info("[Unimined] adding mcphackers ivy: $mcphackersIvy")
+    }
+
     init {
         project.repositories.maven {
+            it.name = "minecraft"
             it.url = URI.create("https://libraries.minecraft.net/")
         }
         GradleRepositoryAdapter.add(

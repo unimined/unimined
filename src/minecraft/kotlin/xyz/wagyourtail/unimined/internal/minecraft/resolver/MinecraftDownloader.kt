@@ -2,15 +2,11 @@ package xyz.wagyourtail.unimined.internal.minecraft.resolver
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
-import org.gradle.api.tasks.SourceSetContainer
-import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.resolver.MinecraftData
-import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
@@ -21,13 +17,10 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import java.util.*
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
@@ -160,8 +153,8 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
             EnvType.CLIENT,
             version,
             listOf(),
-            MappingNamespace.OFFICIAL,
-            MappingNamespace.OFFICIAL,
+            provider.mappings.OFFICIAL,
+            provider.mappings.OFFICIAL,
             null,
             "jar",
             clientPath
@@ -241,8 +234,8 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
             EnvType.SERVER,
             version,
             listOf(),
-            MappingNamespace.OFFICIAL,
-            MappingNamespace.OFFICIAL,
+            provider.mappings.OFFICIAL,
+            provider.mappings.OFFICIAL,
             null,
             "jar",
             serverPath

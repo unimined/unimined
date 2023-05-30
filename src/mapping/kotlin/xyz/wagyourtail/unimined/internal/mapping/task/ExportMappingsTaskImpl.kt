@@ -11,6 +11,7 @@ import net.fabricmc.mappingio.format.Tiny2Writer2
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.impldep.org.eclipse.jgit.lib.ObjectChecker
+import org.gradle.internal.impldep.org.eclipse.jgit.lib.ObjectChecker.type
 import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import java.io.OutputStreamWriter
@@ -41,15 +42,22 @@ class ExportMappingsTaskImpl(val mappings: MappingsProvider) : ExportMappingsTas
     }
 
     override fun export(action: Export.() -> Unit) {
-        val export = ExportImpl()
+        val export = ExportImpl(mappings)
         export.action()
         export.validate()
         exports.add(export)
     }
 
-    class ExportImpl : Export() {
+    class ExportImpl(val mappings: MappingsProvider) : Export() {
 
         override var exportFunc: (MappingTreeView) -> Unit = ::export
+        override fun setSourceNamespace(namespace: String) {
+            sourceNamespace = mappings.getNamespace(namespace)
+        }
+
+        override fun setTargetNamespaces(namespace: List<String>) {
+            targetNamespace = namespace.map { mappings.getNamespace(it) }
+        }
 
         private fun export(mappingTree: MappingTreeView) {
             location!!.parentFile.mkdirs()
@@ -57,7 +65,7 @@ class ExportMappingsTaskImpl(val mappings: MappingsProvider) : ExportMappingsTas
                 .outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
                 .use { os ->
                     var visitor = when (type) {
-                        MappingExportTypes.MCP -> MCPWriter(os, envType!!.ordinal)
+                        MappingExportTypes.MCP -> MCPWriter(os, envType!!.mcp)
                         MappingExportTypes.TINY_V2 -> {
                             val stream = if (location!!.extension == "jar" || location!!.extension == "zip") {
                                 ZipOutputStream(os).apply {
@@ -83,11 +91,11 @@ class ExportMappingsTaskImpl(val mappings: MappingsProvider) : ExportMappingsTas
                             MappingDstNsFilter(
                                 MappingNsRenamer(
                                     visitor,
-                                    renameNs.mapKeys { it.key.namespace }
+                                    renameNs.mapKeys { it.key.name }
                                 ),
-                                targetNamespace?.map { it.namespace } ?: mappingTree.dstNamespaces
+                                targetNamespace?.map { it.name } ?: mappingTree.dstNamespaces
                             ),
-                            sourceNamespace?.namespace ?: mappingTree.srcNamespace
+                            sourceNamespace?.name ?: mappingTree.srcNamespace
                         ),
                     )
                     os.flush()

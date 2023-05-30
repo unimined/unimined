@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2
 
 import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -27,7 +27,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     providerName = "FG2"
 ) {
 
-    override val prodNamespace = MappingNamespace.SEARGE
+    override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }
 
     override val merger: ClassMerger
         get() = parent.merger
@@ -47,16 +47,16 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             val empty = mappingsDeps.isEmpty()
             if (empty) {
                 if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1 && !parent.customSearge) {
-                    mapping("de.oceanlabs.mcp:mcp:${provider.version}:srg@zip")
+                    searge()
                 }
                 if (provider.minecraftData.mcVersionCompare(provider.version, "1.7") == -1 && !parent.customSearge) {
-                    mapping(forgeSrc)
+                    forgeBuiltinMCP(forgeDep.version!!.substringAfter(provider.version))
                 }
             } else {
                 val deps = mappingsDeps.toList()
                 mappingsDeps.clear()
                 if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1 && !parent.customSearge) {
-                    mapping("de.oceanlabs.mcp:mcp:${provider.version}:srg@zip")
+                    searge()
                 }
                 mappingsDeps.addAll(deps)
             }
@@ -71,7 +71,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 minecraft
             )
         )
-        return provider.minecraftRemapper.provide(shadedForge, MappingNamespace.SEARGE, MappingNamespace.OFFICIAL)
+        return provider.minecraftRemapper.provide(shadedForge, provider.mappings.getNamespace("searge"), provider.mappings.OFFICIAL)
     }
 
     private fun transformIntern(minecraft: MinecraftJar): MinecraftJar {
@@ -143,7 +143,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (baseMinecraft.mappingNamespace.type == MappingNamespace.Type.NAMED) {
+        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.OFFICIAL) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",

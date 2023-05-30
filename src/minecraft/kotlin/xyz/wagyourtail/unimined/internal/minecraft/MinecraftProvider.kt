@@ -9,7 +9,7 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
@@ -18,6 +18,7 @@ import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.QuiltMinecraftTransformer
@@ -43,15 +44,15 @@ import java.util.*
 import kotlin.io.path.*
 
 class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
-    override var mcPatcher: MinecraftPatcher by FinalizeOnRead(ChangeOnce(NoTransformMinecraftTransformer(project, this)))
+    override val minecraftData = MinecraftDownloader(project, this)
 
     override val mappings = MappingsProvider(project, this)
+
+    override var mcPatcher: MinecraftPatcher by FinalizeOnRead(FinalizeOnWrite(NoTransformMinecraftTransformer(project, this)))
 
     override val mods = ModsProvider(project, this)
 
     override val runs = RunsProvider(project, this)
-
-    override val minecraftData = MinecraftDownloader(project, this)
 
     override val minecraftRemapper = MinecraftRemapper(project, this)
 
@@ -77,7 +78,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         project.tasks.getByName("build").dependsOn(remapTask)
     }
 
-    private val minecraftFiles: Map<Pair<MappingNamespace, MappingNamespace>, Path> = defaultedMapOf {
+    private val minecraftFiles: Map<Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>, Path> = defaultedMapOf {
         project.logger.info("[Unimined/Minecraft] Providing minecraft files for $it")
         val mc = if (side == EnvType.COMBINED) {
             val client = minecraftData.minecraftClient
@@ -91,7 +92,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         ).path
     }
 
-    override fun getMinecraft(namespace: MappingNamespace, fallbackNamespace: MappingNamespace): Path {
+    override fun getMinecraft(namespace: MappingNamespaceTree.Namespace, fallbackNamespace: MappingNamespaceTree.Namespace): Path {
         return minecraftFiles[namespace to fallbackNamespace] ?: error("minecraft file not found for $namespace")
     }
 
@@ -105,6 +106,10 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun legacyFabric(action: (FabricLikePatcher) -> Unit) {
         mcPatcher = LegacyFabricMinecraftTransformer(project, this).also(action)
+    }
+
+    override fun babic(action: (FabricLikePatcher) -> Unit) {
+        mcPatcher = BabricMinecraftTransformer(project, this).also(action)
     }
 
     override fun quilt(action: (FabricLikePatcher) -> Unit) {
@@ -190,6 +195,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         if (minecraftRemapper.replaceJSRWithJetbrains) {
             // inject jetbrains annotations into minecraftLibraries
             minecraftLibraries.dependencies.add(project.dependencies.create("org.jetbrains:annotations:24.0.1"))
+        } else {
+            // findbugs
+            minecraftLibraries.dependencies.add(project.dependencies.create("com.google.code.findbugs:jsr305:3.0.2"))
         }
 
         // add minecraft dep

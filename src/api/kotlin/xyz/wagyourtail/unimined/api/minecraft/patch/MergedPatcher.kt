@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.api.minecraft.patch
 
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.PatchProviders
 
 /**
@@ -8,9 +8,10 @@ import xyz.wagyourtail.unimined.api.minecraft.PatchProviders
  * @see PatchProviders
  */
 interface MergedPatcher: MinecraftPatcher, PatchProviders {
-    override var prodNamespace: MappingNamespace
+    override var prodNamespace: MappingNamespaceTree.Namespace
 
-    fun setProdNamespace(namespace: String) {
-        prodNamespace = MappingNamespace.getNamespace(namespace)
-    }
+    @Deprecated("use prodNamespace instead", ReplaceWith("prodNamespace"))
+    fun setProdNamespace(namespace: String)
+
+    fun prodNamespace(namespace: String)
 }

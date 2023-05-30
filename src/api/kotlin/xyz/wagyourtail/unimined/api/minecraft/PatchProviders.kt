@@ -83,6 +83,39 @@ interface PatchProviders {
     }
 
     /**
+     * enables the fabric patcher with additional tweaks for babric.
+     * @param action the action to perform on the patcher.
+     * @since 1.0.0
+     */
+    fun babic(action: (FabricLikePatcher) -> Unit)
+
+    /**
+     * enables the fabric patcher with additional tweaks for babric.
+     * @param action the action to perform on the patcher.
+     * @since 1.0.0
+     */
+    fun babic(
+        @DelegatesTo(
+            value = FabricLikePatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        babic {
+            action.delegate = it
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the fabric patcher with additional tweaks for babric.
+     * @since 1.0.0
+     */
+    fun babic() {
+        babic {}
+    }
+
+    /**
      * enables the quilt patcher.
      * @param action the action to configure the patcher.
      * @see FabricLikePatcher

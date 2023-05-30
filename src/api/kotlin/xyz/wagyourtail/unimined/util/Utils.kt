@@ -243,3 +243,7 @@ fun <E, K, V> Iterable<E>.associateNonNull(apply: (E) -> Pair<K, V>?): Map<K, V>
     }
     return mut
 }
+
+fun Path.isZip(): Boolean =
+    inputStream().use { stream -> ByteArray(4).also { stream.read(it, 0, 4) } }
+        .contentEquals(byteArrayOf(0x50, 0x4B, 0x03, 0x04))

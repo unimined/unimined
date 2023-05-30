@@ -3,16 +3,17 @@ package net.fabricmc.mappingio.format
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.MappedElementKind
+import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import java.io.Reader
 
 object ParchmentReader {
 
-    fun read(reader: Reader, targetNs: String, visitor: MemoryMappingTree) {
+    fun read(reader: Reader, targetNs: String, visitor: MappingVisitor) {
         read(JsonParser.parseReader(reader).asJsonObject, targetNs, visitor)
     }
 
-    fun read(json: JsonObject, targetNs: String, visitor: MemoryMappingTree) {
+    fun read(json: JsonObject, targetNs: String, visitor: MappingVisitor) {
 
         if (visitor.visitHeader()) {
             visitor.visitNamespaces(targetNs, listOf(targetNs))

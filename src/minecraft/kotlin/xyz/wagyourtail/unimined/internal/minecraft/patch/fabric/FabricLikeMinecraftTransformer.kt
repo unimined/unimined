@@ -8,7 +8,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
@@ -89,7 +89,7 @@ abstract class FabricLikeMinecraftTransformer(
         }
     )
 
-    override var prodNamespace by FinalizeOnRead(MappingNamespace.INTERMEDIARY)
+    override var prodNamespace by FinalizeOnRead(LazyMutable { provider.mappings.getNamespace("intermediary") })
 
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
@@ -99,7 +99,7 @@ abstract class FabricLikeMinecraftTransformer(
             .createDirectories()
             .resolve("intermediary2named.jar")
             .apply {
-                val export = ExportMappingsTaskImpl.ExportImpl().apply {
+                val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
                     location = toFile()
                     type = ExportMappingsTask.MappingExportTypes.TINY_V2
                     sourceNamespace = prodNamespace
@@ -116,6 +116,15 @@ abstract class FabricLikeMinecraftTransformer(
         project.afterEvaluate {
             afterEvaluate()
         }
+    }
+
+    override fun prodNamespace(namespace: String) {
+        prodNamespace = provider.mappings.getNamespace(namespace)
+    }
+
+    @Deprecated("", replaceWith = ReplaceWith("prodNamespace(namespace)"))
+    override fun setProdNamespace(namespace: String) {
+        prodNamespace(namespace)
     }
 
     protected abstract fun addMavens()
@@ -329,14 +338,14 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
 
-    override fun at2aw(input: String, output: String, namespace: MappingNamespace) =
+    override fun at2aw(input: String, output: String, namespace: MappingNamespaceTree.Namespace) =
         at2aw(File(input), File(output), namespace)
 
-    override fun at2aw(input: String, namespace: MappingNamespace) = at2aw(File(input), namespace)
+    override fun at2aw(input: String, namespace: MappingNamespaceTree.Namespace) = at2aw(File(input), namespace)
     override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
     override fun at2aw(input: String) = at2aw(File(input))
     override fun at2aw(input: File) = at2aw(input, provider.mappings.devNamespace)
-    override fun at2aw(input: File, namespace: MappingNamespace) = at2aw(
+    override fun at2aw(input: File, namespace: MappingNamespaceTree.Namespace) = at2aw(
         input,
         project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
             .resolve("${project.name}.accesswidener"),
@@ -344,11 +353,11 @@ abstract class FabricLikeMinecraftTransformer(
     )
 
     override fun at2aw(input: File, output: File) = at2aw(input, output, provider.mappings.devNamespace)
-    override fun at2aw(input: File, output: File, namespace: MappingNamespace): File {
+    override fun at2aw(input: File, output: File, namespace: MappingNamespaceTree.Namespace): File {
         return AccessTransformerMinecraftTransformer.at2aw(
             input.toPath(),
             output.toPath(),
-            namespace.namespace,
+            namespace.name,
             provider.mappings.mappingTree,
             project.logger
         ).toFile()
@@ -361,7 +370,7 @@ abstract class FabricLikeMinecraftTransformer(
         )
     }
 
-    override fun mergeAws(namespace: MappingNamespace, inputs: List<File>): File {
+    override fun mergeAws(namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File {
         return mergeAws(
             project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
                 .resolve("${project.name}.accesswidener"),
@@ -373,7 +382,7 @@ abstract class FabricLikeMinecraftTransformer(
         return mergeAws(output, provider.mappings.devNamespace, inputs)
     }
 
-    override fun mergeAws(output: File, namespace: MappingNamespace, inputs: List<File>): File {
+    override fun mergeAws(output: File, namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File {
         return AccessWidenerMinecraftTransformer.mergeAws(
             inputs.map { it.toPath() },
             output.toPath(),

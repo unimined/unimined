@@ -7,8 +7,7 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 
 /**
  * task responsible for transforming your built jar to production.
@@ -26,7 +25,7 @@ abstract class RemapJarTask : Jar() {
     @get:Input
     @get:Optional
     @get:ApiStatus.Internal
-    abstract val devNamespace: Property<MappingNamespace?>
+    abstract val devNamespace: Property<MappingNamespaceTree.Namespace?>
 
     /**
      * the dev env fallback mappings
@@ -35,7 +34,7 @@ abstract class RemapJarTask : Jar() {
     @get:Input
     @get:Optional
     @get:ApiStatus.Internal
-    abstract val devFallbackNamespace: Property<MappingNamespace?>
+    abstract val devFallbackNamespace: Property<MappingNamespaceTree.Namespace?>
 
     /**
      * the prod env mappings
@@ -44,7 +43,7 @@ abstract class RemapJarTask : Jar() {
     @get:Input
     @get:Optional
     @get:ApiStatus.Internal
-    abstract val prodNamespace: Property<MappingNamespace?>
+    abstract val prodNamespace: Property<MappingNamespaceTree.Namespace?>
 
     /**
      * whether to remap AccessTransformers to the legacy format (<=1.7.10)
@@ -53,22 +52,16 @@ abstract class RemapJarTask : Jar() {
     @get:Optional
     abstract val remapATToLegacy: Property<Boolean?>
 
-    fun devNamespace(namespace: String) {
-        devNamespace.set(MappingNamespace.getNamespace(namespace))
-    }
+    abstract fun devNamespace(namespace: String)
 
-    fun devFallbackNamespace(namespace: String) {
-        devFallbackNamespace.set(MappingNamespace.getNamespace(namespace))
-    }
+    abstract fun devFallbackNamespace(namespace: String)
 
-    fun prodNamespace(namespace: String) {
-        prodNamespace.set(MappingNamespace.getNamespace(namespace))
-    }
+    abstract fun prodNamespace(namespace: String)
 
     init {
-        devNamespace.convention(null as MappingNamespace?)
-        devFallbackNamespace.convention(null as MappingNamespace?)
-        prodNamespace.convention(null as MappingNamespace?)
+        devNamespace.convention(null as MappingNamespaceTree.Namespace?)
+        devFallbackNamespace.convention(null as MappingNamespaceTree.Namespace?)
+        prodNamespace.convention(null as MappingNamespaceTree.Namespace?)
         remapATToLegacy.convention(null as Boolean?)
     }
 

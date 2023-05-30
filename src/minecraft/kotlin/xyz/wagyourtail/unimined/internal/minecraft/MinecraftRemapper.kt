@@ -5,7 +5,7 @@ import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.remap.MinecraftRemapConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -13,7 +13,6 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.consumerApply
-import xyz.wagyourtail.unimined.util.getTempFilePath
 import java.nio.file.Path
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
@@ -39,7 +38,7 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
     }
 
     @ApiStatus.Internal
-    fun provide(minecraft: MinecraftJar, remapTo: MappingNamespace, remapFallback: MappingNamespace): MinecraftJar {
+    fun provide(minecraft: MinecraftJar, remapTo: MappingNamespaceTree.Namespace, remapFallback: MappingNamespaceTree.Namespace): MinecraftJar {
         if (remapTo == minecraft.mappingNamespace && remapFallback == minecraft.fallbackNamespace) return minecraft
         return minecraft.let(consumerApply {
             val mappingsId = provider.mappings.combinedNames
@@ -59,12 +58,11 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
                 return@consumerApply target
             }
 
-            val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
+            val path = provider.mappings.getRemapPath(
                 mappingNamespace,
                 fallbackNamespace,
                 remapFallback,
-                remapTo,
-                provider.mappings.available
+                remapTo
             )
             if (path.isEmpty()) {
                 if (minecraft.path != target.path) {
@@ -80,26 +78,24 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
                 project.logger.info("[Unimined/McRemapper] $prevNamespace -> $step")
                 val targetFile = if (step == last) {
                     target.path
-                } else if (step.first) {
-                    getTempFilePath("remap-mc-inner-${step.second.namespace}", ".jar")
                 } else {
                     MinecraftJar(
                         minecraft,
                         parentPath = parent,
-                        mappingNamespace = step.second,
+                        mappingNamespace = step,
                         fallbackNamespace = prevNamespace
                     ).path
                 }
-                remapToInternal(prevTarget, targetFile, envType, prevNamespace, step.second)
+                remapToInternal(prevTarget, targetFile, envType, prevNamespace, step)
                 prevTarget = targetFile
-                prevNamespace = step.second
+                prevNamespace = step
                 project.logger.info("[Unimined/McRemapper]    $targetFile")
             }
             target
         })
     }
 
-    fun remapToInternal(from: Path, target: Path, envType: EnvType, fromNs: MappingNamespace, toNs: MappingNamespace) {
+    fun remapToInternal(from: Path, target: Path, envType: EnvType, fromNs: MappingNamespaceTree.Namespace, toNs: MappingNamespaceTree.Namespace) {
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(
                 provider.mappings.getTRMappings(

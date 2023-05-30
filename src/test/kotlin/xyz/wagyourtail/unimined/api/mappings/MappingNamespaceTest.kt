@@ -1,7 +1,7 @@
 package xyz.wagyourtail.unimined.api.mappings
 
 import org.junit.jupiter.api.Test
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import kotlin.test.assertEquals
 
 class MappingNamespaceTest {
@@ -18,86 +18,126 @@ class MappingNamespaceTest {
 
 
     @Test
-    fun calculateShortestRemapPathInternalTests() {
+    fun remapToForgeOfficial() {
         // remap from searge/official to mojmap/searge,
         // simulates 1.17+ forge remapping to the default ns used by forge (mojmap)
+        val mnt = MappingNamespaceTree()
+        val SEARGE = mnt.addNamespace("searge", setOf(mnt.OFFICIAL), false)
+        val MOJMAP = mnt.addNamespace("mojmap", setOf(mnt.OFFICIAL, SEARGE), true)
         assertEquals(
             listOf(
-                false to MappingNamespace.MOJMAP
+                MOJMAP
             ),
-            MappingNamespace.calculateShortestRemapPathWithFallbacks(
-                MappingNamespace.getNamespace("searge"),
-                MappingNamespace.getNamespace("official"),
-                MappingNamespace.getNamespace("searge"),
-                MappingNamespace.getNamespace("mojmap"),
-                setOf(
-                    MappingNamespace.MOJMAP,
-                    MappingNamespace.SEARGE,
-                    MappingNamespace.OFFICIAL
-                )
+            mnt.getRemapPath(
+                SEARGE,
+                mnt.OFFICIAL,
+                SEARGE,
+                MOJMAP
             )
         )
+    }
 
+    @Test
+    fun remapFromForgeToYarn() {
         // remap from searge/official to yarn/intermediary,
         // simulates 1.17+ forge remapping to fabric ns's (yarn/intermediary) for use in multi mapped projects
         // where yarn is prefered over mojmap
+        val mnt = MappingNamespaceTree()
+        val SEARGE = mnt.addNamespace("searge", setOf(mnt.OFFICIAL), false)
+        val INTERMEDIARY = mnt.addNamespace("intermediary", setOf(mnt.OFFICIAL), false)
+        val YARN = mnt.addNamespace("yarn", setOf(INTERMEDIARY), true)
         assertEquals(
             listOf(
-                true to MappingNamespace.OFFICIAL,
-                false to MappingNamespace.INTERMEDIARY,
-                false to MappingNamespace.YARN
+                mnt.OFFICIAL,
+                INTERMEDIARY,
+                YARN
             ),
-            MappingNamespace.calculateShortestRemapPathWithFallbacks(
-                MappingNamespace.getNamespace("searge"),
-                MappingNamespace.getNamespace("official"),
-                MappingNamespace.getNamespace("intermediary"),
-                MappingNamespace.getNamespace("yarn"),
-                setOf(
-                    MappingNamespace.MOJMAP,
-                    MappingNamespace.SEARGE,
-                    MappingNamespace.OFFICIAL,
-                    MappingNamespace.INTERMEDIARY,
-                    MappingNamespace.YARN
-                )
+            mnt.getRemapPath(
+                SEARGE,
+                mnt.OFFICIAL,
+                INTERMEDIARY,
+                YARN
             )
         )
+    }
 
+
+    @Test
+    fun failRemapFromOfficialToMCP() {
+        val mnt = MappingNamespaceTree()
+        val MCP = mnt.addNamespace("mcp", setOf(), true)
         // attempt remap from official directly to mcp.
         // this should fail as there is no direct path between the two.
-        assertThrows<IllegalArgumentException>("Invalid target: MCP, available: [OFFICIAL, MCP]") {
-            MappingNamespace.calculateShortestRemapPathWithFallbacks(
-                MappingNamespace.getNamespace("official"),
-                MappingNamespace.getNamespace("official"),
-                MappingNamespace.getNamespace("mcp"),
-                MappingNamespace.getNamespace("mcp"),
-                setOf(
-                    MappingNamespace.OFFICIAL,
-                    MappingNamespace.MCP
-                )
+        assertThrows<IllegalArgumentException>("""
+        Cannot remap from "official" to "mcp". MappingNamespaceTree.MappingNamespace: {
+          official -> []
+          mcp -> []
+        }
+        """.trimIndent()) {
+            mnt.getRemapPath(
+                mnt.OFFICIAL,
+                mnt.OFFICIAL,
+                mnt.OFFICIAL,
+                MCP
             )
         }
+    }
 
+    @Test
+    fun remapFromOfficialDirectToMCP() {
+        val mnt = MappingNamespaceTree()
         // make MappingNamespace.OFFICIAL accept remaps to MappingNamespace.MCP
-        val prev = MappingNamespace.OFFICIAL.canRemapTo
-        MappingNamespace.OFFICIAL.canRemapTo = { ns -> prev(ns).let { if (!it.first && ns == MappingNamespace.MCP) true to false else it } }
+        val MCP = mnt.addNamespace("mcp", setOf(mnt.OFFICIAL), true)
         // remap from official to mcp
         assertEquals(
             listOf(
-                false to MappingNamespace.MCP
+                MCP
             ),
-            MappingNamespace.calculateShortestRemapPathWithFallbacks(
-                MappingNamespace.getNamespace("official"),
-                MappingNamespace.getNamespace("official"),
-                MappingNamespace.getNamespace("mcp"),
-                MappingNamespace.getNamespace("mcp"),
-                setOf(
-                    MappingNamespace.OFFICIAL,
-                    MappingNamespace.SEARGE,
-                    MappingNamespace.MCP
-                )
+            mnt.getRemapPath(
+                mnt.OFFICIAL,
+                mnt.OFFICIAL,
+                mnt.OFFICIAL,
+                MCP
             )
         )
+    }
 
+    @Test
+    fun remapFromMCPtoMojmap() {
+        val mnt = MappingNamespaceTree()
+        val SEARGE = mnt.addNamespace("searge", setOf(mnt.OFFICIAL), false)
+        val MCP = mnt.addNamespace("mcp", setOf(mnt.OFFICIAL, SEARGE), true)
+        val MOJMAP = mnt.addNamespace("mojmap", setOf(mnt.OFFICIAL, SEARGE), true)
+        assertEquals(
+            listOf(
+                SEARGE,
+                MOJMAP
+            ),
+            mnt.getRemapPath(
+                MCP,
+                SEARGE,
+                SEARGE,
+                MOJMAP
+            )
+        )
+    }
+
+    @Test
+    fun remapFromSeargeToMCP() {
+        val mnt = MappingNamespaceTree()
+        val SEARGE = mnt.addNamespace("searge", setOf(mnt.OFFICIAL), false)
+        val MCP = mnt.addNamespace("mcp", setOf(mnt.OFFICIAL, SEARGE), true)
+        assertEquals(
+            listOf(
+                MCP
+            ),
+            mnt.getRemapPath(
+                SEARGE,
+                mnt.OFFICIAL,
+                SEARGE,
+                MCP
+            )
+        )
     }
 
 }

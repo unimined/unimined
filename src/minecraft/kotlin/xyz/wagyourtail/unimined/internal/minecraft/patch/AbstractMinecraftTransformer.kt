@@ -6,6 +6,7 @@ import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
@@ -32,6 +33,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
 ): MinecraftPatcher {
 
     open val merger: ClassMerger = ClassMerger()
+
+    override val prodNamespace: MappingNamespaceTree.Namespace = provider.mappings.OFFICIAL
 
     override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit by FinalizeOnRead { cl, _, _, e ->
         throw RuntimeException("Error merging class ${cl.name}", e)

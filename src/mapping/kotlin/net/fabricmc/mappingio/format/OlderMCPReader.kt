@@ -1,6 +1,7 @@
 package net.fabricmc.mappingio.format
 
 import net.fabricmc.mappingio.MappedElementKind
+import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -14,9 +15,10 @@ object OlderMCPReader {
         reader: Reader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        mappingTree: MappingTreeView,
+        visitor: MappingVisitor
     ) {
-        readMethod(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
+        readMethod(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, mappingTree, visitor)
     }
 
     private fun readMethod(
@@ -24,7 +26,8 @@ object OlderMCPReader {
         reader: ColumnFileReader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        mappingTree: MappingTreeView,
+        visitor: MappingVisitor
     ) {
         reader.nextLine(0)
         reader.nextLine(0)
@@ -74,7 +77,7 @@ object OlderMCPReader {
             visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
         }
 
-        val seargeNamespace = parentVisitor.getNamespaceId(sourceNamespace)
+        val seargeNamespace = mappingTree.getNamespaceId(sourceNamespace)
         if (seargeNamespace == MappingTreeView.NULL_NAMESPACE_ID) {
             throw IllegalStateException("Namespace $sourceNamespace not found")
         }
@@ -83,7 +86,7 @@ object OlderMCPReader {
 
 
         if (visitor.visitContent()) {
-            for (clazz in (parentVisitor as MappingTreeView).classes) {
+            for (clazz in mappingTree.classes) {
                 val cn = clazz.getName(seargeNamespace)
                 if (cn == null) {
                     continue
@@ -96,7 +99,7 @@ object OlderMCPReader {
                 }
             }
 
-            for (clazz in (parentVisitor as MappingTreeView).classes) {
+            for (clazz in mappingTree.classes) {
                 val cln = clazz.getName(seargeNamespace)
                 if (cln == null) {
                     continue
@@ -131,7 +134,8 @@ object OlderMCPReader {
         reader: ColumnFileReader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        mappingTree: MappingTreeView,
+        visitor: MappingVisitor
     ) {
         throw UnsupportedOperationException("Older MCPReader does not support reading param mappings")
     }
@@ -141,9 +145,10 @@ object OlderMCPReader {
         reader: Reader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        mappingTree: MappingTreeView,
+        visitor: MappingVisitor
     ) {
-        readField(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
+        readField(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, mappingTree, visitor)
     }
 
     private fun readField(
@@ -151,7 +156,8 @@ object OlderMCPReader {
         reader: ColumnFileReader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        mappingTree: MappingTreeView,
+        visitor: MappingVisitor
     ) {
         reader.nextLine(0)
         reader.nextLine(0)
@@ -203,7 +209,7 @@ object OlderMCPReader {
             visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
         }
 
-        val seargeNamespace = parentVisitor.getNamespaceId(sourceNamespace)
+        val seargeNamespace = mappingTree.getNamespaceId(sourceNamespace)
         if (seargeNamespace == MappingTreeView.NULL_NAMESPACE_ID) {
             throw IllegalStateException("Namespace $sourceNamespace not found")
         }
@@ -212,7 +218,7 @@ object OlderMCPReader {
 
 
         if (visitor.visitContent()) {
-            for (clazz in (parentVisitor as MappingTreeView).classes) {
+            for (clazz in mappingTree.classes) {
                 val cn = clazz.getName(seargeNamespace)
                 if (cn == null) {
                     continue
@@ -225,7 +231,7 @@ object OlderMCPReader {
                 }
             }
 
-            for (clazz in (parentVisitor as MappingTreeView).classes) {
+            for (clazz in mappingTree.classes) {
                 val cln = clazz.getName(seargeNamespace)
                 if (cln == null) {
                     continue

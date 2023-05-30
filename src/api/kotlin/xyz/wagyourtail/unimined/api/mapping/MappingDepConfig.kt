@@ -1,8 +1,6 @@
 package xyz.wagyourtail.unimined.api.mapping
 
 import org.gradle.api.artifacts.Dependency
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.util.LazyMutable
 
 /**
  * @since 1.0.0
@@ -19,24 +17,20 @@ abstract class MappingDepConfig<T : Dependency>(val dep: T, val mappingsConfig: 
      * and so you want to get those recognized as official mappings instead of the default
      * for unimined to use.
      */
-    val mapNamespace = mutableMapOf<String, MappingNamespace>()
+    abstract fun mapNamespace(from: String, to: String)
 
     /**
-     * override the side used for mappings with side information
-     * (like mcp)
+     * set the source namespace for the current dependency.
+     * this can be used to set the source on mappings where the first namespace is not
+     * the source namespace. (ie. mojmap, where the reverse is true, but in that case this value defaults to official anyway)
      */
-    val side: EnvType by LazyMutable {
-        mappingsConfig.side
-    }
+    abstract fun sourceNamespace(namespace: String)
+
 
     /**
-     * if this isn't empty, only the namespaces in this set are allowed...
-     * this is only effective on types with more than 1 target mapping
+     * filters namespaces to have to be from this.
+     * applied after mapNamespace
      */
-    val filterNamespaces = mutableSetOf<MappingNamespace>()
-
-    fun addFilterNamespace(namespace: String) {
-        filterNamespaces.add(MappingNamespace.getNamespace(namespace))
-    }
+    abstract fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): MappingNamespaceTree.Namespace
 
 }

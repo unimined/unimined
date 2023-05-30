@@ -3,7 +3,6 @@ package xyz.wagyourtail.unimined.internal.mapping.aw
 import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor
 import net.fabricmc.tinyremapper.TinyRemapper
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 
@@ -25,7 +24,7 @@ class AccessWidenerBetterRemapper(
             remapper = TinyRemapper.newRemapper()
                 .withMappings(
                     mappingsProvider.getTRMappings(
-                        MappingNamespace.getNamespace(namespace) to MappingNamespace.getNamespace(toNamespace),
+                        mcProvider.mappings.getNamespace(namespace) to mcProvider.mappings.getNamespace(toNamespace),
                         false
                     )
                 ).build()
@@ -33,8 +32,8 @@ class AccessWidenerBetterRemapper(
             remapper?.readClassPathAsync(*mcProvider.minecraftLibraries.resolve().map { it.toPath() }.toTypedArray())
             remapper?.readClassPathAsync(
                 mcProvider.getMinecraft(
-                    MappingNamespace.getNamespace(namespace),
-                    MappingNamespace.getNamespace(namespace)
+                    mcProvider.mappings.getNamespace(namespace),
+                    mcProvider.mappings.getNamespace(namespace)
                 )
             )
         }

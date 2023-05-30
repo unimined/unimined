@@ -2,6 +2,7 @@ package net.fabricmc.mappingio.format
 
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingUtil
+import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -24,7 +25,7 @@ object OldMCPReader {
         ) && reader.nextCol("\"side\"")
     }
 
-    fun readMethod(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
+    fun readMethod(envType: EnvType, reader: Reader, visitor: MappingVisitor) {
         readMethod(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, "searge", MappingUtil.NS_TARGET_FALLBACK, visitor)
     }
 
@@ -34,7 +35,7 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        visitor: MappingVisitor
     ) {
         readMethod(envType, ColumnFileReader(reader, ','), notchNamespace, seargeNamespace, targetNamespace, visitor)
     }
@@ -45,7 +46,7 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        visitor: MappingVisitor
     ) {
 
         reader.mark()
@@ -78,13 +79,13 @@ object OldMCPReader {
                 var classNotch = reader.readCell()
                 val packageName = reader.readCell()
                 val side = reader.readCell()!!
-                if (side != "2" && side.toInt() != envType.ordinal) continue
+                if (side != "2" && side.toInt() != envType.mcp) continue
 
                 if (className == classNotch) {
                     classNotch = "$packageName/$classNotch"
                 }
 
-                notchSig = fixNotchSig(notchSig, sig, parentVisitor)
+//                notchSig = fixNotchSig(notchSig, sig, parentVisitor)
 
                 if (lastClass != classNotch) {
                     lastClass = classNotch
@@ -108,7 +109,7 @@ object OldMCPReader {
         visitor.accept(parentVisitor)
     }
 
-    fun readField(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
+    fun readField(envType: EnvType, reader: Reader, visitor: MappingVisitor) {
         readField(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, "searge", MappingUtil.NS_TARGET_FALLBACK, visitor)
     }
 
@@ -118,7 +119,7 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        visitor: MappingVisitor
     ) {
         readField(envType, ColumnFileReader(reader, ','), notchNamespace, seargeNamespace, targetNamespace, visitor)
     }
@@ -129,7 +130,7 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        visitor: MappingVisitor
     ) {
 
         reader.mark()
@@ -162,13 +163,13 @@ object OldMCPReader {
                 var classNotch = reader.readCell()
                 val packageName = reader.readCell()
                 val side = reader.readCell()!!
-                if (side != "2" && side.toInt() != envType.ordinal) continue
+                if (side != "2" && side.toInt() != envType.mcp) continue
 
                 if (className == classNotch) {
                     classNotch = "$packageName/$classNotch"
                 }
 
-                notchSig = fixNotchSig(notchSig, sig, parentVisitor)
+//                notchSig = fixNotchSig(notchSig, sig, parentVisitor)
 
                 if (lastClass != classNotch) {
                     lastClass = classNotch
@@ -194,33 +195,34 @@ object OldMCPReader {
 
     private val classSigRegex = Regex("L([^;]+);")
 
-    private fun fixNotchSig(notchSig: String, sig: String, parentVisitor: MappingTreeView): String {
-        @Suppress("NAME_SHADOWING") var notchSig = notchSig
-        val notchSigSpl = classSigRegex.findAll(notchSig).map { it.groupValues[1] }.toList()
-        val sigSpl = classSigRegex.findAll(sig).map { it.groupValues[1] }.toList()
-        try {
-            for (i in notchSigSpl.indices) {
-                if (notchSigSpl[i] == sigSpl[i]) {
-                    // find in class map
-                    var found = false
-                    for (clazz in parentVisitor.classes) {
-                        if (clazz.srcName.split("/").last() == notchSigSpl[i]) {
-                            notchSig = notchSig.replace(notchSigSpl[i], clazz.srcName)
-                            found = true
-                            break
-                        }
-                    }
-                    if (!found) {
-                        System.err.println("Class not found: ${notchSigSpl[i]}")
-                    }
-                }
-            }
-        } catch (oob: IndexOutOfBoundsException) {
-            System.err.println("Notch sig: $notchSig")
-            System.err.println("Sig: $sig")
-        }
-        return notchSig
-    }
+//    private fun fixNotchSig(notchSig: String, sig: String, parentVisitor: MappingTreeView): String {
+//        @Suppress("NAME_SHADOWING") var notchSig = notchSig
+//        val notchSigSpl = classSigRegex.findAll(notchSig).map { it.groupValues[1] }.toList()
+//        val sigSpl = classSigRegex.findAll(sig).map { it.groupValues[1] }.toList()
+//        try {
+//            for (i in notchSigSpl.indices) {
+//                if (notchSigSpl[i] == sigSpl[i]) {
+//                    // find in class map
+//                    var found = false
+//                    for (clazz in parentVisitor.classes) {
+//                        if (clazz.srcName.split("/").last() == notchSigSpl[i]) {
+//                            notchSig = notchSig.replace(notchSigSpl[i], clazz.srcName)
+//                            found = true
+//                            break
+//                        }
+//                    }
+//                    if (!found) {
+//                        System.err.println("Class not found: ${notchSigSpl[i]}")
+//                    }
+//                }
+//            }
+//        } catch (oob: IndexOutOfBoundsException) {
+//            System.err.println("Notch sig: $notchSig")
+//            System.err.println("Sig: $sig")
+//            throw oob
+//        }
+//        return notchSig
+//    }
 
     fun readParam(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
         readParam(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
@@ -238,12 +240,12 @@ object OldMCPReader {
         reader: ColumnFileReader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        visitor: MappingVisitor
     ) {
         throw UnsupportedOperationException("Old MCPReader does not support reading param mappings")
     }
 
-    fun readClasses(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
+    fun readClasses(envType: EnvType, reader: Reader, visitor: MappingVisitor) {
         readClasses(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, "searge", MappingUtil.NS_TARGET_FALLBACK, visitor)
     }
 
@@ -253,7 +255,7 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        visitor: MappingVisitor
     ) {
         readClasses(envType, ColumnFileReader(reader, ','), notchNamespace, seargeNamespace, targetNamespace, visitor)
     }
@@ -264,7 +266,7 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        visitor: MappingVisitor
     ) {
         reader.mark()
         if (!checkClassesHeader(reader)) {
@@ -291,7 +293,7 @@ object OldMCPReader {
                 reader.readCell() // superName
                 val packageName = reader.readCell()
                 val side = reader.readCell()!!
-                if (side != "2" && side.toInt() != envType.ordinal) continue
+                if (side != "2" && side.toInt() != envType.mcp) continue
 
                 if (name == notch) {
                     visitLastClass = visitor.visitClass("$packageName/$notch")

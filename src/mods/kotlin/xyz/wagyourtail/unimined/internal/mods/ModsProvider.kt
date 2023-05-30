@@ -2,15 +2,12 @@ package xyz.wagyourtail.unimined.internal.mods
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import xyz.wagyourtail.unimined.api.UniminedExtension
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.mod.ModRemapConfig
 import xyz.wagyourtail.unimined.api.mod.ModsConfig
 import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.util.associateNonNull
 import xyz.wagyourtail.unimined.util.defaultedMapOf
-import xyz.wagyourtail.unimined.util.nonNullValues
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.lang.IllegalArgumentException
@@ -57,7 +54,7 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         }
     }
 
-    fun getClasspathAs(namespace: MappingNamespace, fallbackNamespace: MappingNamespace, classpath: Set<File>): Set<File> {
+    fun getClasspathAs(namespace: MappingNamespaceTree.Namespace, fallbackNamespace: MappingNamespaceTree.Namespace, classpath: Set<File>): Set<File> {
         val remapCp = classpath.associateWith { file ->
             remapConfigsResolved.values.firstNotNullOfOrNull { conf -> conf.getConfigForFile(file)?.let { conf to it } }
         }

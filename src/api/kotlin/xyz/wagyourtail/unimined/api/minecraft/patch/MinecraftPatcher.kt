@@ -3,7 +3,7 @@ package xyz.wagyourtail.unimined.api.minecraft.patch
 import groovy.lang.Closure
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import java.nio.file.FileSystem
 import java.nio.file.Path
@@ -23,7 +23,7 @@ interface MinecraftPatcher {
      * the namespace to use for the production jar.
      */
     @get:ApiStatus.Internal
-    val prodNamespace: MappingNamespace
+    val prodNamespace: MappingNamespaceTree.Namespace
 
     /**
      * @since 0.4.2

@@ -1,12 +1,13 @@
 package net.fabricmc.mappingio.format
 
 import net.fabricmc.mappingio.MappedElementKind
+import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 
 object SeargeFromTsrg2 {
 
-    fun apply(tsrgNamespace: String, classNamesNamespace: String, seargeNamespace: String, tree: MemoryMappingTree) {
+    fun apply(tsrgNamespace: String, classNamesNamespace: String, seargeNamespace: String, tree: MappingTreeView, visitor: MappingVisitor) {
         val tsrgId = tree.getNamespaceId(tsrgNamespace)
         val classNamesId = tree.getNamespaceId(classNamesNamespace)
 
@@ -18,26 +19,26 @@ object SeargeFromTsrg2 {
             throw IllegalArgumentException("Namespace $classNamesNamespace not found")
         }
 
-        val visitHeader = tree.visitHeader()
+        val visitHeader = visitor.visitHeader()
 
         if (visitHeader) {
-            tree.visitNamespaces(tsrgNamespace, listOf(seargeNamespace))
+            visitor.visitNamespaces(tsrgNamespace, listOf(seargeNamespace))
         }
 
-        if (tree.visitContent()) {
-            for (c in (tree as MappingTreeView).classes) {
+        if (visitor.visitContent()) {
+            for (c in tree.classes) {
                 val tsrgName = c.getName(tsrgId)
                 if (tsrgName != null) {
-                    if (tree.visitClass(tsrgName)) {
-                        tree.visitDstName(MappedElementKind.CLASS, 0, c.getName(classNamesId) ?: tsrgName)
-                        if (tree.visitElementContent(MappedElementKind.CLASS)) {
+                    if (visitor.visitClass(tsrgName)) {
+                        visitor.visitDstName(MappedElementKind.CLASS, 0, c.getName(classNamesId) ?: tsrgName)
+                        if (visitor.visitElementContent(MappedElementKind.CLASS)) {
                             for (m in c.methods) {
                                 val tsrgMethodName = m.getName(tsrgId)
                                 val tsrgMethodDesc = m.getDesc(tsrgId)
                                 if (tsrgMethodName != null) {
-                                    if (tree.visitMethod(tsrgMethodName, tsrgMethodDesc)) {
-                                        tree.visitDstName(MappedElementKind.METHOD, 0, tsrgMethodName)
-                                        tree.visitElementContent(MappedElementKind.METHOD)
+                                    if (visitor.visitMethod(tsrgMethodName, tsrgMethodDesc)) {
+                                        visitor.visitDstName(MappedElementKind.METHOD, 0, tsrgMethodName)
+                                        visitor.visitElementContent(MappedElementKind.METHOD)
                                     }
                                 }
                             }
@@ -45,9 +46,9 @@ object SeargeFromTsrg2 {
                                 val tsrgFieldName = f.getName(tsrgId)
                                 val tsrgFieldDesc = f.getDesc(tsrgId)
                                 if (tsrgFieldName != null) {
-                                    if (tree.visitField(tsrgFieldName, tsrgFieldDesc)) {
-                                        tree.visitDstName(MappedElementKind.FIELD, 0, tsrgFieldName)
-                                        tree.visitElementContent(MappedElementKind.FIELD)
+                                    if (visitor.visitField(tsrgFieldName, tsrgFieldDesc)) {
+                                        visitor.visitDstName(MappedElementKind.FIELD, 0, tsrgFieldName)
+                                        visitor.visitElementContent(MappedElementKind.FIELD)
                                     }
                                 }
                             }
@@ -57,6 +58,6 @@ object SeargeFromTsrg2 {
             }
         }
 
-        tree.visitEnd()
+        visitor.visitEnd()
     }
 }

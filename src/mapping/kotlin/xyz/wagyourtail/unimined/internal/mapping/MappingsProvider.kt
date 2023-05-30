@@ -1,8 +1,6 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
-import net.fabricmc.mappingio.MappingReader
-import net.fabricmc.mappingio.MappingUtil
-import net.fabricmc.mappingio.adapter.MappingNsRenamer
+import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
 import net.fabricmc.mappingio.format.*
 import net.fabricmc.mappingio.tree.MappingTreeView
@@ -11,7 +9,7 @@ import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalModuleDependency
 import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.mapping.MemoryMapping
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -37,22 +35,16 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     private var freeze = false
 
-    override var devNamespace by FinalizeOnRead(LazyMutable {
-        available.firstOrNull { it.type == MappingNamespace.Type.NAMED } ?: throw IllegalStateException("No named namespace available")
+    override var devNamespace: Namespace by FinalizeOnRead(LazyMutable {
+        getNamespaces().values.first { it.named }
     })
 
-    override var devFallbackNamespace by FinalizeOnRead(LazyMutable {
-        available.firstOrNull { it.type == MappingNamespace.Type.INT } ?: throw IllegalStateException("No int namespace available")
+    override var devFallbackNamespace: Namespace by FinalizeOnRead(LazyMutable {
+        devNamespace.targets.firstOrNull { it != OFFICIAL } ?: if (devNamespace.targets.contains(OFFICIAL)) OFFICIAL else throw IllegalStateException("No fallback namespace found")
     })
 
     override val mappingsDeps = mutableListOf<MappingDepConfig<*>>()
 
-    override val available: Set<MappingNamespace> by lazy {
-        if (mappingsDeps.isEmpty()) {
-            return@lazy emptySet()
-        }
-        (mappingTree.dstNamespaces.filter { it != "srg" } + mappingTree.srcNamespace).map { MappingNamespace.getNamespace(it) }.toSet()
-    }
 
     override fun intermediary(action: MappingDepConfig<*>.() -> Unit) {
         mapping("net.fabricmc:intermediary:${minecraft.version}:v2", action)
@@ -72,7 +64,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         } else {
             "net.legacyfabric.v${revision}"
         }
-        mapping("${group}:intermediary:${minecraft.version}:v2", action)
+        mapping("${group}:intermediary:${minecraft.version}:v${revision}",action)
     }
 
     override fun babricIntermediary(action: MappingDepConfig<*>.() -> Unit) {
@@ -89,7 +81,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun hashed(action: MappingDepConfig<*>.() -> Unit) {
-        mapping("org.quiltmc:hashed:${minecraft.version}", action)
+        mapping("org.quiltmc:hashed:${minecraft.version}") {
+            action()
+        }
     }
 
     override fun mojmap(action: MappingDepConfig<*>.() -> Unit) {
@@ -101,14 +95,30 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun mcp(channel: String, version: String, action: MappingDepConfig<*>.() -> Unit) {
-        mapping("de.oceanlabs.mcp:mcp_${channel}:${version}@zip", action)
+        if (channel == "legacy") {
+            project.unimined.wagYourMaven("releases")
+        } else {
+            project.unimined.forgeMaven()
+        }
+        mapping("de.oceanlabs.mcp:mcp_${channel}:${version}@zip",action)
+    }
+
+    override fun retroMCP(action: MappingDepConfig<*>.() -> Unit) {
+        project.unimined.mcphackersIvy()
+        mapping("io.github.mcphackers:mcp:${minecraft.version}@zip") {
+            action()
+        }
     }
 
     override fun yarn(build: Int, action: MappingDepConfig<*>.() -> Unit) {
-        mapping("net.fabricmc:yarn:${minecraft.version}+build.${build}:v2", action)
+        project.unimined.fabricMaven()
+        mapping("net.fabricmc:yarn:${minecraft.version}+build.${build}:v2") {
+            action()
+        }
     }
 
     override fun legacyYarn(build: Int, revision: Int, action: MappingDepConfig<*>.() -> Unit) {
+        project.unimined.legacyFabricMaven()
         if (legacyFabricMappingsVersionFinalize.value != revision) {
             if (!legacyFabricMappingsVersionFinalize.finalized) {
                 legacyFabricMappingsVersion = revision
@@ -122,18 +132,26 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         } else {
             "net.legacyfabric.v${revision}"
         }
-        mapping("${group}:yarn:${minecraft.version}+build.${build}:v2", action)
+        mapping("${group}:yarn:${minecraft.version}+build.${build}:v2") {
+            action()
+        }
     }
 
     override fun barn(build: Int, action: MappingDepConfig<*>.() -> Unit) {
-        mapping("babric:barn:${minecraft.version}+build.${build}:v2", action)
+        mapping("babric:barn:${minecraft.version}+build.${build}:v2") {
+            action()
+        }
     }
 
     override fun quilt(build: Int, classifier: String, action: MappingDepConfig<*>.() -> Unit) {
         mapping("org.quiltmc:quilt-mappings:${minecraft.version}+build.${build}:${classifier}") {
-            mapNamespace["named"] = MappingNamespace.QUILT
             action()
         }
+    }
+
+    override fun forgeBuiltinMCP(version: String, action: MappingDepConfig<*>.() -> Unit) {
+        project.unimined.forgeMaven()
+        mapping("net.minecraftforge:forge:${minecraft.version}-${version}:src@zip", action)
     }
 
     override fun mapping(dependency: Any, action: MappingDepConfig<*>.() -> Unit) {
@@ -146,6 +164,11 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     ExternalMappingDepImpl(it, this).also(action)
                 } else {
                     MappingDepImpl(it, this).also(action)
+                }.also {
+                    if (it.inputs.nsFilter.isEmpty()) {
+                        throw IllegalStateException("No namespaces specified for mapping dependency $it")
+                    }
+                    //TODO: other checks
                 }
             )
         }
@@ -174,8 +197,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             EnvType.SERVER, EnvType.DATAGEN -> minecraft.minecraftData.officialServerMappingsFile
         }.inputStream().use {
             ProGuardReader.read(
-                it.reader(), MappingNamespace.MOJMAP.namespace, MappingNamespace.OFFICIAL.namespace,
-                MappingSourceNsSwitch(tree, MappingNamespace.OFFICIAL.namespace)
+                it.reader(), "mojmap", "official",
+                MappingSourceNsSwitch(tree, "official")
             )
         }
         return tree
@@ -183,12 +206,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     private val mappingTreeLazy = lazy {
         project.logger.lifecycle("[Unimined/MappingsProvider] Resolving mappings for ${minecraft.sourceSet}")
-        val mappings = MemoryMappingTree()
+        lateinit var mappings: MappingTreeView
         if (freeze) throw IllegalStateException("Cannot initialize mapping tree twice")
         freeze = true
 
         if (mappingsDeps.isEmpty()) {
-            return@lazy mappings
+            project.logger.warn("[Unimined/MappingsProvider] No mappings specified!")
+            return@lazy MemoryMappingTree()
         }
 
         project.logger.info("[Unimined/MappingsProvider] Loading mappings: \n    ${mappingsDeps.joinToString("\n    ") { it.dep.toString() }}")
@@ -201,7 +225,10 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             // load from cache
             try {
                 cacheFile.reader().use {
-                    Tiny2Reader2.read(it, mappings)
+                    MemoryMappingTree().also { map ->
+                        Tiny2Reader2.read(it, map)
+                        mappings = map
+                    }
                 }
                 true
             } catch (e: IOException) {
@@ -212,84 +239,35 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             }
         } else false
         if (!loaded) {
-            val loadMappings = MemoryMappingTree()
             val configuration = project.configurations.detachedConfiguration().also {
                 it.dependencies.addAll(mappingsDeps)
             }
+            val mappingBuilder = MappingTreeBuilder()
 
             // parse each dep
-            val filterNamespaces = mutableSetOf<String>()
             for (dep in mappingsDeps) {
                 project.logger.info("[Unimined/MappingsProvider] Loading mappings from ${dep.name}")
                 // resolve dep to files, no pom
                 val files = configuration.files(dep).filter { it.extension != "pom" }
                 // load each file
                 project.logger.info("[Unimined/MappingsProvider] Loading mappings files ${files.joinToString(", ")}")
-                val beforeNs = mappings.dstNamespaces ?: emptySet()
-                for (file in files) {
-                    // detect if file is archive by seeing if it starts with the zip header
-                    if (file.inputStream().use { stream -> ByteArray(4).also { stream.read(it, 0, 4) } }
-                            .contentEquals(byteArrayOf(0x50, 0x4B, 0x03, 0x04))) {
-                        // load from archive
-                        val contents = ZipReader.readContents(file.toPath())
-                        val type = ZipReader.getZipTypeFromContentList(contents)
-                        project.logger.info("[Unimined/MappingsProvider] Loading mappings from ${file.name} as $type")
-                        if (type == ZipReader.ZipFormat.TINY_JAR) {
-                            // if user hasn't specified what named should be, default to yarn
-                            if (dep.mapNamespace["named"] == null) {
-                                dep.mapNamespace["named"] = MappingNamespace.YARN
-                            }
-                        }
-                        ZipReader.readMappings(dep.side, file.toPath(), contents, loadMappings, dep.mapNamespace)
-                    } else {
-                        // load from file
-                        val format = MappingReader.detectFormat(file.toPath())
 
-                        if (format == MappingFormat.PROGUARD) {
-                            // detect if source/target are overwritten
-                            if (dep.mapNamespace[MappingUtil.NS_SOURCE_FALLBACK] == null) {
-                                dep.mapNamespace[MappingUtil.NS_SOURCE_FALLBACK] = MappingNamespace.MOJMAP
-                            }
-                            if (dep.mapNamespace[MappingUtil.NS_TARGET_FALLBACK] == null) {
-                                dep.mapNamespace[MappingUtil.NS_TARGET_FALLBACK] = MappingNamespace.OFFICIAL
-                            }
-                            if (dep.mapNamespace[MappingUtil.NS_TARGET_FALLBACK] == MappingNamespace.OFFICIAL) {
-                                file.reader().use {
-                                    ProGuardReader.read(it, MappingNsRenamer(
-                                            MappingSourceNsSwitch(
-                                                loadMappings,
-                                                MappingNamespace.OFFICIAL.namespace
-                                            ), dep.mapNamespace.mapValues { it.value.namespace })
-                                    )
-                                }
-                            } else {
-                                MappingReader.read(file.toPath(), format, MappingNsRenamer(loadMappings, dep.mapNamespace.mapValues { it.value.namespace }))
-                            }
-                        } else {
-                            MappingReader.read(file.toPath(), format, MappingNsRenamer(loadMappings, dep.mapNamespace.mapValues { it.value.namespace }))
-                        }
-                    }
+                val input = (dep as MappingDepConfigImpl<*>).inputs
+                val prev = input.fmv
+                input.forwardVisitor {
+                    SrgToSeargeMapper(prev(it), "srg", "searge", "mojmap", ::getOfficialMappings)
                 }
-                val afterNs = loadMappings.dstNamespaces ?: emptySet()
-                val diff = afterNs - beforeNs
-                if (dep.filterNamespaces.isEmpty()) {
-                    filterNamespaces.addAll(diff)
-                } else {
-                    filterNamespaces.addAll(afterNs.intersect(dep.filterNamespaces.map { it.namespace }.toSet()))
+
+                for (file in files) {
+                    mappingBuilder.mappingFile(file.toPath(), input)
+
                 }
             }
-            if (loadMappings.dstNamespaces?.contains("srg") == true) {
-                project.logger.info("[Unimined/MappingsProvider] Detected TSRG2 mappings (1.17+) - converting to have the right class names for runtime forge")
-                if (!loadMappings.dstNamespaces.contains(MappingNamespace.MOJMAP.namespace)) {
-                    getOfficialMappings().accept(loadMappings)
-                }
-                SeargeFromTsrg2.apply("srg", MappingNamespace.MOJMAP.namespace, MappingNamespace.SEARGE.namespace, mappings)
-            }
+            mappings = mappingBuilder.build()
             if (hasStubs) {
                 project.logger.info("[Unimined/MappingsProvider] Loading stub mappings")
-                _stub!!.visit(loadMappings)
+                _stub!!.visit(mappings as MappingVisitor)
             }
-            loadMappings.accept(MappingDstNsFilter(mappings, filterNamespaces.toList()))
             cacheFile.bufferedWriter().use {
                 mappings.accept(Tiny2Writer2(it, false))
             }
@@ -368,14 +346,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     private class ArgumentMapping(to: String, val index: Int): Mapping(to)
     private class LocalVariableMapping(to: String, val lvIndex: Int, val startOpIdx: Int, val lvtRowIndex: Int): Mapping(to)
 
-    private val mappingProvider: Map<Pair<MappingNamespace, MappingNamespace>, List<Mapping>> = defaultedMapOf { remap ->
+    private val mappingProvider: Map<Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>, List<Mapping>> = defaultedMapOf { remap ->
         project.logger.info("[Unimined/MappingsProvider] resolving internal mappings provider for $remap in ${minecraft.sourceSet}")
-        val reverse = remap.first.shouldReverse(remap.second)
-        val srcName = (if (reverse) remap.second else remap.first).namespace
-        val dstName = (if (reverse) remap.first else remap.second).namespace
+        val srcName = remap.first
+        val dstName = remap.second
 
-        val fromId = mappingTree.getNamespaceId(srcName)
-        val toId = mappingTree.getNamespaceId(dstName)
+        val fromId = mappingTree.getNamespaceId(srcName.name)
+        val toId = mappingTree.getNamespaceId(dstName.name)
 
         if (fromId == MappingTreeView.NULL_NAMESPACE_ID) {
             throw IllegalArgumentException("Unknown source namespace: $srcName")
@@ -417,11 +394,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 continue
             }
 
-            if (reverse) {
-                mappings.add(ClassMapping(toClassName, fromClassName))
-            } else {
-                mappings.add(ClassMapping(fromClassName, toClassName))
-            }
+            mappings.add(ClassMapping(fromClassName, toClassName))
 
             for (fieldDef in classDef.fields) {
                 val fromFieldName = fieldDef.getName(fromId)
@@ -437,11 +410,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     continue
                 }
 
-                if (reverse) {
-                    mappings.add(FieldMapping(toFieldName, fieldDef.getDesc(toId), fromFieldName))
-                } else {
-                    mappings.add(FieldMapping(fromFieldName, fieldDef.getDesc(fromId), toFieldName))
-                }
+                mappings.add(FieldMapping(fromFieldName, fieldDef.getDesc(fromId), toFieldName))
             }
 
             for (methodDef in classDef.methods) {
@@ -458,14 +427,10 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     continue
                 }
 
-                if (reverse) {
-                    mappings.add(MethodMapping(toMethodName, methodDef.getDesc(toId)!!, fromMethodName))
-                } else {
-                    mappings.add(MethodMapping(fromMethodName, methodDef.getDesc(fromId)!!, toMethodName))
-                }
+                mappings.add(MethodMapping(fromMethodName, methodDef.getDesc(fromId)!!, toMethodName))
 
                 for (arg in methodDef.args) {
-                    val toArgName = if (reverse) arg.getName(fromId) else arg.getName(toId)
+                    val toArgName = arg.getName(toId)
 
                     if (toArgName != null) {
                         mappings.add(ArgumentMapping(toArgName, arg.lvIndex))
@@ -473,7 +438,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 }
 
                 for (localVar in methodDef.vars) {
-                    val toLocalVarName = if (reverse) localVar.getName(fromId) else localVar.getName(toId)
+                    val toLocalVarName = localVar.getName(toId)
 
                     if (toLocalVarName != null) {
                         mappings.add(
@@ -494,7 +459,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun getTRMappings(
-        remap: Pair<MappingNamespace, MappingNamespace>,
+        remap: Pair<Namespace, Namespace>,
         remapLocals: Boolean,
     ) : (IMappingProvider.MappingAcceptor) -> Unit {
         val mappings = mappingProvider[remap] ?: throw IllegalStateException("mapping provider returned null for $remap, this should never happen!")

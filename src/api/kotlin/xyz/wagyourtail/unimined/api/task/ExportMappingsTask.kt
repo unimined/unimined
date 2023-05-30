@@ -5,7 +5,7 @@ import groovy.lang.DelegatesTo
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.internal.ConventionTask
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import java.io.File
 
@@ -84,14 +84,14 @@ abstract class ExportMappingsTask : ConventionTask() {
          * @since 0.2.3
          */
         @set:ApiStatus.Internal
-        var sourceNamespace: MappingNamespace? = null
+        var sourceNamespace: MappingNamespaceTree.Namespace? = null
 
         /**
          * the namespace(s) to export to.
          * @since 0.2.3
          */
         @set:ApiStatus.Internal
-        var targetNamespace: List<MappingNamespace>? = null
+        var targetNamespace: List<MappingNamespaceTree.Namespace>? = null
 
         /**
          * should the export skip comments?
@@ -110,7 +110,7 @@ abstract class ExportMappingsTask : ConventionTask() {
          * rename a namespace in the exported format, if supported.
          * @since 0.3.9
          */
-        val renameNs: MutableMap<MappingNamespace, String> = mutableMapOf()
+        val renameNs: MutableMap<MappingNamespaceTree.Namespace, String> = mutableMapOf()
 
         /**
          * the format to export to. (SRG, TINY_V2, MCP)
@@ -126,13 +126,9 @@ abstract class ExportMappingsTask : ConventionTask() {
             this.location = File(location)
         }
 
-        fun setSourceNamespace(namespace: String) {
-            this.sourceNamespace = MappingNamespace.getNamespace(namespace)
-        }
+        abstract fun setSourceNamespace(namespace: String)
 
-        fun setTargetNamespaces(namespace: List<String>) {
-            this.targetNamespace = namespace.map { MappingNamespace.getNamespace(it) }
-        }
+        abstract fun setTargetNamespaces(namespace: List<String>)
 
         @ApiStatus.Internal
         fun validate(): Boolean {

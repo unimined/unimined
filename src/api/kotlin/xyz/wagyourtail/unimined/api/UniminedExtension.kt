@@ -102,4 +102,11 @@ abstract class UniminedExtension(val project: Project) {
     }
 
     abstract val modsRemapRepo: FlatDirectoryArtifactRepository
+    abstract fun forgeMaven()
+    abstract fun fabricMaven()
+    abstract fun legacyFabricMaven()
+    abstract fun wagYourMaven(name: String)
+    abstract fun mcphackersIvy()
+    abstract fun quiltMaven()
+    abstract fun babricMaven()
 }

@@ -8,7 +8,7 @@ import org.gradle.api.logging.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import java.io.BufferedReader
@@ -48,7 +48,7 @@ object AccessWidenerMinecraftTransformer {
 
     fun transform(
         accessWidener: Path,
-        namespace: MappingNamespace,
+        namespace: MappingNamespaceTree.Namespace,
         baseMinecraft: Path,
         output: Path,
         throwIfNSWrong: Boolean,
@@ -56,7 +56,7 @@ object AccessWidenerMinecraftTransformer {
     ): Boolean {
         val aw = AccessWidener()
         AccessWidenerReader(aw).read(BufferedReader(accessWidener.reader()))
-        if (aw.namespace == namespace.namespace) {
+        if (aw.namespace == namespace.name) {
             Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
             ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
                 logger.debug("Transforming $output with access widener $accessWidener and namespace $namespace")
@@ -98,14 +98,14 @@ object AccessWidenerMinecraftTransformer {
     fun mergeAws(
         inputs: List<Path>,
         output: Path,
-        targetNamespace: MappingNamespace,
+        targetNamespace: MappingNamespaceTree.Namespace,
         mappingsProvider: MappingsProvider,
         mcProvider: MinecraftConfig
     ): Path {
-        val merger = AccessWidenerMerger(targetNamespace.namespace)
+        val merger = AccessWidenerMerger(targetNamespace.name)
 
         inputs.forEach {
-            createVisitors(merger, mappingsProvider, targetNamespace.namespace, it.inputStream(), mcProvider)
+            createVisitors(merger, mappingsProvider, targetNamespace.name, it.inputStream(), mcProvider)
         }
 
         output.bufferedWriter(

@@ -7,6 +7,7 @@ import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.minecraft.patch.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.mods.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.util.getTempFilePath
@@ -50,10 +51,7 @@ class JarModAgentMinecraftTransformer(
 
     override fun apply() {
         if (jarModAgent.dependencies.isEmpty()) {
-            project.repositories.maven {
-                it.url = project.uri("https://maven.wagyourtail.xyz/snapshots/")
-                it.name = "WagYourTail's Maven Snapshots"
-            }
+            project.unimined.wagYourMaven("snapshots")
             jarModAgent.dependencies.add(
                 project.dependencies.create(
                     "xyz.wagyourtail.unimined:jarmod-agent:0.1.0-SNAPSHOT"

@@ -7,7 +7,7 @@ import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
@@ -25,6 +25,18 @@ import kotlin.io.path.exists
 
 abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
 
+    override fun devNamespace(namespace: String) {
+        devNamespace.set(provider.mappings.getNamespace(namespace))
+    }
+
+    override fun devFallbackNamespace(namespace: String) {
+        devFallbackNamespace.set(provider.mappings.getNamespace(namespace))
+    }
+
+    override fun prodNamespace(namespace: String) {
+        prodNamespace.set(provider.mappings.getNamespace(namespace))
+    }
+
     @TaskAction
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
     fun run() {
@@ -32,12 +44,11 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         val devNs = devNamespace.getOrElse(provider.mappings.devNamespace)!!
         val devFNs = devFallbackNamespace.getOrElse(provider.mappings.devFallbackNamespace)!!
 
-        val path = MappingNamespace.calculateShortestRemapPathWithFallbacks(
+        val path = provider.mappings.getRemapPath(
             devNs,
             devFNs,
             prodNs,
-            prodNs,
-            (provider.mappings as MappingsProvider).available
+            prodNs
         )
 
         if (devNs == prodNs || path.isEmpty()) {
@@ -51,31 +62,28 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
 
         val last = path.last()
         project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.get().asFile.name} from $devNs/$devFNs to $prodNs")
-        project.logger.info("[Unimined/RemapJar]    $devNs -> ${path.joinToString(" -> ") { it.second.namespace }}")
+        project.logger.info("[Unimined/RemapJar]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
         var prevTarget = inputFile.get().asFile.toPath()
         var prevNamespace = devNs
-        var prevPrevNamespace: MappingNamespace? = null
+        var prevPrevNamespace: MappingNamespaceTree.Namespace? = null
         for (i in path.indices) {
             val step = path[i]
             project.logger.info("[Unimined/RemapJar]    $step")
             val nextTarget = if (step != last)
-                getTempFilePath("${inputFile.get().asFile.nameWithoutExtension}-temp-${step.second.namespace}", ".jar")
+                getTempFilePath("${inputFile.get().asFile.nameWithoutExtension}-temp-${step.name}", ".jar")
             else
                 outputs.files.files.first().toPath()
             val mcNamespace = prevNamespace
-            val mcFallbackNamespace = if (step.first) {
-                step.second
-            } else {
-                prevPrevNamespace
-            }
+            val mcFallbackNamespace = prevPrevNamespace
+
             val mc = provider.getMinecraft(
                 mcNamespace,
                 mcFallbackNamespace!!
             )
-            remapToInternal(prevTarget, nextTarget, prevNamespace, step.second, mc)
+            remapToInternal(prevTarget, nextTarget, prevNamespace, step, mc)
             prevTarget = nextTarget
             prevPrevNamespace = prevNamespace
-            prevNamespace = step.second
+            prevNamespace = step
         }
 
         provider.mcPatcher.afterRemapJarTask(this, outputs.files.files.first().toPath())
@@ -84,8 +92,8 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     protected fun remapToInternal(
         from: Path,
         target: Path,
-        fromNs: MappingNamespace,
-        toNs: MappingNamespace,
+        fromNs: MappingNamespaceTree.Namespace,
+        toNs: MappingNamespaceTree.Namespace,
         mc: Path
     ) {
         val remapperB = TinyRemapper.newRemapper()
@@ -124,7 +132,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                     from,
                     remapper,
                     listOf(
-                        AccessWidenerMinecraftTransformer.AwRemapper(fromNs.namespace, toNs.namespace),
+                        AccessWidenerMinecraftTransformer.AwRemapper(fromNs.name, toNs.name),
                         AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.getOrElse((provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true)!!),
                         betterMixinExtension
                     )

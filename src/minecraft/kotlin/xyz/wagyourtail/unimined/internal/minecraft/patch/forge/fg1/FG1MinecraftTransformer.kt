@@ -6,7 +6,7 @@ import org.gradle.api.artifacts.Configuration
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespace
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
@@ -27,8 +27,8 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     providerName = "FG1"
 ) {
 
-    override val prodNamespace: MappingNamespace
-        get() = MappingNamespace.OFFICIAL
+    override val prodNamespace: MappingNamespaceTree.Namespace
+        get() = provider.mappings.OFFICIAL
 
     var resolvedForgeDeps = false
 
@@ -46,7 +46,9 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         provider.mappings.mappingsDeps.apply {
             if (isEmpty() && !parent.customSearge)
-                provider.mappings.mapping("${forge.group}:${forge.name}:${forge.version}:src@zip")
+                provider.mappings {
+                    forgeBuiltinMCP(forge.version!!.substringAfter(provider.version))
+                }
         }
 
         super.apply()
@@ -197,7 +199,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (baseMinecraft.mappingNamespace.type == MappingNamespace.Type.NAMED) {
+        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.OFFICIAL) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",

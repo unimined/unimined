@@ -2,6 +2,7 @@ package net.fabricmc.mappingio.format
 
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingUtil
+import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -29,8 +30,8 @@ object MCPReader {
         return reader.nextCol("class") && reader.nextCol("package")
     }
 
-    fun readMethod(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
-        readMethod(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
+    fun readMethod(envType: EnvType, reader: Reader, seargeMappings: MappingTreeView, visitor: MappingVisitor) {
+        readMethod(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, seargeMappings, visitor)
     }
 
     fun readMethod(
@@ -38,9 +39,10 @@ object MCPReader {
         reader: Reader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        seargeMappings: MappingTreeView,
+        visitor: MappingVisitor
     ) {
-        readMethod(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
+        readMethod(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, seargeMappings, visitor)
     }
 
     private fun readMethod(
@@ -48,7 +50,8 @@ object MCPReader {
         reader: ColumnFileReader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        seargeMappings: MappingTreeView,
+        visitor: MappingVisitor
     ) {
 
         reader.mark()
@@ -61,7 +64,7 @@ object MCPReader {
         while (reader.nextLine(0)) {
             val src = reader.readCell()!!
             val data = MethodData(src, reader.readCell()!!, reader.readCell()!!, reader.readCell())
-            if (envType != EnvType.COMBINED && data.side != "2" && data.side.toInt() != envType.ordinal) continue
+            if (envType != EnvType.COMBINED && data.side != "2" && data.side.toInt() != envType.mcp) continue
             methods[src] = data
         }
 
@@ -76,7 +79,7 @@ object MCPReader {
             visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
         }
 
-        val seargeNamespace = parentVisitor.getNamespaceId(sourceNamespace)
+        val seargeNamespace = seargeMappings.getNamespaceId(sourceNamespace)
         if (seargeNamespace == MappingTreeView.NULL_NAMESPACE_ID) {
             throw IllegalStateException("Namespace $sourceNamespace not found")
         }
@@ -85,7 +88,7 @@ object MCPReader {
         if (visitor.visitContent()) {
             var visitLastClass: Boolean
 
-            for (clazz in (parentVisitor as MappingTreeView).classes) {
+            for (clazz in seargeMappings.classes) {
                 val cn = clazz.getName(seargeNamespace)
                 visitLastClass = visitor.visitClass(cn)
 
@@ -95,7 +98,7 @@ object MCPReader {
                 }
             }
 
-            for (clazz in (parentVisitor as MappingTreeView).classes) {
+            for (clazz in seargeMappings.classes) {
                 visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace))
                 if (visitLastClass) {
                     visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
@@ -123,8 +126,9 @@ object MCPReader {
         visitor.accept(parentVisitor)
     }
 
-    fun readField(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
-        readField(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
+    fun readField(envType: EnvType, reader: Reader,
+        mappingTree: MappingTreeView, visitor: MemoryMappingTree) {
+        readField(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, mappingTree, visitor)
     }
 
     fun readField(
@@ -132,9 +136,10 @@ object MCPReader {
         reader: Reader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        mappingTree: MappingTreeView,
+        visitor: MappingVisitor
     ) {
-        readField(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
+        readField(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, mappingTree, visitor)
     }
 
     private fun readField(
@@ -142,7 +147,8 @@ object MCPReader {
         reader: ColumnFileReader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        mappingTree: MappingTreeView,
+        visitor: MappingVisitor
     ) {
 
         reader.mark()
@@ -155,7 +161,7 @@ object MCPReader {
         while (reader.nextLine(0)) {
             val src = reader.readCell()!!
             val data = FieldData(src, reader.readCell()!!, reader.readCell()!!, reader.readCell())
-            if (envType != EnvType.COMBINED && data.side != "2" && data.side.toInt() != envType.ordinal) {
+            if (envType != EnvType.COMBINED && data.side != "2" && data.side.toInt() != envType.mcp) {
 //                System.out.println("Skipping ${data.source} ->  ${data.target} (side: ${data.side} env: ${envType.ordinal})")
                 continue
             }
@@ -173,7 +179,7 @@ object MCPReader {
             visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
         }
 
-        val seargeNamespace = parentVisitor.getNamespaceId(sourceNamespace)
+        val seargeNamespace = mappingTree.getNamespaceId(sourceNamespace)
         if (seargeNamespace == MappingTreeView.NULL_NAMESPACE_ID) {
             throw IllegalStateException("Namespace $sourceNamespace not found")
         }
@@ -182,7 +188,7 @@ object MCPReader {
 
 
         if (visitor.visitContent()) {
-            for (clazz in (parentVisitor as MappingTreeView).classes) {
+            for (clazz in mappingTree.classes) {
                 val cn = clazz.getName(seargeNamespace)
                 visitLastClass = visitor.visitClass(cn)
 
@@ -192,7 +198,7 @@ object MCPReader {
                 }
             }
 
-            for (clazz in (parentVisitor as MappingTreeView).classes) {
+            for (clazz in mappingTree.classes) {
                 visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace))
                 if (visitLastClass) {
                     visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
@@ -222,8 +228,9 @@ object MCPReader {
         visitor.accept(parentVisitor)
     }
 
-    fun readParam(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
-        readParam(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
+    fun readParam(envType: EnvType, reader: Reader,
+        mappingTree: MappingTreeView, visitor: MappingVisitor) {
+        readParam(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, mappingTree, visitor)
     }
 
     fun readParam(
@@ -231,9 +238,10 @@ object MCPReader {
         reader: Reader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        mappingTree: MappingTreeView,
+        visitor: MappingVisitor
     ) {
-        readParam(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
+        readParam(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, mappingTree, visitor)
     }
 
     private fun readParam(
@@ -241,7 +249,8 @@ object MCPReader {
         reader: ColumnFileReader,
         sourceNamespace: String,
         targetNamespace: String,
-        visitor: MemoryMappingTree
+        mappingTree: MappingTreeView,
+        visitor: MappingVisitor
     ) {
 
         reader.mark()
@@ -254,7 +263,7 @@ object MCPReader {
         while (reader.nextLine(0)) {
             val src = reader.readCell()!!.split("_")
             val data = ParamData(src[2], reader.readCell()!!, reader.readCell()!!)
-            if (envType != EnvType.COMBINED && data.side != "2" && data.side.toInt() != envType.ordinal) continue
+            if (envType != EnvType.COMBINED && data.side != "2" && data.side.toInt() != envType.mcp) continue
             params[src[1]] = data
         }
 
@@ -267,7 +276,7 @@ object MCPReader {
             visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
         }
 
-        val seargeNamespace = parentVisitor.getNamespaceId(sourceNamespace)
+        val seargeNamespace = mappingTree.getNamespaceId(sourceNamespace)
         if (seargeNamespace == MappingTreeView.NULL_NAMESPACE_ID) {
             throw IllegalStateException("Namespace $sourceNamespace not found")
         }
@@ -275,7 +284,7 @@ object MCPReader {
         var visitLastClass: Boolean
 
         if (visitor.visitContent()) {
-            for (clazz in (parentVisitor as MappingTreeView).classes) {
+            for (clazz in mappingTree.classes) {
                 visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace))
                 if (visitLastClass) {
                     visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
