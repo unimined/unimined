@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.util.getFile
+import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -94,7 +95,7 @@ data class McpExecutor(
         val mcpConfig = configuration.getFile(transformer.mcpConfig, Regex("zip"))
         val target = getStepCache(step.name).createDirectories()
             .resolve(transformer.mcpConfigData.mappingsPath.split("/").last())
-        ZipReader.readInputStreamFor(transformer.mcpConfigData.mappingsPath, mcpConfig.toPath()) {
+        mcpConfig.toPath().readZipInputStreamFor(transformer.mcpConfigData.mappingsPath) {
             target.writeBytes(it.readBytes(), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
         }
         return target.toAbsolutePath()
@@ -184,7 +185,7 @@ data class McpExecutor(
             val mcpConfig = configuration.getFile(transformer.mcpConfig, Regex("zip"))
             val target = getStepCache(step.name).createDirectories()
                 .resolve(transformer.mcpConfigData.mappingsPath.split("/").last())
-            ZipReader.readInputStreamFor(transformer.mcpConfigData.mappingsPath, mcpConfig.toPath()) {
+            mcpConfig.toPath().readZipInputStreamFor(transformer.mcpConfigData.mappingsPath) {
                 target.writeBytes(it.readBytes(), StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
             }
             return target.toAbsolutePath()

@@ -17,6 +17,7 @@ import org.gradle.api.logging.LogLevel
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import xyz.wagyourtail.unimined.util.defaultedMapOf
+import xyz.wagyourtail.unimined.util.forEachInZip
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileSystem
@@ -225,7 +226,7 @@ class BetterMixinExtension(
 
     fun preRead(path: Path) {
         logger.info("[PreRead] Reading $path")
-        ZipReader.forEachInZip(path) { file, input ->
+        path.forEachInZip { file, input ->
             preRead(file, input)
         }
     }

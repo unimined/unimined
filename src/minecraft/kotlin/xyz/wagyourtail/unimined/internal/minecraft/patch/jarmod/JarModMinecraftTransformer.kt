@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.ModLoaderPatches
 import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.util.deleteRecursively
+import xyz.wagyourtail.unimined.util.openZipFileSystem
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.nio.file.FileSystem
 import java.nio.file.Files
@@ -65,7 +66,7 @@ open class JarModMinecraftTransformer(
 
             try {
                 Files.copy(path, target.path, StandardCopyOption.REPLACE_EXISTING)
-                ZipReader.openZipFileSystem(target.path, mapOf("mutable" to true)).use { out ->
+                target.path.openZipFileSystem(mapOf("mutable" to true)).use { out ->
                     if (out.getPath("META-INF").exists() && deleteMetaInf) {
                         out.getPath("META-INF").deleteRecursively()
                     }

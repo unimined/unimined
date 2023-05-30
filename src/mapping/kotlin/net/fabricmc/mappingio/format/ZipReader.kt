@@ -21,29 +21,29 @@ import kotlin.io.path.outputStream
 
 object ZipReader {
 
-    fun getZipTypeFromContentList(zipContents: List<String>): ZipFormat {
-        val mappingFormats = mutableSetOf<MappingType>()
-        for (value in MappingType.values()) {
-            if (zipContents.any { it.matches(value.pattern) }) {
-                mappingFormats.add(value)
-            }
-        }
-        for (value in ZipFormat.values()) {
-            if (mappingFormats.containsAll(value.contains) && mappingFormats.none { value.doesntContain.contains(it) }) {
-                return value
-            }
-        }
-        throw IllegalArgumentException("No MCP config version detected, found: ${mappingFormats.joinToString { it.name }}")
-    }
-
-    private fun getTypeOf(path: String): MappingType? {
-        for (value in MappingType.values()) {
-            if (path.matches(value.pattern)) {
-                return value
-            }
-        }
-        return null
-    }
+//    fun getZipTypeFromContentList(zipContents: List<String>): ZipFormat {
+//        val mappingFormats = mutableSetOf<MappingType>()
+//        for (value in MappingType.values()) {
+//            if (zipContents.any { it.matches(value.pattern) }) {
+//                mappingFormats.add(value)
+//            }
+//        }
+//        for (value in ZipFormat.values()) {
+//            if (mappingFormats.containsAll(value.contains) && mappingFormats.none { value.doesntContain.contains(it) }) {
+//                return value
+//            }
+//        }
+//        throw IllegalArgumentException("No MCP config version detected, found: ${mappingFormats.joinToString { it.name }}")
+//    }
+//
+//    private fun getTypeOf(path: String): MappingType? {
+//        for (value in MappingType.values()) {
+//            if (path.matches(value.pattern)) {
+//                return value
+//            }
+//        }
+//        return null
+//    }
 
 //    fun readMappings(
 //        envType: EnvType,
@@ -332,132 +332,80 @@ object ZipReader {
 //        }
 //    }
 
-    fun readContents(zip: Path): List<String> {
-        val contents = mutableListOf<String>()
-        forEachInZip(zip) { entry, _ ->
-            contents.add(entry)
-        }
-        return contents
-    }
-
-    fun forEachInZip(zip: Path, action: (String, InputStream) -> Unit) {
-        ZipInputStream(zip.inputStream()).use { stream ->
-            var entry = stream.nextEntry
-            while (entry != null) {
-                if (entry.isDirectory) {
-                    entry = stream.nextEntry
-                    continue
-                }
-                action(entry.name, stream)
-                entry = stream.nextEntry
-            }
-        }
-    }
-
-    fun <T> readInputStreamFor(path: String, zip: Path, throwIfMissing: Boolean = true, action: (InputStream) -> T): T {
-        ZipInputStream(zip.inputStream()).use { stream ->
-            var entry = stream.nextEntry
-            while (entry != null) {
-                if (entry.isDirectory) {
-                    entry = stream.nextEntry
-                    continue
-                }
-                if (entry.name == path) {
-                    return action(stream)
-                }
-                entry = stream.nextEntry
-            }
-        }
-        if (throwIfMissing) {
-            throw IllegalArgumentException("Missing file $path in $zip")
-        }
-        @Suppress("UNCHECKED_CAST")
-        return null as T
-    }
-
-    fun openZipFileSystem(path: Path, args: Map<String, *> = mapOf<String, Any>()): FileSystem {
-        if (!Files.exists(path) && args["create"] == true) {
-            ZipOutputStream(path.outputStream()).use { stream ->
-                stream.closeEntry()
-            }
-        }
-        return FileSystems.newFileSystem(URI.create("jar:${path.toUri()}"), args, null)
-    }
-
-    enum class MappingType(val pattern: Regex) {
-        TINY(Regex("""(.+[/\\]|^)mappings.tiny$""")),
-        PARCHMENT(Regex("""(.+[/\\]|^)parchment.json$""")),
-        SRG_CLIENT(Regex("""(.+[/\\]|^)client.srg$""")),
-        SRG_SERVER(Regex("""(.+[/\\]|^)server.srg$""")),
-        SRG_MERGED(Regex("""(.+[/\\]|^)joined.srg$""")),
-        TSRG(Regex("""(.+[/\\]|^)joined.tsrg$""")),
-        RGS_CLIENT(Regex("""(.+[/\\]|^)minecraft.rgs$""")), // see mcp28
-        RGS_SERVER(Regex("""(.+[/\\]|^)minecraft_server.rgs$""")),
-        MCP_CLASSES(Regex("""(.+[/\\]|^)classes.csv$""")), // see mcp43
-        MCP_METHODS(Regex("""((.+[/\\]|^)|^)methods.csv$""")),
-        MCP_PARAMS(Regex("""(.+[/\\]|^)params.csv$""")),
-        MCP_FIELDS(Regex("""(.+[/\\]|^)fields.csv$""")),
-        MCP_PACKAGES(Regex("""(.+[/\\]|^)packages.csv$""")),
-        ;
-
-        companion object {
-            fun allBut(set: Set<MappingType>): Set<MappingType> {
-                return values().toSet() - set
-            }
-        }
-    }
-
-    enum class ZipFormat(
-        val contains: Set<MappingType>,
-        val doesntContain: Set<MappingType> = setOf(),
-        val ignore: Set<MappingType> = setOf()
-    ) {
-        TINY_JAR(
-            setOf(MappingType.TINY),
-            MappingType.allBut(setOf(MappingType.TINY))
-        ),
-        PARCHMENT_ZIP(
-            setOf(MappingType.PARCHMENT),
-            MappingType.allBut(setOf(MappingType.PARCHMENT))
-        ),
-        NEW_MCPCONFIG(
-            setOf(MappingType.TSRG),
-            MappingType.allBut(setOf(MappingType.TSRG))
-        ),
-        MCPCONFIG(
-            setOf(MappingType.SRG_MERGED),
-            setOf(
-                MappingType.MCP_FIELDS,
-                MappingType.MCP_METHODS,
-                MappingType.MCP_PARAMS,
-                MappingType.MCP_CLASSES,
-                MappingType.RGS_SERVER,
-                MappingType.RGS_CLIENT
-            )
-        ),
-        NEWFORGE_MCP(
-            setOf(MappingType.MCP_METHODS, MappingType.MCP_PARAMS, MappingType.MCP_FIELDS),
-            setOf(
-                MappingType.MCP_CLASSES,
-                MappingType.RGS_SERVER,
-                MappingType.RGS_CLIENT,
-                MappingType.SRG_SERVER,
-                MappingType.SRG_CLIENT,
-                MappingType.SRG_MERGED
-            )
-        ),
-        MCP(
-            setOf(MappingType.MCP_METHODS, MappingType.MCP_FIELDS),
-            setOf(MappingType.RGS_CLIENT, MappingType.RGS_SERVER, MappingType.MCP_CLASSES, MappingType.TSRG),
-        ),
-        OLD_MCP(
-            setOf(MappingType.MCP_METHODS, MappingType.MCP_FIELDS, MappingType.MCP_CLASSES),
-            setOf(MappingType.RGS_CLIENT, MappingType.RGS_SERVER, MappingType.TSRG),
-        ),
-        OLDER_MCP(
-            setOf(MappingType.RGS_CLIENT),
-            setOf(MappingType.SRG_CLIENT, MappingType.SRG_SERVER, MappingType.SRG_MERGED, MappingType.TSRG),
-            setOf(MappingType.MCP_CLASSES)
-        ),
-    }
+//    enum class MappingType(val pattern: Regex) {
+//        TINY(Regex("""(.+[/\\]|^)mappings.tiny$""")),
+//        PARCHMENT(Regex("""(.+[/\\]|^)parchment.json$""")),
+//        SRG_CLIENT(Regex("""(.+[/\\]|^)client.srg$""")),
+//        SRG_SERVER(Regex("""(.+[/\\]|^)server.srg$""")),
+//        SRG_MERGED(Regex("""(.+[/\\]|^)joined.srg$""")),
+//        TSRG(Regex("""(.+[/\\]|^)joined.tsrg$""")),
+//        RGS_CLIENT(Regex("""(.+[/\\]|^)minecraft.rgs$""")), // see mcp28
+//        RGS_SERVER(Regex("""(.+[/\\]|^)minecraft_server.rgs$""")),
+//        MCP_CLASSES(Regex("""(.+[/\\]|^)classes.csv$""")), // see mcp43
+//        MCP_METHODS(Regex("""((.+[/\\]|^)|^)methods.csv$""")),
+//        MCP_PARAMS(Regex("""(.+[/\\]|^)params.csv$""")),
+//        MCP_FIELDS(Regex("""(.+[/\\]|^)fields.csv$""")),
+//        MCP_PACKAGES(Regex("""(.+[/\\]|^)packages.csv$""")),
+//        ;
+//
+//        companion object {
+//            fun allBut(set: Set<MappingType>): Set<MappingType> {
+//                return values().toSet() - set
+//            }
+//        }
+//    }
+//
+//    enum class ZipFormat(
+//        val contains: Set<MappingType>,
+//        val doesntContain: Set<MappingType> = setOf(),
+//        val ignore: Set<MappingType> = setOf()
+//    ) {
+//        TINY_JAR(
+//            setOf(MappingType.TINY),
+//            MappingType.allBut(setOf(MappingType.TINY))
+//        ),
+//        PARCHMENT_ZIP(
+//            setOf(MappingType.PARCHMENT),
+//            MappingType.allBut(setOf(MappingType.PARCHMENT))
+//        ),
+//        NEW_MCPCONFIG(
+//            setOf(MappingType.TSRG),
+//            MappingType.allBut(setOf(MappingType.TSRG))
+//        ),
+//        MCPCONFIG(
+//            setOf(MappingType.SRG_MERGED),
+//            setOf(
+//                MappingType.MCP_FIELDS,
+//                MappingType.MCP_METHODS,
+//                MappingType.MCP_PARAMS,
+//                MappingType.MCP_CLASSES,
+//                MappingType.RGS_SERVER,
+//                MappingType.RGS_CLIENT
+//            )
+//        ),
+//        NEWFORGE_MCP(
+//            setOf(MappingType.MCP_METHODS, MappingType.MCP_PARAMS, MappingType.MCP_FIELDS),
+//            setOf(
+//                MappingType.MCP_CLASSES,
+//                MappingType.RGS_SERVER,
+//                MappingType.RGS_CLIENT,
+//                MappingType.SRG_SERVER,
+//                MappingType.SRG_CLIENT,
+//                MappingType.SRG_MERGED
+//            )
+//        ),
+//        MCP(
+//            setOf(MappingType.MCP_METHODS, MappingType.MCP_FIELDS),
+//            setOf(MappingType.RGS_CLIENT, MappingType.RGS_SERVER, MappingType.MCP_CLASSES, MappingType.TSRG),
+//        ),
+//        OLD_MCP(
+//            setOf(MappingType.MCP_METHODS, MappingType.MCP_FIELDS, MappingType.MCP_CLASSES),
+//            setOf(MappingType.RGS_CLIENT, MappingType.RGS_SERVER, MappingType.TSRG),
+//        ),
+//        OLDER_MCP(
+//            setOf(MappingType.RGS_CLIENT),
+//            setOf(MappingType.SRG_CLIENT, MappingType.SRG_SERVER, MappingType.SRG_MERGED, MappingType.TSRG),
+//            setOf(MappingType.MCP_CLASSES)
+//        ),
+//    }
 }

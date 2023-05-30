@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.mods.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.util.getTempFilePath
+import xyz.wagyourtail.unimined.util.openZipFileSystem
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.BufferedReader
 import java.io.File
@@ -151,7 +152,7 @@ class JarModAgentMinecraftTransformer(
 
             // transform
             project.logger.lifecycle("[Unimined/JarModAgentTransformer] Transforming...")
-            ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { out ->
+            output.openZipFileSystem(mapOf("mutable" to true)).use { out ->
                 val fd = TransformerManager::class.java.getDeclaredField("transformedClasses")
                 fd.isAccessible = true
                 val transformedClasses = fd.get(transformer) as Set<String>

@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1
 
-import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.objectweb.asm.ClassReader
@@ -14,6 +13,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
+import xyz.wagyourtail.unimined.util.openZipFileSystem
+import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.io.InputStream
@@ -181,7 +182,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
 
         // resolve dyn libs
-        ZipReader.readInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", forge, false) {
+        forge.readZipInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", false) {
             resolveDynLibs(config.workingDir, getDynLibs(it))
         }
 
@@ -191,7 +192,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         val out = fixForge(baseMinecraft)
-        return ZipReader.openZipFileSystem(out.path).use { fs ->
+        return out.path.openZipFileSystem().use { fs ->
             parent.applyATs(
                 out,
                 listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })

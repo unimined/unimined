@@ -113,10 +113,6 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         )
     }
 
-    override var isPreCombined: Boolean by FinalizeOnRead(LazyMutable {
-        mcVersionCompare(version, "1.3") < 0
-    })
-
     fun download(download: Download, path: Path) {
 
         if (testSha1(download.size, download.sha1, path)) {

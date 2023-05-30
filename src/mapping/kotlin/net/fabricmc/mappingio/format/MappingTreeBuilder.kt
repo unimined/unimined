@@ -1,15 +1,12 @@
 package net.fabricmc.mappingio.format
 
 import net.fabricmc.mappingio.MappingVisitor
-import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
 import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.FinalizeOnWrite
-import xyz.wagyourtail.unimined.util.isZip
+import xyz.wagyourtail.unimined.util.*
 import java.io.BufferedReader
 import java.io.InputStream
 import java.nio.file.Path
@@ -44,7 +41,7 @@ class MappingTreeBuilder {
         checkInput(input)
         if (file.isZip()) {
             val found = mutableSetOf<Pair<BetterMappingFormat, String>>()
-            ZipReader.forEachInZip(file) { name, stream ->
+            file.forEachInZip { name, stream ->
                 val reader = stream.bufferedReader()
                 val header = detectHeader(reader)
                 if (header != null) {
@@ -80,7 +77,7 @@ class MappingTreeBuilder {
                         }
                     }
                 }
-                ZipReader.readInputStreamFor(it.second, file) { stream ->
+                file.readZipInputStreamFor(it.second) { stream ->
                     mappingReaderIntl(it.second, stream.bufferedReader(), input, it.first)
                 }
             }

@@ -11,6 +11,7 @@ import org.objectweb.asm.Opcodes
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
+import xyz.wagyourtail.unimined.util.openZipFileSystem
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -58,7 +59,7 @@ object AccessWidenerMinecraftTransformer {
         AccessWidenerReader(aw).read(BufferedReader(accessWidener.reader()))
         if (aw.namespace == namespace.name) {
             Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
-            ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
+            output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
                 logger.debug("Transforming $output with access widener $accessWidener and namespace $namespace")
                 for (target in aw.targets) {
                     try {

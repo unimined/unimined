@@ -1,7 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 
 import com.google.gson.JsonParser
-import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -28,10 +27,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.getSha1
-import xyz.wagyourtail.unimined.util.withSourceSet
+import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.InputStreamReader
 import java.nio.file.Path
@@ -126,7 +122,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
         val forgeUniversal = forge.dependencies.last()
         val forgeJar = forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
-        val type = ZipReader.readContents(forgeJar.toPath()).map {
+        val type = forgeJar.toPath().readZipContents().map {
             it.substringBefore(".class") to sideMarkers[it.substringBefore(".class")]
         }.filter { it.second != null }.map { it.first to it.second!! }
         if (type.size > 1) throw IllegalStateException("Found more than one side marker in forge jar: $type")
@@ -285,7 +281,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
             forgeTransformer = determineForgeProviderFromUniversal(jar)
 
             //parse version json from universal jar and apply
-            ZipReader.readInputStreamFor("version.json", jar.toPath(), false) {
+            jar.toPath().readZipInputStreamFor("version.json", false) {
                 JsonParser.parseReader(InputStreamReader(it)).asJsonObject
             }?.let { versionJson ->
                 val libraries = parseAllLibraries(versionJson.getAsJsonArray("libraries"))
@@ -306,7 +302,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     private fun determineForgeProviderFromUniversal(universal: File): JarModMinecraftTransformer {
         val files = mutableSetOf<ForgeFiles>()
-        ZipReader.forEachInZip(universal.toPath()) { path, _ ->
+        universal.toPath().forEachInZip { path, _ ->
             if (ForgeFiles.ffMap.contains(path)) {
                 files.add(ForgeFiles.ffMap[path]!!)
             }

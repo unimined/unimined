@@ -9,7 +9,6 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.LogLevel
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.*
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -22,6 +21,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.getFile
+import xyz.wagyourtail.unimined.util.openZipFileSystem
+import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.io.IOException
@@ -54,7 +55,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         val configuration = project.configurations.detachedConfiguration(mcpConfig)
         configuration.resolve()
         val config = configuration.getFile(mcpConfig, Regex("zip"))
-        val configJson = ZipReader.readInputStreamFor("config.json", config.toPath()) {
+        val configJson = config.toPath().readZipInputStreamFor("config.json") {
             JsonParser.parseReader(InputStreamReader(it)).asJsonObject
         }
         McpConfigData.fromJson(configJson)
@@ -66,8 +67,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         // detect if userdev3 or userdev
         //   read if forgeDep has binpatches file
         val forgeUni = parent.forge.getFile(forgeDep)
-        val userdevClassifier = ZipReader.readInputStreamFor<String?>(
-            "binpatches.pack.lzma", forgeUni.toPath(), false
+        val userdevClassifier = forgeUni.toPath().readZipInputStreamFor<String?>(
+            "binpatches.pack.lzma", false
         ) {
             "userdev3"
         } ?: "userdev"
@@ -111,7 +112,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         if (userdevCfg.has("inject")) {
             project.logger.lifecycle("[Unimined/ForgeTransformer] Injecting forge userdev into minecraft jar")
             this.addTransform { outputJar ->
-                ZipReader.openZipFileSystem(forgeUd.toPath()).use { inputJar ->
+                forgeUd.toPath().openZipFileSystem().use { inputJar ->
                     val inject = inputJar.getPath("/" + userdevCfg.get("inject").asString)
                     if (Files.exists(inject)) {
                         project.logger.info("[Unimined/ForgeTransformer] Injecting forge userdev into minecraft jar")
@@ -146,7 +147,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         // get forge userdev jar
         val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
 
-        ZipReader.readInputStreamFor("config.json", forgeUd.toPath()) {
+        forgeUd.toPath().readZipInputStreamFor("config.json") {
             JsonParser.parseReader(InputStreamReader(it)).asJsonObject
         }!!
     }
@@ -217,8 +218,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             }
         }
 
-        ZipReader.openZipFileSystem(clientExtra, mapOf("mutable" to true, "create" to true)).use { extra ->
-            ZipReader.openZipFileSystem(baseMinecraftClient.path).use { base ->
+        clientExtra.openZipFileSystem(mapOf("mutable" to true, "create" to true)).use { extra ->
+            baseMinecraftClient.path.openZipFileSystem().use { base ->
                 for (path in Files.walk(base.getPath("/"))) {
                     // skip meta-inf
                     if (path.nameCount > 0 && path.getName(0).toString().equals("META-INF", ignoreCase = true)) continue
@@ -255,7 +256,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
 
         //  extract binpatches
-        val binPatchFile = ZipReader.readInputStreamFor(userdevCfg["binpatches"].asString, forgeUd.toPath()) {
+        val binPatchFile = forgeUd.toPath().readZipInputStreamFor(userdevCfg["binpatches"].asString) {
             outFolder.resolve("binpatches.lzma").apply {
                 writeBytes(
                     it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
@@ -434,7 +435,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         val out = fixForge(baseMinecraft)
-        ZipReader.openZipFileSystem(out.path).use { fs ->
+        out.path.openZipFileSystem().use { fs ->
             return parent.applyATs(out, listOf(
                 fs.getPath("fml_at.cfg"), fs.getPath("forge_at.cfg"), fs.getPath("META-INF/accesstransformer.cfg")
             ).filter { Files.exists(it) })
@@ -454,7 +455,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
             Files.copy(baseMinecraft.path, target.path, StandardCopyOption.REPLACE_EXISTING)
             try {
-                ZipReader.openZipFileSystem(target.path, mapOf("mutable" to true)).use { out ->
+                target.path.openZipFileSystem(mapOf("mutable" to true)).use { out ->
                     out.getPath("binpatches.pack.lzma").deleteIfExists()
                 }
             } catch (e: Throwable) {

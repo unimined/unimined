@@ -1,8 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2
 
-import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -11,6 +9,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
+import xyz.wagyourtail.unimined.util.openZipFileSystem
+import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -88,7 +88,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         )
 
         // apply binary patches
-        val binaryPatchFile = ZipReader.readInputStreamFor("binpatches.pack.lzma", forgeJar.toPath()) {
+        val binaryPatchFile = forgeJar.toPath().readZipInputStreamFor("binpatches.pack.lzma") {
             outFolder.resolve("binpatches.pack.lzma")
                 .apply {
                     writeBytes(
@@ -135,7 +135,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         val out = fixForge(baseMinecraft)
-        return ZipReader.openZipFileSystem(out.path).use { fs ->
+        return out.path.openZipFileSystem().use { fs ->
             parent.applyATs(
                 out,
                 listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })

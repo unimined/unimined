@@ -24,6 +24,7 @@ import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransf
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
+import xyz.wagyourtail.unimined.util.openZipFileSystem
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.io.InputStreamReader
@@ -257,7 +258,7 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     private fun insertIncludes(output: Path) {
-        ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
+        output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
             val mod = fs.getPath(modJsonName)
             if (!Files.exists(mod)) {
                 throw IllegalStateException("$modJsonName not found in jar")
@@ -277,7 +278,7 @@ abstract class FabricLikeMinecraftTransformer(
                         StandardCopyOption.REPLACE_EXISTING
                     )
 
-                    ZipReader.openZipFileSystem(cachePath, mapOf("mutable" to true)).use { innerfs ->
+                    cachePath.openZipFileSystem(mapOf("mutable" to true)).use { innerfs ->
                         val innermod = innerfs.getPath(modJsonName)
                         if (!Files.exists(innermod)) {
                             val innerjson = JsonObject()
@@ -316,7 +317,7 @@ abstract class FabricLikeMinecraftTransformer(
 
     private fun insertAW(output: Path) {
         if (accessWidener != null) {
-            ZipReader.openZipFileSystem(output, mapOf("mutable" to true)).use { fs ->
+            output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
                 val mod = fs.getPath(modJsonName)
                 if (!Files.exists(mod)) {
                     throw IllegalStateException("$modJsonName not found in jar")

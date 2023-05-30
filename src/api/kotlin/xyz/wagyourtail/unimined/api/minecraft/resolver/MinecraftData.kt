@@ -6,12 +6,6 @@ import java.net.URI
 
 abstract class MinecraftData {
 
-    /**
-     * if before server/client are combined in 1.3+
-     */
-    @set:ApiStatus.Experimental
-    abstract var isPreCombined: Boolean
-
     @set:ApiStatus.Experimental
     abstract var metadataURL: URI
 

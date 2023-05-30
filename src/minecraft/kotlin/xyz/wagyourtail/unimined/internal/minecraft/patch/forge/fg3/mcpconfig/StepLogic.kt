@@ -4,6 +4,7 @@ import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Action
 import org.gradle.api.logging.Logger
 import org.gradle.process.JavaExecSpec
+import xyz.wagyourtail.unimined.util.openZipFileSystem
 import java.io.File
 import java.io.IOException
 import java.io.PrintWriter
@@ -98,8 +99,8 @@ interface StepLogic {
                 }
                 .collect(Collectors.toSet())
             val input: Path = Paths.get(context.resolve(ConfigValue.Variable("input")))
-            ZipReader.openZipFileSystem(context.setOutput("stripped.jar"), mapOf("create" to true)).use { output ->
-                ZipReader.openZipFileSystem(input).use { fs ->
+            context.setOutput("stripped.jar").openZipFileSystem(mapOf("create" to true)).use { output ->
+                input.openZipFileSystem().use { fs ->
                     for (path in Files.walk(fs.getPath("/"))) {
                         val trimLeadingSlash: String = trimLeadingSlash(path.toString())
                         if (!trimLeadingSlash.endsWith(".class")) continue

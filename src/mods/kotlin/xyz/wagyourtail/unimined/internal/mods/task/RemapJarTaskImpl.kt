@@ -16,6 +16,7 @@ import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTr
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
 import xyz.wagyourtail.unimined.util.getTempFilePath
+import xyz.wagyourtail.unimined.util.openZipFileSystem
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -145,7 +146,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         }
         remapper.finish()
 
-        ZipReader.openZipFileSystem(target, mapOf("mutable" to true)).use {
+        target.openZipFileSystem(mapOf("mutable" to true)).use {
             betterMixinExtension.write(it)
         }
 

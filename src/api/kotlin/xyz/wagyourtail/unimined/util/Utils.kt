@@ -8,17 +8,13 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.net.URI
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
+import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.*
-import kotlin.io.path.deleteExisting
-import kotlin.io.path.exists
-import kotlin.io.path.fileSize
-import kotlin.io.path.inputStream
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+import kotlin.io.path.*
 
 inline fun <T, U> consumerApply(crossinline action: T.() -> U): (T) -> U {
     return { action(it) }
@@ -247,3 +243,58 @@ fun <E, K, V> Iterable<E>.associateNonNull(apply: (E) -> Pair<K, V>?): Map<K, V>
 fun Path.isZip(): Boolean =
     inputStream().use { stream -> ByteArray(4).also { stream.read(it, 0, 4) } }
         .contentEquals(byteArrayOf(0x50, 0x4B, 0x03, 0x04))
+
+
+
+
+fun Path.readZipContents(): List<String> {
+    val contents = mutableListOf<String>()
+    forEachInZip() { entry, _ ->
+        contents.add(entry)
+    }
+    return contents
+}
+
+fun Path.forEachInZip(action: (String, InputStream) -> Unit) {
+    ZipInputStream(inputStream()).use { stream ->
+        var entry = stream.nextEntry
+        while (entry != null) {
+            if (entry.isDirectory) {
+                entry = stream.nextEntry
+                continue
+            }
+            action(entry.name, stream)
+            entry = stream.nextEntry
+        }
+    }
+}
+
+fun <T> Path.readZipInputStreamFor(path: String, throwIfMissing: Boolean = true, action: (InputStream) -> T): T {
+    ZipInputStream(inputStream()).use { stream ->
+        var entry = stream.nextEntry
+        while (entry != null) {
+            if (entry.isDirectory) {
+                entry = stream.nextEntry
+                continue
+            }
+            if (entry.name == path) {
+                return action(stream)
+            }
+            entry = stream.nextEntry
+        }
+    }
+    if (throwIfMissing) {
+        throw IllegalArgumentException("Missing file $path in $this")
+    }
+    @Suppress("UNCHECKED_CAST")
+    return null as T
+}
+
+fun Path.openZipFileSystem(args: Map<String, *> = mapOf<String, Any>()): FileSystem {
+    if (!exists() && args["create"] == true) {
+        ZipOutputStream(outputStream()).use { stream ->
+            stream.closeEntry()
+        }
+    }
+    return FileSystems.newFileSystem(URI.create("jar:${toUri()}"), args, null)
+}

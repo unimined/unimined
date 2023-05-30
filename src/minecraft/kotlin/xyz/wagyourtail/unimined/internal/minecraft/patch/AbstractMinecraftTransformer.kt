@@ -15,8 +15,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixParamAnnotations
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.GlobToRegex
+import xyz.wagyourtail.unimined.util.*
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,10 +39,17 @@ abstract class AbstractMinecraftTransformer protected constructor(
         throw RuntimeException("Error merging class ${cl.name}", e)
     }
 
+    override var canCombine: Boolean by FinalizeOnRead(LazyMutable {
+        provider.minecraftData.mcVersionCompare(provider.version, "1.3") > -1
+    })
+
     fun isAnonClass(node: ClassNode): Boolean =
         node.innerClasses?.firstOrNull { it.name == node.name }.let { it != null && it.innerName == null }
 
     open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
+        if (clientjar.mappingNamespace != serverjar.mappingNamespace || clientjar.fallbackNamespace != serverjar.fallbackNamespace) {
+            throw IllegalArgumentException("client and server jars must have the same mapping namespace")
+        }
         val merged = MinecraftJar(
             clientjar,
             envType = EnvType.COMBINED,
@@ -55,9 +61,9 @@ abstract class AbstractMinecraftTransformer protected constructor(
         }
 
         merged.path.deleteIfExists()
-        ZipReader.openZipFileSystem(merged.path, mapOf("create" to true, "mutable" to true)).use { mergedFS ->
+        merged.path.openZipFileSystem(mapOf("create" to true, "mutable" to true)).use { mergedFS ->
             val clientClassEntries = mutableMapOf<String, ClassNode>()
-            ZipReader.forEachInZip(clientjar.path) { path, stream ->
+            clientjar.path.forEachInZip { path, stream ->
                 if (path.startsWith("META-INF/")) return@forEachInZip
                 if (path.endsWith(".class")) {
                     if (shouldStripClass(path)) return@forEachInZip
@@ -74,7 +80,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
                 }
             }
             val serverClassEntries = mutableMapOf<String, ClassNode>()
-            ZipReader.forEachInZip(serverjar.path) { path, stream ->
+            serverjar.path.forEachInZip { path, stream ->
                 if (path.startsWith("META-INF/")) return@forEachInZip
                 if (path.endsWith(".class")) {
                     if (shouldStripClass(path)) return@forEachInZip
@@ -139,7 +145,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
         try {
             Files.copy(minecraft.path, target.path, StandardCopyOption.REPLACE_EXISTING)
-            ZipReader.openZipFileSystem(target.path, mapOf("mutable" to true)).use { out ->
+            target.path.openZipFileSystem(mapOf("mutable" to true)).use { out ->
                 transform.forEach { it(out) }
             }
         } catch (e: Exception) {
@@ -176,21 +182,21 @@ abstract class AbstractMinecraftTransformer protected constructor(
         // do nothing
     }
 
-    private val includeGlobs = listOf(
+    protected open val includeGlobs = listOf(
         "*",
         "META-INF/**",
         "net/minecraft/**",
         "com/mojang/blaze3d/**",
         "paulscode/sound/**",
         "com/jcraft/**"
-    ).map { Regex(GlobToRegex.apply(it)) }
+    )
 
     /*
      * only accurate on official mappings
      */
     open fun shouldStripClass(path: String): Boolean {
         // check if in include globs
-        for (glob in includeGlobs) {
+        for (glob in includeGlobs.map { Regex(GlobToRegex.apply(it)) }) {
             if (glob.matches(path)) return false
         }
         // otherwise strip

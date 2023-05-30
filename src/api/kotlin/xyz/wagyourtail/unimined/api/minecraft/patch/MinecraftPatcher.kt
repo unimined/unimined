@@ -43,4 +43,8 @@ interface MinecraftPatcher {
 
     @ApiStatus.Internal
     fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path)
+
+    @get:ApiStatus.Internal
+    @set:ApiStatus.Experimental
+    var canCombine: Boolean
 }

@@ -23,10 +23,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.defaultedMapOf
-import xyz.wagyourtail.unimined.util.nonNullValues
+import xyz.wagyourtail.unimined.util.*
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -345,7 +342,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             remapper.first.apply(it, input.first)
         }
         if (remapper.second != null) {
-            ZipReader.openZipFileSystem(targetFile, mapOf("mutable" to true)).use {
+            targetFile.openZipFileSystem(mapOf("mutable" to true)).use {
                 remapper.second!!.write(it)
             }
         }

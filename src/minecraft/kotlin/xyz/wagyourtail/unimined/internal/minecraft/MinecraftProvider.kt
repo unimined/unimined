@@ -328,7 +328,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     @ApiStatus.Internal
     fun provideVanillaRunServerTask(name: String, workingDirectory: File): RunConfig {
         var mainClass: String? = null
-        ZipReader.openZipFileSystem(minecraftData.minecraftServer.path).use {
+        minecraftData.minecraftServer.path.openZipFileSystem().use {
             val properties = Properties()
             val metainf = it.getPath("META-INF/MANIFEST.MF")
             if (metainf.exists()) {
