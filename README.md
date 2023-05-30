@@ -61,104 +61,116 @@ repositories {
     mavenCentral()
 }
 
-unimined {
-    // debug, puts some things in build/unimined instead of ~/.gradle/caches/unimined
-    // I reccomend you leave this on until unimined is stable
-    useGlobalCache = false
-}
+// debug, puts some things in build/unimined instead of ~/.gradle/caches/unimined
+unimined.useGlobalCache = false
 
-minecraft {
-    // current available options are: forge, jarMod, fabric
-    // if you don't include this, it will default to no mod loader transforms
-    forge {
-        // required for 1.7+ if you want to use mcp mappings
-        mcpVersion = '39-1.12'
-        mcpChannel = 'stable'
+// when targetting main the first arg is optional
+// unimined.minecraft {
+unimined.minecraft(sourceSets.main) {
+    // defaults to combined on 1.3+ so you don't need to set this one
+    side "combined"
+    
+    version "1.14.4"
+    
+    mappings {
+        /* helper declarations - intermediary/searge are auto added by fabric/forge */
         
-        accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
-        devFallbackNamespace = "searge" // you may need to change this to "intermediary" on multi-platform projects
+        // intermediary()
+        // searge()
+        mojmap("1.14.4")
+        // retroMCP("1.2.5") // TODO: add this one, it's not here yet
+        // yarn(1)
+        // parchment("1.19.3", "2022.12.18")
+        // mcp("stable", "39+1.12")
+        
+        // these will auto-resolve with the first available from your declared mappings
+        devNamespace "mojmap"
+        devFallbackNamespace "intermediary"
     }
+    
+    // specify modloader
+    /*
+    fabric {
+        accessWidener "src/main/resources/whatever.aw"
+        loader "0.14.18"
 
-    mcRemapper.tinyRemapperConf = {
-        // most mcp mappings (except older format) dont include field desc
-        ignoreFieldDesc(true)
-        // this also fixes some issues with them, as it tells tiny remapper to try harder to resolve conflicts
-        ignoreConflicts(true)
+        // set these ones to target fabric versions without intermediaries
+        customIntermediaries = true
+        prodNamespace "official"
+        devMappings = null
     }
-}
-
-mappings {
-    // ability to add custom mappings
-  // available targets are "CLIENT", "SERVER", "COMBINED"
-    getStub("CLIENT").withMappings(["searge", "named"]) {
-      c("ModLoader", "ModLoader", "modloader/ModLoader")
-      c("BaseMod", "BaseMod", "modloader/BaseMod")
+    */
+    /*
+    forge {
+        forge "28.2.26"
+        
+        accessTransformer "src/main/resources/META-INF/accesstransformer.cfg"
+        mixinConfig "modid.mixins.json"
     }
-}
-
-sourceSets {
-    // enable the client configuration when not using combined (or mc <= 1.2.5)
-    client
+    */
+    // other options available, see PatchProviders
+    
+    
+    mods {
+        // auto-genned, default to `configuration.${sourceSet.name}ModImplementation` (or just modImplementation if main),
+        // these are additive, so always has at least this configuration
+        remap(configurations.modImplementation) {
+            // optional, these are auto-set
+            namespace "intermediary"
+            fallbackNamespace "intermediary"
+            remapAtToLegacy = true // auto set to value in forge provider
+            mixinRemap("unimined") // default value is none, this value does full mixin remapping for dev... may be necessary for run configs in some envs
+            remapper {
+                // tiny remapper settings
+            }
+        }
+        // if you have multiple, and they have the same config, 
+        // use a list of configurations so they can remap together for speed reasons
+        // the configurations can be different, just the options in remap the same
+        /*
+        remap([configurations.a, configurations.b]) {
+             // stuff
+        }
+        */
+    }
+    
+    minecraftRemapper.config {
+        // tiny remapper settings
+    }
+    
+    
+    // this is default value when sourceSet main...
+    // would bind a remapJar task after jar
+    remap(jar)
+    
+    // this one is custom
+    remap(jar, "customRemap") {
+        // these can be config'd here, but don't need to be. they can be configured below
+    }
+    
+    runs {
+        // off = true // disable runs
+        config("client") {
+            jvmArgs += ["-Dexample.arg=true"]
+        }
+    }
 }
 
 dependencies {
-    minecraft 'net.minecraft:minecraft:1.12.2'
-    
-    forge 'net.minecraftforge:forge:1.12.2-14.23.5.2860'
-    
-    // mappings "mappinggroup:mappingname:version"
-}
-```
+    // these get prepended with the sourceSet name for the mc config
+    modImplementation "mod:identifier:stuff"
+    include "mod:identifier:stuff"
 
-## B1.3_01 example
-
-```groovy
-plugins {
-    id 'java'
-    id 'xyz.wagyourtail.unimined'
+    modImplementation "other:mod:stuff"
 }
 
-group 'xyz.wagyourtail'
-version '1.0-SNAPSHOT'
-
-repositories {
-    mavenCentral()
-    flatDir {
-        dirs 'libs'
-    }
+remapJar {
+    // basically don't need to change anything here, but you can do things like set the classifier
 }
 
-unimined {
-    useGlobalCache = false
-}
-
-minecraft {
-    jarMod {
-      // unlike forge, jarmod (currently) defaults to intermediary. so we have to change this
-      devFallbackNamespace = "searge"
-    }
-    mcRemapper.tinyRemapperConf = {
-        ignoreFieldDesc(true)
-        ignoreConflicts(true)
-    }
-}
-
-mappings {
-    getStub("CLIENT").withMappings(["searge", "named"]) {
-        c("ModLoader", "ModLoader", "modloader/ModLoader")
-        c("BaseMod", "BaseMod", "modloader/BaseMod")
-    }
-}
-
-sourceSets {
-    client
-}
-
-dependencies {
-    minecraft 'net.minecraft:minecraft:b1.3_01'
-    
-    // you'll have to provide them locally unless I decide to throw these on my maven
-    jarMod 'local_mod:ModLoader:B1.3_01v5@zip'
-    mappings 'local_mod:mcp:29a@zip'
+customRemap {
+    // extra remap after jar, can be used for second other-mapped output for
+    // more complicated stuff
+    prodNamespace "official"
 }
 ```

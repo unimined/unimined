@@ -2,12 +2,14 @@ package xyz.wagyourtail.unimined.api.minecraft
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.FabricLikePatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.minecraft.transform.patch.JarModPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.JarModAgentPatcher
 
 /**
- * older functions were directly in {@link MinecraftProvider} before
+ * usage:
+ *
+ *
  * @since 0.4.10
  */
 interface PatchProviders {
@@ -15,6 +17,7 @@ interface PatchProviders {
     /**
      * enables the fabric patcher.
      * @param action the action to configure the patcher.
+     * @see FabricLikePatcher
      * @since 0.1.0
      */
     fun fabric(action: (FabricLikePatcher) -> Unit)
@@ -48,6 +51,7 @@ interface PatchProviders {
     /**
      * enables the fabric patcher with additional tweaks for LegacyFabric.
      * @param action the action to perform on the patcher.
+     * @see FabricLikePatcher
      * @since 0.4.2
      */
     fun legacyFabric(action: (FabricLikePatcher) -> Unit)
@@ -79,8 +83,42 @@ interface PatchProviders {
     }
 
     /**
+     * enables the fabric patcher with additional tweaks for babric.
+     * @param action the action to perform on the patcher.
+     * @since 1.0.0
+     */
+    fun babic(action: (FabricLikePatcher) -> Unit)
+
+    /**
+     * enables the fabric patcher with additional tweaks for babric.
+     * @param action the action to perform on the patcher.
+     * @since 1.0.0
+     */
+    fun babic(
+        @DelegatesTo(
+            value = FabricLikePatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        babic {
+            action.delegate = it
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the fabric patcher with additional tweaks for babric.
+     * @since 1.0.0
+     */
+    fun babic() {
+        babic {}
+    }
+
+    /**
      * enables the quilt patcher.
      * @param action the action to configure the patcher.
+     * @see FabricLikePatcher
      * @since 0.3.4
      */
     fun quilt(action: (FabricLikePatcher) -> Unit)
@@ -115,6 +153,7 @@ interface PatchProviders {
     /**
      * enables the forge patcher.
      * @param action the action to configure the patcher.
+     * @see ForgePatcher
      * @since 0.1.0
      */
     fun forge(action: (ForgePatcher) -> Unit)
@@ -148,9 +187,10 @@ interface PatchProviders {
     /**
      * enables the jar mod patcher.
      * @param action the action to configure the patcher.
+     * @see JarModAgentPatcher
      * @since 0.1.0
      */
-    fun jarMod(action: (JarModPatcher) -> Unit)
+    fun jarMod(action: (JarModAgentPatcher) -> Unit)
 
     /**
      * enables the jar mod patcher.
@@ -159,7 +199,7 @@ interface PatchProviders {
      */
     fun jarMod(
         @DelegatesTo(
-            value = JarModPatcher::class,
+            value = JarModAgentPatcher::class,
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {

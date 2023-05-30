@@ -1,0 +1,411 @@
+package net.fabricmc.mappingio.format
+
+import net.fabricmc.mappingio.MappingVisitor
+import net.fabricmc.mappingio.adapter.MappingNsRenamer
+import net.fabricmc.mappingio.tree.MappingTreeView
+import net.fabricmc.mappingio.tree.MemoryMappingTree
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import java.io.BufferedReader
+import java.io.InputStream
+import java.io.InputStreamReader
+import java.net.URI
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+import kotlin.io.path.inputStream
+import kotlin.io.path.outputStream
+
+object ZipReader {
+
+//    fun getZipTypeFromContentList(zipContents: List<String>): ZipFormat {
+//        val mappingFormats = mutableSetOf<MappingType>()
+//        for (value in MappingType.values()) {
+//            if (zipContents.any { it.matches(value.pattern) }) {
+//                mappingFormats.add(value)
+//            }
+//        }
+//        for (value in ZipFormat.values()) {
+//            if (mappingFormats.containsAll(value.contains) && mappingFormats.none { value.doesntContain.contains(it) }) {
+//                return value
+//            }
+//        }
+//        throw IllegalArgumentException("No MCP config version detected, found: ${mappingFormats.joinToString { it.name }}")
+//    }
+//
+//    private fun getTypeOf(path: String): MappingType? {
+//        for (value in MappingType.values()) {
+//            if (path.matches(value.pattern)) {
+//                return value
+//            }
+//        }
+//        return null
+//    }
+
+//    fun readMappings(
+//        envType: EnvType,
+//        zip: Path,
+//        zipContents: List<String>,
+//        mappingTree: MappingTreeView,
+//        visitor: MappingVisitor
+//    ) {
+//        val mcpConfigVersion = getZipTypeFromContentList(zipContents)
+//        println("Detected Zip Format: ${mcpConfigVersion.name} & envType: $envType")
+//        for (entry in zipContents.mapNotNull { getTypeOf(it)?.let { t -> Pair(t, it) } }
+//            .sortedBy { it.first.ordinal }
+//            .map { it.second }) {
+//            for (mappingType in MappingType.values()) {
+//                if (entry.matches(mappingType.pattern)) {
+//                    if (mcpConfigVersion.ignore.contains(mappingType)) {
+//                        break
+//                    }
+//                    println("Reading $entry")
+//                    when (mappingType) {
+//                        MappingType.MCP_METHODS -> {
+//                            when (mcpConfigVersion) {
+//                                ZipFormat.OLD_MCP -> {
+//                                    readInputStreamFor(entry, zip) {
+//                                        OldMCPReader.readMethod(
+//                                            envType,
+//                                            InputStreamReader(it),
+//                                            "official",
+//                                            "searge",
+//                                            "mcp",
+//                                            visitor
+//                                        )
+//                                    }
+//                                }
+//
+//                                ZipFormat.OLDER_MCP -> {
+//                                    readInputStreamFor(entry, zip) {
+//                                        OlderMCPReader.readMethod(
+//                                            envType,
+//                                            InputStreamReader(it),
+//                                            "searge",
+//                                            "mcp",
+//                                            visitor
+//                                        )
+//                                    }
+//                                }
+//
+//                                else -> {
+//                                    readInputStreamFor(entry, zip) {
+//                                        MCPReader.readMethod(
+//                                            envType,
+//                                            InputStreamReader(it),
+//                                            "searge",
+//                                            "mcp",
+//                                            mappingTree,
+//                                            visitor
+//                                        )
+//                                    }
+//                                }
+//                            }
+//                        }
+//
+//                        MappingType.MCP_PARAMS -> {
+//                            readInputStreamFor(entry, zip) {
+//                                MCPReader.readParam(
+//                                    envType,
+//                                    InputStreamReader(it),
+//                                    "searge",
+//                                    "mcp",
+//                                    mappingTree,
+//                                    visitor
+//                                )
+//                            }
+//                        }
+//
+//                        MappingType.MCP_FIELDS -> {
+//                            when (mcpConfigVersion) {
+//                                ZipFormat.OLD_MCP -> {
+//                                    readInputStreamFor(entry, zip) {
+//                                        OldMCPReader.readField(
+//                                            envType,
+//                                            InputStreamReader(it),
+//                                            "official",
+//                                            "searge",
+//                                            "mcp",
+//                                            mappingTree
+//                                        )
+//                                    }
+//                                }
+//
+//                                ZipFormat.OLDER_MCP -> {
+//                                    readInputStreamFor(entry, zip) {
+//                                        OlderMCPReader.readField(
+//                                            envType,
+//                                            InputStreamReader(it),
+//                                            "searge",
+//                                            "mcp",
+//                                            mappingTree
+//                                        )
+//                                    }
+//                                }
+//
+//                                else -> {
+//                                    readInputStreamFor(entry, zip) {
+//                                        MCPReader.readField(
+//                                            envType,
+//                                            InputStreamReader(it),
+//                                            "searge",
+//                                            "mcp",
+//                                            mappingTree
+//                                        )
+//                                    }
+//                                }
+//                            }
+//                        }
+//
+//                        MappingType.MCP_CLASSES -> {
+//                            readInputStreamFor(entry, zip) {
+//                                OldMCPReader.readClasses(
+//                                    envType,
+//                                    InputStreamReader(it),
+//                                    "official",
+//                                    "searge",
+//                                    "mcp",
+//                                    mappingTree
+//                                )
+//                            }
+//                        }
+//
+//                        MappingType.SRG_CLIENT -> {
+//                            if (envType == EnvType.CLIENT) {
+//                                readInputStreamFor(entry, zip) {
+//                                    SrgReader.read(
+//                                        InputStreamReader(it),
+//                                        "official",
+//                                        "searge",
+//                                        mappingTree
+//                                    )
+//                                }
+//                            } else {
+//                                println("Skipping SRG Client")
+//                            }
+//                        }
+//
+//                        MappingType.SRG_SERVER -> {
+//                            if (envType == EnvType.SERVER) {
+//                                readInputStreamFor(entry, zip) {
+//                                    SrgReader.read(
+//                                        InputStreamReader(it),
+//                                        "official",
+//                                        "searge",
+//                                        mappingTree
+//                                    )
+//                                }
+//                            } else {
+//                                println("Skipping SRG Server")
+//                            }
+//                        }
+//
+//                        MappingType.SRG_MERGED -> {
+////                            if (envType == EnvType.COMBINED) {
+//                            readInputStreamFor(entry, zip) {
+//                                SrgReader.read(
+//                                    InputStreamReader(it),
+//                                    "official",
+//                                    "searge",
+//                                    mappingTree
+//                                )
+//                            }
+////                            }
+//                        }
+//
+//                        MappingType.RGS_CLIENT -> {
+//                            if (envType == EnvType.CLIENT) {
+//                                readInputStreamFor(entry, zip) {
+//                                    RGSReader.read(
+//                                        InputStreamReader(it),
+//                                        "official",
+//                                        "searge",
+//                                        mappingTree
+//                                    )
+//                                }
+//                            } else {
+//                                println("Skipping RGS Client")
+//                            }
+//                        }
+//
+//                        MappingType.RGS_SERVER -> {
+//                            if (envType == EnvType.SERVER) {
+//                                readInputStreamFor(entry, zip) {
+//                                    RGSReader.read(
+//                                        InputStreamReader(it),
+//                                        "official",
+//                                        "searge",
+//                                        mappingTree
+//                                    )
+//                                }
+//                            } else {
+//                                println("Skipping RGS Server")
+//                            }
+//                        }
+//
+//                        MappingType.TSRG -> {
+//                            readInputStreamFor(entry, zip) {
+//                                val temp = MemoryMappingTree()
+//                                TsrgReader.read(
+//                                    InputStreamReader(it),
+//                                    "official",
+//                                    "searge",
+//                                    temp
+//                                )
+//                                temp.accept(
+//                                    MappingNsRenamer(
+//                                        mappingTree, mapOf(
+//                                            temp.srcNamespace to "official",
+//                                        )
+//                                    )
+//                                )
+//                            }
+//                        }
+//
+//                        MappingType.TINY -> {
+//                            readInputStreamFor(entry, zip) {
+//                                // check if tiny v2
+//                                BufferedReader(InputStreamReader(it)).use { isr ->
+//                                    isr.mark(3)
+//                                    val buffer = CharArray(3)
+//                                    isr.read(buffer)
+//                                    val bs = String(buffer)
+//                                    // reset stream
+//                                    isr.reset()
+//                                    if (bs.contentEquals("tin")) {
+//                                        Tiny2Reader.read(
+//                                            isr,
+//                                            MappingNsRenamer(
+//                                                mappingTree, mapOf(
+//                                                    "official" to "official",
+//                                                    "intermediary" to "intermediary",
+//                                                    "hashed" to "hashed",
+//                                                ) + nameMap
+//                                            )
+//                                        )
+//                                    } else if (bs.contentEquals("v1\t")) {
+//                                        Tiny1Reader.read(
+//                                            isr,
+//                                            MappingNsRenamer(
+//                                                mappingTree, mapOf(
+//                                                    "official" to "official",
+//                                                    "intermediary" to "intermediary",
+//                                                    "hashed" to "hashed",
+//                                                ) + nameMap
+//                                            )
+//                                        )
+//                                    } else {
+//                                        throw IllegalArgumentException("Unknown tiny format")
+//                                    }
+//                                }
+//                            }
+//                        }
+//
+//                        MappingType.MCP_PACKAGES -> {
+//                            readInputStreamFor(entry, zip) {
+//                                MCPReader.readPackages(
+//                                    envType,
+//                                    InputStreamReader(it),
+//                                    "searge",
+//                                    "mcp",
+//                                    mappingTree
+//                                )
+//                            }
+//                        }
+//
+//                        MappingType.PARCHMENT -> {
+//                            readInputStreamFor(entry, zip) {
+//                                ParchmentReader.read(
+//                                    InputStreamReader(it),
+//                                    "mojmap",
+//                                    mappingTree
+//                                )
+//                            }
+//                        }
+//                    }
+//                    break
+//                }
+//            }
+//        }
+//    }
+
+//    enum class MappingType(val pattern: Regex) {
+//        TINY(Regex("""(.+[/\\]|^)mappings.tiny$""")),
+//        PARCHMENT(Regex("""(.+[/\\]|^)parchment.json$""")),
+//        SRG_CLIENT(Regex("""(.+[/\\]|^)client.srg$""")),
+//        SRG_SERVER(Regex("""(.+[/\\]|^)server.srg$""")),
+//        SRG_MERGED(Regex("""(.+[/\\]|^)joined.srg$""")),
+//        TSRG(Regex("""(.+[/\\]|^)joined.tsrg$""")),
+//        RGS_CLIENT(Regex("""(.+[/\\]|^)minecraft.rgs$""")), // see mcp28
+//        RGS_SERVER(Regex("""(.+[/\\]|^)minecraft_server.rgs$""")),
+//        MCP_CLASSES(Regex("""(.+[/\\]|^)classes.csv$""")), // see mcp43
+//        MCP_METHODS(Regex("""((.+[/\\]|^)|^)methods.csv$""")),
+//        MCP_PARAMS(Regex("""(.+[/\\]|^)params.csv$""")),
+//        MCP_FIELDS(Regex("""(.+[/\\]|^)fields.csv$""")),
+//        MCP_PACKAGES(Regex("""(.+[/\\]|^)packages.csv$""")),
+//        ;
+//
+//        companion object {
+//            fun allBut(set: Set<MappingType>): Set<MappingType> {
+//                return values().toSet() - set
+//            }
+//        }
+//    }
+//
+//    enum class ZipFormat(
+//        val contains: Set<MappingType>,
+//        val doesntContain: Set<MappingType> = setOf(),
+//        val ignore: Set<MappingType> = setOf()
+//    ) {
+//        TINY_JAR(
+//            setOf(MappingType.TINY),
+//            MappingType.allBut(setOf(MappingType.TINY))
+//        ),
+//        PARCHMENT_ZIP(
+//            setOf(MappingType.PARCHMENT),
+//            MappingType.allBut(setOf(MappingType.PARCHMENT))
+//        ),
+//        NEW_MCPCONFIG(
+//            setOf(MappingType.TSRG),
+//            MappingType.allBut(setOf(MappingType.TSRG))
+//        ),
+//        MCPCONFIG(
+//            setOf(MappingType.SRG_MERGED),
+//            setOf(
+//                MappingType.MCP_FIELDS,
+//                MappingType.MCP_METHODS,
+//                MappingType.MCP_PARAMS,
+//                MappingType.MCP_CLASSES,
+//                MappingType.RGS_SERVER,
+//                MappingType.RGS_CLIENT
+//            )
+//        ),
+//        NEWFORGE_MCP(
+//            setOf(MappingType.MCP_METHODS, MappingType.MCP_PARAMS, MappingType.MCP_FIELDS),
+//            setOf(
+//                MappingType.MCP_CLASSES,
+//                MappingType.RGS_SERVER,
+//                MappingType.RGS_CLIENT,
+//                MappingType.SRG_SERVER,
+//                MappingType.SRG_CLIENT,
+//                MappingType.SRG_MERGED
+//            )
+//        ),
+//        MCP(
+//            setOf(MappingType.MCP_METHODS, MappingType.MCP_FIELDS),
+//            setOf(MappingType.RGS_CLIENT, MappingType.RGS_SERVER, MappingType.MCP_CLASSES, MappingType.TSRG),
+//        ),
+//        OLD_MCP(
+//            setOf(MappingType.MCP_METHODS, MappingType.MCP_FIELDS, MappingType.MCP_CLASSES),
+//            setOf(MappingType.RGS_CLIENT, MappingType.RGS_SERVER, MappingType.TSRG),
+//        ),
+//        OLDER_MCP(
+//            setOf(MappingType.RGS_CLIENT),
+//            setOf(MappingType.SRG_CLIENT, MappingType.SRG_SERVER, MappingType.SRG_MERGED, MappingType.TSRG),
+//            setOf(MappingType.MCP_CLASSES)
+//        ),
+//    }
+}

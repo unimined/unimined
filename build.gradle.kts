@@ -2,16 +2,17 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URI
 
 plugins {
-    kotlin("jvm") version "1.7.10"
+    kotlin("jvm") version "1.8.21"
     `java-gradle-plugin`
     `maven-publish`
-}
-base {
-    archivesName.set(project.properties["archives_base_name"] as String)
 }
 
 version = if (project.hasProperty("version_snapshot")) project.properties["version"] as String + "-SNAPSHOT" else project.properties["version"] as String
 group = project.properties["maven_group"] as String
+
+base {
+    archivesName.set(project.properties["archives_base_name"] as String)
+}
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -26,6 +27,7 @@ repositories {
     maven {
         url = URI.create("https://maven.fabricmc.net/")
     }
+    gradlePluginPortal()
 }
 
 fun SourceSet.inputOf(sourceSet: SourceSet) {
@@ -54,13 +56,20 @@ sourceSets {
     create("api") {
         inputOf(main.get())
     }
-    create("mappings") {
+    create("mapping") {
         inputOf(main.get())
         outputOf(
             sourceSets["api"]
         )
     }
-    create("launcher") {
+    create("mods") {
+        inputOf(main.get())
+        outputOf(
+            sourceSets["api"],
+            sourceSets["mapping"]
+        )
+    }
+    create("runs") {
         inputOf(main.get())
         outputOf(
             sourceSets["api"]
@@ -70,45 +79,43 @@ sourceSets {
         inputOf(main.get())
         outputOf(
             sourceSets["api"],
-            sourceSets["mappings"],
-            sourceSets["launcher"]
-        )
-    }
-    create("mod") {
-        inputOf(main.get())
-        outputOf(
-            sourceSets["api"],
-            sourceSets["mappings"],
-            sourceSets["minecraft"]
-        )
-    }
-    create("sources") {
-        inputOf(main.get())
-        outputOf(
-            sourceSets["api"],
-            sourceSets["minecraft"],
-            sourceSets["mod"]
+            sourceSets["mapping"],
+            sourceSets["mods"],
+            sourceSets["runs"]
         )
     }
     main {
         outputOf(
             sourceSets["api"],
-            sourceSets["mappings"],
-            sourceSets["launcher"],
+            sourceSets["mapping"],
+            sourceSets["minecraft"]
+        )
+    }
+    test {
+        inputOf(
+            main.get()
+        )
+        outputOf(
+            sourceSets["api"],
+            sourceSets["mapping"],
             sourceSets["minecraft"],
-            sourceSets["mod"],
-            sourceSets["sources"]
+            main.get()
         )
     }
 }
 
 dependencies {
     testImplementation(kotlin("test"))
+
+    runtimeOnly(gradleApi())
+
     // guava
     implementation("com.google.guava:guava:31.1-jre")
 
     // gson
-    implementation("com.google.code.gson:gson:2.9.0")
+    implementation("com.google.code.gson:gson:2.9.0") {
+
+    }
 
     // artifact transformer
     implementation("net.minecraftforge:artifactural:3.0.10")
@@ -138,24 +145,24 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false
     }
+
+    // class transform
+    implementation("net.lenni0451.classtransform:core:1.8.4")
 }
 
 tasks.jar {
     from(
         sourceSets["api"].output,
-        sourceSets["mappings"].output,
         sourceSets["minecraft"].output,
-        sourceSets["launcher"].output,
-        sourceSets["mod"].output,
-        sourceSets["sources"].output,
+        sourceSets["mapping"].output,
+        sourceSets["mods"].output,
+        sourceSets["runs"].output,
         sourceSets["main"].output
     )
 
     manifest {
-        attributes.putAll(
-            mapOf(
-                "Implementation-Version" to project.version
-            )
+        attributes(
+            "Implementation-Version" to project.version
         )
     }
 }
@@ -188,10 +195,10 @@ publishing {
     repositories {
         maven {
             name = "WagYourMaven"
-            if (project.hasProperty("version_snapshot")) {
-                url = URI.create("https://maven.wagyourtail.xyz/snapshots/")
+            url = if (project.hasProperty("version_snapshot")) {
+                URI.create("https://maven.wagyourtail.xyz/snapshots/")
             } else {
-                url = URI.create("https://maven.wagyourtail.xyz/releases/")
+                URI.create("https://maven.wagyourtail.xyz/releases/")
             }
             credentials {
                 username = project.findProperty("mvn.user") as String? ?: System.getenv("USERNAME")
@@ -202,7 +209,7 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = project.group as String
-            artifactId = project.name
+            artifactId = project.properties["archives_base_name"] as String? ?: project.name
             version = project.version as String
 
             from(components["java"])
