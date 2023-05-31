@@ -9,6 +9,7 @@ import net.fabricmc.mappingio.format.MappingDstNsFilter
 import net.fabricmc.mappingio.format.SrgWriter
 import net.fabricmc.mappingio.format.Tiny2Writer2
 import net.fabricmc.mappingio.tree.MappingTreeView
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.impldep.org.eclipse.jgit.lib.ObjectChecker
 import org.gradle.internal.impldep.org.eclipse.jgit.lib.ObjectChecker.type
@@ -19,9 +20,11 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.StandardOpenOption
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.inject.Inject
 import kotlin.io.path.outputStream
 
-class ExportMappingsTaskImpl(val mappings: MappingsProvider) : ExportMappingsTask() {
+
+open class ExportMappingsTaskImpl @Inject constructor(@get:Internal val mappings: MappingsProvider) : ExportMappingsTask() {
 
     private val exports = mutableSetOf<ExportImpl>()
 
