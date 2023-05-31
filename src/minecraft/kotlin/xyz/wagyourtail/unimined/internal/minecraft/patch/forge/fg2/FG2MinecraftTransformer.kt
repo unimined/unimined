@@ -26,6 +26,9 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     parent.provider,
     providerName = "FG2"
 ) {
+    init {
+        project.logger.lifecycle("[Unimined/Forge] Using FG2 transformer")
+    }
 
     override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }
 
@@ -66,6 +69,8 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
+        project.logger.lifecycle("[Unimined/Forge] transforming minecraft jar for FG2")
+        project.logger.info("minecraft: $minecraft")
         val shadedForge = super.transform(
             if (minecraft.envType == EnvType.COMBINED) minecraft else transformIntern(
                 minecraft

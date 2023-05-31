@@ -9,8 +9,8 @@ import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.openZipFileSystem
@@ -19,7 +19,10 @@ import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.io.InputStream
 import java.net.URI
-import java.nio.file.*
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
 class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
@@ -27,6 +30,9 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     parent.provider,
     providerName = "FG1"
 ) {
+    init {
+        project.logger.lifecycle("[Unimined/Forge] Using FG1 transformer")
+    }
 
     override val prodNamespace: MappingNamespaceTree.Namespace
         get() = provider.mappings.OFFICIAL

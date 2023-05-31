@@ -34,8 +34,8 @@ class JarModAgentMinecraftTransformer(
     project, provider, "jarMod", "JarModAgent"
 ), JarModAgentPatcher {
     companion object {
-        private val JMA_TRANSFORMERS = "jma.transformers"
-        private val JMA_PRIORITY_CLASSPATH = "jma.priorityClasspath"
+        private const val JMA_TRANSFORMERS = "jma.transformers"
+        private const val JMA_PRIORITY_CLASSPATH = "jma.priorityClasspath"
     }
 
     override var transforms: String? = null
@@ -87,9 +87,9 @@ class JarModAgentMinecraftTransformer(
         //TODO: add mods to priority classpath, and resolve their jma.transformers
     }
 
-    @Suppress("DEPRECATION")
     override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
         super.afterRemapJarTask(remapJarTask, output)
+        @Suppress("DEPRECATION")
         if (compiletimeTransforms && transforms != null) {
             project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${remapJarTask.name}...")
 
@@ -164,14 +164,14 @@ class JarModAgentMinecraftTransformer(
                         continue
                     }
                     project.logger.info("[Unimined/JarModAgentTransformer] Transforming $name")
-                    val path = out.getPath(name.replace('.', '/') + ".class");
+                    val path = out.getPath(name.replace('.', '/') + ".class")
                     path.parent?.createDirectories()
                     path.writeBytes(transformer.transform(name, bytes))
                 }
 
                 // shade net.lenni0451.classtransform.InjectionCallback
                 val injectionCallback = JarModAgentMinecraftTransformer::class.java.classLoader.getResourceAsStream("net/lenni0451/classtransform/InjectionCallback.class")!!.readBytes()
-                val path = out.getPath("net/lenni0451/classtransform/InjectionCallback.class");
+                val path = out.getPath("net/lenni0451/classtransform/InjectionCallback.class")
                 path.parent?.createDirectories()
                 path.writeBytes(injectionCallback)
             }

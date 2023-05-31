@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.api.mapping
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
 import org.gradle.api.artifacts.Dependency
 
 /**
@@ -27,10 +29,33 @@ abstract class MappingDepConfig<T : Dependency>(val dep: T, val mappingsConfig: 
     abstract fun sourceNamespace(namespace: String)
 
 
+    abstract fun sourceNamespace(mappingTypeToSrc: (String) -> String)
+
+    fun sourceNamespace(
+        mappingTypeToSrc: Closure<*>
+    ) {
+        sourceNamespace { mappingTypeToSrc.call(it) as String }
+    }
+
     /**
      * filters namespaces to have to be from this.
      * applied after mapNamespace
      */
     abstract fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): MappingNamespaceTree.Namespace
 
+    fun outputs(
+        namespace: String,
+        named: Boolean,
+        @DelegatesTo(
+            value = MappingNamespaceTree.Namespace::class,
+            strategy = Closure.DELEGATE_FIRST
+        )
+        canRemapTo: Closure<*>
+    ) {
+        outputs(namespace, named) {
+            canRemapTo.delegate = this
+            canRemapTo.resolveStrategy = Closure.DELEGATE_FIRST
+            canRemapTo.call() as List<String>
+        }
+    }
 }

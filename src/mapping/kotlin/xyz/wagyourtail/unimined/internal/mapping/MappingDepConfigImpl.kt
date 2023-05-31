@@ -18,6 +18,12 @@ abstract class MappingDepConfigImpl<T: Dependency>(dep: T, mappingsConfig: Mappi
         inputs.setSource(namespace)
     }
 
+    override fun sourceNamespace(mappingTypeToSrc: (String) -> String) {
+        inputs.setSource {
+            mappingTypeToSrc(it.name)
+        }
+    }
+
     override fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): MappingNamespaceTree.Namespace {
         return mappingsConfig.addNamespace(namespace, { canRemapTo().map { mappingsConfig.getNamespace(it.lowercase()) }.toSet() }, named).also {
             inputs.addNs(it.name)

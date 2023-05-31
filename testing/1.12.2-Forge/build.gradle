@@ -1,0 +1,34 @@
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined'
+}
+
+group 'com.example'
+archivesBaseName 'UniminedExampleMod'
+version '1.0-SNAPSHOT'
+
+unimined.useGlobalCache = false
+
+unimined.minecraft {
+    version "1.12.2"
+
+    mappings {
+        mcp("stable", "39-1.12")
+    }
+
+    forge {
+        forge "14.23.5.2860"
+    }
+
+    minecraftRemapper.config {
+        // because MCP/SRG doesn't have field desc's we need to add this
+        // if also have a mapping like intermediary this is unnecessary
+        ignoreFieldDesc(true)
+    }
+}
+
+repositories {
+}
+
+dependencies {
+}

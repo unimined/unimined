@@ -20,7 +20,7 @@ interface PatchProviders {
      * @see FabricLikePatcher
      * @since 0.1.0
      */
-    fun fabric(action: (FabricLikePatcher) -> Unit)
+    fun fabric(action: FabricLikePatcher.() -> Unit)
 
     /**
      * enables the fabric patcher.
@@ -34,7 +34,7 @@ interface PatchProviders {
         ) action: Closure<*>
     ) {
         fabric {
-            action.delegate = it
+            action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
@@ -54,7 +54,7 @@ interface PatchProviders {
      * @see FabricLikePatcher
      * @since 0.4.2
      */
-    fun legacyFabric(action: (FabricLikePatcher) -> Unit)
+    fun legacyFabric(action: FabricLikePatcher.() -> Unit)
 
     /**
      * enables the fabric patcher with additional tweaks for LegacyFabric.
@@ -68,7 +68,7 @@ interface PatchProviders {
         ) action: Closure<*>
     ) {
         legacyFabric {
-            action.delegate = it
+            action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
@@ -87,7 +87,7 @@ interface PatchProviders {
      * @param action the action to perform on the patcher.
      * @since 1.0.0
      */
-    fun babic(action: (FabricLikePatcher) -> Unit)
+    fun babic(action: FabricLikePatcher.() -> Unit)
 
     /**
      * enables the fabric patcher with additional tweaks for babric.
@@ -101,7 +101,7 @@ interface PatchProviders {
         ) action: Closure<*>
     ) {
         babic {
-            action.delegate = it
+            action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
@@ -121,7 +121,7 @@ interface PatchProviders {
      * @see FabricLikePatcher
      * @since 0.3.4
      */
-    fun quilt(action: (FabricLikePatcher) -> Unit)
+    fun quilt(action: FabricLikePatcher.() -> Unit)
 
     /**
      * enables the quilt patcher.
@@ -135,7 +135,7 @@ interface PatchProviders {
         ) action: Closure<*>
     ) {
         quilt {
-            action.delegate = it
+            action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
@@ -156,7 +156,7 @@ interface PatchProviders {
      * @see ForgePatcher
      * @since 0.1.0
      */
-    fun forge(action: (ForgePatcher) -> Unit)
+    fun forge(action: ForgePatcher.() -> Unit)
 
     /**
      * enables the forge patcher.
@@ -170,7 +170,7 @@ interface PatchProviders {
         ) action: Closure<*>
     ) {
         forge {
-            action.delegate = it
+            action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
@@ -190,7 +190,7 @@ interface PatchProviders {
      * @see JarModAgentPatcher
      * @since 0.1.0
      */
-    fun jarMod(action: (JarModAgentPatcher) -> Unit)
+    fun jarMod(action: JarModAgentPatcher.() -> Unit)
 
     /**
      * enables the jar mod patcher.
@@ -204,7 +204,7 @@ interface PatchProviders {
         ) action: Closure<*>
     ) {
         jarMod {
-            action.delegate = it
+            action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }

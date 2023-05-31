@@ -90,7 +90,8 @@ data class McpExecutor(
 
     private fun mappings(step: McpConfigStep): Path {
         val transformer = ((provider.mcPatcher as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
-        val configuration = project.configurations.detachedConfiguration(transformer.mcpConfig)
+        val configuration = project.configurations.detachedConfiguration()
+        configuration.dependencies.add(transformer.mcpConfig)
         configuration.resolve()
         val mcpConfig = configuration.getFile(transformer.mcpConfig, Regex("zip"))
         val target = getStepCache(step.name).createDirectories()
@@ -180,7 +181,8 @@ data class McpExecutor(
 
         override fun mappings(): Path {
             val transformer = ((provider.mcPatcher as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
-            val configuration = project.configurations.detachedConfiguration(transformer.mcpConfig)
+            val configuration = project.configurations.detachedConfiguration()
+            configuration.dependencies.add(transformer.mcpConfig)
             configuration.resolve()
             val mcpConfig = configuration.getFile(transformer.mcpConfig, Regex("zip"))
             val target = getStepCache(step.name).createDirectories()

@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package xyz.wagyourtail.unimined.util
 
 import org.gradle.api.artifacts.Configuration
@@ -228,6 +230,7 @@ fun String.withSourceSet(sourceSet: SourceSet) =
 
 fun String.decapitalized(): String = if (this.isEmpty()) this else this[0].lowercase() + this.substring(1)
 
+@Suppress("UNCHECKED_CAST")
 fun <K, V> Map<K, V?>.nonNullValues(): Map<K, V> = filterValues { it != null } as Map<K, V>
 
 fun <E, K, V> Iterable<E>.associateNonNull(apply: (E) -> Pair<K, V>?): Map<K, V> {
@@ -249,7 +252,7 @@ fun Path.isZip(): Boolean =
 
 fun Path.readZipContents(): List<String> {
     val contents = mutableListOf<String>()
-    forEachInZip() { entry, _ ->
+    forEachInZip { entry, _ ->
         contents.add(entry)
     }
     return contents

@@ -197,6 +197,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     fun mcp(channel: String, version: String) {
         mcp(channel, version) {
             outputs("mcp", true) { listOf("searge") }
+            sourceNamespace("searge")
         }
     }
 
@@ -242,6 +243,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     fun yarn(build: Int) {
         yarn(build) {
             outputs("yarn", true) { listOf("intermediary") }
+            sourceNamespace("intermediary")
         }
     }
 
@@ -266,6 +268,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     fun legacyYarn(build: Int, revision: Int) {
         legacyYarn(build, revision) {
             outputs("yarn", true) { listOf("intermediary") }
+            sourceNamespace("intermediary")
         }
     }
 
@@ -295,6 +298,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     fun barn(build: Int) {
         barn(build) {
             outputs("barn", true) { listOf("intermediary") }
+            sourceNamespace("intermediary")
         }
     }
 
@@ -323,11 +327,12 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     fun quilt(build: Int, classifier: String) {
         quilt(build, classifier) {
             mapNamespace("named", "quilt")
+            val intermediary = if (classifier.contains("intermediary")) listOf("intermediary") else emptyList()
+            val hashed = if (intermediary.isEmpty()) listOf("hashed") else emptyList()
             outputs("quilt", true) {
-                val intermediary = if (classifier.contains("intermediary")) listOf("intermediary") else emptyList()
-                val hashed = if (intermediary.isEmpty()) listOf("hashed") else emptyList()
                 intermediary + hashed
             }
+            sourceNamespace((intermediary + hashed).first())
         }
     }
 
@@ -349,6 +354,13 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         forgeBuiltinMCP(version) {
             outputs("searge", false) { listOf("official") }
             outputs("mcp", true) { listOf("searge") }
+            sourceNamespace {
+                if (it == "MCP") {
+                    "searge"
+                } else {
+                    "official"
+                }
+            }
         }
     }
 

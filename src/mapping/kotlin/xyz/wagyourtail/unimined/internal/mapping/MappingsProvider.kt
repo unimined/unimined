@@ -155,7 +155,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun mapping(dependency: Any, action: MappingDepConfig<*>.() -> Unit) {
-        if (mappingTreeLazy.isInitialized()) {
+        if (freeze) {
             throw IllegalStateException("Cannot add mappings after mapping tree has been initialized")
         }
         project.dependencies.create(dependency).let {
@@ -204,15 +204,14 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         return tree
     }
 
-    private val mappingTreeLazy = lazy {
+    private fun resolveMappingTree(): MappingTreeView {
         project.logger.lifecycle("[Unimined/MappingsProvider] Resolving mappings for ${minecraft.sourceSet}")
         lateinit var mappings: MappingTreeView
-        if (freeze) throw IllegalStateException("Cannot initialize mapping tree twice")
         freeze = true
 
         if (mappingsDeps.isEmpty()) {
             project.logger.warn("[Unimined/MappingsProvider] No mappings specified!")
-            return@lazy MemoryMappingTree()
+            return MemoryMappingTree()
         }
 
         project.logger.info("[Unimined/MappingsProvider] Loading mappings: \n    ${mappingsDeps.joinToString("\n    ") { it.dep.toString() }}")
@@ -274,11 +273,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
 
         project.logger.lifecycle("[Unimined/MappingsProvider] Mapping tree initialized, ${mappings.srcNamespace} -> ${mappings.dstNamespaces.filter { it != "srg" }}")
-        mappings
+        return mappings
     }
 
-    val mappingTree: MappingTreeView
-        get() = mappingTreeLazy.value
+    val mappingTree: MappingTreeView by lazy {
+        resolveMappingTree()
+    }
 
     private fun mappingCacheFile(): Path =
         (if (hasStubs) project.unimined.getLocalCache() else project.unimined.getGlobalCache())

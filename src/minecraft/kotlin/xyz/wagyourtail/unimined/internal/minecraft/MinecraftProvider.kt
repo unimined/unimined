@@ -112,11 +112,11 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override fun merged(action: (MergedPatcher) -> Unit) {
+    override fun merged(action: MergedPatcher.() -> Unit) {
         TODO("Not yet implemented")
     }
 
-    override fun fabric(action: (FabricLikePatcher) -> Unit) {
+    override fun fabric(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = OfficialFabricMinecraftTransformer(project, this).also {
             lateActions.add {
                 action(it)
@@ -124,7 +124,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override fun legacyFabric(action: (FabricLikePatcher) -> Unit) {
+    override fun legacyFabric(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = LegacyFabricMinecraftTransformer(project, this).also {
             lateActions.add {
                 action(it)
@@ -132,7 +132,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override fun babic(action: (FabricLikePatcher) -> Unit) {
+    override fun babic(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = BabricMinecraftTransformer(project, this).also {
             lateActions.add {
                 action(it)
@@ -140,7 +140,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override fun quilt(action: (FabricLikePatcher) -> Unit) {
+    override fun quilt(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = QuiltMinecraftTransformer(project, this).also {
             lateActions.add {
                 action(it)
@@ -148,7 +148,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override fun forge(action: (ForgePatcher) -> Unit) {
+    override fun forge(action: ForgePatcher.() -> Unit) {
         mcPatcher = ForgeMinecraftTransformer(project, this).also {
             lateActions.add {
                 action(it)
@@ -156,7 +156,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override fun jarMod(action: (JarModAgentPatcher) -> Unit) {
+    override fun jarMod(action: JarModAgentPatcher.() -> Unit) {
         mcPatcher = JarModAgentMinecraftTransformer(project, this).also {
             lateActions.add {
                 action(it)
@@ -275,6 +275,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             group = "unimined"
             description = "Generates sources for $sourceSet's minecraft jar"
         })
+
     }
 
     override val minecraftFileDev: File by lazy {

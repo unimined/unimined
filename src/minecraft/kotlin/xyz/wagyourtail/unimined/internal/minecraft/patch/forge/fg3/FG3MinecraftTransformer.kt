@@ -1,7 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3
 
 import com.google.gson.JsonParser
-import net.fabricmc.mappingio.format.ZipReader
 import net.minecraftforge.binarypatcher.ConsoleTool
 import org.apache.commons.io.output.NullOutputStream
 import org.gradle.api.Project
@@ -13,12 +12,12 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigData
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.getFile
 import xyz.wagyourtail.unimined.util.openZipFileSystem
@@ -36,6 +35,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     project, parent.provider, providerName = "FG3"
 ) {
 
+    init {
+        project.logger.lifecycle("[Unimined/Forge] Using FG3 transformer")
+    }
+
     override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }
 
     override val merger: ClassMerger
@@ -52,7 +55,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     lateinit var mcpConfig: Dependency
 
     val mcpConfigData by lazy {
-        val configuration = project.configurations.detachedConfiguration(mcpConfig)
+        val configuration = project.configurations.detachedConfiguration()
+        configuration.dependencies.add(mcpConfig)
         configuration.resolve()
         val config = configuration.getFile(mcpConfig, Regex("zip"))
         val configJson = config.toPath().readZipInputStreamFor("config.json") {
@@ -236,7 +240,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        project.logger.lifecycle("transforming minecraft jar for FG3")
+        project.logger.lifecycle("[Unimined/Forge] transforming minecraft jar for FG3")
         project.logger.info("minecraft: $minecraft")
         val forgeUniversal = parent.forge.dependencies.last()
         val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
@@ -252,7 +256,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         // if userdev cfg says notch
         if (userdevCfg["notchObf"]?.asBoolean == true && minecraft.envType != EnvType.COMBINED) {
-            throw IllegalStateException("Forge userdev3 (legacy fg3, aka 1.12.2) is not supported for non-combined environments.")
+            throw IllegalStateException("Forge userdev3 (legacy fg3, aka 1.12.2) is not supported for non-combined environments currently.")
         }
 
         //  extract binpatches
@@ -356,7 +360,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 //        val source = sourceSets.findByName("client") ?: sourceSets.getByName("main")
 
         legacyClasspath.writeText(
-            (provider.minecraftLibraries.files + provider.minecraft.resolve() + clientExtra.resolve()).joinToString(
+            (provider.minecraftLibraries.files + provider.minecraftFileDev + clientExtra.resolve()).joinToString(
                 "\n"
             ) { it.toString() }, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
         )
@@ -443,7 +447,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (!baseMinecraft.patches.contains("fixForge")) {
+        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.OFFICIAL) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",

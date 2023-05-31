@@ -8,6 +8,7 @@ import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.util.*
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Path
 import kotlin.io.path.inputStream
@@ -42,48 +43,75 @@ class MappingTreeBuilder {
         if (file.isZip()) {
             val found = mutableSetOf<Pair<BetterMappingFormat, String>>()
             file.forEachInZip { name, stream ->
-                val reader = stream.bufferedReader()
-                val header = detectHeader(reader)
-                if (header != null) {
-                    found.add(header to name)
-                }
-            }
-            found.sortedWith { a, b ->
-                if (a.first == b.first) {
-                    a.second.compareTo(b.second)
-                } else {
-                    a.first.ordinal.compareTo(b.first.ordinal)
-                }
-            }.forEach {
-                if (it.first == BetterMappingFormat.RETROGUARD) {
-                    if (side == EnvType.COMBINED) throw IllegalArgumentException("Cannot use retroguard mappings in combined mode")
-                    if (it.second.endsWith("_server.rgs") && side.mcp == 0) {
-                        return@forEach
-                    } else if (!it.second.endsWith("_server.rgs") && side.mcp == 1) {
-                        return@forEach
-                    }
-                }
-                if (it.first == BetterMappingFormat.SRG) {
-                    val combined = it.second.endsWith("joined.srg")
-                    if (side == EnvType.COMBINED && !combined) {
-                        throw IllegalArgumentException("Cannot use srg mappings in combined mode as joined.srg is required")
-                    }
-                    if (!combined) {
-                        if (side == EnvType.CLIENT && !it.second.endsWith("client.srg")) {
-                            return@forEach
+                try {
+                    val reader = stream.bufferedReader()
+                    if (listOf(
+                        name.endsWith(".tsrg"),
+                        name.endsWith(".rgs"),
+                        name.endsWith(".srg"),
+                        name.endsWith(".csrg"),
+                        name.endsWith(".tiny"),
+                        name.endsWith(".csv"),
+                        name.endsWith(".mapping"),
+                        name.endsWith(".json")
+                    ).any { it }) {
+                        val header = if (name == "parchment.json") {
+                            BetterMappingFormat.PARCHMENT
+                        } else {
+                            detectHeader(reader)
                         }
-                        if (side == EnvType.SERVER && !it.second.endsWith("server.srg")) {
-                            return@forEach
+                        if (header != null) {
+                            found.add(header to name)
                         }
                     }
-                }
-                file.readZipInputStreamFor(it.second) { stream ->
-                    mappingReaderIntl(it.second, stream.bufferedReader(), input, it.first)
+                } catch (e: Exception) {
+                    throw IOException("Error reading header on $name", e)
                 }
             }
+                found.sortedWith { a, b ->
+                    if (a.first == b.first) {
+                        a.second.compareTo(b.second)
+                    } else {
+                        a.first.ordinal.compareTo(b.first.ordinal)
+                    }
+                }.forEach {
+                    try {
+                        if (it.first == BetterMappingFormat.RETROGUARD) {
+                            if (side == EnvType.COMBINED) throw IllegalArgumentException("Cannot use retroguard mappings in combined mode")
+                            if (it.second.endsWith("_server.rgs") && side.mcp == 0) {
+                                return@forEach
+                            } else if (!it.second.endsWith("_server.rgs") && side.mcp == 1) {
+                                return@forEach
+                            }
+                        }
+                        if (it.first == BetterMappingFormat.SRG) {
+                            val combined = it.second.endsWith("joined.srg")
+                            if (side == EnvType.COMBINED && !combined) {
+                                throw IllegalArgumentException("Cannot use srg mappings in combined mode as joined.srg is required")
+                            }
+                            if (!combined) {
+                                if (side == EnvType.CLIENT && !it.second.endsWith("client.srg")) {
+                                    return@forEach
+                                }
+                                if (side == EnvType.SERVER && !it.second.endsWith("server.srg")) {
+                                    return@forEach
+                                }
+                            }
+                        }
+                        file.readZipInputStreamFor(it.second) { stream ->
+                            mappingReaderIntl(it.second, stream.bufferedReader(), input, it.first)
+                        }
+                    } catch (e: Exception) {
+                        throw IOException("Error reading ${file.name}!/${it.second}", e)
+                    }
+                }
         } else {
             file.inputStream().use {
-                mappingReaderIntl(file.name, it.bufferedReader(), input)
+                try {
+                    mappingReaderIntl(file.name, it.bufferedReader(), input)
+                } catch (e: Exception) {
+                    throw IOException("Error reading ${file.name}", e)
+                }
             }
         }
     }
@@ -98,17 +126,16 @@ class MappingTreeBuilder {
         reader.mark(4096)
         val str = CharArray(4096).let {
             val read = reader.read(it)
+            if (read == -1) return null // empty file
             String(it, 0, read)
         }
         val type = when (str.substring(0..2)) {
             "v1\t" -> BetterMappingFormat.TINY
             "tin" -> BetterMappingFormat.TINY_2
             "PK:", "CL:", "FD:", "MD:" -> BetterMappingFormat.SRG
-            ".cl",".pa",".me",".fi", ".op" -> BetterMappingFormat.RETROGUARD
+            ".cl", ".pa", ".me", ".fi", ".op" -> BetterMappingFormat.RETROGUARD
             else -> {
-                if (str.startsWith("{")) {
-                    BetterMappingFormat.PARCHMENT
-                } else if (str.startsWith("tsrg2")) {
+                if (str.startsWith("tsrg2")) {
                     BetterMappingFormat.TSRG_2
                 } else if (str.startsWith("searge,name") || str.startsWith("param,name")) {
                     BetterMappingFormat.MCP
@@ -133,9 +160,19 @@ class MappingTreeBuilder {
         fname: String,
         reader: BufferedReader,
         input: MappingInputBuilder,
-        type: BetterMappingFormat = detectHeader(reader) ?: throw IllegalArgumentException("cannot detect mapping format")
+        type: BetterMappingFormat = detectHeader(reader)
+            ?: throw IllegalArgumentException("cannot detect mapping format")
     ) {
-        val visitor = input.fmv(MappingNsRenamer(MappingSourceNsSwitch(MappingDstNsFilter(tree, input.nsFilter.toList()), input.nsSource), input.nsMap))
+        val visitor = input.fmv(
+            MappingNsRenamer(
+                MappingSourceNsSwitch(
+                    MappingDstNsFilter(
+                        tree,
+                        input.nsFilter.toList()
+                    ), input.nsSource(type)
+                ), input.nsMap
+            )
+        )
         val preDstNs = tree.dstNamespaces ?: emptyList()
         when (type) {
             BetterMappingFormat.TINY -> Tiny1Reader.read(reader, visitor)
@@ -152,6 +189,7 @@ class MappingTreeBuilder {
                             visitor
                         )
                     }
+
                     "fields.csv" -> {
                         MCPReader.readField(
                             side,
@@ -162,6 +200,7 @@ class MappingTreeBuilder {
                             visitor
                         )
                     }
+
                     "params.csv" -> {
                         MCPReader.readParam(
                             side,
@@ -172,9 +211,11 @@ class MappingTreeBuilder {
                             visitor
                         )
                     }
+
                     else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
                 }
             }
+
             BetterMappingFormat.OLD_MCP -> {
                 when (fname.split("/", "\\").last()) {
                     "classes.csv" -> {
@@ -187,6 +228,7 @@ class MappingTreeBuilder {
                             visitor
                         )
                     }
+
                     "methods.csv" -> {
                         OldMCPReader.readMethod(
                             side,
@@ -197,6 +239,7 @@ class MappingTreeBuilder {
                             visitor
                         )
                     }
+
                     "fields.csv" -> {
                         OldMCPReader.readField(
                             side,
@@ -207,9 +250,11 @@ class MappingTreeBuilder {
                             visitor
                         )
                     }
+
                     else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
                 }
             }
+
             BetterMappingFormat.OLDER_MCP -> {
                 when (fname.split("/", "\\").last()) {
                     "methods.csv" -> {
@@ -222,6 +267,7 @@ class MappingTreeBuilder {
                             visitor
                         )
                     }
+
                     "fields.csv" -> {
                         OlderMCPReader.readField(
                             side,
@@ -232,9 +278,11 @@ class MappingTreeBuilder {
                             visitor
                         )
                     }
+
                     else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
                 }
             }
+
             BetterMappingFormat.SRG -> SrgReader.read(reader, "official", "searge", visitor)
             BetterMappingFormat.TSRG -> TsrgReader.read(reader, "official", "searge", visitor)
             BetterMappingFormat.TSRG_2 -> TsrgReader.read(reader, visitor)
@@ -258,8 +306,7 @@ class MappingTreeBuilder {
         val nsMap: MutableMap<String, String> = mutableMapOf()
         val nsFilter: MutableSet<String> = mutableSetOf()
         var fmv: (MappingVisitor) -> MappingVisitor = { it }
-        var nsSource: String = "official"
-            private set
+        var nsSource: (BetterMappingFormat) -> String = { "official" }
 
         fun mapNs(from: String, to: String) {
             nsMap[from] = to
@@ -270,7 +317,11 @@ class MappingTreeBuilder {
         }
 
         fun setSource(ns: String) {
-            nsSource = ns
+            nsSource = { ns }
+        }
+
+        fun setSource(f: (BetterMappingFormat) -> String) {
+            nsSource = f
         }
 
         fun forwardVisitor(f: (MappingVisitor) -> MappingVisitor) {
@@ -283,6 +334,7 @@ class MappingTreeBuilder {
         TINY_2,
         ENIGMA,
         SRG,
+        CSRG, //TODO: implement
         TSRG,
         TSRG_2,
         RETROGUARD,

@@ -71,12 +71,14 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     var side by FinalizeOnRead(LazyMutable { if (!mcPatcher.canCombine) error("must set \"side\" for minecraft to either \"client\" or \"server\"") else EnvType.COMBINED })
 
     fun side(sideConf: String) {
+        project.logger.info("setting minecraft side to $sideConf")
         side = EnvType.valueOf(sideConf.uppercase())
     }
 
     var version: String by FinalizeOnRead(MustSet())
 
     fun version(version: String) {
+        project.logger.info("setting minecraft version to $version")
         this.version = version
     }
 
@@ -102,7 +104,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         }
     }
 
-    abstract fun merged(action: (MergedPatcher) -> Unit)
+    abstract fun merged(action: MergedPatcher.() -> Unit)
 
     fun merged(
         @DelegatesTo(
@@ -111,7 +113,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         ) action: Closure<*>
     ) {
         merged {
-            action.delegate = it
+            action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
