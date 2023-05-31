@@ -188,6 +188,8 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 return
             }
             project.logger.lifecycle("[Unimined/ModRemapper] Found $count mods for remapping")
+            project.logger.info("[Unimined/ModRemapper] remapAtToLegacy: $remapAtToLegacy")
+            project.logger.info("[Unimined/ModRemapper] mixinRemap: $mixinRemap")
             project.logger.info(
                 "[Unimined/ModRemapper] Remap path $namespace -> ${
                     path.joinToString(" -> ")

@@ -176,7 +176,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     private var _stub: MemoryMapping? = null
 
-    val stub: MemoryMapping
+    override val stub: MemoryMapping
         get() {
             if (freeze) {
                 throw IllegalStateException("Cannot access stub after mapping tree has been initialized")

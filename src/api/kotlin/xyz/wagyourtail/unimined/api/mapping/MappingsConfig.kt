@@ -403,4 +403,5 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
 
     @get:ApiStatus.Internal
     abstract val combinedNames: String
+    abstract val stub: MemoryMapping
 }

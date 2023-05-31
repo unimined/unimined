@@ -119,7 +119,6 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
                                 }
                             }
                         }
-                        throw IllegalArgumentException("unknown classifier ${info.classifier}")
                     } catch (e: Exception) {
                         project.logger.error("[Unimined/ArtifactProvider] error providing artifact $info", e)
                         throw e
