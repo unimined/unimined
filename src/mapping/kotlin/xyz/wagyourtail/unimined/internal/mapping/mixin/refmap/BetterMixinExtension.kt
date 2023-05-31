@@ -214,14 +214,15 @@ class BetterMixinExtension(
         }
     }
 
-    fun mixinCheck(relativePath: Path): Boolean =
-        relativePath.name.contains("mixins") && relativePath.extension == "json"
+    fun mixinCheck(relativePath: String): Boolean =
+        relativePath.contains("mixins") && relativePath.endsWith(".json")
 
-    fun refmapCheck(relativePath: Path): Boolean =
-        relativePath.name.contains("refmap") && relativePath.extension == "json"
+    fun refmapCheck(relativePath: String): Boolean =
+        relativePath.contains("refmap") && relativePath.endsWith(".json")
+
 
     override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
-        return mixinCheck(relativePath) || refmapCheck(relativePath)
+        return mixinCheck(relativePath.name) || refmapCheck(relativePath.name)
     }
 
     fun preRead(path: Path) {
@@ -232,7 +233,15 @@ class BetterMixinExtension(
     }
 
     fun preRead(file: String, input: InputStream) {
-        if (file.substringAfterLast("/").let { it.contains("mixins") && it.endsWith(".json")}) {
+        if (refmapCheck(file)) {
+            try {
+                logger.info("[PreRead] Found refmap: $file")
+                val json = JsonParser.parseReader(input.reader()).asJsonObject
+                existingRefmaps[file] = json
+            } catch (e: Exception) {
+                logger.error("[PreRead] Error while processing refmap ($file): ${e.message}")
+            }
+        } else if (mixinCheck(file)) {
             logger.info("[PreRead] Found mixin config: ${file.substringAfterLast("/")}")
             val json = JsonParser.parseReader(input.reader()).asJsonObject
             val refmap = json.get("refmap")?.asString ?: defaultRefmapPath
@@ -242,10 +251,10 @@ class BetterMixinExtension(
                     (json.getAsJsonArray("client") ?: listOf()) +
                     (json.getAsJsonArray("server") ?: listOf())
 
-            logger.info("    ${mixins.size} mixins:")
+            logger.info("[PreRead]    ${mixins.size} mixins:")
             for (mixin in mixins) {
                 classesToRefmap.computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
-                logger.info("        $pkg.${mixin.asString}")
+                logger.info("[PreRead]        $pkg.${mixin.asString}")
             }
             json.addProperty("refmap", refmap)
             mixinJsons[file] = json
@@ -258,15 +267,9 @@ class BetterMixinExtension(
         input: InputStream,
         remapper: TinyRemapper
     ) {
-        if (refmapCheck(relativePath)) {
-            try {
-                logger.info("Found refmap: $relativePath")
-                val json = JsonParser.parseReader(input.reader()).asJsonObject
-                existingRefmaps[relativePath.toString()] = json
-            } catch (e: Exception) {
-                logger.error("Error while processing refmap ($relativePath): ${e.message}")
-            }
-        } else if (mixinCheck(relativePath)) {
+        if (refmapCheck(relativePath.name)) {
+            logger.info("[Transform] Found refmap: $relativePath")
+        } else if (mixinCheck(relativePath.name)) {
             try {
                 val json = mixinJsons[relativePath.toString()]!!
                 val output = destinationDirectory.resolve(relativePath)
@@ -278,7 +281,7 @@ class BetterMixinExtension(
                     StandardOpenOption.TRUNCATE_EXISTING
                 )
             } catch (e: Exception) {
-                logger.error("Error while processing mixin config ($relativePath): ${e.message}")
+                logger.error("[Transform] Error while processing mixin config ($relativePath): ${e.message}")
             }
         } else {
             throw IllegalStateException("Unexpected path: $relativePath")
