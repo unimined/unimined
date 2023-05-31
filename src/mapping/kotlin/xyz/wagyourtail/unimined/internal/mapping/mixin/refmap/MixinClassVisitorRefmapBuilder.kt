@@ -320,11 +320,11 @@ class MixinClassVisitorRefmapBuilder(
                     }
                 }
 
-                val callbackInfo = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;"
-                val callbackInfoReturn = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable;"
+                val callbackInfo = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo"
+                val callbackInfoReturn = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable"
 
                 private fun parseCIRVal(): String? {
-                    val remain = signature?.substringAfterLast("Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable<", "") ?: ""
+                    val remain = signature?.substringAfterLast("$callbackInfoReturn<", "") ?: ""
                     if (remain.isEmpty()) {
                         return null
                     }
@@ -358,10 +358,14 @@ class MixinClassVisitorRefmapBuilder(
                     }
                 }
 
-                private fun stripCallbackInfoFromDesc(): Set<String> {
-                    val desc = descriptor.replace(callbackInfo, "").replace(callbackInfoReturn, "")
+                private fun stripCallbackInfoFromDesc(): Set<String?> {
+                    val desc = descriptor.substringBeforeLast(callbackInfo) + ")V"
                     if (descriptor.contains(callbackInfoReturn)) {
-                        val returnType = parseCIRVal() ?: throw IllegalStateException("Failed to parse CIR return type from $descriptor for $mixinName")
+                        val returnType = parseCIRVal()
+                        if (returnType == null) {
+                            logger.warn("Failed to parse return type from $descriptor on $mixinName")
+                            return setOf(null)
+                        }
                         val rets = setOfNotNull(
                             desc.replace(")V", ")$returnType"),
                             toPrimitive(returnType)?.let { desc.replace(")V", ")${it}") })
