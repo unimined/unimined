@@ -98,7 +98,7 @@ class JarModAgentMinecraftTransformer(
             // remove minecraft
             classpath.removeIf { provider.isMinecraftJar(it.toPath()) }
             // add back with correct mappings
-            val targetNamespace = remapJarTask.prodNamespace.get() ?: this.prodNamespace
+            val targetNamespace = remapJarTask.prodNamespace ?: this.prodNamespace
             classpath.add(provider.getMinecraft(targetNamespace, targetNamespace).toFile())
             // add input jar
             // copy output to temp

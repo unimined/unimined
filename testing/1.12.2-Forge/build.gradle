@@ -27,6 +27,10 @@ unimined.minecraft {
     }
 }
 
+remapJar {
+    prodNamespace "searge"
+}
+
 repositories {
 }
 

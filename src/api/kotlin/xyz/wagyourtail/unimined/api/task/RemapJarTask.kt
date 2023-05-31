@@ -4,10 +4,12 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
 /**
  * task responsible for transforming your built jar to production.
@@ -19,31 +21,17 @@ abstract class RemapJarTask : Jar() {
     @get:InputFile
     abstract val inputFile: RegularFileProperty
 
-    /**
-     * the dev env mappings
-     */
-    @get:Input
-    @get:Optional
-    @get:ApiStatus.Internal
-    abstract val devNamespace: Property<MappingNamespaceTree.Namespace?>
+    @get:Internal
+    @set:Internal
+    var devNamespace: MappingNamespaceTree.Namespace? by FinalizeOnRead(null)
 
-    /**
-     * the dev env fallback mappings
-     * defaults to {@link mcConfig.mappings.devNamespace}
-     */
-    @get:Input
-    @get:Optional
-    @get:ApiStatus.Internal
-    abstract val devFallbackNamespace: Property<MappingNamespaceTree.Namespace?>
+    @get:Internal
+    @set:Internal
+    var devFallbackNamespace: MappingNamespaceTree.Namespace? by FinalizeOnRead(null)
 
-    /**
-     * the prod env mappings
-     * defaults to {@link mcConfig.mcProvider.prodNamespace}
-     */
-    @get:Input
-    @get:Optional
-    @get:ApiStatus.Internal
-    abstract val prodNamespace: Property<MappingNamespaceTree.Namespace?>
+    @get:Internal
+    @set:Internal
+    var prodNamespace: MappingNamespaceTree.Namespace? by FinalizeOnRead(null)
 
     /**
      * whether to remap AccessTransformers to the legacy format (<=1.7.10)
@@ -59,9 +47,6 @@ abstract class RemapJarTask : Jar() {
     abstract fun prodNamespace(namespace: String)
 
     init {
-        devNamespace.convention(null as MappingNamespaceTree.Namespace?)
-        devFallbackNamespace.convention(null as MappingNamespaceTree.Namespace?)
-        prodNamespace.convention(null as MappingNamespaceTree.Namespace?)
         remapATToLegacy.convention(null as Boolean?)
     }
 

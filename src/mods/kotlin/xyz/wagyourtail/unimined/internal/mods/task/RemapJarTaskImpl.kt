@@ -27,23 +27,23 @@ import kotlin.io.path.exists
 abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
 
     override fun devNamespace(namespace: String) {
-        devNamespace.set(provider.mappings.getNamespace(namespace))
+        devNamespace = provider.mappings.getNamespace(namespace)
     }
 
     override fun devFallbackNamespace(namespace: String) {
-        devFallbackNamespace.set(provider.mappings.getNamespace(namespace))
+        devFallbackNamespace = provider.mappings.getNamespace(namespace)
     }
 
     override fun prodNamespace(namespace: String) {
-        prodNamespace.set(provider.mappings.getNamespace(namespace))
+        prodNamespace = provider.mappings.getNamespace(namespace)
     }
 
     @TaskAction
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
     fun run() {
-        val prodNs = prodNamespace.getOrElse(provider.mcPatcher.prodNamespace)!!
-        val devNs = devNamespace.getOrElse(provider.mappings.devNamespace)!!
-        val devFNs = devFallbackNamespace.getOrElse(provider.mappings.devFallbackNamespace)!!
+        val prodNs = prodNamespace ?: provider.mcPatcher.prodNamespace!!
+        val devNs = devNamespace ?: provider.mappings.devNamespace!!
+        val devFNs = devFallbackNamespace ?: provider.mappings.devFallbackNamespace!!
 
         val path = provider.mappings.getRemapPath(
             devNs,
