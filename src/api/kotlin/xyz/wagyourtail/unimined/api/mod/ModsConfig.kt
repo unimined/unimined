@@ -60,4 +60,15 @@ abstract class ModsConfig {
     }
 
     abstract fun modImplementation(action: ModRemapConfig.() -> Unit)
+
+    fun modImplementation(
+        @DelegatesTo(value = ModRemapConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        modImplementation {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
 }
