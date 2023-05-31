@@ -15,8 +15,8 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
-import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
+import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftTransformer
@@ -44,7 +44,9 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
 import kotlin.collections.ArrayDeque
-import kotlin.io.path.*
+import kotlin.io.path.exists
+import kotlin.io.path.inputStream
+import kotlin.io.path.writeBytes
 
 class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
     override val minecraftData = MinecraftDownloader(project, this)
@@ -59,7 +61,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override val minecraftRemapper = MinecraftRemapper(project, this)
 
-    private val lateActions = mutableListOf<() -> Unit>()
+    private val lateActions = ArrayDeque<() -> Unit>()
     private var lateActionsRunning by FinalizeOnWrite(false)
 
     val minecraft: Configuration = project.configurations.maybeCreate("minecraft".withSourceSet(sourceSet)).also {
@@ -108,7 +110,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         if (lateActionsRunning) {
             mappings.action()
         } else {
-            lateActions.add {
+            lateActions.addFirst {
                 mappings.action()
             }
         }
@@ -120,7 +122,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun fabric(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = OfficialFabricMinecraftTransformer(project, this).also {
-            lateActions.add {
+            lateActions.addLast {
                 action(it)
             }
         }
@@ -128,7 +130,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun legacyFabric(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = LegacyFabricMinecraftTransformer(project, this).also {
-            lateActions.add {
+            lateActions.addLast {
                 action(it)
             }
         }
@@ -136,7 +138,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun babic(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = BabricMinecraftTransformer(project, this).also {
-            lateActions.add {
+            lateActions.addLast {
                 action(it)
             }
         }
@@ -144,7 +146,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun quilt(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = QuiltMinecraftTransformer(project, this).also {
-            lateActions.add {
+            lateActions.addLast {
                 action(it)
             }
         }
@@ -152,7 +154,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun forge(action: ForgePatcher.() -> Unit) {
         mcPatcher = ForgeMinecraftTransformer(project, this).also {
-            lateActions.add {
+            lateActions.addLast {
                 action(it)
             }
         }
@@ -160,7 +162,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun jarMod(action: JarModAgentPatcher.() -> Unit) {
         mcPatcher = JarModAgentMinecraftTransformer(project, this).also {
-            lateActions.add {
+            lateActions.addLast {
                 action(it)
             }
         }
@@ -282,7 +284,14 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 //        minecraft.dependencies.add(project.dependencies.create(project.files(minecraftFileDev)))
 
         project.logger.info("[Unimined/MinecraftProvider] minecraft file: $minecraftFileDev")
-        minecraft.resolve()
+
+        // add export mappings task
+        project.tasks.create("exportMappings".withSourceSet(sourceSet), ExportMappingsTaskImpl::class.java, this.mappings).apply {
+            group = "unimined"
+            description = "Exports mappings for $sourceSet's minecraft jar"
+        }
+
+
     }
 
     override val minecraftFileDev: File by lazy {
@@ -292,23 +301,23 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    val minecraftFilePom: File by lazy {
-        project.logger.info("[Unimined/Minecraft] Providing minecraft pom file to $sourceSet")
-        // create pom default stub
-        val xml = XMLBuilder("project")
-            .append(
-                XMLBuilder("modelVersion", true, true).append("4.0.0"),
-                XMLBuilder("groupId", true, true).append("net.minecraft"),
-                XMLBuilder("artifactId", true, true).append(minecraftDepName),
-                XMLBuilder("version", true, true).append(version),
-                XMLBuilder("packaging", true, true).append("jar"),
-            )
-        // write pom file
-        val pomFile = project.unimined.getLocalCache().resolve("poms").resolve("$minecraftDepName-$version.pom")
-        pomFile.parent.createDirectories()
-        pomFile.writeText(xml.toString())
-        pomFile.toFile()
-    }
+//    val minecraftFilePom: File by lazy {
+//        project.logger.info("[Unimined/Minecraft] Providing minecraft pom file to $sourceSet")
+//        // create pom default stub
+//        val xml = XMLBuilder("project")
+//            .append(
+//                XMLBuilder("modelVersion", true, true).append("4.0.0"),
+//                XMLBuilder("groupId", true, true).append("net.minecraft"),
+//                XMLBuilder("artifactId", true, true).append(minecraftDepName),
+//                XMLBuilder("version", true, true).append(version),
+//                XMLBuilder("packaging", true, true).append("jar"),
+//            )
+//        // write pom file
+//        val pomFile = project.unimined.getLocalCache().resolve("poms").resolve("$minecraftDepName-$version.pom")
+//        pomFile.parent.createDirectories()
+//        pomFile.writeText(xml.toString())
+//        pomFile.toFile()
+//    }
 
     override fun isMinecraftJar(path: Path) = minecraftFiles.values.any { it == path }
 

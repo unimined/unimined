@@ -43,6 +43,16 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         remapConfigs[config.toSet()] = action
     }
 
+    override fun modImplementation(action: ModRemapConfig.() -> Unit) {
+        val old = remapConfigs[setOf(modImplementation)]
+        remapConfigs[setOf(modImplementation)] = {
+            if (old != null) {
+                old()
+            }
+            action()
+        }
+    }
+
     fun afterEvaluate() {
         for ((config, action) in remapConfigs) {
             val remapSettings = ModRemapProvider(config, project, minecraft)

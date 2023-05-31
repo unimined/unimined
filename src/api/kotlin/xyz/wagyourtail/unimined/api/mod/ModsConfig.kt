@@ -58,4 +58,6 @@ abstract class ModsConfig {
             action.call()
         }
     }
+
+    abstract fun modImplementation(action: ModRemapConfig.() -> Unit)
 }

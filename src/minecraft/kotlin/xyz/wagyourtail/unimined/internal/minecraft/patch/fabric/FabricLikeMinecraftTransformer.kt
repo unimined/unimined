@@ -22,10 +22,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.openZipFileSystem
-import xyz.wagyourtail.unimined.util.withSourceSet
+import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.InputStreamReader
 import java.nio.file.Files
@@ -217,7 +214,8 @@ abstract class FabricLikeMinecraftTransformer(
         if (accessWidener != null) {
             val output = MinecraftJar(
                 baseMinecraft,
-                parentPath = project.unimined.getLocalCache().resolve("fabric").createDirectories()
+                parentPath = project.unimined.getLocalCache().resolve("fabric").createDirectories(),
+                awOrAt = "aw+${accessWidener!!.toPath().getSha1()}"
             )
             if (!output.path.exists() || project.unimined.forceReload) {
                 if (AccessWidenerMinecraftTransformer.transform(
@@ -238,7 +236,7 @@ abstract class FabricLikeMinecraftTransformer(
             }
         } else baseMinecraft
 
-    val intermediaryClasspath = project.unimined.getLocalCache().resolve("remapClasspath.txt".withSourceSet(provider.sourceSet))
+    val intermediaryClasspath: Path = project.unimined.getLocalCache().resolve("remapClasspath.txt".withSourceSet(provider.sourceSet))
 
     private fun afterEvaluate() {
         project.logger.lifecycle("[Unimined/Fabric] Generating intermediary classpath.")
