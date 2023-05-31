@@ -424,6 +424,9 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
             }
             output
         } else {
+            if (ats.isEmpty()) {
+                return baseMinecraft
+            }
             val output = MinecraftJar(baseMinecraft, awOrAt = "at")
             if (!output.path.exists() || project.unimined.forceReload) {
                 AccessTransformerMinecraftTransformer.transform(ats, baseMinecraft.path, output.path)

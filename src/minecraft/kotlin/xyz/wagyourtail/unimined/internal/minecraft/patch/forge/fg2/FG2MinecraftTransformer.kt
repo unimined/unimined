@@ -24,6 +24,7 @@ import kotlin.io.path.writeBytes
 class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
     project,
     parent.provider,
+    jarModProvider = "forge",
     providerName = "FG2"
 ) {
     init {
@@ -83,7 +84,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         val forgeUniversal = parent.forge.dependencies.last()
         val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
-        val outFolder = minecraft.path.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
+        val outFolder = minecraft.path.parent.resolve("${forgeUniversal.version}")
             .createDirectories()
 
         val patchedMC = MinecraftJar(

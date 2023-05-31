@@ -55,51 +55,76 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
                 override fun getArtifact(info: ArtifactIdentifier): Artifact {
 
-                    if (info.group != "net.minecraft") {
-                        return Artifact.none()
-                    }
-
-                    if (info.extension == "pom") {
-                        return Artifact.none()
-                    }
-
-                    when (info.name) {
-                        "client_mappings", "client-mappings", "mappings" -> {
-                            val mc = minecrafts.values.first { it.version == info.version }
-                            project.logger.info("[Unimined/ArtifactProvider] providing client mappings")
-                            return StreamableArtifact.ofFile(info, ArtifactType.BINARY, mc.minecraftData.officialClientMappingsFile)
+                    try {
+                        if (info.group != "net.minecraft") {
+                            return Artifact.none()
                         }
-                        "server_mappings", "server-mappings" -> {
-                            val mc = minecrafts.values.first { it.version == info.version }
-                            project.logger.info("[Unimined/ArtifactProvider] providing server mappings")
-                            return StreamableArtifact.ofFile(info, ArtifactType.BINARY, mc.minecraftData.officialServerMappingsFile)
-                        }
-                        else -> {
-                            val sourceSet = depNameToSourceSet(info.name)
-                            if ((info.name != "minecraft" && !getMinecraftDepNames().contains(info.name))) {
-                                return Artifact.none()
+
+                        when (info.name) {
+                            "client_mappings", "client-mappings", "mappings" -> {
+                                if (info.extension == "pom") {
+                                    return Artifact.none()
+                                }
+                                val mc = minecrafts.values.first { it.version == info.version }
+                                project.logger.info("[Unimined/ArtifactProvider] providing client mappings")
+                                return StreamableArtifact.ofFile(
+                                    info,
+                                    ArtifactType.BINARY,
+                                    mc.minecraftData.officialClientMappingsFile
+                                )
                             }
-                            when (info.classifier) {
-                                "client", "server", null -> {
-                                    project.logger.info("[Unimined/ArtifactProvider] providing ${info.classifier ?: "combined"} jar")
-                                    return StreamableArtifact.ofFile(info, ArtifactType.BINARY, minecrafts[sourceSet]!!.minecraftFileDev)
+
+                            "server_mappings", "server-mappings" -> {
+                                if (info.extension == "pom") {
+                                    return Artifact.none()
                                 }
-                                "sources" -> {
-                                    //TODO: reconsider
-                                    // this is because we only want to generate sources sometimes currently,
-                                    // maybe have a flag for sources tho... but this flag needs to be changeable by CI's
-                                    Artifact.none()
+                                val mc = minecrafts.values.first { it.version == info.version }
+                                project.logger.info("[Unimined/ArtifactProvider] providing server mappings")
+                                return StreamableArtifact.ofFile(
+                                    info,
+                                    ArtifactType.BINARY,
+                                    mc.minecraftData.officialServerMappingsFile
+                                )
+                            }
+
+                            else -> {
+                                val sourceSet = depNameToSourceSet(info.name)
+                                if (!getMinecraftDepNames().contains(info.name)) {
+                                    project.logger.warn("[Unimined/ArtifactProvider] unknown minecraft dep ${info.name}")
+                                    return Artifact.none()
                                 }
-                                else -> {
-                                    throw IllegalArgumentException("unknown classifier ${info.classifier}")
+                                when (info.classifier) {
+                                    "client", "server", null -> {
+                                        if (info.extension == "pom") {
+                                            return Artifact.none()
+                                        }
+                                        project.logger.info("[Unimined/ArtifactProvider] providing ${info.classifier ?: "combined"} jar")
+                                        return StreamableArtifact.ofFile(
+                                            info,
+                                            ArtifactType.BINARY,
+                                            minecrafts[sourceSet]!!.minecraftFileDev
+                                        )
+                                    }
+
+                                    "sources" -> {
+                                        //TODO: reconsider
+                                        // this is because we only want to generate sources sometimes currently,
+                                        // maybe have a flag for sources tho... but this flag needs to be changeable by CI's
+                                        return Artifact.none()
+                                    }
+
+                                    else -> {
+                                        throw IllegalArgumentException("unknown classifier ${info.classifier}")
+                                    }
                                 }
                             }
                         }
+                        throw IllegalArgumentException("unknown classifier ${info.classifier}")
+                    } catch (e: Exception) {
+                        project.logger.error("[Unimined/ArtifactProvider] error providing artifact $info", e)
+                        throw e
                     }
-
-                    throw IllegalArgumentException("unknown classifier ${info.classifier}")
                 }
-
             })
     )
 

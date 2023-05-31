@@ -28,6 +28,7 @@ import kotlin.io.path.*
 class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
     project,
     parent.provider,
+    jarModProvider = "forge",
     providerName = "FG1"
 ) {
     init {

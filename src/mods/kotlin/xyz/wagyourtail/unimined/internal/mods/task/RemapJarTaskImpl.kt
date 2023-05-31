@@ -66,7 +66,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         project.logger.info("[Unimined/RemapJar]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
         var prevTarget = inputFile.get().asFile.toPath()
         var prevNamespace = devNs
-        var prevPrevNamespace: MappingNamespaceTree.Namespace? = null
+        var prevPrevNamespace = devFNs
         for (i in path.indices) {
             val step = path[i]
             project.logger.info("[Unimined/RemapJar]    $step")
@@ -79,7 +79,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
 
             val mc = provider.getMinecraft(
                 mcNamespace,
-                mcFallbackNamespace!!
+                mcFallbackNamespace
             )
             remapToInternal(prevTarget, nextTarget, prevNamespace, step, mc)
             prevTarget = nextTarget

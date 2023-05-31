@@ -64,7 +64,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         } else {
             "net.legacyfabric.v${revision}"
         }
-        mapping("${group}:intermediary:${minecraft.version}:v${revision}",action)
+        mapping("${group}:intermediary:${minecraft.version}:v2",action)
     }
 
     override fun babricIntermediary(action: MappingDepConfig<*>.() -> Unit) {

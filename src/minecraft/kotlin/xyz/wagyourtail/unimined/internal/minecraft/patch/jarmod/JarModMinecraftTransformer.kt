@@ -25,7 +25,7 @@ import kotlin.io.path.exists
 open class JarModMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider,
-    private val jarModProvider: String = "jarMod",
+    jarModProvider: String = "jarMod",
     providerName: String = "JarMod"
 ): AbstractMinecraftTransformer(
     project, provider, providerName

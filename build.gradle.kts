@@ -118,7 +118,7 @@ dependencies {
     }
 
     // artifact transformer
-    implementation("net.minecraftforge:artifactural:3.0.10")
+    implementation("net.minecraftforge:artifactural:3.0.14")
     implementation("net.minecraftforge:unsafe:0.2.0")
 
     // remapper

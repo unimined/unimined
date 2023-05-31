@@ -15,6 +15,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTransformer
@@ -34,6 +35,7 @@ import xyz.wagyourtail.unimined.internal.mods.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.internal.runs.RunsProvider
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
@@ -42,9 +44,7 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
 import kotlin.collections.ArrayDeque
-import kotlin.io.path.exists
-import kotlin.io.path.inputStream
-import kotlin.io.path.writeBytes
+import kotlin.io.path.*
 
 class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
     override val minecraftData = MinecraftDownloader(project, this)
@@ -93,9 +93,11 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         } else {
             minecraftData.getMinecraft(side)
         }
-        (mcPatcher as AbstractMinecraftTransformer).afterRemap(
+        val path = (mcPatcher as AbstractMinecraftTransformer).afterRemap(
             minecraftRemapper.provide((mcPatcher as AbstractMinecraftTransformer).transform(mc), it.first, it.second)
         ).path
+        if (!path.exists()) throw IOException("minecraft path $path does not exist")
+        path
     }
 
     override fun getMinecraft(namespace: MappingNamespaceTree.Namespace, fallbackNamespace: MappingNamespaceTree.Namespace): Path {
@@ -244,9 +246,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             minecraftLibraries.dependencies.add(project.dependencies.create("com.google.code.findbugs:jsr305:3.0.2"))
         }
 
-        // add minecraft dep
-        minecraft.dependencies.add(project.dependencies.create("net.minecraft:$minecraftDepName:$version" + if (side != EnvType.COMBINED) ":${side.classifier}" else ""))
-
         // add minecraft libraries
         addLibraries(minecraftData.metadata.libraries)
 
@@ -276,6 +275,14 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             description = "Generates sources for $sourceSet's minecraft jar"
         })
 
+        // add minecraft dep
+        minecraft.dependencies.add(project.dependencies.create("net.minecraft:$minecraftDepName:$version" + if (side != EnvType.COMBINED) ":${side.classifier}" else ""))
+
+        //DEBUG: add minecraft dev dep as file
+//        minecraft.dependencies.add(project.dependencies.create(project.files(minecraftFileDev)))
+
+        project.logger.info("[Unimined/MinecraftProvider] minecraft file: $minecraftFileDev")
+        minecraft.resolve()
     }
 
     override val minecraftFileDev: File by lazy {
@@ -283,6 +290,24 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         getMinecraft(mappings.devNamespace, mappings.devFallbackNamespace).toFile().also {
             project.logger.info("[Unimined/Minecraft] Provided minecraft dev file $it")
         }
+    }
+
+    val minecraftFilePom: File by lazy {
+        project.logger.info("[Unimined/Minecraft] Providing minecraft pom file to $sourceSet")
+        // create pom default stub
+        val xml = XMLBuilder("project")
+            .append(
+                XMLBuilder("modelVersion", true, true).append("4.0.0"),
+                XMLBuilder("groupId", true, true).append("net.minecraft"),
+                XMLBuilder("artifactId", true, true).append(minecraftDepName),
+                XMLBuilder("version", true, true).append(version),
+                XMLBuilder("packaging", true, true).append("jar"),
+            )
+        // write pom file
+        val pomFile = project.unimined.getLocalCache().resolve("poms").resolve("$minecraftDepName-$version.pom")
+        pomFile.parent.createDirectories()
+        pomFile.writeText(xml.toString())
+        pomFile.toFile()
     }
 
     override fun isMinecraftJar(path: Path) = minecraftFiles.values.any { it == path }

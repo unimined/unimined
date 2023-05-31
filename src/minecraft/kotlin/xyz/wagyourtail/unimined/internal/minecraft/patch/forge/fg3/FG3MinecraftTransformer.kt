@@ -32,7 +32,7 @@ import java.nio.file.*
 import kotlin.io.path.*
 
 class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
-    project, parent.provider, providerName = "FG3"
+    project, parent.provider, jarModProvider = "forge", providerName = "FG3"
 ) {
 
     init {
@@ -245,7 +245,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         val forgeUniversal = parent.forge.dependencies.last()
         val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
 
-        val outFolder = minecraft.path.parent.resolve("${forgeUniversal.name}-${forgeUniversal.version}")
+        val outFolder = minecraft.path.parent.resolve("${forgeUniversal.version}")
             .createDirectories()
 
         val patchedMC = MinecraftJar(

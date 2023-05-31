@@ -14,10 +14,7 @@ import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTr
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.consumerApply
 import java.nio.file.Path
-import kotlin.io.path.copyTo
-import kotlin.io.path.createDirectories
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.exists
+import kotlin.io.path.*
 
 class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): MinecraftRemapConfig() {
 
@@ -45,7 +42,11 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
             val parent = if (provider.mappings.hasStubs) {
                 project.unimined.getLocalCache().resolve("minecraft").resolve(mappingsId).createDirectories()
             } else {
-                parentPath.resolve(mappingsId)
+                if (parentPath.name != mappingsId) {
+                    parentPath.resolve(mappingsId).createDirectories()
+                } else {
+                    parentPath
+                }
             }
             val target = MinecraftJar(
                 minecraft,
