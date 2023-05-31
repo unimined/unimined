@@ -133,7 +133,6 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 remapperB.extension(mixin)
                 mixin
             }
-
             MixinRemap.NONE -> null
             MixinRemap.TINY_HARD, MixinRemap.TINY_HARDSOFT -> {
                 remapperB.extension(
@@ -146,7 +145,8 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                             )
 
                             else -> throw InvalidUserDataException("Invalid MixinRemap value: $mixinRemap")
-                        }
+                        },
+                        BetterMixinExtension.translateLogLevel(project.gradle.startParameter.logLevel)
                     )
                 )
                 null

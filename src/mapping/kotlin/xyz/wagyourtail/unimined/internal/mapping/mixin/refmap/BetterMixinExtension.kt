@@ -45,7 +45,7 @@ class BetterMixinExtension(
     companion object {
         private val GSON = GsonBuilder().setPrettyPrinting().create()
 
-        private fun translateLogLevel(loggerLevel: LogLevel) = when (loggerLevel) {
+        fun translateLogLevel(loggerLevel: LogLevel) = when (loggerLevel) {
             LogLevel.DEBUG -> Logger.Level.INFO
             LogLevel.INFO -> Logger.Level.INFO
             LogLevel.WARN -> Logger.Level.WARN

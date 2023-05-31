@@ -323,8 +323,11 @@ class MixinClassVisitorRefmapBuilder(
                 val callbackInfo = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;"
                 val callbackInfoReturn = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable;"
 
-                private fun parseCIRVal(): String {
-                    val remain = signature!!.split("Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable<")[1]
+                private fun parseCIRVal(): String? {
+                    val remain = signature?.substringAfterLast("Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable<", "") ?: ""
+                    if (remain.isEmpty()) {
+                        return null
+                    }
                     var valBuild = ""
                     var depth = 1
                     for (c in remain) {
@@ -338,7 +341,7 @@ class MixinClassVisitorRefmapBuilder(
                         }
                         valBuild += c
                     }
-                    return valBuild
+                    return valBuild.substringBefore("<").substringBefore(";") + ";"
                 }
 
                 private fun toPrimitive(sig: String): String? {
@@ -358,7 +361,7 @@ class MixinClassVisitorRefmapBuilder(
                 private fun stripCallbackInfoFromDesc(): Set<String> {
                     val desc = descriptor.replace(callbackInfo, "").replace(callbackInfoReturn, "")
                     if (descriptor.contains(callbackInfoReturn)) {
-                        val returnType = parseCIRVal()
+                        val returnType = parseCIRVal() ?: throw IllegalStateException("Failed to parse CIR return type from $descriptor for $mixinName")
                         val rets = setOfNotNull(
                             desc.replace(")V", ")$returnType"),
                             toPrimitive(returnType)?.let { desc.replace(")V", ")${it}") })
