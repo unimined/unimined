@@ -136,7 +136,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override fun babic(action: FabricLikePatcher.() -> Unit) {
+    override fun babric(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = BabricMinecraftTransformer(project, this).also {
             lateActions.addLast {
                 action(it)

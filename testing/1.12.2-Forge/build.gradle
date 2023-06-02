@@ -23,6 +23,8 @@ unimined.minecraft {
     minecraftRemapper.config {
         // because MCP/SRG doesn't have field desc's we need to add this
         // if also have a mapping like intermediary this is unnecessary
+        // and can cause problems... I will try to fix this at a future time
+        // by adding code to calculate field-desc's and clean up forge's mappings
         ignoreFieldDesc(true)
     }
 }

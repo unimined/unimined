@@ -119,7 +119,9 @@ dependencies {
 
     // artifact transformer
     implementation("net.minecraftforge:artifactural:3.0.14")
-    implementation("net.minecraftforge:unsafe:0.2.0")
+    implementation("net.minecraftforge:unsafe:0.2.0") {
+        exclude(mapOf("group" to "org.apache.logging.log4j"))
+    }
 
     // remapper
     implementation("net.fabricmc:tiny-remapper:0.8.6")
@@ -140,7 +142,12 @@ dependencies {
     implementation("net.fabricmc:access-widener:2.1.0")
 
     // at
-    implementation("net.minecraftforge:accesstransformers:8.0.7")
+    implementation("net.minecraftforge:accesstransformers:8.0.7") {
+        exclude(mapOf("group" to "org.apache.logging.log4j"))
+    }
+
+    // because we exclude it to prevent the dynamic version
+    implementation("org.apache.logging.log4j:log4j-core:2.11.2")
 
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false

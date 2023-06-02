@@ -77,8 +77,8 @@ unimined.minecraft(sourceSets.main) {
         
         // intermediary()
         // searge()
-        mojmap("1.14.4")
-        // retroMCP("1.2.5") // TODO: add this one, it's not here yet
+        mojmap()
+        // retroMCP()
         // yarn(1)
         // parchment("1.19.3", "2022.12.18")
         // mcp("stable", "39+1.12")

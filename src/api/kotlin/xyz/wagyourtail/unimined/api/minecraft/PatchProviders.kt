@@ -87,20 +87,20 @@ interface PatchProviders {
      * @param action the action to perform on the patcher.
      * @since 1.0.0
      */
-    fun babic(action: FabricLikePatcher.() -> Unit)
+    fun babric(action: FabricLikePatcher.() -> Unit)
 
     /**
      * enables the fabric patcher with additional tweaks for babric.
      * @param action the action to perform on the patcher.
      * @since 1.0.0
      */
-    fun babic(
+    fun babric(
         @DelegatesTo(
             value = FabricLikePatcher::class,
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {
-        babic {
+        babric {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -111,8 +111,8 @@ interface PatchProviders {
      * enables the fabric patcher with additional tweaks for babric.
      * @since 1.0.0
      */
-    fun babic() {
-        babic {}
+    fun babric() {
+        babric {}
     }
 
     /**

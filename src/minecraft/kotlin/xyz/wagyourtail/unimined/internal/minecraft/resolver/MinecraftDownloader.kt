@@ -55,22 +55,32 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     }
 
     val launcherMeta by lazy {
-        if (project.gradle.startParameter.isOffline) {
-            throw IllegalStateException("Offline mode is enabled, but version metadata is not available")
+        val file = project.unimined.getGlobalCache().resolve("manifest.json")
+        if (!project.gradle.startParameter.isOffline) {
+
+            project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving launcher metadata")
+
+            val urlConnection = URL("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json").openConnection() as HttpURLConnection
+            urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+            urlConnection.requestMethod = "GET"
+            urlConnection.connect()
+
+            if (urlConnection.responseCode != 200) {
+                project.logger.warn("Failed to get metadata, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
+            } else {
+                // write out to file
+                file.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                    .use {
+                        urlConnection.inputStream.copyTo(it)
+                    }
+            }
+        } else {
+            if (!file.exists()) {
+                throw IllegalStateException("Offline mode is enabled, but version metadata is not available")
+            }
         }
 
-        project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving launcher metadata")
-
-        val urlConnection = URL("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json").openConnection() as HttpURLConnection
-        urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
-        urlConnection.requestMethod = "GET"
-        urlConnection.connect()
-
-        if (urlConnection.responseCode != 200) {
-            throw IOException("Failed to get metadata, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
-        }
-
-        val versionsList = urlConnection.inputStream.reader().use {
+        val versionsList = file.reader().use {
             JsonParser.parseReader(it).asJsonObject
         }
 

@@ -291,7 +291,7 @@ object MCPReader {
 
                     if (visitLastClass) {
                         for (meth in clazz.methods) {
-                            val srg = meth.getName(seargeNamespace).split("_")
+                            val srg = meth.getName(seargeNamespace)?.split("_") ?: continue
                             if (srg.size < 2) continue
                             val srgId = srg[1]
                             if (srgId in params) {

@@ -47,10 +47,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
 
     override fun intermediary(action: MappingDepConfig<*>.() -> Unit) {
+        project.unimined.fabricMaven()
         mapping("net.fabricmc:intermediary:${minecraft.version}:v2", action)
     }
 
     override fun legacyIntermediary(revision: Int, action: MappingDepConfig<*>.() -> Unit) {
+        project.unimined.legacyFabricMaven()
         if (legacyFabricMappingsVersionFinalize.value != revision) {
             if (!legacyFabricMappingsVersionFinalize.finalized) {
                 legacyFabricMappingsVersion = revision
@@ -68,10 +70,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun babricIntermediary(action: MappingDepConfig<*>.() -> Unit) {
+        project.unimined.babricMaven()
         mapping("babric:intermediary:${minecraft.version}:v2", action)
     }
 
     override fun searge(version: String, action: MappingDepConfig<*>.() -> Unit) {
+        project.unimined.forgeMaven()
         val mappings = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.12.2") < 0) {
             "de.oceanlabs.mcp:mcp:${version}:srg@zip"
         } else {
@@ -81,6 +85,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun hashed(action: MappingDepConfig<*>.() -> Unit) {
+        project.unimined.quiltMaven()
         mapping("org.quiltmc:hashed:${minecraft.version}") {
             action()
         }
@@ -138,12 +143,14 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun barn(build: Int, action: MappingDepConfig<*>.() -> Unit) {
+        project.unimined.babricMaven()
         mapping("babric:barn:${minecraft.version}+build.${build}:v2") {
             action()
         }
     }
 
     override fun quilt(build: Int, classifier: String, action: MappingDepConfig<*>.() -> Unit) {
+        project.unimined.quiltMaven()
         mapping("org.quiltmc:quilt-mappings:${minecraft.version}+build.${build}:${classifier}") {
             action()
         }

@@ -85,7 +85,7 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         patchers.add(fabric)
     }
 
-    override fun babic(action: FabricLikePatcher.() -> Unit) {
+    override fun babric(action: FabricLikePatcher.() -> Unit) {
         val fabric = BabricMinecraftTransformer(project, provider)
         fabric.action()
         patchers.add(fabric)

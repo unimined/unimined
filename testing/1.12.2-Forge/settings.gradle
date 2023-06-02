@@ -1,6 +1,7 @@
 
 pluginManagement {
     repositories {
+        mavenCentral()
         maven {
             url = "https://maven.wagyourtail.xyz/releases"
         }
@@ -13,7 +14,6 @@ pluginManagement {
         maven {
             url = "https://maven.fabricmc.net/"
         }
-        mavenCentral()
         gradlePluginPortal() {
             content {
                 excludeGroup("org.apache.logging.log4j")
