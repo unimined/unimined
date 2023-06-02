@@ -197,8 +197,19 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
 
     fun mcp(channel: String, version: String) {
         mcp(channel, version) {
+            if (channel == "legacy") {
+                outputs("searge", false) { listOf("official") }
+                sourceNamespace {
+                    if (it.contains("MCP")) {
+                        "searge"
+                    } else {
+                        "official"
+                    }
+                }
+            } else {
+                sourceNamespace("searge")
+            }
             outputs("mcp", true) { listOf("searge") }
-            sourceNamespace("searge")
         }
     }
 
