@@ -121,6 +121,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
 
     fun searge(version: String) {
         searge(version)  {
+            mapNamespace("obf", "official")
             outputs("searge", false) { listOf("official") }
         }
     }
