@@ -249,6 +249,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 it.dependencies.addAll(mappingsDeps)
             }
             val mappingBuilder = MappingTreeBuilder()
+            mappingBuilder.side(minecraft.side)
 
             // parse each dep
             for (dep in mappingsDeps) {
