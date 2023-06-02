@@ -30,6 +30,9 @@ class MixinClassVisitorRefmapBuilder(
     val classTargets = mutableListOf<String>()
     val classValues = mutableListOf<String>()
 
+    val targetClasses: Set<String>
+        get() = (classValues + classTargets.map { it.replace('.', '/') }).toSet()
+
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
         val av = if (Annotation.MIXIN == descriptor) {
             object: AnnotationVisitor(Constant.ASM_VERSION, super.visitAnnotation(descriptor, visible)) {
@@ -137,7 +140,7 @@ class MixinClassVisitorRefmapBuilder(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapAccessor.get()) {
-                        for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
+                        for (targetClass in targetClasses) {
                             val targetName = if (targetName != null) {
                                 targetName!!.split(":")[0]
                             } else {
@@ -216,7 +219,7 @@ class MixinClassVisitorRefmapBuilder(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapInvoker.get()) {
-                        for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
+                        for (targetClass in targetClasses) {
                             val targetName = if (targetName != null) {
                                 targetName
                             } else {
@@ -396,7 +399,7 @@ class MixinClassVisitorRefmapBuilder(
                                 }
                             }
                             for (targetDesc in targetDescs) {
-                                for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
+                                for (targetClass in targetClasses) {
                                     val target = resolver.resolveMethod(
                                         targetClass,
                                         targetName,
@@ -431,7 +434,11 @@ class MixinClassVisitorRefmapBuilder(
                                             .orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
                                         val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
-                                        refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
+                                        if (classTargets.size > 1) {
+                                            refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
+                                        } else {
+                                            refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
+                                        }
                                     }
                                     if (target.isPresent) {
                                         return@forEach
@@ -501,7 +508,7 @@ class MixinClassVisitorRefmapBuilder(
                     super.visitEnd()
                     if (remapModifyArg.get()) {
                         targetNames.forEach { targetMethod ->
-                            for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
+                            for (targetClass in targetClasses) {
                                 val targetDesc = if (targetMethod.contains("(")) {
                                     "(" + targetMethod.split("(")[1]
                                 } else {
@@ -547,7 +554,11 @@ class MixinClassVisitorRefmapBuilder(
                                         .orElse(targetClass)
                                     val mappedName = mapper.mapName(it)
                                     val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
-                                    refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
+                                    if (classTargets.size > 1) {
+                                        refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
+                                    } else {
+                                        refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
+                                    }
                                 }
                                 if (target.isPresent) {
                                     return@forEach
@@ -599,7 +610,7 @@ class MixinClassVisitorRefmapBuilder(
                         super.visitEnd()
                         if (remapModifyConstant.get()) {
                             targetNames.forEach { targetMethod ->
-                                for (targetClass in classValues + classTargets.map { it.replace('.', '/') }) {
+                                for (targetClass in targetClasses) {
                                     val targetDesc = if (targetMethod.contains("(")) {
                                         "(" + targetMethod.split("(")[1]
                                     } else {
@@ -648,7 +659,11 @@ class MixinClassVisitorRefmapBuilder(
                                             .orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
                                         val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
-                                        refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
+                                        if (classTargets.size > 1) {
+                                            refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
+                                        } else {
+                                            refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
+                                        }
                                     }
                                     if (target.isPresent) {
                                         return@forEach

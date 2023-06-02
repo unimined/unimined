@@ -94,7 +94,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
                     val mergedPath = mergedFS.getPath(path)
                     mergedPath.parent?.createDirectories()
                     if (mergedPath.exists()) {
-                        project.logger.warn("[Unimined/MappingsProvider] Entry in server jar already exists in client jar: $path, skipping")
+                        project.logger.info("[Unimined/MappingsProvider] Entry in server jar already exists in client jar: $path, skipping")
                         return@forEachInZip
                     }
                     mergedPath.writeBytes(stream.readBytes())
