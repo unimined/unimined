@@ -434,7 +434,7 @@ class MixinClassVisitorRefmapBuilder(
                                             .orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
                                         val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
-                                        if (classTargets.size > 1) {
+                                        if (targetClasses.size > 1) {
                                             refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
                                         } else {
                                             refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
@@ -554,7 +554,7 @@ class MixinClassVisitorRefmapBuilder(
                                         .orElse(targetClass)
                                     val mappedName = mapper.mapName(it)
                                     val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
-                                    if (classTargets.size > 1) {
+                                    if (targetClasses.size > 1) {
                                         refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
                                     } else {
                                         refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
@@ -659,7 +659,7 @@ class MixinClassVisitorRefmapBuilder(
                                             .orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
                                         val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
-                                        if (classTargets.size > 1) {
+                                        if (targetClasses.size > 1) {
                                             refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
                                         } else {
                                             refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
