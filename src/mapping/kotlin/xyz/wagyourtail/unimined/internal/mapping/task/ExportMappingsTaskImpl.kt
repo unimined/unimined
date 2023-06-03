@@ -59,7 +59,7 @@ open class ExportMappingsTaskImpl @Inject constructor(@get:Internal val mappings
         }
 
         override fun setTargetNamespaces(namespace: List<String>) {
-            targetNamespace = namespace.map { mappings.getNamespace(it) }
+            targetNamespace = namespace.map { mappings.getNamespace(it) }.toSet()
         }
 
         private fun export(mappingTree: MappingTreeView) {
@@ -96,7 +96,7 @@ open class ExportMappingsTaskImpl @Inject constructor(@get:Internal val mappings
                                     visitor,
                                     renameNs.mapKeys { it.key.name }
                                 ),
-                                targetNamespace?.map { it.name } ?: mappingTree.dstNamespaces
+                                targetNamespace?.map { it.name }?.toSet() ?: mappingTree.dstNamespaces.toSet()
                             ),
                             sourceNamespace?.name ?: mappingTree.srcNamespace
                         ),

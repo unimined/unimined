@@ -168,7 +168,7 @@ class MappingTreeBuilder {
                 MappingSourceNsSwitch(
                     MappingDstNsFilter(
                         tree,
-                        input.nsFilter.toList()
+                        input.nsFilter
                     ), input.nsSource(type)
                 ), input.nsMap
             )

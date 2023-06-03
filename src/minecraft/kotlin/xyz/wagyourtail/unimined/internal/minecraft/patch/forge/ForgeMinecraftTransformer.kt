@@ -241,7 +241,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
                 location = toFile()
                 type = ExportMappingsTask.MappingExportTypes.SRG
                 sourceNamespace = provider.mappings.getNamespace("searge")
-                targetNamespace = listOf(provider.mappings.devNamespace)
+                targetNamespace = setOf(provider.mappings.devNamespace)
             }
             export.validate()
             export.exportFunc(provider.mappings.mappingTree)
@@ -257,7 +257,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
                 type = ExportMappingsTask.MappingExportTypes.MCP
                 sourceNamespace = provider.mappings.getNamespace("searge")
                 skipComments = true // the reader forge uses now is too dumb...
-                targetNamespace = listOf(provider.mappings.devNamespace)
+                targetNamespace = setOf(provider.mappings.devNamespace)
                 envType = provider.side
             }
             export.validate()

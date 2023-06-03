@@ -4,11 +4,12 @@ import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
 
-class MappingDstNsFilter(next: MappingVisitor?, val namespaces: List<String>): ForwardingMappingVisitor(next) {
+class MappingDstNsFilter(next: MappingVisitor?, val namespaces: Set<String>): ForwardingMappingVisitor(next) {
     private lateinit var nsMap: Map<Int, Int>
 
     override fun visitNamespaces(srcNamespace: String, dstNamespaces: MutableList<String>) {
-        nsMap = dstNamespaces.mapIndexedNotNull { index, s -> if (namespaces.contains(s)) index to namespaces.indexOf(s) else null }
+        val intersect = dstNamespaces.intersect(namespaces).toList()
+        nsMap = dstNamespaces.mapIndexedNotNull { index, s -> if (namespaces.contains(s)) index to intersect.indexOf(s) else null }
             .toMap()
         super.visitNamespaces(srcNamespace, namespaces.filter { dstNamespaces.contains(it) })
     }

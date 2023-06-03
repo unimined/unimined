@@ -174,6 +174,23 @@ tasks.jar {
     }
 }
 
+tasks.create("sourcesJar", Jar::class) {
+    archiveClassifier.set("sources")
+    from(
+        sourceSets["api"].allSource,
+        sourceSets["minecraft"].allSource,
+        sourceSets["mapping"].allSource,
+        sourceSets["mods"].allSource,
+        sourceSets["runs"].allSource,
+        sourceSets["main"].allSource
+    )
+    archiveClassifier.set("sources")
+}
+
+tasks.build {
+    dependsOn("sourcesJar")
+}
+
 tasks.test {
     useJUnitPlatform()
 }
@@ -219,7 +236,10 @@ publishing {
             artifactId = project.properties["archives_base_name"] as String? ?: project.name
             version = project.version as String
 
-            from(components["java"])
+            artifact(tasks["sourcesJar"]) {
+                classifier = "sources"
+            }
+            artifact(tasks["jar"]) {}
         }
     }
 }

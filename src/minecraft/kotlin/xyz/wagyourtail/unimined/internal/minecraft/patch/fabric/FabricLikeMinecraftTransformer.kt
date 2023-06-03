@@ -101,7 +101,7 @@ abstract class FabricLikeMinecraftTransformer(
                     location = toFile()
                     type = ExportMappingsTask.MappingExportTypes.TINY_V2
                     sourceNamespace = prodNamespace
-                    targetNamespace = listOf(provider.mappings.devNamespace)
+                    targetNamespace = setOf(provider.mappings.devNamespace)
                     renameNs[provider.mappings.devNamespace] = "named"
                 }
                 export.validate()

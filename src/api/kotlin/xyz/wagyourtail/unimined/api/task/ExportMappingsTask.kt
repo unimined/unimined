@@ -91,7 +91,7 @@ abstract class ExportMappingsTask : ConventionTask() {
          * @since 0.2.3
          */
         @set:ApiStatus.Internal
-        var targetNamespace: List<MappingNamespaceTree.Namespace>? = null
+        var targetNamespace: Set<MappingNamespaceTree.Namespace>? = null
 
         /**
          * should the export skip comments?
