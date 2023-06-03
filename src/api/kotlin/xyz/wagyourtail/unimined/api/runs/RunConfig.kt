@@ -1,11 +1,19 @@
 package xyz.wagyourtail.unimined.api.runs
 
 import com.ibm.icu.impl.ICUDebug
+import net.minecraftforge.artifactural.gradle.ReflectionUtils
+import org.apache.logging.log4j.core.util.ReflectionUtil
+import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
+import org.gradle.api.tasks.internal.JavaExecExecutableUtils
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.jvm.toolchain.JavaToolchainSpec
 import xyz.wagyourtail.unimined.util.XMLBuilder
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
@@ -19,6 +27,7 @@ import kotlin.io.path.relativeTo
  */
 data class RunConfig(
     val project: Project,
+    val javaVersion: JavaVersion,
     val name: String,
     val taskName: String,
     var description: String,
@@ -34,6 +43,7 @@ data class RunConfig(
     fun copy(): RunConfig {
         return RunConfig(
             project,
+            javaVersion,
             name,
             taskName,
             description,
@@ -134,6 +144,15 @@ data class RunConfig(
 
     fun createGradleTask(tasks: TaskContainer, group: String): Task {
         return tasks.create(taskName.withSourceSet(launchClasspath), JavaExec::class.java) {
+
+            // get java toolchain service
+            val java = project.extensions.getByType(JavaPluginExtension::class.java)
+            java.
+            val launcher = toolchain.launcherFor { spec ->
+                spec.languageVersion.set(JavaLanguageVersion.of(javaVersion.majorVersion))
+            }
+            it.javaLauncher.set(launcher)
+
             it.group = group
             it.description = description
             it.mainClass.set(mainClass)
