@@ -46,12 +46,14 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
     fun apply() {
         freeze = true
         if (!off) {
-            (transformers.keys-runConfigs.keys).apply {
-                if (isNotEmpty()) throw IllegalStateException("You have transformers for run configs that don't exist: $this")
+            project.afterEvaluate {
+                (transformers.keys - runConfigs.keys).apply {
+                    if (isNotEmpty()) throw IllegalStateException("You have transformers for run configs that don't exist: $this")
+                }
+                project.logger.lifecycle("[Unimined/Runs] Applying runs")
+                genIntellijRunsTask()
+                createGradleRuns()
             }
-            project.logger.lifecycle("[Unimined/Runs] Applying runs")
-            genIntellijRunsTask()
-            createGradleRuns()
         }
     }
 

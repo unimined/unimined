@@ -248,6 +248,12 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             minecraftLibraries.dependencies.add(project.dependencies.create("com.google.code.findbugs:jsr305:3.0.2"))
         }
 
+        // add minecraft dep
+        minecraft.dependencies.add(project.dependencies.create("net.minecraft:$minecraftDepName:$version" + if (side != EnvType.COMBINED) ":${side.classifier}" else ""))
+
+        //DEBUG: add minecraft dev dep as file
+//        minecraft.dependencies.add(project.dependencies.create(project.files(minecraftFileDev)))
+
         // add minecraft libraries
         addLibraries(minecraftData.metadata.libraries)
 
@@ -276,12 +282,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             group = "unimined"
             description = "Generates sources for $sourceSet's minecraft jar"
         })
-
-        // add minecraft dep
-        minecraft.dependencies.add(project.dependencies.create("net.minecraft:$minecraftDepName:$version" + if (side != EnvType.COMBINED) ":${side.classifier}" else ""))
-
-        //DEBUG: add minecraft dev dep as file
-//        minecraft.dependencies.add(project.dependencies.create(project.files(minecraftFileDev)))
 
         project.logger.info("[Unimined/MinecraftProvider] minecraft file: $minecraftFileDev")
 
