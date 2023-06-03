@@ -1,24 +1,17 @@
 package xyz.wagyourtail.unimined.api.runs
 
-import com.ibm.icu.impl.ICUDebug
-import net.minecraftforge.artifactural.gradle.ReflectionUtils
-import org.apache.logging.log4j.core.util.ReflectionUtil
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
-import org.gradle.api.tasks.internal.JavaExecExecutableUtils
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
-import org.gradle.jvm.toolchain.JavaToolchainSpec
 import xyz.wagyourtail.unimined.util.XMLBuilder
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.nio.charset.StandardCharsets
-import java.nio.file.Path
 import kotlin.io.path.relativeTo
 
 /**
@@ -62,15 +55,21 @@ data class RunConfig(
             .resolve("runConfigurations")
             .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+$taskName.xml")
 
+
+        val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+        val launcher = toolchain.launcherFor { spec ->
+            spec.languageVersion.set(JavaLanguageVersion.of(javaVersion.majorVersion))
+        }
+
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
             .addStringOption("name", "${project.path}+${taskName} $description")
             .addStringOption("type", "Application")
             .addStringOption("factoryName", "Application")
             .append(
                 XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH")
-                    .addStringOption("value", ICUDebug.javaVersion.major.toString()),
+                    .addStringOption("value", launcher.get().metadata.installationPath.asFile.absolutePath),
                 XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH_ENABLED")
-                    .addStringOption("value", "false"),
+                    .addStringOption("value", "true"),
                 XMLBuilder("envs").append(
                     *env.map { (key, value) ->
                         XMLBuilder("env").addStringOption("name", key).addStringOption("value", value)
@@ -145,9 +144,7 @@ data class RunConfig(
     fun createGradleTask(tasks: TaskContainer, group: String): Task {
         return tasks.create(taskName.withSourceSet(launchClasspath), JavaExec::class.java) {
 
-            // get java toolchain service
-            val java = project.extensions.getByType(JavaPluginExtension::class.java)
-            java.
+            val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
             val launcher = toolchain.launcherFor { spec ->
                 spec.languageVersion.set(JavaLanguageVersion.of(javaVersion.majorVersion))
             }
