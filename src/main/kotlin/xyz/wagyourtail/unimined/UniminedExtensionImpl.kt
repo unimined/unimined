@@ -215,6 +215,9 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
             ivy.content {
                 it.includeModule("io.github.mcphackers", "mcp")
             }
+            ivy.metadataSources {
+                it.artifact()
+            }
         }
     }
 
