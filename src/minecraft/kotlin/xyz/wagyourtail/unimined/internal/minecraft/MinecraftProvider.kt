@@ -384,6 +384,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         return RunConfig(
             project,
+            minecraftData.metadata.javaVersion,
             name,
             "run${name.capitalized()}",
             "Minecraft Client",
@@ -418,6 +419,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         return RunConfig(
             project,
+            minecraftData.metadata.javaVersion,
             name,
             "run${name.capitalized()}",
             "Minecraft Server",
