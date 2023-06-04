@@ -66,7 +66,7 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
                 }
             }
         }
-//        project.tasks.named("idea").configure { it.finalizedBy(genIntellijRuns) }
+        project.tasks.named("idea").configure { it.finalizedBy(genIntellijRuns) }
     }
 
     private fun createGradleRuns() {
@@ -75,6 +75,5 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
             transformedRunConfig[configName].createGradleTask(project.tasks, "unimined_runs")
         }
     }
-
 
 }

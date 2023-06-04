@@ -25,4 +25,4 @@ pluginManagement {
 // so we can use the unimined directly provided by the super project
 includeBuild('../../')
 
-rootProject.name = '1.12.2-Forge'
+rootProject.name = '1.16.5-Forge-Fabric'

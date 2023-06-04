@@ -65,6 +65,7 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         patchers.forEach { it.apply() }
     }
 
+    @Deprecated("use prodNamespace instead", replaceWith = ReplaceWith("prodNamespace"))
     override fun setProdNamespace(namespace: String) {
         prodNamespace = provider.mappings.getNamespace(namespace)
     }

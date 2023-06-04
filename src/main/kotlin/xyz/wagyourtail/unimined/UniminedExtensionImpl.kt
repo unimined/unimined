@@ -18,6 +18,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import java.net.URI
+import java.nio.file.Path
 
 open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) {
 
@@ -248,7 +249,21 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
+    fun getSourceSetFromMinecraft(path: Path): SourceSet? {
+        for ((set, mc) in minecrafts) {
+            if (mc.isMinecraftJar(path)) {
+                return set
+            }
+        }
+        return null
+    }
+
     fun afterEvaluate() {
-        //TODO: ensure minecrafts don't overlap
+        for (sourceSet in minecrafts.keys) {
+            val mcFiles = sourceSet.runtimeClasspath.files.mapNotNull { getSourceSetFromMinecraft(it.toPath()) }
+            if (mcFiles.size > 1) {
+                throw IllegalStateException("multiple minecraft jars in runtime classpath of $sourceSet, from $mcFiles")
+            }
+        }
     }
 }

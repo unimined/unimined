@@ -223,7 +223,6 @@ object ModLoaderPatches {
                             readFromModsDir = true
                         }
                         if (readFromClassPath && readFromModsDir) {
-                            slice = false
                             break
                         }
                     }
@@ -604,14 +603,14 @@ object ModLoaderPatches {
 
     class ClassWriterASM(val fileSystem: FileSystem): ClassWriter(COMPUTE_MAXS or COMPUTE_FRAMES) {
         override fun getCommonSuperClass(type1: String, type2: String): String {
-            try {
-                return super.getCommonSuperClass(type1, type2)
+            return try {
+                super.getCommonSuperClass(type1, type2)
             } catch (e: Exception) {
                 // one of the classes was not found, so we now need to calculate it
                 val it1 = buildInheritanceTree(type1)
                 val it2 = buildInheritanceTree(type2)
                 val common = it1.intersect(it2.toSet())
-                return common.first()
+                common.first()
             }
         }
 

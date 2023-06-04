@@ -171,27 +171,30 @@ class HarderTargetMixinClassVisitor(
 
         override fun visitArray(name: String?): AnnotationVisitor {
             val visitor = super.visitArray(name)
-            return if (name == AnnotationElement.TARGETS) {
-                object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
-                    override fun visit(name: String?, value: Any) {
-                        var value = (value as String)
-                        val srcName = existingMappings[value] ?: value.replace("\\s".toRegex(), "").replace('.', '/')
-                        logger.info("Found mixin annotation target $srcName")
-                        targets.add(srcName)
-                        super.visit(name, value)
+            return when (name) {
+                AnnotationElement.TARGETS -> {
+                    object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+                        override fun visit(name: String?, value: Any) {
+                            val srcName = existingMappings[value as String] ?: value.replace("\\s".toRegex(), "").replace('.', '/')
+                            logger.info("Found mixin annotation target $srcName")
+                            targets.add(srcName)
+                            super.visit(name, value)
+                        }
                     }
                 }
-            } else if (name == AnnotationElement.VALUE || name == null) {
-                object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
-                    override fun visit(name: String?, value: Any) {
-                        val srcType = Objects.requireNonNull(value as Type)
-                        targets.add(srcType.internalName)
-                        logger.info("Found mixin annotation target $srcType")
-                        super.visit(name, value)
+                AnnotationElement.VALUE, null -> {
+                    object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
+                        override fun visit(name: String?, value: Any) {
+                            val srcType = Objects.requireNonNull(value as Type)
+                            targets.add(srcType.internalName)
+                            logger.info("Found mixin annotation target $srcType")
+                            super.visit(name, value)
+                        }
                     }
                 }
-            } else {
-                visitor
+                else -> {
+                    visitor
+                }
             }
         }
     }

@@ -179,10 +179,10 @@ class MixinClassVisitorRefmapBuilder(
                             ).orElse {
                                 existingMappings[targetName]?.let {
                                     logger.info("remapping $it from existing refmap")
-                                    val (name, desc) = it.split(":")
+                                    val (mName, desc) = it.split(":")
                                     resolver.resolveField(
                                         targetClass,
-                                        name,
+                                        mName,
                                         desc,
                                         ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
                                     )
@@ -255,10 +255,10 @@ class MixinClassVisitorRefmapBuilder(
                             ).orElse {
                                 existingMappings[targetName]?.let {
                                     logger.info("remapping $it from existing refmap")
-                                    val (name, desc) = it.split("(")
+                                    val (mName, desc) = it.split("(")
                                     resolver.resolveMethod(
                                         targetClass,
-                                        name,
+                                        mName,
                                         "($desc",
                                         ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
                                     )
@@ -387,7 +387,7 @@ class MixinClassVisitorRefmapBuilder(
                             ) {
                                 return@forEach
                             }
-                            var wildcard = targetMethod.endsWith("*")
+                            val wildcard = targetMethod.endsWith("*")
                             val (targetName, targetDescs) = if (targetMethod.contains("(")) {
                                 val n = targetMethod.split("(")
                                 (n[0] to setOf("(${n[1]}"))
@@ -408,20 +408,20 @@ class MixinClassVisitorRefmapBuilder(
                                     ).orElse {
                                         existingMappings[targetMethod]?.let {
                                             if (wildcard) {
-                                                val name = it.substringAfter(";").substring(0, it.length - 1)
+                                                val mName = it.substringAfter(";").substring(0, it.length - 1)
                                                 logger.info("remapping $targetMethod from existing refmap, name $targetClass;$name")
                                                 resolver.resolveMethod(
                                                     targetClass,
-                                                    name,
+                                                    mName,
                                                     null,
                                                     ResolveUtility.FLAG_FIRST or ResolveUtility.FLAG_RECURSIVE
                                                 )
                                             } else {
-                                                val (name, desc) = it.substringAfter(";").split("(")
+                                                val (mName, desc) = it.substringAfter(";").split("(")
                                                 logger.info("remapping $targetMethod from existing refmap, name $targetClass;$name")
                                                 resolver.resolveMethod(
                                                     targetClass,
-                                                    name,
+                                                    mName,
                                                     "($desc",
                                                     ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
                                                 )
@@ -530,18 +530,18 @@ class MixinClassVisitorRefmapBuilder(
                                     existingMappings[targetMethod]?.let {
                                         logger.info("remapping $it from existing refmap")
                                         if (wildcard) {
-                                            val name = it.substringAfter(";").substring(0, it.length - 1)
+                                            val mName = it.substringAfter(";").substring(0, it.length - 1)
                                             resolver.resolveMethod(
                                                 targetClass,
-                                                name,
+                                                mName,
                                                 null,
                                                 ResolveUtility.FLAG_FIRST or ResolveUtility.FLAG_RECURSIVE
                                             )
                                         } else {
-                                            val (name, desc) = it.substringAfter(";").split("(")
+                                            val (mName, desc) = it.substringAfter(";").split("(")
                                             resolver.resolveMethod(
                                                 targetClass,
-                                                name,
+                                                mName,
                                                 "($desc",
                                                 ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
                                             )
@@ -590,19 +590,24 @@ class MixinClassVisitorRefmapBuilder(
                     }
 
                     override fun visitArray(name: String): AnnotationVisitor {
-                        return if (name == AnnotationElement.TARGET) {
-                            ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { visitDesc(it, remap) }
-                        } else if (name == AnnotationElement.SLICE) {
-                            ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { visitSlice(it, remap) }
-                        } else if (name == AnnotationElement.METHOD) {
-                            object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
-                                override fun visit(name: String?, value: Any) {
-                                    super.visit(name, value)
-                                    targetNames.add(value as String)
+                        return when (name) {
+                            AnnotationElement.TARGET -> {
+                                ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { visitDesc(it, remap) }
+                            }
+                            AnnotationElement.SLICE -> {
+                                ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { visitSlice(it, remap) }
+                            }
+                            AnnotationElement.METHOD -> {
+                                object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                                    override fun visit(name: String?, value: Any) {
+                                        super.visit(name, value)
+                                        targetNames.add(value as String)
+                                    }
                                 }
                             }
-                        } else {
-                            super.visitArray(name)
+                            else -> {
+                                super.visitArray(name)
+                            }
                         }
                     }
 
@@ -633,18 +638,18 @@ class MixinClassVisitorRefmapBuilder(
                                         existingMappings[targetMethod]?.let {
                                             logger.info("remapping $it from existing refmap")
                                             if (wildcard) {
-                                                val name = it.substringAfter(";").substring(0, it.length - 1)
+                                                val mName = it.substringAfter(";").substring(0, it.length - 1)
                                                 resolver.resolveMethod(
                                                     targetClass,
-                                                    name,
+                                                    mName,
                                                     null,
                                                     ResolveUtility.FLAG_FIRST or ResolveUtility.FLAG_RECURSIVE
                                                 )
                                             } else {
-                                                val (name, desc) = it.substringAfter(";").split("(")
+                                                val (mName, desc) = it.substringAfter(";").split("(")
                                                 resolver.resolveMethod(
                                                     targetClass,
-                                                    name,
+                                                    mName,
                                                     "($desc",
                                                     ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
                                                 )
@@ -739,12 +744,12 @@ class MixinClassVisitorRefmapBuilder(
                                             it.length - 1
                                         ) else it.substring(0, it.length - 1)
                                     }
-                                    val targetName = matchEFd.groupValues[2]
-                                    val targetDesc = matchEFd.groupValues[3]
+                                    val fName = matchEFd.groupValues[2]
+                                    val fDesc = matchEFd.groupValues[3]
                                     resolver.resolveField(
                                         targetOwner,
-                                        targetName,
-                                        targetDesc,
+                                        fName,
+                                        fDesc,
                                         ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
                                     )
                                 } else {
@@ -799,12 +804,12 @@ class MixinClassVisitorRefmapBuilder(
                                             it.length - 1
                                         ) else it.substring(0, it.length - 1)
                                     }
-                                    val targetName = matchEMd.groupValues[2]
-                                    val targetDesc = matchEMd.groupValues[3]
+                                    val mName = matchEMd.groupValues[2]
+                                    val mDesc = matchEMd.groupValues[3]
                                     resolver.resolveMethod(
                                         targetOwner,
-                                        targetName,
-                                        targetDesc,
+                                        mName,
+                                        mDesc,
                                         ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
                                     )
                                 } else {
@@ -848,7 +853,7 @@ class MixinClassVisitorRefmapBuilder(
 
     fun visitDesc(visitor: AnnotationVisitor, remap: AtomicBoolean) =
         object: AnnotationVisitor(Constant.ASM_VERSION, visitor) {
-            val remapDesc = AtomicBoolean(remap.get())
+            @Suppress("UNUSED") val remapDesc = AtomicBoolean(remap.get())
             override fun visit(name: String, value: Any) {
                 TODO()
             }

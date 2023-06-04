@@ -156,7 +156,7 @@ class JarModAgentMinecraftTransformer(
             output.openZipFileSystem(mapOf("mutable" to true)).use { out ->
                 val fd = TransformerManager::class.java.getDeclaredField("transformedClasses")
                 fd.isAccessible = true
-                val transformedClasses = fd.get(transformer) as Set<String>
+                @Suppress("UNCHECKED_CAST") val transformedClasses = fd.get(transformer) as Set<String>
                 for (name in transformedClasses) {
                     val bytes = classLoader.getResourceAsStream(name.replace('.', '/') + ".class")?.readBytes()
                     if (bytes == null) {

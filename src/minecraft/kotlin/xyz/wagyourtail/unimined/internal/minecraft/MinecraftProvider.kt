@@ -25,6 +25,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.OfficialFabricMi
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.QuiltMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.merged.MergedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Extract
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
@@ -117,7 +118,11 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     override fun merged(action: MergedPatcher.() -> Unit) {
-        TODO("Not yet implemented")
+        mcPatcher = MergedMinecraftTransformer(project, this).also {
+            lateActions.addLast {
+                action(it)
+            }
+        }
     }
 
     override fun fabric(action: FabricLikePatcher.() -> Unit) {
@@ -263,7 +268,13 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             task.apply {
                 archiveClassifier.set("dev")
             }
-            remap(task)
+            remap(task) {
+                group = "unimined"
+                description = "Remaps $task's output jar"
+            }
+        } else {
+            project.logger.warn("[Unimined/Minecraft] Could not find default jar task for $sourceSet. named: ${"jar".withSourceSet(sourceSet)}.")
+            project.logger.warn("[Unimined/Minecraft] add manually with `remap(task)` in the minecraft block for $sourceSet")
         }
 
         // apply minecraft patcher changes

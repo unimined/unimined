@@ -69,7 +69,15 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    fun legacyIntermediary(revision: String) {
+        legacyIntermediary(revision.toInt())
+    }
+
     abstract fun legacyIntermediary(revision: Int, action: MappingDepConfig<*>.() -> Unit)
+
+    fun legacyIntermediary(revision: String, action: MappingDepConfig<*>.() -> Unit) {
+        legacyIntermediary(revision.toInt(), action)
+    }
 
     fun legacyIntermediary(
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
@@ -88,6 +96,14 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
+    }
+
+    fun legacyIntermediary(
+        revision: String,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        legacyIntermediary(revision.toInt(), action)
     }
 
     fun babricIntermediary() {
@@ -255,11 +271,20 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     fun yarn(build: Int) {
         yarn(build) {
             outputs("yarn", true) { listOf("intermediary") }
+            mapNamespace("named", "yarn")
             sourceNamespace("intermediary")
         }
     }
 
+    fun yarn(build: String) {
+        yarn(build.toInt())
+    }
+
     abstract fun yarn(build: Int, action: MappingDepConfig<*>.() -> Unit)
+
+    fun yarn(build: String, action: MappingDepConfig<*>.() -> Unit) {
+        yarn(build.toInt(), action)
+    }
 
     fun yarn(
         build: Int,
@@ -273,18 +298,57 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    fun yarn(
+        build: String,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        yarn(build.toInt(), action)
+    }
+
     fun legacyYarn(build: Int) {
         legacyYarn(build, legacyFabricMappingsVersion)
+    }
+
+    fun legacyYarn(build: String) {
+        legacyYarn(build.toInt())
     }
 
     fun legacyYarn(build: Int, revision: Int) {
         legacyYarn(build, revision) {
             outputs("yarn", true) { listOf("intermediary") }
+            mapNamespace("named", "yarn")
             sourceNamespace("intermediary")
         }
     }
 
+    fun legacyYarn(build: String, revision: String) {
+        legacyYarn(build.toInt(), revision.toInt())
+    }
+
+    fun legacyYarn(build: String, revision: Int) {
+        legacyYarn(build.toInt(), revision)
+    }
+
+    fun legacyYarn(build: Int, revision: String) {
+        legacyYarn(build, revision.toInt())
+    }
+
+
+
     abstract fun legacyYarn(build: Int, revision: Int, action: MappingDepConfig<*>.() -> Unit)
+
+    fun legacyYarn(build: String, revision: String, action: MappingDepConfig<*>.() -> Unit) {
+        legacyYarn(build.toInt(), revision.toInt(), action)
+    }
+
+    fun legacyYarn(build: String, revision: Int, action: MappingDepConfig<*>.() -> Unit) {
+        legacyYarn(build.toInt(), revision, action)
+    }
+
+    fun legacyYarn(build: Int, revision: String, action: MappingDepConfig<*>.() -> Unit) {
+        legacyYarn(build, revision.toInt(), action)
+    }
 
     fun legacyYarn(
         build: Int,
@@ -292,6 +356,14 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         action: Closure<*>
     ) {
         legacyYarn(build, legacyFabricMappingsVersion, action)
+    }
+
+    fun legacyYarn(
+        build: String,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        legacyYarn(build.toInt(), action)
     }
 
     fun legacyYarn(
@@ -307,14 +379,50 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    fun legacyYarn(
+        build: String,
+        revision: String,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        legacyYarn(build.toInt(), revision.toInt(), action)
+    }
+
+    fun legacyYarn(
+        build: String,
+        revision: Int,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        legacyYarn(build.toInt(), revision, action)
+    }
+
+    fun legacyYarn(
+        build: Int,
+        revision: String,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        legacyYarn(build, revision.toInt(), action)
+    }
+
     fun barn(build: Int) {
         barn(build) {
             outputs("barn", true) { listOf("intermediary") }
+            mapNamespace("named", "barn")
             sourceNamespace("intermediary")
         }
     }
 
+    fun barn(build: String) {
+        barn(build.toInt())
+    }
+
     abstract fun barn(build: Int, action: MappingDepConfig<*>.() -> Unit)
+
+    fun barn(build: String, action: MappingDepConfig<*>.() -> Unit) {
+        barn(build.toInt(), action)
+    }
 
     fun barn(
         build: Int,
@@ -328,12 +436,28 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    fun barn(
+        build: String,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        barn(build.toInt(), action)
+    }
+
     fun quilt(build: Int) {
         quilt(build, "intermediary-v2")
     }
 
+    fun quilt(build: String) {
+        quilt(build.toInt())
+    }
+
     fun quilt(build: Int, action: MappingDepConfig<*>.() -> Unit) {
         quilt(build, "intermediary-v2", action)
+    }
+
+    fun quilt(build: String, action: MappingDepConfig<*>.() -> Unit) {
+        quilt(build.toInt(), action)
     }
 
     fun quilt(build: Int, classifier: String) {
@@ -348,7 +472,15 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    fun quilt(build: String, classifier: String) {
+        quilt(build.toInt(), classifier)
+    }
+
     abstract fun quilt(build: Int, classifier: String, action: MappingDepConfig<*>.() -> Unit)
+
+    fun quilt(build: String, classifier: String, action: MappingDepConfig<*>.() -> Unit) {
+        quilt(build.toInt(), classifier, action)
+    }
 
     fun quilt(
         build: Int,
@@ -360,6 +492,14 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
+    }
+
+    fun quilt(
+        build: String,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        quilt(build.toInt(), action)
     }
 
     fun forgeBuiltinMCP(version: String) {

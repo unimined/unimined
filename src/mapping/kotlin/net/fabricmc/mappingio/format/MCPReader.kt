@@ -313,54 +313,54 @@ object MCPReader {
         visitor.accept(parentVisitor)
     }
 
-    fun readPackages(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
-        readPackages(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
-    }
-
-    fun readPackages(
-        envType: EnvType,
-        reader: Reader,
-        sourceNamespace: String,
-        targetNamespace: String,
-        visitor: MemoryMappingTree
-    ) {
-        readPackages(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
-    }
-
-    private fun readPackages(
-        envType: EnvType,
-        reader: ColumnFileReader,
-        sourceNamespace: String,
-        targetNamespace: String,
-        visitor: MemoryMappingTree
-    ) {
-        reader.mark()
-        if (!checkPackageHeader(reader)) {
-            reader.reset()
-            throw IllegalStateException("Invalid header")
-        }
-
-        val visitHeader = visitor.visitHeader()
-
-        if (visitHeader) {
-            visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
-        }
-
-        var visitLastClass: Boolean
-        if (visitor.visitContent()) {
-            while (reader.nextLine(0)) {
-                val src = reader.readCell()
-                visitLastClass = visitor.visitClass("net/minecraft/src/$src")
-
-                if (visitLastClass) {
-                    visitor.visitDstName(MappedElementKind.CLASS, 0, reader.readCell() + "/" + src)
-                    visitor.visitElementContent(MappedElementKind.CLASS)
-                }
-            }
-        }
-
-        visitor.visitEnd()
-    }
+//    fun readPackages(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
+//        readPackages(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
+//    }
+//
+//    fun readPackages(
+//        envType: EnvType,
+//        reader: Reader,
+//        sourceNamespace: String,
+//        targetNamespace: String,
+//        visitor: MemoryMappingTree
+//    ) {
+//        readPackages(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
+//    }
+//
+//    private fun readPackages(
+//        envType: EnvType,
+//        reader: ColumnFileReader,
+//        sourceNamespace: String,
+//        targetNamespace: String,
+//        visitor: MemoryMappingTree
+//    ) {
+//        reader.mark()
+//        if (!checkPackageHeader(reader)) {
+//            reader.reset()
+//            throw IllegalStateException("Invalid header")
+//        }
+//
+//        val visitHeader = visitor.visitHeader()
+//
+//        if (visitHeader) {
+//            visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
+//        }
+//
+//        var visitLastClass: Boolean
+//        if (visitor.visitContent()) {
+//            while (reader.nextLine(0)) {
+//                val src = reader.readCell()
+//                visitLastClass = visitor.visitClass("net/minecraft/src/$src")
+//
+//                if (visitLastClass) {
+//                    visitor.visitDstName(MappedElementKind.CLASS, 0, reader.readCell() + "/" + src)
+//                    visitor.visitElementContent(MappedElementKind.CLASS)
+//                }
+//            }
+//        }
+//
+//        visitor.visitEnd()
+//    }
 
     private data class MethodData(
         val source: String,

@@ -73,8 +73,8 @@ object OldMCPReader {
                 val searge = reader.readCell()
                 val name = reader.readCell()
                 val notch = reader.readCell()
-                val sig = reader.readCell()!!
-                var notchSig = reader.readCell()!!
+                @Suppress("UNUSED_VARIABLE") val sig = reader.readCell()!!
+                val notchSig = reader.readCell()!!
                 val className = reader.readCell()
                 var classNotch = reader.readCell()
                 val packageName = reader.readCell()
@@ -157,8 +157,8 @@ object OldMCPReader {
                 val searge = reader.readCell()
                 val name = reader.readCell()
                 val notch = reader.readCell()
-                val sig = reader.readCell()!!
-                var notchSig = reader.readCell()!!
+                @Suppress("UNUSED_VARIABLE") val sig = reader.readCell()!!
+                val notchSig = reader.readCell()!!
                 val className = reader.readCell()
                 var classNotch = reader.readCell()
                 val packageName = reader.readCell()

@@ -76,7 +76,7 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
             map[m].add(c)
         }
         val remapOutputs = mutableSetOf<Configuration>()
-        for ((m, c) in map) {
+        for (m in map.keys) {
             val def = defaultedMapOf<Configuration, Configuration> { project.configurations.detachedConfiguration() }
             m.doRemap(namespace, fallbackNamespace, def)
             remapOutputs.addAll(def.values)

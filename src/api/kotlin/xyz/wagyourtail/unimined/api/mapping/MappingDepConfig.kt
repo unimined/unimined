@@ -55,6 +55,7 @@ abstract class MappingDepConfig<T : Dependency>(val dep: T, val mappingsConfig: 
         outputs(namespace, named) {
             canRemapTo.delegate = this
             canRemapTo.resolveStrategy = Closure.DELEGATE_FIRST
+            @Suppress("UNCHECKED_CAST")
             canRemapTo.call() as List<String>
         }
     }

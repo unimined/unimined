@@ -1,13 +1,17 @@
 plugins {
     id 'java'
-    id 'xyz.wagyourtail.unimined'
+    id 'xyz.wagyourtail.unimined' // version '1.0.0'
 }
 
 group 'com.example'
 archivesBaseName 'UniminedExampleMod'
 version '1.0-SNAPSHOT'
 
+// this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
 
 unimined.minecraft {
     version "1.12.2"
@@ -27,10 +31,6 @@ unimined.minecraft {
         // by adding code to calculate field-desc's and clean up forge's mappings
         ignoreFieldDesc(true)
     }
-}
-
-remapJar {
-    prodNamespace "searge"
 }
 
 repositories {

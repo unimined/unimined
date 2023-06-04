@@ -318,7 +318,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         fromClassName: String,
         toClassName: String?
     ): String? {
-        var toClassName = toClassName
+        var fixedClassName = toClassName
         val outerClass = fromClassName.substring(0, fromClassName.lastIndexOf('$'))
         val outerClassDef = mappings.getClass(outerClass, fromId)
         if (outerClassDef != null) {
@@ -333,17 +333,17 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     outerToClassName
                 )
             }
-            val innerClassName = toClassName?.substringAfterLast('/')?.substringAfterLast('$') ?: fromClassName.substringAfterLast('$')
-            if (outerToClassName != null && (toClassName == null || !toClassName.startsWith(outerToClassName))) {
-                toClassName = "$outerToClassName$$innerClassName"
+            val innerClassName = fixedClassName?.substringAfterLast('/')?.substringAfterLast('$') ?: fromClassName.substringAfterLast('$')
+            if (outerToClassName != null && (fixedClassName == null || !fixedClassName.startsWith(outerToClassName))) {
+                fixedClassName = "$outerToClassName$$innerClassName"
                 project.logger.info(
                     "[Unimined/MappingsProvider] Detected missing inner class, replacing with: {} -> {}",
                     fromClassName,
-                    toClassName
+                    fixedClassName
                 )
             }
         }
-        return toClassName
+        return fixedClassName
     }
 
     private open class Mapping(val to: String?)

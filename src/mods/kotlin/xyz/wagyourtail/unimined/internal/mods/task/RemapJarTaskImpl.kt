@@ -90,6 +90,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         provider.mcPatcher.afterRemapJarTask(this, outputs.files.files.first().toPath())
     }
 
+    @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
     protected fun remapToInternal(
         from: Path,
         target: Path,

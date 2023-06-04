@@ -34,7 +34,7 @@ abstract class ExportMappingsTask : ConventionTask() {
      * @since 0.2.3
      * @revised 1.0.0
      */
-    abstract fun export(export: Export.() -> Unit)
+    abstract fun export(action: Export.() -> Unit)
 
     /**
      * export a mapping to a file.

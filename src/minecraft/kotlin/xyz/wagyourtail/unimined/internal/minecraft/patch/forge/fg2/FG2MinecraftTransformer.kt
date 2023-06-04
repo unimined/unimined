@@ -46,7 +46,6 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         // get and add forge-src to mappings
         val forgeDep = parent.forge.dependencies.last()
 
-        val forgeSrc = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:src@zip"
         provider.mappings.apply {
             val empty = mappingsDeps.isEmpty()
             if (empty) {
