@@ -59,7 +59,7 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
 
     private fun genIntellijRunsTask() {
         val genIntellijRuns = project.tasks.register("genIntellijRuns".withSourceSet(minecraft.sourceSet)) {
-            it.group = "unimined_runs"
+            it.group = "unimined_internal"
             it.doLast {
                 for (configName in runConfigs.keys) {
                     transformedRunConfig[configName].createIdeaRunConfig()

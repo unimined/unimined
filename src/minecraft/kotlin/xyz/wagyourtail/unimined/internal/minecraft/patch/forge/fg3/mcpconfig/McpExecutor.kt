@@ -2,7 +2,6 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig
 
 import com.google.common.base.Stopwatch
 import com.google.common.hash.Hashing
-import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.logging.LogLevel

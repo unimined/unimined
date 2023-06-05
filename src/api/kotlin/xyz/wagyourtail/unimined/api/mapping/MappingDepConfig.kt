@@ -7,7 +7,7 @@ import org.gradle.api.artifacts.Dependency
 /**
  * @since 1.0.0
  */
-abstract class MappingDepConfig<T : Dependency>(val dep: T, val mappingsConfig: MappingsConfig) : Dependency {
+abstract class MappingDepConfig(val dep: Dependency, val mappingsConfig: MappingsConfig) {
 
     /**
      * Maps namespace names for file formats that support naming namespaces.
@@ -38,10 +38,27 @@ abstract class MappingDepConfig<T : Dependency>(val dep: T, val mappingsConfig: 
     }
 
     /**
+     * insert forward visitor that converts srg to searge names.
+     */
+    abstract fun srgToSearge()
+
+    /**
+     * insert forward visitor that only allows existing src names.
+     */
+    abstract fun onlyExistingSrc()
+
+    /**
+     * insert forward visitor that strips child method mappings.
+     */
+    abstract fun childMethodStrip()
+
+    abstract fun clearForwardVisitor()
+
+    /**
      * filters namespaces to have to be from this.
      * applied after mapNamespace
      */
-    abstract fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): MappingNamespaceTree.Namespace
+    abstract fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): TempMappingNamespace
 
     fun outputs(
         namespace: String,
@@ -58,5 +75,11 @@ abstract class MappingDepConfig<T : Dependency>(val dep: T, val mappingsConfig: 
             @Suppress("UNCHECKED_CAST")
             canRemapTo.call() as List<String>
         }
+    }
+
+    abstract fun clearOutputs()
+
+    abstract class TempMappingNamespace(val namespace: String, val named: Boolean, val canRemapTo: () -> List<String>) {
+        abstract val actualNamespace: MappingNamespaceTree.Namespace
     }
 }

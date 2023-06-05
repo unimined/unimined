@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod
 
-import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer

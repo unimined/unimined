@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig
 
-import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Action
 import org.gradle.api.logging.Logger
 import org.gradle.process.JavaExecSpec

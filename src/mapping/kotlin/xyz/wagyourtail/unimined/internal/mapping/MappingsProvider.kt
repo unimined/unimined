@@ -8,6 +8,7 @@ import net.fabricmc.mappingio.tree.MemoryMappingTree
 import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalModuleDependency
+import org.gradle.api.artifacts.FileCollectionDependency
 import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
@@ -43,15 +44,18 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         devNamespace.targets.firstOrNull { it != OFFICIAL } ?: if (devNamespace.targets.contains(OFFICIAL)) OFFICIAL else throw IllegalStateException("No fallback namespace found")
     })
 
-    override val mappingsDeps = mutableListOf<MappingDepConfig<*>>()
+    override val mappingsDeps = mutableListOf<MappingDepConfig>()
 
 
-    override fun intermediary(action: MappingDepConfig<*>.() -> Unit) {
+    override fun intermediary(action: MappingDepConfig.() -> Unit) {
         project.unimined.fabricMaven()
-        mapping("net.fabricmc:intermediary:${minecraft.version}:v2", action)
+        mapping("net.fabricmc:intermediary:${minecraft.version}:v2") {
+            outputs("intermediary", false) { listOf("official") }
+            action()
+        }
     }
 
-    override fun legacyIntermediary(revision: Int, action: MappingDepConfig<*>.() -> Unit) {
+    override fun legacyIntermediary(revision: Int, action: MappingDepConfig.() -> Unit) {
         project.unimined.legacyFabricMaven()
         if (legacyFabricMappingsVersionFinalize.value != revision) {
             if (!legacyFabricMappingsVersionFinalize.finalized) {
@@ -66,63 +70,131 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         } else {
             "net.legacyfabric.v${revision}"
         }
-        mapping("${group}:intermediary:${minecraft.version}:v2",action)
+        mapping("${group}:intermediary:${minecraft.version}:v2") {
+            outputs("intermediary", false) { listOf("official") }
+            action()
+        }
     }
 
-    override fun babricIntermediary(action: MappingDepConfig<*>.() -> Unit) {
+    override fun babricIntermediary(action: MappingDepConfig.() -> Unit) {
         project.unimined.babricMaven()
-        mapping("babric:intermediary:${minecraft.version}:v2", action)
+        if (side == EnvType.COMBINED) throw IllegalStateException("Cannot use babricIntermediary with side COMBINED")
+        mapping("babric:intermediary:${minecraft.version}:v2") {
+            mapNamespace(side.classifier!!, "official")
+            outputs("intermediary", false) { listOf("official") }
+        }
     }
 
-    override fun searge(version: String, action: MappingDepConfig<*>.() -> Unit) {
+    override fun officialMappingsFromJar(action: MappingDepConfig.() -> Unit) {
+        val mcFile = when (minecraft.side) {
+            EnvType.CLIENT -> minecraft.minecraftData.minecraftClientFile
+            EnvType.COMBINED -> minecraft.mergedOfficialMinecraftFile
+            EnvType.SERVER, EnvType.DATAGEN -> minecraft.minecraftData.minecraftServerFile
+        }
+        mapping(project.files(mcFile)) {
+            outputs("official", false) { listOf() }
+            action()
+        }
+    }
+
+    override fun searge(version: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.forgeMaven()
         val mappings = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.12.2") < 0) {
             "de.oceanlabs.mcp:mcp:${version}:srg@zip"
         } else {
             "de.oceanlabs.mcp:mcp_config:${version}@zip"
         }
-        mapping(mappings, action)
-    }
-
-    override fun hashed(action: MappingDepConfig<*>.() -> Unit) {
-        project.unimined.quiltMaven()
-        mapping("org.quiltmc:hashed:${minecraft.version}") {
+        officialMappingsFromJar {
+            action()
+        }
+        mapping(mappings) {
+            mapNamespace("obf", "official")
+            onlyExistingSrc()
+            srgToSearge()
+            childMethodStrip()
+            outputs("searge", false) { listOf("official") }
             action()
         }
     }
 
-    override fun mojmap(action: MappingDepConfig<*>.() -> Unit) {
+    override fun hashed(action: MappingDepConfig.() -> Unit) {
+        project.unimined.quiltMaven()
+        mapping("org.quiltmc:hashed:${minecraft.version}") {
+            outputs("hashed", false) { listOf("official") }
+            action()
+        }
+    }
+
+    override fun mojmap(action: MappingDepConfig.() -> Unit) {
         val mapping = when (minecraft.side) {
             EnvType.CLIENT, EnvType.COMBINED -> "client"
             EnvType.SERVER, EnvType.DATAGEN -> "server"
         }
-        mapping("net.minecraft:$mapping-mappings:${minecraft.version}", action)
+        mapping("net.minecraft:$mapping-mappings:${minecraft.version}") {
+            outputs("mojmap", true) {
+                // check if we have searge or intermediary or hashed mappings
+                val searge = if ("searge" in getNamespaces()) listOf("searge") else emptyList()
+                val intermediary = if ("intermediary" in getNamespaces()) listOf("intermediary") else emptyList()
+                val hashed = if ("hashed" in getNamespaces()) listOf("hashed") else emptyList()
+                listOf("official") + intermediary + searge + hashed
+            }
+            action()
+        }
     }
 
-    override fun mcp(channel: String, version: String, action: MappingDepConfig<*>.() -> Unit) {
+    override fun mcp(channel: String, version: String, action: MappingDepConfig.() -> Unit) {
         if (channel == "legacy") {
             project.unimined.wagYourMaven("releases")
+            officialMappingsFromJar {
+                action()
+            }
         } else {
             project.unimined.forgeMaven()
         }
-        mapping("de.oceanlabs.mcp:mcp_${channel}:${version}@zip",action)
+        mapping("de.oceanlabs.mcp:mcp_${channel}:${version}@zip") {
+            if (channel == "legacy") {
+                outputs("searge", false) { listOf("official") }
+                onlyExistingSrc()
+                childMethodStrip()
+                sourceNamespace {
+                    if (it.contains("MCP")) {
+                        "searge"
+                    } else {
+                        "official"
+                    }
+                }
+            } else {
+                sourceNamespace("searge")
+            }
+            outputs("mcp", true) { listOf("searge") }
+            action()
+        }
     }
 
-    override fun retroMCP(action: MappingDepConfig<*>.() -> Unit) {
+    override fun retroMCP(action: MappingDepConfig.() -> Unit) {
         project.unimined.mcphackersIvy()
         mapping("io.github.mcphackers:mcp:${minecraft.version}@zip") {
+            if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.3") < 0) {
+                if (side == EnvType.COMBINED) throw IllegalStateException("Cannot use retroMCP with side COMBINED")
+                mapNamespace(side.classifier!!, "official")
+            }
+            mapNamespace("named", "mcp")
+            outputs("mcp", true) { listOf("official") }
             action()
         }
     }
 
-    override fun yarn(build: Int, action: MappingDepConfig<*>.() -> Unit) {
+    override fun yarn(build: Int, action: MappingDepConfig.() -> Unit) {
         project.unimined.fabricMaven()
         mapping("net.fabricmc:yarn:${minecraft.version}+build.${build}:v2") {
+            outputs("yarn", true) { listOf("intermediary") }
+            mapNamespace("named", "yarn")
+            sourceNamespace("intermediary")
             action()
         }
     }
 
-    override fun legacyYarn(build: Int, revision: Int, action: MappingDepConfig<*>.() -> Unit) {
+    override fun legacyYarn(build: Int, revision: Int, action: MappingDepConfig.() -> Unit) {
         project.unimined.legacyFabricMaven()
         if (legacyFabricMappingsVersionFinalize.value != revision) {
             if (!legacyFabricMappingsVersionFinalize.finalized) {
@@ -138,45 +210,72 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             "net.legacyfabric.v${revision}"
         }
         mapping("${group}:yarn:${minecraft.version}+build.${build}:v2") {
+            outputs("yarn", true) { listOf("intermediary") }
+            mapNamespace("named", "yarn")
+            sourceNamespace("intermediary")
             action()
         }
     }
 
-    override fun barn(build: Int, action: MappingDepConfig<*>.() -> Unit) {
+    override fun barn(build: Int, action: MappingDepConfig.() -> Unit) {
         project.unimined.babricMaven()
         mapping("babric:barn:${minecraft.version}+build.${build}:v2") {
+            outputs("barn", true) { listOf("intermediary") }
+            mapNamespace("named", "barn")
+            sourceNamespace("intermediary")
             action()
         }
     }
 
-    override fun quilt(build: Int, classifier: String, action: MappingDepConfig<*>.() -> Unit) {
+    override fun quilt(build: Int, classifier: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.quiltMaven()
         mapping("org.quiltmc:quilt-mappings:${minecraft.version}+build.${build}:${classifier}") {
+            mapNamespace("named", "quilt")
+            val intermediary = if (classifier.contains("intermediary")) listOf("intermediary") else emptyList()
+            val hashed = if (intermediary.isEmpty()) listOf("hashed") else emptyList()
+            outputs("quilt", true) {
+                intermediary + hashed
+            }
+            sourceNamespace((intermediary + hashed).first())
             action()
         }
     }
 
-    override fun forgeBuiltinMCP(version: String, action: MappingDepConfig<*>.() -> Unit) {
-        project.unimined.forgeMaven()
-        mapping("net.minecraftforge:forge:${minecraft.version}-${version}:src@zip", action)
+    override fun freeze() {
+        for (dep in mappingsDeps) {
+            project.logger.info("[Unimined/MappingsProvider] Finalizing $dep")
+            (dep as MappingDepConfigImpl).finalize()
+        }
+        super.freeze()
     }
 
-    override fun mapping(dependency: Any, action: MappingDepConfig<*>.() -> Unit) {
+    override fun forgeBuiltinMCP(version: String, action: MappingDepConfig.() -> Unit) {
+        project.unimined.forgeMaven()
+        officialMappingsFromJar {
+            action()
+        }
+        mapping("net.minecraftforge:forge:${minecraft.version}-${version}:src@zip") {
+
+            outputs("searge", false) { listOf("official") }
+            outputs("mcp", true) { listOf("searge") }
+            sourceNamespace {
+                if (it == "MCP") {
+                    "searge"
+                } else {
+                    "official"
+                }
+            }
+            action()
+        }
+    }
+
+    override fun mapping(dependency: Any, action: MappingDepConfig.() -> Unit) {
         if (freeze) {
             throw IllegalStateException("Cannot add mappings after mapping tree has been initialized")
         }
         project.dependencies.create(dependency).let {
             mappingsDeps.add(
-                if (it is ExternalModuleDependency) {
-                    ExternalMappingDepImpl(it, this).also(action)
-                } else {
-                    MappingDepImpl(it, this).also(action)
-                }.also {
-                    if (it.inputs.nsFilter.isEmpty()) {
-                        throw IllegalStateException("No namespaces specified for mapping dependency $it")
-                    }
-                    //TODO: other checks
-                }
+                MappingDepConfigImpl(it, this).also(action)
             )
         }
     }
@@ -197,7 +296,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     override val hasStubs: Boolean
         get() =_stub != null
 
-    private fun getOfficialMappings(): MemoryMappingTree {
+    fun getMojmapMappings(): MemoryMappingTree {
         val tree = MemoryMappingTree()
         when (minecraft.side) {
             EnvType.COMBINED, EnvType.CLIENT -> minecraft.minecraftData.officialClientMappingsFile
@@ -246,28 +345,27 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         } else false
         if (!loaded) {
             val configuration = project.configurations.detachedConfiguration().also {
-                it.dependencies.addAll(mappingsDeps)
+                it.dependencies.addAll(mappingsDeps.map { it.dep })
             }
             val mappingBuilder = MappingTreeBuilder()
             mappingBuilder.side(minecraft.side)
 
             // parse each dep
             for (dep in mappingsDeps) {
-                project.logger.info("[Unimined/MappingsProvider] Loading mappings from ${dep.name}")
+                dep as MappingDepConfigImpl
+                project.logger.info("[Unimined/MappingsProvider] Loading mappings from ${dep.dep.name}")
                 // resolve dep to files, no pom
-                val files = configuration.files(dep).filter { it.extension != "pom" }
+                val files = configuration.files(dep.dep).filter { it.extension != "pom" }
+
                 // load each file
                 project.logger.info("[Unimined/MappingsProvider] Loading mappings files ${files.joinToString(", ")}")
 
-                val input = (dep as MappingDepConfigImpl<*>).inputs
-                val prev = input.fmv
-                input.forwardVisitor {
-                    SrgToSeargeMapper(prev(it), "srg", "searge", "mojmap", ::getOfficialMappings)
-                }
-
                 for (file in files) {
-                    mappingBuilder.mappingFile(file.toPath(), input)
-
+                    if (minecraft.isMinecraftJar(file.toPath())) {
+                        mappingBuilder.bytecodeJar(file.toPath(), dep.inputs)
+                    } else {
+                        mappingBuilder.mappingFile(file.toPath(), dep.inputs)
+                    }
                 }
             }
             mappings = mappingBuilder.build()
@@ -295,7 +393,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     override val combinedNames: String by lazy {
         freeze = true
-        val names = mappingsDeps.map { "${it.name}-${it.version}" }.sorted() + (if (hasStubs) listOf("stub-${_stub!!.hash}") else listOf())
+        val names = mappingsDeps.map { if (it.dep is FileCollectionDependency) (it.dep as FileCollectionDependency).files.first().nameWithoutExtension else "${it.dep.name}-${it.dep.version}" }.sorted() + (if (hasStubs) listOf("stub-${_stub!!.hash}") else listOf())
         names.joinToString("-")
     }
 

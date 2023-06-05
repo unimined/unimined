@@ -1,7 +1,6 @@
 package xyz.wagyourtail.unimined.internal.mapping.aw
 
 import net.fabricmc.accesswidener.*
-import net.fabricmc.mappingio.format.ZipReader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.logging.Logger

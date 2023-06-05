@@ -43,22 +43,19 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override val merger: ClassMerger
         get() = parent.merger
 
-    override fun apply() {
-        // get and add forge-src to mappings
+    override fun beforeMappingsResolve() {
         val forge = parent.forge.dependencies.first()
-        if (forge.group != "net.minecraftforge" || !(forge.name == "minecraftforge" || forge.name == "forge")) {
-            throw IllegalStateException("Invalid forge dependency found, if you are using multiple dependencies in the forge configuration, make sure the last one is the forge dependency!")
-        }
-
-        parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
-
         provider.mappings.mappingsDeps.apply {
             if (isEmpty() && !parent.customSearge)
                 provider.mappings {
                     forgeBuiltinMCP(forge.version!!.substringAfter(provider.version))
                 }
         }
+    }
 
+    override fun apply() {
+        // get and add forge-src to mappings
+        parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
         super.apply()
     }
 

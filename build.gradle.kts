@@ -122,6 +122,7 @@ dependencies {
     implementation("net.minecraftforge:unsafe:0.2.0") {
         exclude(mapOf("group" to "org.apache.logging.log4j"))
     }
+    implementation("org.apache.logging.log4j:log4j-core:2.20.0")
 
     // remapper
     implementation("net.fabricmc:tiny-remapper:0.8.6")
@@ -133,7 +134,10 @@ dependencies {
     implementation("org.jetbrains:annotations-java5:23.0.0")
 
     // binpatcher
-    implementation("net.minecraftforge:binarypatcher:1.1.1")
+    implementation("net.minecraftforge:binarypatcher:1.1.1") {
+        exclude(mapOf("group" to "commons-io"))
+    }
+    implementation("commons-io:commons-io:2.12.0")
 
     // pack200 provided by apache commons-compress
     implementation("org.apache.commons:commons-compress:1.21")
@@ -145,9 +149,6 @@ dependencies {
     implementation("net.minecraftforge:accesstransformers:8.0.7") {
         exclude(mapOf("group" to "org.apache.logging.log4j"))
     }
-
-    // because we exclude it to prevent the dynamic version
-    implementation("org.apache.logging.log4j:log4j-core:2.11.2")
 
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false

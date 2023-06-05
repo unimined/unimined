@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod
 
-import net.fabricmc.mappingio.format.ZipReader
 import net.lenni0451.classtransform.TransformerManager
 import net.lenni0451.classtransform.utils.tree.IClassProvider
 import org.gradle.api.Project

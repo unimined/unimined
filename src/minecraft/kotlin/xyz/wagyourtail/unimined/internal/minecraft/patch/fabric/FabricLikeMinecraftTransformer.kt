@@ -1,7 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
 
 import com.google.gson.*
-import net.fabricmc.mappingio.format.ZipReader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -130,10 +129,13 @@ abstract class FabricLikeMinecraftTransformer(
 
     var mainClass: JsonObject? = null
 
-    override fun apply() {
+    override fun beforeMappingsResolve() {
         if (!customIntermediaries) {
             addIntermediaryMappings()
         }
+    }
+
+    override fun apply() {
         val client = provider.side == EnvType.CLIENT || provider.side == EnvType.COMBINED
         val server = provider.side == EnvType.SERVER || provider.side == EnvType.COMBINED
 

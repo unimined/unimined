@@ -16,4 +16,7 @@ abstract class MinecraftData {
     abstract val officialServerMappingsFile: File
 
     abstract fun mcVersionCompare(vers1: String, vers2: String): Int
+
+    abstract val minecraftClientFile: File
+    abstract val minecraftServerFile: File
 }

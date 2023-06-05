@@ -54,6 +54,11 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         throw Exception("Failed to compare versions, $vers1 and $vers2 are not valid versions")
     }
 
+    override val minecraftClientFile: File
+        get() = minecraftClient.path.toFile()
+    override val minecraftServerFile: File
+        get() = minecraftServer.path.toFile()
+
     val launcherMeta by lazy {
         val file = project.unimined.getGlobalCache().resolve("manifest.json")
         if (!project.gradle.startParameter.isOffline) {

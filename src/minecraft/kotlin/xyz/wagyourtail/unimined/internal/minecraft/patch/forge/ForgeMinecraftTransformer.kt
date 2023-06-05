@@ -82,6 +82,10 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
         provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") < 0
     }
 
+    override fun beforeMappingsResolve() {
+        forgeTransformer.beforeMappingsResolve()
+    }
+
     override fun forge(dep: Any, action: Dependency.() -> Unit) {
         forge.dependencies.add(if (dep is String && !dep.contains(":")) {
             if (!canCombine) {

@@ -3,7 +3,6 @@ package xyz.wagyourtail.unimined.internal.mapping.mixin.refmap
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import net.fabricmc.mappingio.format.ZipReader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import net.fabricmc.tinyremapper.api.TrClass
@@ -25,7 +24,6 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.function.Consumer
 import kotlin.io.path.createDirectories
-import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.writeText
 

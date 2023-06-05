@@ -13,26 +13,35 @@ unimined.useGlobalCache = false
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
 
-configurations {
-    mainImplementation {
-        extendsFrom compileClasspath
-        extendsFrom runtimeClasspath
+sourceSets {
+    fabric {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+    forge {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
     }
 }
 
-sourceSets {
-    fabric {
-        compileClasspath += sourceSets.main.output + configurations.implementation
-        runtimeClasspath += sourceSets.main.output + configurations.implementation
-    }
-    forge {
-        compileClasspath += sourceSets.main.output + configurations.implementation
-        runtimeClasspath += sourceSets.main.output + configurations.implementation
-    }
+tasks.register("fabricJar", Jar) {
+    from sourceSets.fabric.output, sourceSets.main.output
+
+    archiveClassifier = "fabric"
+}
+
+tasks.register("forgeJar", Jar) {
+    from sourceSets.forge.output, sourceSets.main.output
+
+    archiveClassifier = "forge"
 }
 
 repositories {
     mavenCentral()
+    maven {
+        name = "sponge"
+        url = "https://repo.spongepowered.org/maven"
+    }
 }
 
 unimined.minecraft {
@@ -43,6 +52,7 @@ unimined.minecraft {
         yarn(project.mapping_version)
     }
 
+    defaultRemapJar = false
 }
 
 unimined.minecraft(sourceSets.fabric) {
@@ -53,7 +63,7 @@ unimined.minecraft(sourceSets.fabric) {
     }
 
     fabric {
-        loader "0.14.20"
+        loader project.fabric_version
     }
 }
 
@@ -66,8 +76,23 @@ unimined.minecraft(sourceSets.forge) {
     }
 
     forge {
-        forge "36.2.0"
-        mixinConfig "src/main/resources/modid.mixins.json"
+        forge project.forge_version
+        mixinConfig "modid.mixins.json"
+    }
+}
+
+configurations {
+    mainImplementation
+    implementation {
+        extendsFrom forgeImplementation
+        extendsFrom fabricImplementation
+    }
+}
+
+sourceSets {
+    main {
+        compileClasspath += configurations.mainImplementation
+        runtimeClasspath += configurations.mainImplementation
     }
 }
 

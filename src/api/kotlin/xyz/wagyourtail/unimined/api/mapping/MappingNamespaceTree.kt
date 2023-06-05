@@ -41,7 +41,7 @@ open class MappingNamespaceTree {
 
     private var isFreezing = false
 
-    private fun freeze() {
+    open fun freeze() {
         if (frozen || isFreezing) return
         isFreezing = true
         targetRemapFuns.forEach { k, v ->

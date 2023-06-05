@@ -44,15 +44,17 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override val merger: ClassMerger
         get() = throw UnsupportedOperationException("ForgeGradle 3 does not support merging with unofficial merger.")
 
-    @ApiStatus.Internal
-    val forgeUd = project.configurations.detachedConfiguration()
 
     @ApiStatus.Internal
     val clientExtra = project.configurations.maybeCreate("clientExtra".withSourceSet(provider.sourceSet)).also {
         provider.minecraft.extendsFrom(it)
     }
 
-    lateinit var mcpConfig: Dependency
+    val mcpConfig: Dependency by lazy {
+        project.dependencies.create(
+            userdevCfg["mcp"]?.asString ?: "de.oceanlabs.mcp:mcp_config:${provider.version}@zip"
+        )
+    }
 
     val mcpConfigData by lazy {
         val configuration = project.configurations.detachedConfiguration()
@@ -65,7 +67,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         McpConfigData.fromJson(configJson)
     }
 
-    override fun apply() {
+    val forgeUd by lazy {
         val forgeDep = parent.forge.dependencies.first()
 
         // detect if userdev3 or userdev
@@ -78,19 +80,20 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         } ?: "userdev"
 
         val userdev = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:$userdevClassifier"
+
+        val forgeUd = project.configurations.detachedConfiguration()
         forgeUd.dependencies.add(project.dependencies.create(userdev))
 
-//        val installer = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:installer"
-//        forgeInstaller.dependencies.add(project.dependencies.create(installer))
+        // get forge userdev jar
+        forgeUd.getFile(forgeUd.dependencies.last())
+    }
 
-        mcpConfig = project.dependencies.create(
-            userdevCfg["mcp"]?.asString ?: "de.oceanlabs.mcp:mcp_config:${provider.version}@zip"
-        )
-
-        provider.mappings.apply {
-            val mcpConfigUserSpecified = mappingsDeps.firstOrNull { it.group == "de.oceanlabs.mcp" && it.name == "mcp_config" }
+    override fun beforeMappingsResolve() {
+        project.logger.info("[Unimined/ForgeTransformer] FG3: beforeMappingsResolve")
+        provider.mappings {
+            val mcpConfigUserSpecified = mappingsDeps.firstOrNull { it.dep.group == "de.oceanlabs.mcp" && it.dep.name == "mcp_config" }
             if (mcpConfigUserSpecified != null && !parent.customSearge) {
-                if (mcpConfigUserSpecified.version != mcpConfig.version) {
+                if (mcpConfigUserSpecified.dep.version != mcpConfig.version) {
                     project.logger.warn("[Unimined/ForgeTransformer] FG3 does not support custom mcp_config (searge) version specification. Using ${mcpConfig.version} from userdev.")
                 }
                 mappingsDeps.remove(mcpConfigUserSpecified)
@@ -100,6 +103,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             if (!parent.customSearge) searge(mcpConfig.version!!)
             mappingsDeps.addAll(deps)
         }
+    }
+
+    override fun apply() {
+//        val installer = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:installer"
+//        forgeInstaller.dependencies.add(project.dependencies.create(installer))
 
         for (element in userdevCfg.get("libraries")?.asJsonArray ?: listOf()) {
             if (element.asString.contains("legacydev")) continue
@@ -111,8 +119,6 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             }
         }
 
-        // get forge userdev jar
-        val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
         if (userdevCfg.has("inject")) {
             project.logger.lifecycle("[Unimined/ForgeTransformer] Injecting forge userdev into minecraft jar")
             this.addTransform { outputJar ->
@@ -148,9 +154,6 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
     val userdevCfg by lazy {
-        // get forge userdev jar
-        val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
-
         forgeUd.toPath().readZipInputStreamFor("config.json") {
             JsonParser.parseReader(InputStreamReader(it)).asJsonObject
         }!!
@@ -243,7 +246,6 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         project.logger.lifecycle("[Unimined/Forge] transforming minecraft jar for FG3")
         project.logger.info("minecraft: $minecraft")
         val forgeUniversal = parent.forge.dependencies.last()
-        val forgeUd = forgeUd.getFile(forgeUd.dependencies.last())
 
         val outFolder = minecraft.path.parent.resolve("${forgeUniversal.version}")
             .createDirectories()
@@ -281,7 +283,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             val stoutLevel = project.gradle.startParameter.logLevel
             val stdout = System.out
             if (stoutLevel > LogLevel.INFO) {
-                System.setOut(PrintStream(NullOutputStream()))
+                System.setOut(PrintStream(NullOutputStream.INSTANCE))
             }
             project.logger.info("Running binpatcher with args: ${args.joinToString(" ")}")
             try {

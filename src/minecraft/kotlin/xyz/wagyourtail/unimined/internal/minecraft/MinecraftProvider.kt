@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
@@ -18,6 +19,7 @@ import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
@@ -62,7 +64,8 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override val minecraftRemapper = MinecraftRemapper(project, this)
 
-    private val lateActions = ArrayDeque<() -> Unit>()
+    private val patcherActions = ArrayDeque<() -> Unit>()
+    private val mappingActions = ArrayDeque<() -> Unit>()
     private var lateActionsRunning by FinalizeOnWrite(false)
 
     val minecraft: Configuration = project.configurations.maybeCreate("minecraft".withSourceSet(sourceSet)).also {
@@ -84,7 +87,12 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             it.action()
             it.dependsOn(task)
         }
-        project.tasks.getByName("build").dependsOn(remapTask)
+    }
+
+    override val mergedOfficialMinecraftFile: File by lazy {
+        val client = minecraftData.minecraftClient
+        val server = minecraftData.minecraftServer
+        NoTransformMinecraftTransformer(project, this).merge(client, server).path.toFile()
     }
 
     private val minecraftFiles: Map<Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>, Path> = defaultedMapOf {
@@ -111,7 +119,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         if (lateActionsRunning) {
             mappings.action()
         } else {
-            lateActions.addFirst {
+            patcherActions.addLast {
                 mappings.action()
             }
         }
@@ -119,7 +127,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun merged(action: MergedPatcher.() -> Unit) {
         mcPatcher = MergedMinecraftTransformer(project, this).also {
-            lateActions.addLast {
+            patcherActions.addFirst {
                 action(it)
             }
         }
@@ -127,7 +135,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun fabric(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = OfficialFabricMinecraftTransformer(project, this).also {
-            lateActions.addLast {
+            patcherActions.addFirst {
                 action(it)
             }
         }
@@ -135,7 +143,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun legacyFabric(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = LegacyFabricMinecraftTransformer(project, this).also {
-            lateActions.addLast {
+            patcherActions.addFirst {
                 action(it)
             }
         }
@@ -143,7 +151,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun babric(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = BabricMinecraftTransformer(project, this).also {
-            lateActions.addLast {
+            patcherActions.addFirst {
                 action(it)
             }
         }
@@ -151,7 +159,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun quilt(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = QuiltMinecraftTransformer(project, this).also {
-            lateActions.addLast {
+            patcherActions.addFirst {
                 action(it)
             }
         }
@@ -159,7 +167,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun forge(action: ForgePatcher.() -> Unit) {
         mcPatcher = ForgeMinecraftTransformer(project, this).also {
-            lateActions.addLast {
+            patcherActions.addFirst {
                 action(it)
             }
         }
@@ -167,7 +175,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun jarMod(action: JarModAgentPatcher.() -> Unit) {
         mcPatcher = JarModAgentMinecraftTransformer(project, this).also {
-            lateActions.addLast {
+            patcherActions.addFirst {
                 action(it)
             }
         }
@@ -175,6 +183,10 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     val minecraftDepName: String = project.path.replace(":", "_").let { projectPath ->
         "minecraft${if (projectPath == "_") "" else projectPath}${if (sourceSet.name == "main") "" else "+"+sourceSet.name}"
+    }
+
+    override val minecraftDependency: ModuleDependency by lazy {
+        project.dependencies.create("net.minecraft:$minecraftDepName:$version" + if (side != EnvType.COMBINED) ":${side.classifier}" else "") as ModuleDependency
     }
 
     private val extractDependencies: MutableMap<Dependency, Extract> = mutableMapOf()
@@ -231,10 +243,21 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     fun apply() {
         project.logger.lifecycle("[Unimined/Minecraft] Applying minecraft config for $sourceSet")
+
         lateActionsRunning = true
-        while (lateActions.isNotEmpty()) {
-            lateActions.removeFirst().invoke()
+
+        while (patcherActions.isNotEmpty()) {
+            patcherActions.removeFirst().invoke()
         }
+
+        project.logger.info("[Unimined/MappingProvider] before mappings $sourceSet")
+        (mcPatcher as AbstractMinecraftTransformer).beforeMappingsResolve()
+
+        // finalize mapping deps
+        project.logger.info("[Unimined/MappingProvider] $sourceSet mappings: ${mappings.getNamespaces()}")
+
+        // late actions done
+
         // ensure minecraft deps are clear
         if (minecraft.dependencies.isNotEmpty()) {
             project.logger.warn("[Unimined/Minecraft] $minecraft dependencies are not empty! clearing...")
@@ -254,7 +277,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
 
         // add minecraft dep
-        minecraft.dependencies.add(project.dependencies.create("net.minecraft:$minecraftDepName:$version" + if (side != EnvType.COMBINED) ":${side.classifier}" else ""))
+        minecraft.dependencies.add(minecraftDependency)
 
         //DEBUG: add minecraft dev dep as file
 //        minecraft.dependencies.add(project.dependencies.create(project.files(minecraftFileDev)))
@@ -263,18 +286,34 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         addLibraries(minecraftData.metadata.libraries)
 
         // create remapjar task
-        val task = project.tasks.findByName("jar".withSourceSet(sourceSet))
-        if (task != null && task is Jar) {
-            task.apply {
-                archiveClassifier.set("dev")
+        if (defaultRemapJar) {
+            val task = project.tasks.findByName("jar".withSourceSet(sourceSet))
+            if (task != null && task is Jar) {
+                @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+                val classifier: String? = task.archiveClassifier.getOrElse(null as String?)
+                task.apply {
+                    if (classifier != null) {
+                        archiveClassifier.set(archiveClassifier.get() + "-dev")
+                    } else {
+                        archiveClassifier.set("dev")
+                    }
+                }
+                remap(task) {
+                    group = "unimined"
+                    description = "Remaps $task's output jar"
+                    archiveClassifier.set(classifier)
+                }
+                project.tasks.getByName("build").dependsOn("remap" + "jar".withSourceSet(sourceSet).capitalized())
+            } else {
+                project.logger.warn(
+                    "[Unimined/Minecraft] Could not find default jar task for $sourceSet. named: ${
+                        "jar".withSourceSet(
+                            sourceSet
+                        )
+                    }."
+                )
+                project.logger.warn("[Unimined/Minecraft] add manually with `remap(task)` in the minecraft block for $sourceSet")
             }
-            remap(task) {
-                group = "unimined"
-                description = "Remaps $task's output jar"
-            }
-        } else {
-            project.logger.warn("[Unimined/Minecraft] Could not find default jar task for $sourceSet. named: ${"jar".withSourceSet(sourceSet)}.")
-            project.logger.warn("[Unimined/Minecraft] add manually with `remap(task)` in the minecraft block for $sourceSet")
         }
 
         // apply minecraft patcher changes
@@ -330,7 +369,11 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 //        pomFile.toFile()
 //    }
 
-    override fun isMinecraftJar(path: Path) = minecraftFiles.values.any { it == path }
+    override fun isMinecraftJar(path: Path) =
+        minecraftFiles.values.any { it == path } ||
+        path == minecraftData.minecraftClientFile.toPath() ||
+        path == minecraftData.minecraftServerFile.toPath() ||
+        path == mergedOfficialMinecraftFile.toPath()
 
 
 

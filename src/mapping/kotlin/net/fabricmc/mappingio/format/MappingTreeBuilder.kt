@@ -37,6 +37,25 @@ class MappingTreeBuilder {
         side = env
     }
 
+    fun bytecodeJar(file: Path, input: MappingInputBuilder) {
+        checkFrozen()
+        checkInput(input)
+        val visitor = input.fmv(
+            MappingNsRenamer(
+                MappingSourceNsSwitch(
+                    MappingDstNsFilter(
+                        tree,
+                        input.nsFilter
+                    ), input.nsSource(BetterMappingFormat.OBF_JAR)
+                ), input.nsMap
+            ), tree
+        )
+        val preDstNs = tree.dstNamespaces ?: emptyList()
+        BytecodeToMappings.readFile(file, "official", visitor)
+        val postDstNs = tree.dstNamespaces ?: emptyList()
+        ns.addAll(postDstNs - preDstNs.toSet())
+    }
+
     fun mappingFile(file: Path, input: MappingInputBuilder) {
         checkFrozen()
         checkInput(input)
@@ -171,7 +190,7 @@ class MappingTreeBuilder {
                         input.nsFilter
                     ), input.nsSource(type)
                 ), input.nsMap
-            )
+            ), tree
         )
         val preDstNs = tree.dstNamespaces ?: emptyList()
         when (type) {
@@ -305,7 +324,7 @@ class MappingTreeBuilder {
     class MappingInputBuilder {
         val nsMap: MutableMap<String, String> = mutableMapOf()
         val nsFilter: MutableSet<String> = mutableSetOf()
-        var fmv: (MappingVisitor) -> MappingVisitor = { it }
+        var fmv: (MappingVisitor, MappingTreeView) -> MappingVisitor = { v, _ -> v }
         var nsSource: (BetterMappingFormat) -> String = { "official" }
 
         fun mapNs(from: String, to: String) {
@@ -325,7 +344,17 @@ class MappingTreeBuilder {
         }
 
         fun forwardVisitor(f: (MappingVisitor) -> MappingVisitor) {
-            fmv = f
+            val prev = fmv
+            fmv = { v, m -> f(prev(v, m)) }
+        }
+
+        fun forwardVisitor(f: (MappingVisitor, MappingTreeView) -> MappingVisitor) {
+            val prev = fmv
+            fmv = { v, m -> f(prev(v, m), m) }
+        }
+
+        fun clearForwardVisitor() {
+            fmv = { v, _ -> v }
         }
     }
 
@@ -342,7 +371,8 @@ class MappingTreeBuilder {
         OLD_MCP,
         OLDER_MCP,
         PROGUARD,
-        PARCHMENT
+        PARCHMENT,
+        OBF_JAR
         ;
     }
 }

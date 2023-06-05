@@ -5,6 +5,7 @@ import groovy.lang.DelegatesTo
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.annotations.ApiStatus
@@ -70,13 +71,28 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     @set:ApiStatus.Internal
     var side by FinalizeOnRead(LazyMutable { if (!mcPatcher.canCombine) error("must set \"side\" for minecraft to either \"client\" or \"server\"") else EnvType.COMBINED })
 
+    /**
+     * sets the side for minecraft (client, server, combined, or datagen)
+     * TODO: make datagen work properly
+     */
     fun side(sideConf: String) {
         project.logger.info("setting minecraft side to $sideConf")
         side = EnvType.valueOf(sideConf.uppercase())
     }
 
+    /**
+     * the minecraft version to use
+     */
     var version: String by FinalizeOnRead(MustSet())
 
+    /**
+     * should unimined add the default "remapJar" task to this sourceSet?
+     */
+    var defaultRemapJar: Boolean by FinalizeOnRead(true)
+
+    /**
+     * the minecraft version to use
+     */
     fun version(version: String) {
         project.logger.info("setting minecraft version to $version")
         this.version = version
@@ -198,8 +214,12 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     abstract val minecraftFileDev: File
 
     @get:ApiStatus.Internal
+    abstract val mergedOfficialMinecraftFile: File
+
+    @get:ApiStatus.Internal
     abstract val minecraftLibraries: Configuration
 
     @ApiStatus.Internal
     abstract fun isMinecraftJar(path: Path): Boolean
+    abstract val minecraftDependency: ModuleDependency
 }

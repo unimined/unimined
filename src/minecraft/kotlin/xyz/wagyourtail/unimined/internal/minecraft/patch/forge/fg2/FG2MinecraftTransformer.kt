@@ -42,11 +42,10 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         return super.merge(clientPatched, serverPatched)
     }
 
-    override fun apply() {
+    override fun beforeMappingsResolve() {
         // get and add forge-src to mappings
         val forgeDep = parent.forge.dependencies.last()
-
-        provider.mappings.apply {
+        provider.mappings {
             val empty = mappingsDeps.isEmpty()
             if (empty) {
                 if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1 && !parent.customSearge) {
@@ -64,7 +63,9 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 mappingsDeps.addAll(deps)
             }
         }
+    }
 
+    override fun apply() {
         super.apply()
     }
 
