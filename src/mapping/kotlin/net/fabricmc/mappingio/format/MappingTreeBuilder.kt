@@ -19,6 +19,9 @@ class MappingTreeBuilder {
     private var frozen by FinalizeOnWrite(false)
     private val ns = mutableSetOf<String>()
     private var side by FinalizeOnRead(EnvType.COMBINED)
+    private var sourceNs by FinalizeOnRead("official")
+
+    private val onBuild = mutableListOf<Pair<Pair<String, Set<String>>, () -> Unit>>()
 
     private fun checkFrozen() {
         if (frozen) {
@@ -26,7 +29,7 @@ class MappingTreeBuilder {
         }
     }
 
-    private fun checkInput(input: MappingInputBuilder) {
+    private fun checkInput(input: MappingInputBuilder.MappingInput) {
         if (input.nsFilter.intersect(ns).isNotEmpty()) {
             throw IllegalArgumentException("Namespace ${input.nsFilter.intersect(ns)} already exists in the tree")
         }
@@ -37,43 +40,92 @@ class MappingTreeBuilder {
         side = env
     }
 
-    fun bytecodeJar(file: Path, input: MappingInputBuilder) {
+    fun sourceNs(ns: String) {
         checkFrozen()
+        sourceNs = ns
+    }
+
+    fun MappingInputBuilder.MappingInput.wrapInput(reader: BufferedReader?, action: (BufferedReader?) -> Unit) {
+        if (nsSource == sourceNs) {
+            action(reader)
+        } else {
+            val tempFile = if (reader != null) {
+                // cache the reader
+                createTempFile("mapping-input", ".tmp").apply {
+                    deleteOnExit()
+                    // write reader to file
+                    bufferedWriter().use { out ->
+                        reader.use { it.copyTo(out) }
+                    }
+                }
+            } else null
+            val newKey = (nsSource to nsFilter)
+            val value = newKey to {
+                if (tempFile != null) {
+                    tempFile.bufferedReader().use {
+                        try {
+                            action(it)
+                        } finally {
+                            tempFile.delete()
+                        }
+                    }
+                } else {
+                    action(null)
+                }
+            }
+            // determine where to put in after list based on being in the output of a previous
+            for (i in 0 until onBuild.size) {
+                val key = onBuild[i].first
+                if (key.second.contains(newKey.first)) {
+                    onBuild.add(i + 1, value)
+                    return
+                }
+            }
+            // source wasn't found in prev's dst's
+            onBuild.add(value)
+        }
+    }
+
+    fun bytecodeJar(file: Path, inputs: MappingInputBuilder) {
+        checkFrozen()
+        val input = inputs.build("", BetterMappingFormat.OBF_JAR)
         checkInput(input)
-        val visitor = input.fmv(
-            MappingNsRenamer(
+        input.wrapInput(null) {
+            val visitor = MappingNsRenamer(
                 MappingSourceNsSwitch(
-                    MappingDstNsFilter(
-                        tree,
-                        input.nsFilter
-                    ), input.nsSource(BetterMappingFormat.OBF_JAR)
+                    input.fmv(
+                        MappingDstNsFilter(
+                            tree, input.nsFilter
+                        ), tree, side
+                    ),
+                    input.nsSource,
                 ), input.nsMap
-            ), tree
-        )
-        val preDstNs = tree.dstNamespaces ?: emptyList()
-        BytecodeToMappings.readFile(file, "official", visitor)
-        val postDstNs = tree.dstNamespaces ?: emptyList()
-        ns.addAll(postDstNs - preDstNs.toSet())
+            )
+            val preDstNs = tree.dstNamespaces ?: emptyList()
+            BytecodeToMappings.readFile(file, "official", visitor)
+            val postDstNs = tree.dstNamespaces ?: emptyList()
+            ns.addAll(postDstNs - preDstNs.toSet())
+        }
     }
 
     fun mappingFile(file: Path, input: MappingInputBuilder) {
         checkFrozen()
-        checkInput(input)
         if (file.isZip()) {
             val found = mutableSetOf<Pair<BetterMappingFormat, String>>()
             file.forEachInZip { name, stream ->
                 try {
                     val reader = stream.bufferedReader()
                     if (listOf(
-                        name.endsWith(".tsrg"),
-                        name.endsWith(".rgs"),
-                        name.endsWith(".srg"),
-                        name.endsWith(".csrg"),
-                        name.endsWith(".tiny"),
-                        name.endsWith(".csv"),
-                        name.endsWith(".mapping"),
-                        name.endsWith(".json")
-                    ).any { it }) {
+                            name.endsWith(".tsrg"),
+                            name.endsWith(".rgs"),
+                            name.endsWith(".srg"),
+                            name.endsWith(".csrg"),
+                            name.endsWith(".tiny"),
+                            name.endsWith(".csv"),
+                            name.endsWith(".mapping"),
+                            name.endsWith(".json")
+                        ).any { it }
+                    ) {
                         val header = if (name == "parchment.json") {
                             BetterMappingFormat.PARCHMENT
                         } else {
@@ -87,43 +139,43 @@ class MappingTreeBuilder {
                     throw IOException("Error reading header on $name", e)
                 }
             }
-                found.sortedWith { a, b ->
-                    if (a.first == b.first) {
-                        a.second.compareTo(b.second)
-                    } else {
-                        a.first.ordinal.compareTo(b.first.ordinal)
-                    }
-                }.forEach {
-                    try {
-                        if (it.first == BetterMappingFormat.RETROGUARD) {
-                            if (side == EnvType.COMBINED) throw IllegalArgumentException("Cannot use retroguard mappings in combined mode")
-                            if (it.second.endsWith("_server.rgs") && side.mcp == 0) {
-                                return@forEach
-                            } else if (!it.second.endsWith("_server.rgs") && side.mcp == 1) {
-                                return@forEach
-                            }
-                        }
-                        if (it.first == BetterMappingFormat.SRG) {
-                            val combined = it.second.endsWith("joined.srg")
-                            if (side == EnvType.COMBINED && !combined) {
-                                throw IllegalArgumentException("Cannot use srg mappings in combined mode as joined.srg is required")
-                            }
-                            if (!combined) {
-                                if (side == EnvType.CLIENT && !it.second.endsWith("client.srg")) {
-                                    return@forEach
-                                }
-                                if (side == EnvType.SERVER && !it.second.endsWith("server.srg")) {
-                                    return@forEach
-                                }
-                            }
-                        }
-                        file.readZipInputStreamFor(it.second) { stream ->
-                            mappingReaderIntl(it.second, stream.bufferedReader(), input, it.first)
-                        }
-                    } catch (e: Exception) {
-                        throw IOException("Error reading ${file.name}!/${it.second}", e)
-                    }
+            found.sortedWith { a, b ->
+                if (a.first == b.first) {
+                    a.second.compareTo(b.second)
+                } else {
+                    a.first.ordinal.compareTo(b.first.ordinal)
                 }
+            }.forEach {
+                try {
+                    if (it.first == BetterMappingFormat.RETROGUARD) {
+                        if (side == EnvType.COMBINED) throw IllegalArgumentException("Cannot use retroguard mappings in combined mode")
+                        if (it.second.endsWith("_server.rgs") && side.mcp == 0) {
+                            return@forEach
+                        } else if (!it.second.endsWith("_server.rgs") && side.mcp == 1) {
+                            return@forEach
+                        }
+                    }
+                    if (it.first == BetterMappingFormat.SRG) {
+                        val combined = it.second.endsWith("joined.srg")
+                        if (side == EnvType.COMBINED && !combined) {
+                            throw IllegalArgumentException("Cannot use srg mappings in combined mode as joined.srg is required")
+                        }
+                        if (!combined) {
+                            if (side == EnvType.CLIENT && !it.second.endsWith("client.srg")) {
+                                return@forEach
+                            }
+                            if (side == EnvType.SERVER && !it.second.endsWith("server.srg")) {
+                                return@forEach
+                            }
+                        }
+                    }
+                    file.readZipInputStreamFor(it.second) { stream ->
+                        mappingReaderIntl(it.second, stream.bufferedReader(), input, it.first)
+                    }
+                } catch (e: Exception) {
+                    throw IOException("Error reading ${file.name}!/${it.second}", e)
+                }
+            }
         } else {
             file.inputStream().use {
                 try {
@@ -137,7 +189,6 @@ class MappingTreeBuilder {
 
     fun mappingStream(name: String, stream: InputStream, input: MappingInputBuilder) {
         checkFrozen()
-        checkInput(input)
         mappingReaderIntl(name, stream.bufferedReader(), input)
     }
 
@@ -178,201 +229,177 @@ class MappingTreeBuilder {
     private fun mappingReaderIntl(
         fname: String,
         reader: BufferedReader,
-        input: MappingInputBuilder,
+        inputs: MappingInputBuilder,
         type: BetterMappingFormat = detectHeader(reader)
             ?: throw IllegalArgumentException("cannot detect mapping format")
     ) {
-        val visitor = input.fmv(
-            MappingNsRenamer(
+        val input = inputs.build(fname, type)
+        @Suppress("NAME_SHADOWING")
+        input.wrapInput(reader) { reader ->
+            reader!!
+            val visitor = MappingNsRenamer(
                 MappingSourceNsSwitch(
-                    MappingDstNsFilter(
-                        tree,
-                        input.nsFilter
-                    ), input.nsSource(type)
+                    input.fmv(
+                        MappingDstNsFilter(
+                            tree, input.nsFilter
+                        ), tree, side
+                    ),
+                    input.nsSource
                 ), input.nsMap
-            ), tree
-        )
-        val preDstNs = tree.dstNamespaces ?: emptyList()
-        when (type) {
-            BetterMappingFormat.TINY -> Tiny1Reader.read(reader, visitor)
-            BetterMappingFormat.TINY_2 -> Tiny2Reader.read(reader, visitor)
-            BetterMappingFormat.MCP -> {
-                when (fname.split("/", "\\").last()) {
-                    "methods.csv" -> {
-                        MCPReader.readMethod(
-                            side,
-                            reader,
-                            "searge",
-                            "mcp",
-                            tree,
-                            visitor
-                        )
-                    }
+            )
+            val preDstNs = tree.dstNamespaces ?: emptyList()
+            when (type) {
+                BetterMappingFormat.TINY -> Tiny1Reader.read(reader, visitor)
+                BetterMappingFormat.TINY_2 -> Tiny2Reader.read(reader, visitor)
+                BetterMappingFormat.MCP -> {
+                    when (fname.split("/", "\\").last()) {
+                        "methods.csv" -> {
+                            MCPReader.readMethod(
+                                side, reader, "searge", "mcp", tree, visitor
+                            )
+                        }
 
-                    "fields.csv" -> {
-                        MCPReader.readField(
-                            side,
-                            reader,
-                            "searge",
-                            "mcp",
-                            tree,
-                            visitor
-                        )
-                    }
+                        "fields.csv" -> {
+                            MCPReader.readField(
+                                side, reader, "searge", "mcp", tree, visitor
+                            )
+                        }
 
-                    "params.csv" -> {
-                        MCPReader.readParam(
-                            side,
-                            reader,
-                            "searge",
-                            "mcp",
-                            tree,
-                            visitor
-                        )
-                    }
+                        "params.csv" -> {
+                            MCPReader.readParam(
+                                side, reader, "searge", "mcp", tree, visitor
+                            )
+                        }
 
-                    else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
+                        else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
+                    }
+                }
+
+                BetterMappingFormat.OLD_MCP -> {
+                    when (fname.split("/", "\\").last()) {
+                        "classes.csv" -> {
+                            OldMCPReader.readClasses(
+                                side, reader, "official", "searge", "mcp", visitor
+                            )
+                        }
+
+                        "methods.csv" -> {
+                            OldMCPReader.readMethod(
+                                side, reader, "official", "searge", "mcp", visitor
+                            )
+                        }
+
+                        "fields.csv" -> {
+                            OldMCPReader.readField(
+                                side, reader, "official", "searge", "mcp", visitor
+                            )
+                        }
+
+                        else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
+                    }
+                }
+
+                BetterMappingFormat.OLDER_MCP -> {
+                    when (fname.split("/", "\\").last()) {
+                        "methods.csv" -> {
+                            OlderMCPReader.readMethod(
+                                side, reader, "searge", "mcp", tree, visitor
+                            )
+                        }
+
+                        "fields.csv" -> {
+                            OlderMCPReader.readField(
+                                side, reader, "searge", "mcp", tree, visitor
+                            )
+                        }
+
+                        else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
+                    }
+                }
+
+                BetterMappingFormat.SRG -> SrgReader.read(reader, "official", "searge", visitor)
+                BetterMappingFormat.TSRG -> TsrgReader.read(reader, "official", "searge", visitor)
+                BetterMappingFormat.TSRG_2 -> TsrgReader.read(reader, visitor)
+                BetterMappingFormat.RETROGUARD -> RGSReader.read(reader, "official", "searge", visitor)
+                BetterMappingFormat.PROGUARD -> ProGuardReader.read(reader, "mojmap", "official", visitor)
+                BetterMappingFormat.PARCHMENT -> ParchmentReader.read(reader, "mojmap", visitor)
+                else -> {
+                    throw IllegalArgumentException("cannot process mapping format $type")
                 }
             }
-
-            BetterMappingFormat.OLD_MCP -> {
-                when (fname.split("/", "\\").last()) {
-                    "classes.csv" -> {
-                        OldMCPReader.readClasses(
-                            side,
-                            reader,
-                            "official",
-                            "searge",
-                            "mcp",
-                            visitor
-                        )
-                    }
-
-                    "methods.csv" -> {
-                        OldMCPReader.readMethod(
-                            side,
-                            reader,
-                            "official",
-                            "searge",
-                            "mcp",
-                            visitor
-                        )
-                    }
-
-                    "fields.csv" -> {
-                        OldMCPReader.readField(
-                            side,
-                            reader,
-                            "official",
-                            "searge",
-                            "mcp",
-                            visitor
-                        )
-                    }
-
-                    else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
-                }
-            }
-
-            BetterMappingFormat.OLDER_MCP -> {
-                when (fname.split("/", "\\").last()) {
-                    "methods.csv" -> {
-                        OlderMCPReader.readMethod(
-                            side,
-                            reader,
-                            "searge",
-                            "mcp",
-                            tree,
-                            visitor
-                        )
-                    }
-
-                    "fields.csv" -> {
-                        OlderMCPReader.readField(
-                            side,
-                            reader,
-                            "searge",
-                            "mcp",
-                            tree,
-                            visitor
-                        )
-                    }
-
-                    else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
-                }
-            }
-
-            BetterMappingFormat.SRG -> SrgReader.read(reader, "official", "searge", visitor)
-            BetterMappingFormat.TSRG -> TsrgReader.read(reader, "official", "searge", visitor)
-            BetterMappingFormat.TSRG_2 -> TsrgReader.read(reader, visitor)
-            BetterMappingFormat.RETROGUARD -> RGSReader.read(reader, "official", "searge", visitor)
-            BetterMappingFormat.PROGUARD -> ProGuardReader.read(reader, "mojmap", "official", visitor)
-            BetterMappingFormat.PARCHMENT -> ParchmentReader.read(reader, "mojmap", visitor)
-            else -> {
-                throw IllegalArgumentException("cannot process mapping format $type")
-            }
+            val postDstNs = tree.dstNamespaces ?: emptyList()
+            ns.addAll(postDstNs - preDstNs.toSet())
         }
-        val postDstNs = tree.dstNamespaces ?: emptyList()
-        ns.addAll(postDstNs - preDstNs.toSet())
     }
 
     fun build(): MappingTreeView {
         frozen = true
+        for (action in onBuild) {
+            action.second()
+        }
         return tree
     }
 
     class MappingInputBuilder {
-        val nsMap: MutableMap<String, String> = mutableMapOf()
-        val nsFilter: MutableSet<String> = mutableSetOf()
-        var fmv: (MappingVisitor, MappingTreeView) -> MappingVisitor = { v, _ -> v }
-        var nsSource: (BetterMappingFormat) -> String = { "official" }
+        class MappingInput {
+            val nsMap: MutableMap<String, String> = mutableMapOf()
+            val nsFilter: MutableSet<String> = mutableSetOf()
+            var fmv: (MappingVisitor, MappingTreeView, EnvType) -> MappingVisitor = { v, _, _ -> v }
+            var nsSource: String = "official"
 
-        fun mapNs(from: String, to: String) {
-            nsMap[from] = to
+            fun mapNs(from: String, to: String) {
+                nsMap[from] = to
+            }
+
+            fun addNs(ns: String) {
+                nsFilter.add(ns)
+            }
+
+            fun setSource(ns: String) {
+                nsSource = ns
+            }
+
+            fun forwardVisitor(f: (MappingVisitor) -> MappingVisitor) {
+                val prev = fmv
+                fmv = { v, m, e -> f(prev(v, m, e)) }
+            }
+
+            fun forwardVisitor(f: (MappingVisitor, MappingTreeView) -> MappingVisitor) {
+                val prev = fmv
+                fmv = { v, m, e -> f(prev(v, m, e), m) }
+            }
+
+            fun forwardVisitor(f: (MappingVisitor, MappingTreeView, EnvType) -> MappingVisitor) {
+                val prev = fmv
+                fmv = { v, m, e -> f(prev(v, m, e), m, e) }
+            }
+
+            fun clearForwardVisitor() {
+                fmv = { v, _, _ -> v }
+            }
         }
 
-        fun addNs(ns: String) {
-            nsFilter.add(ns)
+        private var frozen by FinalizeOnWrite(false)
+        private val provided = mutableListOf<Pair<(String, BetterMappingFormat) -> Boolean, MappingInput.() -> Unit>>()
+
+        fun provides(f: (String, BetterMappingFormat) -> Boolean, input: MappingInput.() -> Unit) {
+            provided.add(f to input)
         }
 
-        fun setSource(ns: String) {
-            nsSource = { ns }
-        }
-
-        fun setSource(f: (BetterMappingFormat) -> String) {
-            nsSource = f
-        }
-
-        fun forwardVisitor(f: (MappingVisitor) -> MappingVisitor) {
-            val prev = fmv
-            fmv = { v, m -> f(prev(v, m)) }
-        }
-
-        fun forwardVisitor(f: (MappingVisitor, MappingTreeView) -> MappingVisitor) {
-            val prev = fmv
-            fmv = { v, m -> f(prev(v, m), m) }
-        }
-
-        fun clearForwardVisitor() {
-            fmv = { v, _ -> v }
+        fun build(fname: String, format: BetterMappingFormat): MappingInput {
+            frozen = true
+            val input = MappingInput()
+            for ((f, i) in provided) {
+                if (f(fname, format)) {
+                    input.i()
+                }
+            }
+            return input
         }
     }
 
     enum class BetterMappingFormat {
-        TINY,
-        TINY_2,
-        ENIGMA,
-        SRG,
-        CSRG, //TODO: implement
-        TSRG,
-        TSRG_2,
-        RETROGUARD,
-        MCP,
-        OLD_MCP,
-        OLDER_MCP,
-        PROGUARD,
-        PARCHMENT,
-        OBF_JAR
-        ;
+        TINY, TINY_2, ENIGMA, SRG, CSRG, //TODO: implement
+        TSRG, TSRG_2, RETROGUARD, MCP, OLD_MCP, OLDER_MCP, PROGUARD, PARCHMENT, OBF_JAR;
     }
 }

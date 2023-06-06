@@ -7,8 +7,34 @@ import org.gradle.api.artifacts.Dependency
 /**
  * @since 1.0.0
  */
-abstract class MappingDepConfig(val dep: Dependency, val mappingsConfig: MappingsConfig) {
+abstract class MappingDepConfig(val dep: Dependency, val mappingsConfig: MappingsConfig): ContainedMapping {
 
+    abstract class TempMappingNamespace(val namespace: String, val named: Boolean, val canRemapTo: () -> List<String>) {
+        abstract val actualNamespace: MappingNamespaceTree.Namespace
+    }
+
+    abstract fun contains(acceptor: (fname: String, type: String) -> Boolean, action: ContainedMapping.() -> Unit)
+
+    fun contains(
+        acceptor: Closure<*>,
+        @DelegatesTo(
+            value = ContainedMapping::class,
+            strategy = Closure.DELEGATE_FIRST
+        )
+        action: Closure<*>
+    ) {
+        contains({ f, t ->
+            acceptor.call(f, t) as Boolean
+        }) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+}
+
+
+interface ContainedMapping {
     /**
      * Maps namespace names for file formats that support naming namespaces.
      * If you use the name of a detected namespace for a file format that doesn't, it will still
@@ -19,55 +45,37 @@ abstract class MappingDepConfig(val dep: Dependency, val mappingsConfig: Mapping
      * and so you want to get those recognized as official mappings instead of the default
      * for unimined to use.
      */
-    abstract fun mapNamespace(from: String, to: String)
+    fun mapNamespace(from: String, to: String)
 
     /**
      * set the source namespace for the current dependency.
      * this can be used to set the source on mappings where the first namespace is not
      * the source namespace. (ie. mojmap, where the reverse is true, but in that case this value defaults to official anyway)
      */
-    abstract fun sourceNamespace(namespace: String)
-
-
-    /**
-     * set the source namespace for the current dependency.
-     * this version can be used if a single dependency provides multiple files.
-     * such as forge-src. in which case, the type of the mappings can be used to determine the src namespace.
-     *
-     * obviously this won't work for things like multiple .tiny files in one zip,
-     * if anyone runs into a real-world example like that, contact me, I might add support via
-     * using the available namespace list and list of already read namespaces instead.
-     */
-    abstract fun sourceNamespace(mappingTypeToSrc: (String) -> String)
-
-    fun sourceNamespace(
-        mappingTypeToSrc: Closure<*>
-    ) {
-        sourceNamespace { mappingTypeToSrc.call(it) as String }
-    }
+    fun sourceNamespace(namespace: String)
 
     /**
      * insert forward visitor that converts srg to searge names.
      */
-    abstract fun srgToSearge()
+    fun srgToSearge()
 
     /**
      * insert forward visitor that only allows existing src names.
      */
-    abstract fun onlyExistingSrc()
+    fun onlyExistingSrc()
 
     /**
      * insert forward visitor that strips child method mappings.
      */
-    abstract fun childMethodStrip()
+    fun childMethodStrip()
 
-    abstract fun clearForwardVisitor()
+    fun clearForwardVisitor()
 
     /**
      * filters namespaces to have to be from this.
      * applied after mapNamespace
      */
-    abstract fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): TempMappingNamespace
+    fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): MappingDepConfig.TempMappingNamespace
 
     fun outputs(
         namespace: String,
@@ -86,9 +94,5 @@ abstract class MappingDepConfig(val dep: Dependency, val mappingsConfig: Mapping
         }
     }
 
-    abstract fun clearOutputs()
-
-    abstract class TempMappingNamespace(val namespace: String, val named: Boolean, val canRemapTo: () -> List<String>) {
-        abstract val actualNamespace: MappingNamespaceTree.Namespace
-    }
+    fun clearOutputs()
 }

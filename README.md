@@ -24,7 +24,6 @@ unified minecraft modding environment.
     * figure out how to determine the correctness of remap output
     * aka automate the verification that versions work
         * list of versions to verify
-            * 1.19.2
             * 1.17.1
             * 1.16.5
             * 1.13.2

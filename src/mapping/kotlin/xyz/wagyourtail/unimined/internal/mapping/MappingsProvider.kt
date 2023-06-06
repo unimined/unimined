@@ -111,7 +111,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             mapNamespace("obf", "official")
             onlyExistingSrc()
             srgToSearge()
-            childMethodStrip()
             outputs("searge", false) { listOf("official") }
             action()
         }
@@ -153,20 +152,27 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
         mapping("de.oceanlabs.mcp:mcp_${channel}:${version}@zip") {
             if (channel == "legacy") {
-                outputs("searge", false) { listOf("official") }
-                onlyExistingSrc()
-                childMethodStrip()
-                sourceNamespace {
-                    if (it.contains("MCP")) {
-                        "searge"
-                    } else {
-                        "official"
-                    }
+                contains({ f, t ->
+                    !t.contains("MCP")
+                }) {
+                    onlyExistingSrc()
+                    childMethodStrip()
+                    outputs("searge", false) { listOf("official") }
+                }
+                contains({ f, t ->
+                    t.contains("MCP")
+                }) {
+                    onlyExistingSrc()
+                    srgToSearge()
+                    outputs("mcp", false) { listOf("searge") }
+                    sourceNamespace("searge")
                 }
             } else {
+                onlyExistingSrc()
+                srgToSearge()
+                outputs("mcp", false) { listOf("searge") }
                 sourceNamespace("searge")
             }
-            outputs("mcp", true) { listOf("searge") }
             action()
         }
     }
@@ -255,15 +261,19 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             action()
         }
         mapping("net.minecraftforge:forge:${minecraft.version}-${version}:src@zip") {
-
-            outputs("searge", false) { listOf("official") }
-            outputs("mcp", true) { listOf("searge") }
-            sourceNamespace {
-                if (it == "MCP") {
-                    "searge"
-                } else {
-                    "official"
-                }
+            contains({ f, t ->
+                !t.contains("MCP")
+            }) {
+                onlyExistingSrc()
+                childMethodStrip()
+                outputs("searge", false) { listOf("official") }
+            }
+            contains({ f, t ->
+                t.contains("MCP")
+            }) {
+                onlyExistingSrc()
+                outputs("mcp", false) { listOf("searge") }
+                sourceNamespace("searge")
             }
             action()
         }

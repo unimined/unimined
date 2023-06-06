@@ -46,7 +46,7 @@ data class VersionData(
         if (arguments?.jvm != null) {
             arguments.jvm.forEach(consumerApply {
                 if (rules.all { it.testRule() }) {
-                    args.addAll(values)
+                    args.addAll(value)
                 }
             })
         } else {
@@ -102,7 +102,7 @@ data class VersionData(
 
             arguments.forEach(consumerApply {
                 if (rules.all { it.testRule() }) {
-                    args.addAll(values)
+                    args.addAll(value)
                 }
             })
         }
@@ -131,7 +131,7 @@ data class VersionData(
         if (arguments?.game != null) {
             for (arg in arguments.game) {
                 if (arg.rules.all { it.testRule() }) {
-                    args.addAll(arg.values)
+                    args.addAll(arg.value)
                 }
             }
         }
@@ -286,7 +286,7 @@ fun parseArgumentList(json: JsonArray): List<Argument> {
 
 data class Argument(
     val rules: List<Rule>,
-    val values: List<String>
+    val value: List<String>
 )
 
 fun parseArgument(json: JsonElement): Argument {

@@ -120,9 +120,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     fun officialMappingsFromJar() {
-        officialMappingsFromJar {
-            outputs("official", false) { listOf("official") }
-        }
+        officialMappingsFromJar {}
     }
 
     abstract fun officialMappingsFromJar(action: MappingDepConfig.() -> Unit)
