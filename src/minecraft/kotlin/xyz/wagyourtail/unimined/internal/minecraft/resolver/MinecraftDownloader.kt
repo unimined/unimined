@@ -211,7 +211,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
 
     val minecraftServer: MinecraftJar by lazy {
         project.logger.info("[Unimined/MinecraftDownloader] retrieving minecraft server jar")
-        val serverPath = mcVersionFolder.resolve("minecraft-$version-server.jar")
+        var serverPath = mcVersionFolder.resolve("minecraft-$version-server.jar")
         if (!serverPath.exists() || project.unimined.forceReload) {
             serverPath.parent.createDirectories()
             if (version.startsWith("empty-")) {
@@ -239,6 +239,18 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
                 download(serverJar, serverPath)
             }
         }
+
+        // test if is modern server jar, and replace with zip from version folder if so
+        serverPath = serverPath.readZipInputStreamFor("META-INF/versions/$version/server-$version.jar", false) { stream ->
+            // extract to minecraft-server-actual.jar
+            mcVersionFolder.resolve("minecraft-server-$version-extracted.jar").also {
+                if (!it.exists() || project.unimined.forceReload) {
+                    Files.copy(stream, it, StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
+            //TODO: possibly read library list in this case as well..., should be same as client tho so probably a waste
+        } ?: serverPath
+
         MinecraftJar(
             mcVersionFolder,
             "minecraft",
