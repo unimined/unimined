@@ -303,7 +303,7 @@ fun parseArgument(json: JsonElement): Argument {
 fun parseArgument(json: JsonObject): Argument {
     return Argument(
         json.getAsJsonArray("rules")?.map { parseRule(it.asJsonObject) } ?: listOf(),
-        json.getAsJsonArray("values")?.map { it.asString } ?: listOf()
+        json.getAsJsonArray("value")?.map { it.asString } ?: listOf()
     )
 }
 

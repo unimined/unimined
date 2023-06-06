@@ -29,6 +29,15 @@ abstract class MappingDepConfig(val dep: Dependency, val mappingsConfig: Mapping
     abstract fun sourceNamespace(namespace: String)
 
 
+    /**
+     * set the source namespace for the current dependency.
+     * this version can be used if a single dependency provides multiple files.
+     * such as forge-src. in which case, the type of the mappings can be used to determine the src namespace.
+     *
+     * obviously this won't work for things like multiple .tiny files in one zip,
+     * if anyone runs into a real-world example like that, contact me, I might add support via
+     * using the available namespace list and list of already read namespaces instead.
+     */
     abstract fun sourceNamespace(mappingTypeToSrc: (String) -> String)
 
     fun sourceNamespace(
