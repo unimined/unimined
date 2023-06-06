@@ -246,6 +246,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             // supply back to proper configs
             for (c in configurations) {
                 val outConf = targetConfigurations[c]
+                project.logger.info("[Unimined/ModRemapper] Supplying remapped mods to ${c.name}")
                 outConf!!.dependencies.clear()
                 for (artifact in originalDepsFiles[c].keys) {
                     if (artifact.extension == "pom") continue
@@ -261,6 +262,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         } else {
             for (c in configurations) {
                 val outConf = targetConfigurations[c]
+                project.logger.info("[Unimined/ModRemapper] Supplying original mods to ${c.name}")
                 outConf!!.dependencies.clear()
                 outConf.dependencies.addAll(originalDeps[c])
             }

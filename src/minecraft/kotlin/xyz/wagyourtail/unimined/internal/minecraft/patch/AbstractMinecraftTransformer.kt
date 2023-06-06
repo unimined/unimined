@@ -206,4 +206,6 @@ abstract class AbstractMinecraftTransformer protected constructor(
     open fun beforeMappingsResolve() {
         // do nothing
     }
+
+    open fun afterEvaluate() {}
 }

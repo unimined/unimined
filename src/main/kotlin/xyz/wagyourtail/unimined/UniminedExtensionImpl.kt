@@ -259,7 +259,8 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     fun afterEvaluate() {
-        for (sourceSet in minecrafts.keys) {
+        for ((sourceSet, mc) in minecrafts) {
+            mc.afterEvaluate()
             val mcFiles = sourceSet.runtimeClasspath.files.mapNotNull { getSourceSetFromMinecraft(it.toPath()) }
             if (mcFiles.size > 1) {
                 throw IllegalStateException("multiple minecraft jars in runtime classpath of $sourceSet, from $mcFiles")

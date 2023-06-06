@@ -19,7 +19,6 @@ import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
@@ -340,8 +339,14 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             group = "unimined"
             description = "Exports mappings for $sourceSet's minecraft jar"
         }
+    }
 
+    fun afterEvaluate() {
+        // remap mods
+        mods.afterEvaluate()
 
+        // run patcher after evaluate
+        (mcPatcher as AbstractMinecraftTransformer).afterEvaluate()
     }
 
     override val minecraftFileDev: File by lazy {

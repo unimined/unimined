@@ -110,9 +110,6 @@ abstract class FabricLikeMinecraftTransformer(
 
     init {
         addMavens()
-        project.afterEvaluate {
-            afterEvaluate()
-        }
     }
 
     override fun prodNamespace(namespace: String) {
@@ -240,7 +237,7 @@ abstract class FabricLikeMinecraftTransformer(
 
     val intermediaryClasspath: Path = project.unimined.getLocalCache().resolve("remapClasspath.txt".withSourceSet(provider.sourceSet))
 
-    private fun afterEvaluate() {
+    override fun afterEvaluate() {
         project.logger.lifecycle("[Unimined/Fabric] Generating intermediary classpath.")
         // resolve intermediary classpath
         val classpath = provider.mods.getClasspathAs(

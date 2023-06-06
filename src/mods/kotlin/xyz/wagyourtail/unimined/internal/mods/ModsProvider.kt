@@ -25,12 +25,6 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
 
     private val remapConfigsResolved = mutableMapOf<Configuration, ModRemapProvider>()
 
-    init {
-        project.afterEvaluate {
-            afterEvaluate()
-        }
-    }
-
     fun modTransformFolder(): Path {
         return project.unimined.getLocalCache().resolve("modTransform").createDirectories()
     }
