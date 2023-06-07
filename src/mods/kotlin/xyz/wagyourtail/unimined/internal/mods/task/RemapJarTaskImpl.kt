@@ -110,10 +110,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         if (classpath != null) {
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
-        val betterMixinExtension = BetterMixinExtension(
-            "${project.rootProject.name}.refmap.json",
-            project.gradle.startParameter.logLevel
-        )
+        val betterMixinExtension = BetterMixinExtension(project.gradle.startParameter.logLevel)
         remapperB.extension(betterMixinExtension)
         provider.minecraftRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
@@ -124,7 +121,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                 .toTypedArray()
         )
         remapper.readClassPathAsync(mc)
-        betterMixinExtension.preRead(from)
+        betterMixinExtension.preRead(from, "${project.rootProject.name}.refmap.json")
         remapper.readInputsAsync(from)
         try {
             OutputConsumerPath.Builder(target).build().use {
@@ -132,9 +129,11 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                     from,
                     remapper,
                     listOf(
-                        AccessWidenerMinecraftTransformer.AwRemapper(fromNs.name, toNs.name),
+                        AccessWidenerMinecraftTransformer.AwRemapper(
+                            if (fromNs.named) "named" else fromNs.name,
+                            if (toNs.named) "named" else toNs.name),
                         AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.getOrElse((provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true)!!),
-                        betterMixinExtension
+                        betterMixinExtension.resourceRemapper()
                     )
                 )
                 remapper.apply(it)

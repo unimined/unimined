@@ -10,6 +10,7 @@ import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
+import xyz.wagyourtail.unimined.util.decapitalized
 import xyz.wagyourtail.unimined.util.orElse
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -20,7 +21,8 @@ class MixinClassVisitorRefmapBuilder(
     val refmap: JsonObject,
     delegate: ClassVisitor,
     val existingMappings: Map<String, String>,
-    private val onEnd: () -> Unit = {}
+    private val onEnd: () -> Unit = {},
+    val allowImplicitWildcards: Boolean = false
 ): ClassVisitor(Constant.ASM_VERSION, delegate) {
     private val mapper = commonData.mapper
     private val resolver = commonData.resolver
@@ -140,63 +142,73 @@ class MixinClassVisitorRefmapBuilder(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapAccessor.get()) {
+                        val targetNames = if (targetName != null) {
+                            listOf(targetName!!.split(":")[0])
+                        } else {
+                            val prefix = if (name.startsWith("get")) {
+                                "get"
+                            } else if (name.startsWith("is")) {
+                                "is"
+                            } else if (name.startsWith("set")) {
+                                "set"
+                            } else {
+                                logger.warn(
+                                    "Failed to resolve accessor $name in mixin ${
+                                        mixinName.replace(
+                                            '/',
+                                            '.'
+                                        )
+                                    }, unknown prefix"
+                                )
+                                return
+                            }
+                            listOf(name.substring(prefix.length).decapitalized(), name.substring(prefix.length))
+                        }
                         for (targetClass in targetClasses) {
-                            val targetName = if (targetName != null) {
-                                targetName!!.split(":")[0]
-                            } else {
-                                val prefix = if (name.startsWith("get")) {
-                                    "get"
-                                } else if (name.startsWith("is")) {
-                                    "is"
-                                } else if (name.startsWith("set")) {
-                                    "set"
+                            for (targetName in targetNames) {
+                                val targetDesc = if (descriptor.startsWith("()")) {
+                                    descriptor.split(')')[1]
                                 } else {
-                                    logger.warn(
-                                        "Failed to resolve accessor $name in mixin ${
-                                            mixinName.replace(
-                                                '/',
-                                                '.'
-                                            )
-                                        }, unknown prefix"
-                                    )
-                                    return
+                                    descriptor.split(")")[0].substring(1)
                                 }
-                                "${
-                                    name.substring(prefix.length, prefix.length + 1)
-                                        .lowercase()
-                                }${name.substring(prefix.length + 1)}"
+                                var implicitWildcard = false
+                                val target = resolver.resolveField(
+                                    targetClass,
+                                    targetName,
+                                    targetDesc,
+                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                ).orElse {
+                                    existingMappings[targetName]?.let {
+                                        logger.info("remapping $it from existing refmap")
+                                        val mName = it.substringBefore(":")
+                                        val desc = if (it.contains(":")) {
+                                            it.substringAfter(":")
+                                        } else null
+                                        if (desc == null && allowImplicitWildcards) {
+                                            implicitWildcard = true
+                                        }
+                                        resolver.resolveField(
+                                            targetClass,
+                                            mName,
+                                            desc,
+                                            (if (implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
+                                        )
+                                    } ?: Optional.empty()
+                                }
+                                target.ifPresent {
+                                    val mappedName = mapper.mapName(it)
+                                    val mappedDesc = mapper.mapDesc(it)
+                                    if (implicitWildcard) {
+                                        refmap.addProperty(targetName, mappedName)
+                                    } else {
+                                        refmap.addProperty(targetName, "$mappedName:$mappedDesc")
+                                    }
+                                }
+                                if (target.isPresent) return
                             }
-                            val targetDesc = if (descriptor.startsWith("()")) {
-                                descriptor.split(')')[1]
-                            } else {
-                                descriptor.split(")")[0].substring(1)
-                            }
-                            val target = resolver.resolveField(
-                                targetClass,
-                                targetName,
-                                targetDesc,
-                                ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                            ).orElse {
-                                existingMappings[targetName]?.let {
-                                    logger.info("remapping $it from existing refmap")
-                                    val (mName, desc) = it.split(":")
-                                    resolver.resolveField(
-                                        targetClass,
-                                        mName,
-                                        desc,
-                                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                                    )
-                                } ?: Optional.empty()
-                            }
-                            target.ifPresent {
-                                val mappedName = mapper.mapName(it)
-                                val mappedDesc = mapper.mapDesc(it)
-                                refmap.addProperty(targetName, "$mappedName:$mappedDesc")
-                            }
-                            if (target.isPresent) return
                         }
                         logger.warn(
-                            "Failed to resolve field accessor $targetName ($name$descriptor) in mixin ${
+                            "Failed to resolve field accessor $targetName ($name$descriptor) $targetNames in mixin ${
                                 mixinName.replace(
                                     '/',
                                     '.'
@@ -219,62 +231,72 @@ class MixinClassVisitorRefmapBuilder(
                 override fun visitEnd() {
                     super.visitEnd()
                     if (remapInvoker.get()) {
-                        for (targetClass in targetClasses) {
-                            val targetName = if (targetName != null) {
-                                targetName
+                        val targetNames = if (targetName != null) {
+                            listOf(targetName)
+                        } else {
+                            val prefix = if (name.startsWith("call")) {
+                                "call"
+                            } else if (name.startsWith("invoke")) {
+                                "invoke"
+                            } else if (name.startsWith("new")) {
+                                "new"
+                            } else if (name.startsWith("create")) {
+                                "create"
                             } else {
-                                val prefix = if (name.startsWith("call")) {
-                                    "call"
-                                } else if (name.startsWith("invoke")) {
-                                    "invoke"
-                                } else if (name.startsWith("new")) {
-                                    "new"
-                                } else if (name.startsWith("create")) {
-                                    "create"
-                                } else {
-                                    logger.warn(
-                                        "Failed to resolve invoker $name in mixin ${
-                                            mixinName.replace(
-                                                '/',
-                                                '.'
-                                            )
-                                        }, unknown prefix"
-                                    )
+                                logger.warn(
+                                    "Failed to resolve invoker $name in mixin ${
+                                        mixinName.replace(
+                                            '/',
+                                            '.'
+                                        )
+                                    }, unknown prefix"
+                                )
+                                return
+                            }
+                            listOf(name.substring(prefix.length).decapitalized(), name.substring(prefix.length))
+                        }
+                        for (targetClass in targetClasses) {
+                            for (targetName in targetNames) {
+                                var implicitWildcard = false
+                                val target = resolver.resolveMethod(
+                                    targetClass,
+                                    targetName,
+                                    descriptor,
+                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                ).orElse {
+                                    existingMappings[targetName]?.let {
+                                        logger.info("remapping $it from existing refmap")
+                                        val mName = it.substringBefore("(")
+                                        val desc = if (it.contains("(")) {
+                                            "(${it.substringAfter("(")}"
+                                        } else null
+                                        if (desc == null && allowImplicitWildcards) {
+                                            implicitWildcard = true
+                                        }
+                                        resolver.resolveMethod(
+                                            targetClass,
+                                            mName,
+                                            desc,
+                                            (if (implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
+                                        )
+                                    } ?: Optional.empty()
+                                }
+                                target.ifPresent {
+                                    val mappedName = mapper.mapName(it)
+                                    val mappedDesc = mapper.mapDesc(it)
+//                                if (implicitWildcard) {
+//                                    refmap.addProperty(targetName, mappedName)
+//                                } else {
+                                    refmap.addProperty(targetName, "$mappedName$mappedDesc")
+//                                }
+                                }
+                                if (target.isPresent) {
                                     return
                                 }
-                                "${
-                                    name.substring(prefix.length, prefix.length + 1)
-                                        .lowercase()
-                                }${name.substring(prefix.length + 1)}"
-                            }
-                            val target = resolver.resolveMethod(
-                                targetClass,
-                                targetName,
-                                descriptor,
-                                ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                            ).orElse {
-                                existingMappings[targetName]?.let {
-                                    logger.info("remapping $it from existing refmap")
-                                    val (mName, desc) = it.split("(")
-                                    resolver.resolveMethod(
-                                        targetClass,
-                                        mName,
-                                        "($desc",
-                                        ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
-                                    )
-                                } ?: Optional.empty()
-                            }
-                            target.ifPresent {
-                                val mappedName = mapper.mapName(it)
-                                val mappedDesc = mapper.mapDesc(it)
-                                refmap.addProperty(targetName, "$mappedName$mappedDesc")
-                            }
-                            if (target.isPresent) {
-                                return
                             }
                         }
                         logger.warn(
-                            "Failed to resolve invoker $targetName ($name$descriptor) in mixin ${
+                            "Failed to resolve invoker $targetName ($name$descriptor) $targetNames in mixin ${
                                 mixinName.replace(
                                     '/',
                                     '.'
@@ -399,17 +421,18 @@ class MixinClassVisitorRefmapBuilder(
                                 }
                             }
                             for (targetDesc in targetDescs) {
+                                var implicitWildcard = targetDesc == null && allowImplicitWildcards
                                 for (targetClass in targetClasses) {
                                     val target = resolver.resolveMethod(
                                         targetClass,
                                         targetName,
                                         targetDesc,
-                                        (if (wildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
+                                        (if (wildcard || implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
                                     ).orElse {
                                         existingMappings[targetMethod]?.let {
                                             if (wildcard) {
-                                                val mName = it.substringAfter(";").substring(0, it.length - 1)
-                                                logger.info("remapping $targetMethod from existing refmap, name $targetClass;$name")
+                                                val mName = it.substringAfter(";").let { it.substring(0, it.length - 1) }
+                                                logger.info("remapping $targetMethod from existing refmap")
                                                 resolver.resolveMethod(
                                                     targetClass,
                                                     mName,
@@ -417,13 +440,17 @@ class MixinClassVisitorRefmapBuilder(
                                                     ResolveUtility.FLAG_FIRST or ResolveUtility.FLAG_RECURSIVE
                                                 )
                                             } else {
-                                                val (mName, desc) = it.substringAfter(";").split("(")
-                                                logger.info("remapping $targetMethod from existing refmap, name $targetClass;$name")
+                                                val mName = it.substringBefore("(").substringAfter(";")
+                                                val desc = if (it.contains("(")) "(${it.substringAfter("(")}" else null
+                                                if (desc == null && allowImplicitWildcards) {
+                                                    implicitWildcard = true
+                                                }
+                                                logger.info("remapping $targetMethod from existing refmap")
                                                 resolver.resolveMethod(
                                                     targetClass,
                                                     mName,
-                                                    "($desc",
-                                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                                    desc,
+                                                    (if (implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
                                                 )
                                             }
                                         } ?: Optional.empty()
@@ -433,7 +460,7 @@ class MixinClassVisitorRefmapBuilder(
                                             .map { mapper.mapName(it) }
                                             .orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
-                                        val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
+                                        val mappedDesc = /* if (implicitWildcard) "" else */ if (wildcard) "*" else mapper.mapDesc(it)
                                         if (targetClasses.size > 1) {
                                             refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
                                         } else {
@@ -446,7 +473,7 @@ class MixinClassVisitorRefmapBuilder(
                                 }
                             }
                             logger.warn(
-                                "Failed to resolve Inject $targetMethod ($name$descriptor) $signature in mixin ${
+                                "Failed to resolve Inject $targetMethod ($name$descriptor) $signature $targetDescs in mixin ${
                                     mixinName.replace(
                                         '/',
                                         '.'
@@ -515,6 +542,7 @@ class MixinClassVisitorRefmapBuilder(
                                     null
                                 }
                                 val wildcard = targetMethod.endsWith("*")
+                                var implicitWildcard = targetDesc == null && allowImplicitWildcards
                                 val targetName = if (wildcard) {
                                     targetMethod.substring(0, targetMethod.length - 1)
                                 } else {
@@ -525,12 +553,12 @@ class MixinClassVisitorRefmapBuilder(
                                     targetClass,
                                     targetName,
                                     targetDesc,
-                                    (if (wildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
+                                    (if (wildcard || implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
                                 ).orElse {
                                     existingMappings[targetMethod]?.let {
                                         logger.info("remapping $it from existing refmap")
                                         if (wildcard) {
-                                            val mName = it.substringAfter(";").substring(0, it.length - 1)
+                                            val mName = it.substringAfter(";").let { it.substring(0, it.length - 1) }
                                             resolver.resolveMethod(
                                                 targetClass,
                                                 mName,
@@ -538,12 +566,16 @@ class MixinClassVisitorRefmapBuilder(
                                                 ResolveUtility.FLAG_FIRST or ResolveUtility.FLAG_RECURSIVE
                                             )
                                         } else {
-                                            val (mName, desc) = it.substringAfter(";").split("(")
+                                            val mName = it.substringBefore("(").substringAfter(";")
+                                            val desc = if (it.contains("(")) "(${it.substringAfter("(")}" else null
+                                            if (desc == null && allowImplicitWildcards) {
+                                                implicitWildcard = true
+                                            }
                                             resolver.resolveMethod(
                                                 targetClass,
                                                 mName,
-                                                "($desc",
-                                                ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                                desc,
+                                                (if (implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
                                             )
                                         }
                                     } ?: Optional.empty()
@@ -553,7 +585,7 @@ class MixinClassVisitorRefmapBuilder(
                                         .map { mapper.mapName(it) }
                                         .orElse(targetClass)
                                     val mappedName = mapper.mapName(it)
-                                    val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
+                                    val mappedDesc = /* if (implicitWildcard) "" else */ if (wildcard) "*" else mapper.mapDesc(it)
                                     if (targetClasses.size > 1) {
                                         refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
                                     } else {
@@ -623,6 +655,7 @@ class MixinClassVisitorRefmapBuilder(
                                     }
 
                                     val wildcard = targetMethod.endsWith("*")
+                                    var implicitWildcard = targetDesc == null && allowImplicitWildcards
                                     val targetName = if (wildcard) {
                                         targetMethod.substring(0, targetMethod.length - 1)
                                     } else {
@@ -633,7 +666,7 @@ class MixinClassVisitorRefmapBuilder(
                                         targetClass,
                                         targetName,
                                         targetDesc,
-                                        (if (wildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
+                                        (if (wildcard || implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
                                     ).orElse {
                                         existingMappings[targetMethod]?.let {
                                             logger.info("remapping $it from existing refmap")
@@ -646,12 +679,16 @@ class MixinClassVisitorRefmapBuilder(
                                                     ResolveUtility.FLAG_FIRST or ResolveUtility.FLAG_RECURSIVE
                                                 )
                                             } else {
-                                                val (mName, desc) = it.substringAfter(";").split("(")
+                                                val mName = it.substringBefore("(").substringAfter(";")
+                                                val desc = if (it.contains("(")) "(${it.substringAfter("(")}" else null
+                                                if (desc == null && allowImplicitWildcards) {
+                                                    implicitWildcard = true
+                                                }
                                                 resolver.resolveMethod(
                                                     targetClass,
                                                     mName,
-                                                    "($desc",
-                                                    ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
+                                                    desc,
+                                                    (if (implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
                                                 )
                                             }
                                         } ?: Optional.empty()
@@ -663,7 +700,7 @@ class MixinClassVisitorRefmapBuilder(
                                             .map { mapper.mapName(it) }
                                             .orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
-                                        val mappedDesc = if (wildcard) "*" else mapper.mapDesc(it)
+                                        val mappedDesc = /* if (implicitWildcard) "" else */ if (wildcard) "*" else mapper.mapDesc(it)
                                         if (targetClasses.size > 1) {
                                             refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
                                         } else {
@@ -700,7 +737,7 @@ class MixinClassVisitorRefmapBuilder(
             override fun visit(name: String, value: Any) {
                 super.visit(name, value)
                 if (name == AnnotationElement.REMAP) remapAt.set(value as Boolean)
-                if (name == AnnotationElement.TARGET) targetName = value as String
+                if (name == AnnotationElement.TARGET) targetName = (value as String).replace(" ", "")
             }
 
             override fun visitAnnotation(name: String, descriptor: String): AnnotationVisitor {
@@ -713,7 +750,7 @@ class MixinClassVisitorRefmapBuilder(
             }
 
             val targetField = Regex("^(L[^;]+;|[^.]+?\\.)([^:]+):(.+)$")
-            val targetMethod = Regex("^(L[^;]+;|[^.]+?\\.)([^(]+)(.+)$")
+            val targetMethod = Regex("^(L[^;]+;|[^.]+?\\.)([^(]+)\\s*([^>]+)$")
 
             override fun visitEnd() {
                 super.visitEnd()
@@ -838,9 +875,56 @@ class MixinClassVisitorRefmapBuilder(
                         }
                         return
                     }
+                    if (targetName!!.startsWith("(")) {
+                        val existing = existingMappings[this.targetName]
+                        if (existing != null) {
+                            logger.info("remapping $existing from existing refmap")
+                            val mapped = mapper.asTrRemapper().mapDesc(existing)
+                            if (mapped == existing) {
+                                logger.warn("Failed to remap $existing")
+                                return
+                            }
+                            return
+                        } else {
+                            val mapped = mapper.asTrRemapper().mapDesc(targetName)
+                            if (mapped == targetName) {
+                                logger.warn("Failed to remap $targetName")
+                                return
+                            } else {
+                                refmap.addProperty(this.targetName, mapped)
+                                return
+                            }
+                        }
+                    }
+
+                    // else is probably a class
+                    // we will count (NEW, <init>) as that too
+                    // carefully, by modifying method so it doesn't capture it
+                    val fixedTarget = if (targetName!!.startsWith("L")) {
+                        targetName!!.substring(1).substringBefore("<init>").substringBefore(";")
+                    } else {
+                        targetName!!.substringBefore(".<init>")
+                    }.replace('.', '/')
+                    val target = resolver.resolveClass(fixedTarget).orElse {
+                        existingMappings[this.targetName]?.let {
+                            logger.info("remapping $it from existing refmap")
+                            resolver.resolveClass(if (it.startsWith("L") && it.endsWith(";")) {
+                                it.substring(1, it.length - 1)
+                            } else {
+                                it
+                            }.replace('.', '/'))
+                        } ?: Optional.empty()
+                    }
+                    target.ifPresent {
+                        val mapped = mapper.mapName(it)
+                        refmap.addProperty(this.targetName, "L$mapped;")
+                    }
+                    if (target.isPresent) {
+                        return
+                    }
 
                     logger.warn(
-                        "Failed to parse target descriptor: $targetName in mixin ${
+                        "Failed to parse target descriptor: $targetName ($fixedTarget) in mixin ${
                             mixinName.replace(
                                 '/',
                                 '.'

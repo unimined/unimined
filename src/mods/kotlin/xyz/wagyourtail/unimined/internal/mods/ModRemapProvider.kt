@@ -125,9 +125,9 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         val mixinExtension = when (mixinRemap) {
             MixinRemap.UNIMINED -> {
                 val mixin = BetterMixinExtension(
-                    "error.mixin.refmap.json",
                     project.gradle.startParameter.logLevel,
-                    fallbackWhenNotInJson = true
+                    fallbackWhenNotInJson = true,
+                    allowImplicitWildcards = true
                 )
                 remapperB.extension(mixin)
                 mixin
@@ -228,7 +228,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                     project.logger.info("[Unimined/ModRemapper]  ${if (mod.value.second.second) "skipping" else "        " } ${mod.value.first} -> ${mod.value.second.first}")
                 }
                 val remapper = constructRemapper(prevNamespace, step, mc)
-                val tags = preRemapInternal(remapper.first, targets)
+                val tags = preRemapInternal(remapper, targets)
                 mods.clear()
                 mods.putAll(
                     remapInternal(
@@ -270,7 +270,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
     }
 
     private fun preRemapInternal(
-        remapper: TinyRemapper,
+        remapper: Pair<TinyRemapper, BetterMixinExtension?>,
         deps: Map<ResolvedArtifact, Pair<File, Pair<Path, Boolean>>>
     ): Map<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>?> {
         val output = mutableMapOf<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>?>()
@@ -283,11 +283,12 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 throw InvalidUserDataException("Cannot remap directory ${file.absolutePath}")
             } else {
                 if (needsRemap) {
-                    val tag = remapper.createInputTag()
-                    remapper.readInputsAsync(tag, file.toPath())
+                    val tag = remapper.first.createInputTag()
+                    remapper.second?.preRead(tag, file.toPath(), "error.${artifact.name}.refmap.json")
+                    remapper.first.readInputsAsync(tag, file.toPath())
                     output[artifact] = tag to (file to target)
                 } else {
-                    remapper.readClassPathAsync(file.toPath())
+                    remapper.first.readClassPathAsync(file.toPath())
                     output[artifact] = null
                 }
             }
@@ -318,10 +319,6 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
     ) {
         val inpFile = input.second.first
         val targetFile = input.second.second
-        if (remapper.second != null) {
-            remapper.second!!.reset(dep.name + ".mixin-refmap.json")
-            remapper.second!!.preRead(inpFile.toPath())
-        }
         project.logger.info("[Unimined/ModRemapper] Remapping mod from $inpFile -> $targetFile with mapping target ${remap.first}/${remap.second}")
         OutputConsumerPath.Builder(targetFile).build().use {
             it.addNonClassFiles(
@@ -329,14 +326,14 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 remapper.first,
                 listOf(
                     AccessWidenerMinecraftTransformer.AwRemapper(
-                        remap.first.name,
-                        remap.second.name
+                        if (remap.first.named) "named" else remap.first.name,
+                        if (remap.second.named) "named" else remap.second.name
                     ),
                     innerJarStripper,
                     AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapAtToLegacy)
                 ) + NonClassCopyMode.FIX_META_INF.remappers + (
                         if (remapper.second != null) {
-                            listOf(remapper.second!!)
+                            listOf(remapper.second!!.resourceReampper(input.first))
                         } else {
                             emptyList()
                         }
@@ -346,7 +343,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         }
         if (remapper.second != null) {
             targetFile.openZipFileSystem(mapOf("mutable" to true)).use {
-                remapper.second!!.write(it)
+                remapper.second!!.write(input.first, it)
             }
         }
     }

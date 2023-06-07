@@ -3,7 +3,8 @@ package xyz.wagyourtail.unimined.internal.mapping.mixin.refmap
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import net.fabricmc.tinyremapper.OutputConsumerPath
+import net.fabricmc.tinyremapper.InputTag
+import net.fabricmc.tinyremapper.OutputConsumerPath.ResourceRemapper
 import net.fabricmc.tinyremapper.TinyRemapper
 import net.fabricmc.tinyremapper.api.TrClass
 import net.fabricmc.tinyremapper.api.TrEnvironment
@@ -28,17 +29,18 @@ import kotlin.io.path.name
 import kotlin.io.path.writeText
 
 class BetterMixinExtension(
-    var defaultRefmapPath: String,
     val loggerLevel: LogLevel = LogLevel.WARN,
     val targets: Set<MixinExtension.AnnotationTarget> = MixinExtension.AnnotationTarget.values().toSet(),
-    val fallbackWhenNotInJson: Boolean = false
+    val fallbackWhenNotInJson: Boolean = false,
+    val allowImplicitWildcards: Boolean = false,
 ):
         TinyRemapper.Extension,
         TinyRemapper.ApplyVisitorProvider,
         TinyRemapper.AnalyzeVisitorProvider,
-        TinyRemapper.StateProcessor,
-        OutputConsumerPath.ResourceRemapper {
+        TinyRemapper.StateProcessor {
     private val tasks: MutableMap<Int, MutableList<Consumer<CommonData>>> = defaultedMapOf { mutableListOf() }
+
+    private val defaultRefmapPath = mutableMapOf<InputTag?, String>()
 
     companion object {
         private val GSON = GsonBuilder().setPrettyPrinting().create()
@@ -55,23 +57,20 @@ class BetterMixinExtension(
 
     val fallback = MixinExtension()
 
-    var defaultRefmap = JsonObject()
-    val refmaps = mutableMapOf(defaultRefmapPath to defaultRefmap)
-    val classesToRefmap = mutableMapOf<String, MutableSet<String>>()
-    val mixinJsons = mutableMapOf<String, JsonObject>()
-    val existingRefmaps = mutableMapOf<String, JsonObject>()
-
-
-    fun reset(defaultRefmapPath: String) {
-        this.defaultRefmapPath = defaultRefmapPath
-        tasks.clear()
-        defaultRefmap = JsonObject()
-        refmaps.clear()
-        refmaps[defaultRefmapPath] = defaultRefmap
-        classesToRefmap.clear()
-        existingRefmaps.clear()
-
+    var defaultRefmap = defaultedMapOf<InputTag?, _> { JsonObject() }
+    val refmaps = defaultedMapOf<InputTag?, _> {
+        mutableMapOf(defaultRefmapPath[it]!! to defaultRefmap[it]!!)
     }
+    val classesToRefmap = defaultedMapOf<InputTag?, _> {
+        mutableMapOf<String, MutableSet<String>>()
+    }
+    val mixinJsons = defaultedMapOf<InputTag?, _> {
+        mutableMapOf<String, JsonObject>()
+    }
+    val existingRefmaps = defaultedMapOf<InputTag?, _> {
+        mutableMapOf<String, JsonObject>()
+    }
+
 
     private val logger: Logger = Logger(translateLogLevel(loggerLevel))
 
@@ -85,99 +84,124 @@ class BetterMixinExtension(
         if (targets.contains(MixinExtension.AnnotationTarget.SOFT)) {
             builder.extraPreApplyVisitor(this)
         }
+
     }
 
     override fun insertApplyVisitor(cls: TrClass, next: ClassVisitor): ClassVisitor {
-        // detect if class in class lists
-        return if (classesToRefmap.containsKey(cls.name.replace("/", "."))) {
-            logger.info("[RefmapTarget] Found mixin class: ${cls.name}")
-            val refmapNames = classesToRefmap[cls.name.replace("/", ".")]
-            val target = JsonObject()
-            val existingRefmaps = refmapNames!!.mapNotNull { existingRefmaps[it] }
-            logger.info("Found ${existingRefmaps.size} existing refmaps")
-            val existingClassMappings = if (existingRefmaps.isNotEmpty()) {
-                existingRefmaps.mapNotNull { it.get("mappings").asJsonObject.get(cls.name)?.asJsonObject }
-            } else {
-                setOf()
+        try {
+            // detect if class in class lists
+            val (tag, refmap) = synchronized(classesToRefmap) {
+                classesToRefmap.entries.firstOrNull { (_, v) ->
+                    v.containsKey(cls.name.replace("/", "."))
+                }?.toPair() ?: (null to null)
             }
-            // combine all mappings
-            val combinedMappings = mutableMapOf<String, String>()
-            for (mapping in existingClassMappings) {
-                for ((key, value) in mapping.entrySet()) {
-                    combinedMappings[key] = value.asString
+
+            return if (refmap != null) {
+                logger.info("[RefmapTarget] Found mixin class: ${cls.name}")
+                val refmapNames = refmap[cls.name.replace("/", ".")]
+                val target = JsonObject()
+
+                val existingRefmaps = refmapNames!!.mapNotNull { existingRefmaps[tag][it] }
+                logger.info("Found ${existingRefmaps.size} existing refmaps")
+                val existingClassMappings = if (existingRefmaps.isNotEmpty()) {
+                    existingRefmaps.mapNotNull { it.get("mappings").asJsonObject.get(cls.name)?.asJsonObject }
+                } else {
+                    setOf()
                 }
-            }
-            MixinClassVisitorRefmapBuilder(
-                CommonData(cls.environment, logger),
-                cls.name,
-                target,
-                next,
-                combinedMappings
-            ) {
-                if (target.size() > 0) {
-                    val refmaps = refmapNames.map { refmaps[it]!! }
-                    for (refmap in refmaps) {
-                        if (!refmap.has("mappings")) {
-                            refmap.add("mappings", JsonObject())
+                // combine all mappings
+                val combinedMappings = mutableMapOf<String, String>()
+                for (mapping in existingClassMappings) {
+                    for ((key, value) in mapping.entrySet()) {
+                        combinedMappings[key] = value.asString
+                    }
+                }
+                MixinClassVisitorRefmapBuilder(
+                    CommonData(cls.environment, logger),
+                    cls.name,
+                    target,
+                    next,
+                    combinedMappings,
+                    onEnd = {
+                        if (target.size() > 0) {
+                            val refmaps = refmapNames.map { refmaps[tag][it]!! }
+                            for (refmap in refmaps) {
+                                if (!refmap.has("mappings")) {
+                                    refmap.add("mappings", JsonObject())
+                                }
+                                val mappings = refmap.getAsJsonObject("mappings")
+                                mappings.add(cls.name, target)
+                            }
                         }
-                        val mappings = refmap.getAsJsonObject("mappings")
-                        mappings.add(cls.name, target)
+                    },
+                    allowImplicitWildcards = allowImplicitWildcards
+                )
+            } else if (fallbackWhenNotInJson) {
+                fallback.preApplyVisitor(cls, next)
+            } else {
+                object : ClassVisitor(Constant.ASM_VERSION, next) {
+                    override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor {
+                        if (Annotation.MIXIN == descriptor) {
+                            logger.error("[RefmapTarget] Found mixin class: ${cls.name}, but it is not in a mixin json file! This will cause issues and the mixin will not be remapped!")
+                        }
+                        return super.visitAnnotation(descriptor, visible)
                     }
                 }
             }
-        } else if (fallbackWhenNotInJson) {
-            fallback.preApplyVisitor(cls, next)
-        } else {
-            object: ClassVisitor(Constant.ASM_VERSION, next) {
-                override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor {
-                    if (Annotation.MIXIN == descriptor) {
-                        logger.error("[RefmapTarget] Found mixin class: ${cls.name}, but it is not in a mixin json file! This will cause issues and the mixin will not be remapped!")
-                    }
-                    return super.visitAnnotation(descriptor, visible)
-                }
-            }
+        } catch (e: Exception) {
+            logger.error("Error while processing class ${cls.name}: ${e.javaClass.simpleName}: ${e.message}")
+            throw e
         }
     }
 
+    private val hardFallbackFunction = fallback::class.java.getDeclaredMethod(
+        "analyzeVisitor",
+        Int::class.java,
+        String::class.java,
+        ClassVisitor::class.java
+    ).apply {
+        isAccessible = true
+    }
 
     override fun insertAnalyzeVisitor(mrjVersion: Int, className: String, next: ClassVisitor?): ClassVisitor? {
-        if (classesToRefmap.containsKey(className.replace("/", "."))) {
+        try {
+            val (tag, refmap) = synchronized(classesToRefmap) {
+                classesToRefmap.entries.firstOrNull { (_, v) ->
+                    v.containsKey(className.replace("/", "."))
+                }?.toPair() ?: (null to null)
+            }
 
-            val refmapNames = classesToRefmap[className.replace("/", ".")]
-            val existingRefmaps = refmapNames!!.mapNotNull { existingRefmaps[it] }
-            logger.info("Found ${existingRefmaps.size} existing refmaps")
-            val existingClassMappings = if (existingRefmaps.isNotEmpty()) {
-                existingRefmaps.mapNotNull { it.get("mappings").asJsonObject.get(className)?.asJsonObject }
-            } else {
-                setOf()
-            }
-            // combine all mappings
-            val combinedMappings = mutableMapOf<String, String>()
-            for (mapping in existingClassMappings) {
-                for ((key, value) in mapping.entrySet()) {
-                    combinedMappings[key] = value.asString
+            if (refmap != null) {
+                val refmapNames = refmap[className.replace("/", ".")]
+                val existingRefmaps = refmapNames!!.mapNotNull { existingRefmaps[tag][it] }
+                logger.info("Found ${existingRefmaps.size} existing refmaps")
+                val existingClassMappings = if (existingRefmaps.isNotEmpty()) {
+                    existingRefmaps.mapNotNull { it.get("mappings").asJsonObject.get(className)?.asJsonObject }
+                } else {
+                    setOf()
                 }
-            }
-            logger.info("[HardTarget] Found mixin class: $className / $mrjVersion")
-            return HarderTargetMixinClassVisitor(tasks[mrjVersion]!!, next, combinedMappings, logger)
-        } else if (fallbackWhenNotInJson) {
-            val fallbackFn = fallback::class.java.getDeclaredMethod(
-                "analyzeVisitor",
-                Int::class.java,
-                String::class.java,
-                ClassVisitor::class.java
-            )
-            fallbackFn.isAccessible = true
-            return fallbackFn(fallback, mrjVersion, className, next) as ClassVisitor?
-        } else {
-            return object: ClassVisitor(Constant.ASM_VERSION, next) {
-                override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
-                    if (Annotation.MIXIN == descriptor) {
-                        logger.error("[HardTarget] Found mixin class: ${className}, but it is not in a mixin json file! This will cause issues and the mixin will not be remapped properly!")
+                // combine all mappings
+                val combinedMappings = mutableMapOf<String, String>()
+                for (mapping in existingClassMappings) {
+                    for ((key, value) in mapping.entrySet()) {
+                        combinedMappings[key] = value.asString
                     }
-                    return super.visitAnnotation(descriptor, visible)
+                }
+                logger.info("[HardTarget] Found mixin class: $className / $mrjVersion")
+                return HarderTargetMixinClassVisitor(tasks[mrjVersion]!!, next, combinedMappings, logger)
+            } else if (fallbackWhenNotInJson) {
+                return hardFallbackFunction(fallback, mrjVersion, className, next) as ClassVisitor?
+            } else {
+                return object : ClassVisitor(Constant.ASM_VERSION, next) {
+                    override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
+                        if (Annotation.MIXIN == descriptor) {
+                            logger.error("[HardTarget] Found mixin class: ${className}, but it is not in a mixin json file! This will cause issues and the mixin will not be remapped properly!")
+                        }
+                        return super.visitAnnotation(descriptor, visible)
+                    }
                 }
             }
+        } catch (e: Exception) {
+            throw IllegalStateException("Error while processing class $className: ${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
@@ -200,7 +224,11 @@ class BetterMixinExtension(
     }
 
     fun write(fs: FileSystem) {
-        for ((path, refmap) in refmaps) {
+        write(null, fs)
+    }
+
+    fun write(tag: InputTag?, fs: FileSystem) {
+        for ((path, refmap) in refmaps[tag]) {
             if (refmap.size() > 0)
                 fs.getPath(path)
                     .writeText(
@@ -212,6 +240,8 @@ class BetterMixinExtension(
         }
     }
 
+
+
     fun mixinCheck(relativePath: String): Boolean =
         relativePath.contains("mixins") && relativePath.endsWith(".json")
 
@@ -219,70 +249,82 @@ class BetterMixinExtension(
         relativePath.contains("refmap") && relativePath.endsWith(".json")
 
 
-    override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
-        return mixinCheck(relativePath.name) || refmapCheck(relativePath.name)
+    fun preRead(path: Path, defaultRefmap: String) {
+        preRead(null, path, defaultRefmap)
     }
 
-    fun preRead(path: Path) {
+    fun preRead(tag: InputTag?, path: Path, defaultRefmap: String) {
         logger.info("[PreRead] Reading $path")
+        defaultRefmapPath[tag] = defaultRefmap
         path.forEachInZip { file, input ->
-            preRead(file, input)
+            preReadIntl(tag, file, input)
         }
     }
 
-    fun preRead(file: String, input: InputStream) {
+    private fun preReadIntl(tag: InputTag?, file: String, input: InputStream) {
         if (refmapCheck(file)) {
             try {
                 logger.info("[PreRead] Found refmap: $file")
                 val json = JsonParser.parseReader(input.reader()).asJsonObject
-                existingRefmaps[file] = json
+                existingRefmaps[tag][file] = json
             } catch (e: Exception) {
                 logger.error("[PreRead] Error while processing refmap ($file): ${e.message}")
             }
         } else if (mixinCheck(file)) {
             logger.info("[PreRead] Found mixin config: ${file.substringAfterLast("/")}")
             val json = JsonParser.parseReader(input.reader()).asJsonObject
-            val refmap = json.get("refmap")?.asString ?: defaultRefmapPath
+            val refmap = json.get("refmap")?.asString ?: defaultRefmapPath[tag]!!
             val pkg = json.get("package").asString
-            refmaps.computeIfAbsent(refmap) { JsonObject() }
+            refmaps[tag].computeIfAbsent(refmap) { JsonObject() }
             val mixins = (json.getAsJsonArray("mixins") ?: listOf()) +
                     (json.getAsJsonArray("client") ?: listOf()) +
                     (json.getAsJsonArray("server") ?: listOf())
 
             logger.info("[PreRead]    ${mixins.size} mixins:")
             for (mixin in mixins) {
-                classesToRefmap.computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
+                synchronized(classesToRefmap) {
+                    classesToRefmap[tag].computeIfAbsent("$pkg.${mixin.asString}") { mutableSetOf() } += refmap
+                }
                 logger.info("[PreRead]        $pkg.${mixin.asString}")
             }
             json.addProperty("refmap", refmap)
-            mixinJsons[file] = json
+            mixinJsons[tag][file] = json
         }
     }
 
-    override fun transform(
-        destinationDirectory: Path,
-        relativePath: Path,
-        input: InputStream,
-        remapper: TinyRemapper
-    ) {
-        if (refmapCheck(relativePath.name)) {
-            logger.info("[Transform] Found refmap: $relativePath")
-        } else if (mixinCheck(relativePath.name)) {
-            try {
-                val json = mixinJsons[relativePath.toString()]!!
-                val output = destinationDirectory.resolve(relativePath)
-                output.parent.createDirectories()
-                output.writeText(
-                    GSON.toJson(json),
-                    StandardCharsets.UTF_8,
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.TRUNCATE_EXISTING
-                )
-            } catch (e: Exception) {
-                logger.error("[Transform] Error while processing mixin config ($relativePath): ${e.message}")
-            }
-        } else {
-            throw IllegalStateException("Unexpected path: $relativePath")
+    fun resourceRemapper() = resourceReampper(null)
+
+    fun resourceReampper(tag: InputTag?) = object : ResourceRemapper {
+        override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
+            return mixinCheck(relativePath.name) || refmapCheck(relativePath.name)
         }
+
+        override fun transform(
+            destinationDirectory: Path,
+            relativePath: Path,
+            input: InputStream,
+            remapper: TinyRemapper
+        ) {
+            if (refmapCheck(relativePath.name)) {
+                logger.info("[Transform] Found refmap: $relativePath")
+            } else if (mixinCheck(relativePath.name)) {
+                try {
+                    val json = mixinJsons[tag][relativePath.toString()]!!
+                    val output = destinationDirectory.resolve(relativePath)
+                    output.parent.createDirectories()
+                    output.writeText(
+                        GSON.toJson(json),
+                        StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING
+                    )
+                } catch (e: Exception) {
+                    logger.error("[Transform] Error while processing mixin config ($relativePath): ${e.message}")
+                }
+            } else {
+                throw IllegalStateException("Unexpected path: $relativePath")
+            }
+        }
+
     }
 }
