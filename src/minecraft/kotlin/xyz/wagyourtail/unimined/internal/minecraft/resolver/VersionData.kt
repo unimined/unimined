@@ -314,9 +314,9 @@ data class Rule(
 ) {
     fun testRule(): Boolean {
         if (os != null && !os.test()) return action != "allow"
-//        features.forEach { (key, value) ->
-//            if (launcher.features.contains(key) !== value) return action != "allow"
-//        }
+        features.forEach { (key, value) ->
+            if (listOf<String>().contains(key) != value) return action != "allow"
+        }
         return action == "allow"
     }
 }

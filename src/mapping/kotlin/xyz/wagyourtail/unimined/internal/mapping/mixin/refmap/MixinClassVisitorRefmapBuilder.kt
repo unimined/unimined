@@ -261,7 +261,7 @@ class MixinClassVisitorRefmapBuilder(
                                 val target = resolver.resolveMethod(
                                     targetClass,
                                     targetName,
-                                    descriptor,
+                                    if (targetName == "<init>") "${descriptor.substringBefore(")")})V" else descriptor,
                                     ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE
                                 ).orElse {
                                     existingMappings[targetName]?.let {
@@ -283,7 +283,7 @@ class MixinClassVisitorRefmapBuilder(
                                 }
                                 target.ifPresent {
                                     val mappedName = mapper.mapName(it)
-                                    val mappedDesc = mapper.mapDesc(it)
+                                    val mappedDesc = mapper.mapDesc(it).let { if (mappedName == "<init>") "" else it }
 //                                if (implicitWildcard) {
 //                                    refmap.addProperty(targetName, mappedName)
 //                                } else {
@@ -460,7 +460,7 @@ class MixinClassVisitorRefmapBuilder(
                                             .map { mapper.mapName(it) }
                                             .orElse(targetClass)
                                         val mappedName = mapper.mapName(it)
-                                        val mappedDesc = /* if (implicitWildcard) "" else */ if (wildcard) "*" else mapper.mapDesc(it)
+                                        val mappedDesc = /* if (implicitWildcard) "" else */ if (wildcard && mappedName != "<clinit>") "*" else mapper.mapDesc(it)
                                         if (targetClasses.size > 1) {
                                             refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
                                         } else {
