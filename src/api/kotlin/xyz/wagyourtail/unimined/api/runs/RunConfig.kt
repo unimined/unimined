@@ -150,17 +150,18 @@ data class RunConfig(
             }
             it.javaLauncher.set(launcher)
 
-            it.group = group
-            it.description = description
-            it.mainClass.set(mainClass)
-            it.workingDir = workingDir
             it.environment.putAll(env)
-            workingDir.mkdirs()
 
             it.classpath = launchClasspath.runtimeClasspath
 
             it.args = args
             it.jvmArgs = jvmArgs
+
+            it.group = group
+            it.description = description
+            it.mainClass.set(mainClass)
+            it.workingDir = workingDir
+            workingDir.mkdirs()
 
             if (runFirst.isNotEmpty()) {
                 for (task in runFirst) {

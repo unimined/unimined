@@ -288,10 +288,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         if (defaultRemapJar) {
             val task = project.tasks.findByName("jar".withSourceSet(sourceSet))
             if (task != null && task is Jar) {
-                @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-                val classifier: String? = task.archiveClassifier.getOrElse(null as String?)
+                val classifier: String= task.archiveClassifier.getOrElse("")
                 task.apply {
-                    if (classifier != null) {
+                    if (classifier.isNotEmpty()) {
                         archiveClassifier.set(archiveClassifier.get() + "-dev")
                     } else {
                         archiveClassifier.set("dev")

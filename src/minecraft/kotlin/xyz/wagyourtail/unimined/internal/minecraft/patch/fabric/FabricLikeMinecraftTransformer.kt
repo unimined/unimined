@@ -240,11 +240,11 @@ abstract class FabricLikeMinecraftTransformer(
     override fun afterEvaluate() {
         project.logger.lifecycle("[Unimined/Fabric] Generating intermediary classpath.")
         // resolve intermediary classpath
-        val classpath = provider.mods.getClasspathAs(
+        val classpath = (provider.mods.getClasspathAs(
             prodNamespace,
             prodNamespace,
             provider.sourceSet.runtimeClasspath.filter { !provider.isMinecraftJar(it.toPath()) }.toSet()
-        ) + provider.getMinecraft(prodNamespace, prodNamespace)
+        ) + provider.getMinecraft(prodNamespace, prodNamespace).toFile()).filter { it.exists() && !it.isDirectory }
         // write to file
         intermediaryClasspath.writeText(classpath.joinToString(File.pathSeparator), options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
     }
