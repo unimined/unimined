@@ -333,7 +333,7 @@ class MappingTreeBuilder {
     }
 
     fun build(): MappingTreeView {
-        frozen = true
+        if (!frozen) frozen = true
         for (action in onBuild) {
             action.second()
         }
@@ -387,7 +387,7 @@ class MappingTreeBuilder {
         }
 
         fun build(fname: String, format: BetterMappingFormat): MappingInput {
-            frozen = true
+            if (!frozen) frozen = true
             val input = MappingInput()
             for ((f, i) in provided) {
                 if (f(fname, format)) {

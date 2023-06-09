@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined' // version '1.0.0'
+}
+
+group 'com.example'
+archivesBaseName 'UniminedExampleMod'
+version '1.0-SNAPSHOT'
+
+// this is just here so we can test the outputs easier and clean between tests
+unimined.useGlobalCache = false
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+unimined.minecraft {
+    version "1.7.10"
+
+    mappings {
+        mcp("stable", "12-1.7.10")
+    }
+
+    forge {
+        forge "10.13.4.1614-1.7.10"
+    }
+}
+
+repositories {
+}
+
+dependencies {
+}

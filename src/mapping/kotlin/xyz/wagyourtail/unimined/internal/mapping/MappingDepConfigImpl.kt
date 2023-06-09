@@ -66,7 +66,7 @@ class ContainedMappingImpl() : ContainedMapping {
     }
 
     fun finalize(input: MappingTreeBuilder.MappingInputBuilder.MappingInput) {
-        finalized = true
+        if (!finalized) finalized = true
         inputActions.forEach { input.it() }
     }
 
