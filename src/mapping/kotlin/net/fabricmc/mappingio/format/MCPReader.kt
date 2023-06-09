@@ -3,6 +3,7 @@ package net.fabricmc.mappingio.format
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingUtil
 import net.fabricmc.mappingio.MappingVisitor
+import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -313,54 +314,40 @@ object MCPReader {
         visitor.accept(parentVisitor)
     }
 
-//    fun readPackages(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
-//        readPackages(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)
-//    }
-//
-//    fun readPackages(
-//        envType: EnvType,
-//        reader: Reader,
-//        sourceNamespace: String,
-//        targetNamespace: String,
-//        visitor: MemoryMappingTree
-//    ) {
-//        readPackages(envType, ColumnFileReader(reader, ','), sourceNamespace, targetNamespace, visitor)
-//    }
-//
-//    private fun readPackages(
-//        envType: EnvType,
-//        reader: ColumnFileReader,
-//        sourceNamespace: String,
-//        targetNamespace: String,
-//        visitor: MemoryMappingTree
-//    ) {
-//        reader.mark()
-//        if (!checkPackageHeader(reader)) {
-//            reader.reset()
-//            throw IllegalStateException("Invalid header")
-//        }
-//
-//        val visitHeader = visitor.visitHeader()
-//
-//        if (visitHeader) {
-//            visitor.visitNamespaces(sourceNamespace, listOf(targetNamespace))
-//        }
-//
-//        var visitLastClass: Boolean
-//        if (visitor.visitContent()) {
-//            while (reader.nextLine(0)) {
-//                val src = reader.readCell()
-//                visitLastClass = visitor.visitClass("net/minecraft/src/$src")
-//
-//                if (visitLastClass) {
-//                    visitor.visitDstName(MappedElementKind.CLASS, 0, reader.readCell() + "/" + src)
-//                    visitor.visitElementContent(MappedElementKind.CLASS)
-//                }
-//            }
-//        }
-//
-//        visitor.visitEnd()
-//    }
+    fun readPackages(envType: EnvType, reader: Reader): (MappingVisitor) -> PackageRemappingVisitor {
+        return readPackages(envType, reader, setOf(MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK))
+    }
+
+    fun readPackages(
+        envType: EnvType,
+        reader: Reader,
+        targetNamespaces: Set<String>
+    ): (MappingVisitor) -> PackageRemappingVisitor {
+        return readPackages(envType, ColumnFileReader(reader, ','), targetNamespaces)
+    }
+
+    private fun readPackages(
+        envType: EnvType,
+        reader: ColumnFileReader,
+        targetNamespaces: Set<String>
+    ): (MappingVisitor) -> PackageRemappingVisitor {
+        reader.mark()
+        if (!checkPackageHeader(reader)) {
+            reader.reset()
+            throw IllegalStateException("Invalid header")
+        }
+
+        val packages = mutableListOf<Pair<String, String>>()
+        while (reader.nextLine(0)) {
+            val className = reader.readCell()!!
+            val packageName = reader.readCell()!!
+            packages += "net/minecraft/**/$className" to packageName
+        }
+
+        return {
+            PackageRemappingVisitor(it, targetNamespaces, packages)
+        }
+    }
 
     private data class MethodData(
         val source: String,

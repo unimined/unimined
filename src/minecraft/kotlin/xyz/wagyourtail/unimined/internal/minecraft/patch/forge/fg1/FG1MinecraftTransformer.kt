@@ -48,7 +48,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         provider.mappings.mappingsDeps.apply {
             if (isEmpty() && !parent.customSearge)
                 provider.mappings {
-                    forgeBuiltinMCP(forge.version!!.substringAfter(provider.version))
+                    forgeBuiltinMCP(forge.version!!.substringAfter("${provider.version}-"))
                 }
         }
     }

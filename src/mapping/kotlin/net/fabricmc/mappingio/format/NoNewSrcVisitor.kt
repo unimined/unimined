@@ -4,11 +4,6 @@ import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MappingTreeView.ClassMappingView
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.tree.ClassNode
-import xyz.wagyourtail.unimined.util.defaultedMapOf
-import xyz.wagyourtail.unimined.util.readZipInputStreamFor
-import java.nio.file.Path
 import kotlin.properties.Delegates
 
 class NoNewSrcVisitor(next: MappingVisitor, val existingMappings: MappingTreeView) : ForwardingMappingVisitor(next) {

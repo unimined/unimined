@@ -156,7 +156,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     !t.contains("MCP")
                 }) {
                     onlyExistingSrc()
-                    childMethodStrip()
                     outputs("searge", false) { listOf("official") }
                 }
                 contains({ f, t ->
@@ -265,7 +264,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 !t.contains("MCP")
             }) {
                 onlyExistingSrc()
-                childMethodStrip()
                 outputs("searge", false) { listOf("official") }
             }
             contains({ f, t ->

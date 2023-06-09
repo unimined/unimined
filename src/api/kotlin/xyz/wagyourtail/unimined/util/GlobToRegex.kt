@@ -35,3 +35,5 @@ object GlobToRegex {
         } + "$"
     }
 }
+
+fun String.globToRegex() = Regex(GlobToRegex.apply(this))

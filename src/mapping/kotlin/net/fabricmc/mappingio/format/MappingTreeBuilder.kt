@@ -3,6 +3,7 @@ package net.fabricmc.mappingio.format
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
+import net.fabricmc.mappingio.tree.MappingTree
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -15,7 +16,8 @@ import kotlin.io.path.inputStream
 import kotlin.io.path.name
 
 class MappingTreeBuilder {
-    private val tree = MemoryMappingTree()
+    private var tree = MemoryMappingTree()
+    private var globalFMV: (MappingVisitor) -> MappingVisitor = { it }
     private var frozen by FinalizeOnWrite(false)
     private val ns = mutableSetOf<String>()
     private var side by FinalizeOnRead(EnvType.COMBINED)
@@ -46,66 +48,68 @@ class MappingTreeBuilder {
     }
 
     fun MappingInputBuilder.MappingInput.wrapInput(reader: BufferedReader?, action: (BufferedReader?) -> Unit) {
-        if (nsSource == sourceNs) {
-            action(reader)
-        } else {
-            val tempFile = if (reader != null) {
-                // cache the reader
-                createTempFile("mapping-input", ".tmp").apply {
-                    deleteOnExit()
-                    // write reader to file
-                    bufferedWriter().use { out ->
-                        reader.use { it.copyTo(out) }
-                    }
-                }
-            } else null
-            val newKey = (nsSource to nsFilter)
-            val value = newKey to {
-                if (tempFile != null) {
-                    tempFile.bufferedReader().use {
-                        try {
-                            action(it)
-                        } finally {
-                            tempFile.delete()
-                        }
-                    }
-                } else {
-                    action(null)
+        val tempFile = if (reader != null) {
+            // cache the reader
+            createTempFile("mapping-input", ".tmp").apply {
+                deleteOnExit()
+                // write reader to file
+                bufferedWriter().use { out ->
+                    reader.use { it.copyTo(out) }
                 }
             }
-            // determine where to put in after list based on being in the output of a previous
-            for (i in 0 until onBuild.size) {
-                val key = onBuild[i].first
-                if (key.second.contains(newKey.first)) {
-                    onBuild.add(i + 1, value)
-                    return
+        } else null
+        val newKey = (nsSource to nsFilter)
+        val value = newKey to {
+            if (tempFile != null) {
+                tempFile.bufferedReader().use {
+                    try {
+                        action(it)
+                    } finally {
+                        tempFile.delete()
+                    }
                 }
+            } else {
+                action(null)
             }
-            // source wasn't found in prev's dst's
-            onBuild.add(value)
         }
+        // determine where to put in after list based on being in the output of a previous
+        for (i in 0 until onBuild.size) {
+            val key = onBuild[i].first
+            if (key.second.contains(newKey.first)) {
+                onBuild.add(i + 1, value)
+                return
+            }
+        }
+        // source wasn't found in prev's dst's
+        onBuild.add(value)
+    }
+
+    fun reprocessWithAddedGlobalFMV(newVisitor: (MappingVisitor) -> MappingVisitor) {
+        val oldTree = tree
+        tree = MemoryMappingTree()
+        val oldFMV = globalFMV
+        globalFMV = { newVisitor(oldFMV(it)) }
+        oldTree.accept(newVisitor(tree as MappingVisitor))
     }
 
     fun bytecodeJar(file: Path, inputs: MappingInputBuilder) {
         checkFrozen()
         val input = inputs.build("", BetterMappingFormat.OBF_JAR)
         checkInput(input)
-        input.wrapInput(null) {
-            val visitor = MappingNsRenamer(
-                MappingSourceNsSwitch(
-                    input.fmv(
-                        MappingDstNsFilter(
-                            tree, input.nsFilter
-                        ), tree, side
-                    ),
-                    input.nsSource,
-                ), input.nsMap
-            )
-            val preDstNs = tree.dstNamespaces ?: emptyList()
-            BytecodeToMappings.readFile(file, "official", visitor)
-            val postDstNs = tree.dstNamespaces ?: emptyList()
-            ns.addAll(postDstNs - preDstNs.toSet())
-        }
+        val visitor = MappingNsRenamer(
+            MappingSourceNsSwitch(
+                input.fmv(
+                    MappingDstNsFilter(
+                        tree, input.nsFilter
+                    ), tree, side
+                ),
+                input.nsSource,
+            ), input.nsMap
+        )
+        val preDstNs = tree.dstNamespaces ?: emptyList()
+        BytecodeToMappings.readFile(file, "official", visitor)
+        val postDstNs = tree.dstNamespaces ?: emptyList()
+        ns.addAll(postDstNs - preDstNs.toSet())
     }
 
     fun mappingFile(file: Path, input: MappingInputBuilder) {
@@ -207,7 +211,7 @@ class MappingTreeBuilder {
             else -> {
                 if (str.startsWith("tsrg2")) {
                     BetterMappingFormat.TSRG_2
-                } else if (str.startsWith("searge,name") || str.startsWith("param,name")) {
+                } else if (str.startsWith("searge,name") || str.startsWith("param,name") || str.startsWith("class,package")) {
                     BetterMappingFormat.MCP
                 } else if (str.split("\n")[0].contains("\"name\",\"notch\"")) {
                     BetterMappingFormat.OLD_MCP
@@ -239,11 +243,11 @@ class MappingTreeBuilder {
             reader!!
             val visitor = MappingNsRenamer(
                 MappingSourceNsSwitch(
-                    input.fmv(
+                    globalFMV(input.fmv(
                         MappingDstNsFilter(
                             tree, input.nsFilter
                         ), tree, side
-                    ),
+                    )),
                     input.nsSource
                 ), input.nsMap
             )
@@ -269,6 +273,12 @@ class MappingTreeBuilder {
                             MCPReader.readParam(
                                 side, reader, "searge", "mcp", tree, visitor
                             )
+                        }
+
+                        "packages.csv" -> {
+                            reprocessWithAddedGlobalFMV(MCPReader.readPackages(
+                                side, reader, setOf("searge", input.nsMap["mcp"] ?: "mcp")
+                            ))
                         }
 
                         else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")

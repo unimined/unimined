@@ -48,7 +48,7 @@ object AccessWidenerMinecraftTransformer {
 
     fun transform(
         accessWidener: Path,
-        namespace: MappingNamespaceTree.Namespace,
+        namespace: String,
         baseMinecraft: Path,
         output: Path,
         throwIfNSWrong: Boolean,
@@ -56,7 +56,7 @@ object AccessWidenerMinecraftTransformer {
     ): Boolean {
         val aw = AccessWidener()
         AccessWidenerReader(aw).read(BufferedReader(accessWidener.reader()))
-        if (aw.namespace == namespace.name) {
+        if (aw.namespace == namespace) {
             Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
             output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
                 logger.debug("Transforming $output with access widener $accessWidener and namespace $namespace")

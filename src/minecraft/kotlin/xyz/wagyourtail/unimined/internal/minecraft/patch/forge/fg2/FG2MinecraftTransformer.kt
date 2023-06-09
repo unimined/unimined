@@ -52,7 +52,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                     searge()
                 }
                 if (provider.minecraftData.mcVersionCompare(provider.version, "1.7") == -1 && !parent.customSearge) {
-                    forgeBuiltinMCP(forgeDep.version!!.substringAfter(provider.version))
+                    forgeBuiltinMCP(forgeDep.version!!.substringAfter("${provider.version}-"))
                 }
             } else {
                 val deps = mappingsDeps.toList()
