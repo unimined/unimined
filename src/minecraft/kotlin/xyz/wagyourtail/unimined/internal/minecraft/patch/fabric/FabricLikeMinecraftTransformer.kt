@@ -219,7 +219,7 @@ abstract class FabricLikeMinecraftTransformer(
             if (!output.path.exists() || project.unimined.forceReload) {
                 if (AccessWidenerMinecraftTransformer.transform(
                         accessWidener!!.toPath(),
-                        "named",
+                        if (baseMinecraft.mappingNamespace.named) "named" else baseMinecraft.mappingNamespace.name,
                         baseMinecraft.path,
                         output.path,
                         true,
