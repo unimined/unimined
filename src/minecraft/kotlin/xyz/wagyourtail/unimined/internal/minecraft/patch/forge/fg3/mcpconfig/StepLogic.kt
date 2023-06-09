@@ -149,10 +149,10 @@ interface StepLogic {
         }
     }
 
-    class NoOpWithFile(private val path: Supplier<Path>): StepLogic {
+    class NoOpWithFile(private val path: (ExecutionContext) -> Path): StepLogic {
         @Throws(IOException::class)
         override fun execute(context: ExecutionContext) {
-            context.setOutput(path.get())
+            context.setOutput(path(context))
         }
     }
 }

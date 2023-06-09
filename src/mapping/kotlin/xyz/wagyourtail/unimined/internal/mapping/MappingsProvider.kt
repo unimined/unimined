@@ -37,7 +37,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     private var freeze = false
 
     override var devNamespace: Namespace by FinalizeOnRead(LazyMutable {
-        getNamespaces().values.first { it.named }
+        getNamespaces().values.firstOrNull { it.named } ?: throw IllegalStateException("No named namespace found in ${getNamespaces().keys}")
     })
 
     override var devFallbackNamespace: Namespace by FinalizeOnRead(LazyMutable {
@@ -164,13 +164,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 }) {
                     onlyExistingSrc()
                     srgToSearge()
-                    outputs("mcp", false) { listOf("searge") }
+                    outputs("mcp", true) { listOf("searge") }
                     sourceNamespace("searge")
                 }
             } else {
                 onlyExistingSrc()
                 srgToSearge()
-                outputs("mcp", false) { listOf("searge") }
+                outputs("mcp", true) { listOf("searge") }
                 sourceNamespace("searge")
             }
             action()
@@ -272,7 +272,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 t.contains("MCP")
             }) {
                 onlyExistingSrc()
-                outputs("mcp", false) { listOf("searge") }
+                outputs("mcp", true) { listOf("searge") }
                 sourceNamespace("searge")
             }
             action()

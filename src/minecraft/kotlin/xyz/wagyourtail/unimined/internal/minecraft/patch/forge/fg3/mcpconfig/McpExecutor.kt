@@ -149,6 +149,9 @@ data class McpExecutor(
             "downloadServerMappings" -> StepLogic.DownloadManifestFile(
                 provider.minecraftData.officialServerMappingsFile.toPath()
             )
+            "bundleExtractJar" -> StepLogic.NoOpWithFile {
+                Paths.get(it.resolve(ConfigValue.Variable("input")))
+            }
 
             else -> {
                 if (functions.containsKey(type)) {
