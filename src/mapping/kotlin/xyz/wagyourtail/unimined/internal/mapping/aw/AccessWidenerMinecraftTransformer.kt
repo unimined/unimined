@@ -92,7 +92,7 @@ object AccessWidenerMinecraftTransformer {
         if (throwIfNSWrong) {
             throw IllegalStateException("AccessWidener namespace (${aw.namespace}) does not match minecraft namespace ($namespace)")
         } else {
-            logger.warn("AccessWidener ($accessWidener) namespace (${aw.namespace}) does not match minecraft namespace ($namespace), it will not be applied!")
+            logger.info("AccessWidener ($accessWidener) namespace (${aw.namespace}) does not match minecraft namespace ($namespace), it will not be applied!")
         }
         return false
     }
