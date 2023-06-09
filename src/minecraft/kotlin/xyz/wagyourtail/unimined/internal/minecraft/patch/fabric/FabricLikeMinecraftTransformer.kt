@@ -222,7 +222,7 @@ abstract class FabricLikeMinecraftTransformer(
                         if (baseMinecraft.mappingNamespace.named) "named" else baseMinecraft.mappingNamespace.name,
                         baseMinecraft.path,
                         output.path,
-                        true,
+                        false,
                         project.logger
                     )
                 ) {
