@@ -196,15 +196,6 @@ tasks.test {
     useJUnitPlatform()
 }
 
-gradlePlugin {
-    plugins {
-        create("simplePlugin") {
-            id = "xyz.wagyourtail.unimined"
-            implementationClass = "xyz.wagyourtail.unimined.UniminedPlugin"
-        }
-    }
-}
-
 tasks.withType<JavaCompile> {
     val targetVersion = 8
     if (JavaVersion.current().isJava9Compatible) {
@@ -214,6 +205,19 @@ tasks.withType<JavaCompile> {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
+
+//    compilerOptions {
+//        freeCompilerArgs.add("-Xjvm-default=all")
+//    }
+}
+
+gradlePlugin {
+    plugins {
+        create("simplePlugin") {
+            id = "xyz.wagyourtail.unimined"
+            implementationClass = "xyz.wagyourtail.unimined.UniminedPlugin"
+        }
+    }
 }
 
 publishing {

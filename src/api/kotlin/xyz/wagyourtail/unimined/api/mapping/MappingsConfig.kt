@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.util.FinalizeOnRead
 /**
  * @since 1.0.0
  */
+@Suppress("OVERLOADS_ABSTRACT", "UNUSED")
 abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConfig) : MappingNamespaceTree() {
 
     @set:ApiStatus.Internal
@@ -23,7 +24,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     abstract var devFallbackNamespace: Namespace
 
     @get:ApiStatus.Internal
-    abstract val mappingsDeps: MutableList<MappingDepConfig>
+    abstract val mappingsDeps: MutableMap<String, MappingDepConfig>
 
     abstract var side: EnvType
 
@@ -40,460 +41,365 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         devFallbackNamespace = getNamespace(namespace)
     }
 
-    fun intermediary() {
-        intermediary {}
+    fun isEmpty(): Boolean {
+        return mappingsDeps.isEmpty()
     }
+    @JvmOverloads
+    abstract fun intermediary(key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
 
-    abstract fun intermediary(action: MappingDepConfig.() -> Unit)
-
+    @JvmOverloads
     fun intermediary(
+        key: String = "intermediary",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        intermediary {
+        intermediary(key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
-    fun legacyIntermediary() {
-        legacyIntermediary(1)
+    @JvmOverloads
+    abstract fun legacyIntermediary(revision: Int = 1, key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun legacyIntermediary(revision: String, key: String = "intermediary", action: MappingDepConfig.() -> Unit = {}) {
+        legacyIntermediary(revision.toInt(), key, action)
     }
 
-    fun legacyIntermediary(revision: Int) {
-        legacyIntermediary(revision) {}
-    }
-
-    fun legacyIntermediary(revision: String) {
-        legacyIntermediary(revision.toInt())
-    }
-
-    abstract fun legacyIntermediary(revision: Int, action: MappingDepConfig.() -> Unit)
-
-    fun legacyIntermediary(revision: String, action: MappingDepConfig.() -> Unit) {
-        legacyIntermediary(revision.toInt(), action)
-    }
-
+    @JvmOverloads
     fun legacyIntermediary(
+        revision: Int = 1,
+        key: String = "intermediary",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        legacyIntermediary(legacyFabricMappingsVersion, action)
+        legacyIntermediary(revision, key, action)
     }
 
-    fun legacyIntermediary(
-        revision: Int,
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        legacyIntermediary(revision) {
-            action.delegate = this
-            action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
-        }
-    }
-
+    @JvmOverloads
     fun legacyIntermediary(
         revision: String,
+        key: String = "intermediary",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        legacyIntermediary(revision.toInt(), action)
+        legacyIntermediary(revision.toInt(), key, action)
     }
 
-    fun babricIntermediary() {
-        babricIntermediary {}
-    }
+    @JvmOverloads
+    abstract fun babricIntermediary(key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
 
-    abstract fun babricIntermediary(action: MappingDepConfig.() -> Unit)
-
+    @JvmOverloads
     fun babricIntermediary(
+        key: String = "intermediary",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        babricIntermediary {
+        babricIntermediary(key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
-    fun officialMappingsFromJar() {
-        officialMappingsFromJar {}
-    }
+    @JvmOverloads
+    abstract fun officialMappingsFromJar(key: String = "official", action: MappingDepConfig.() -> Unit = {})
 
-    abstract fun officialMappingsFromJar(action: MappingDepConfig.() -> Unit)
-
+    @JvmOverloads
     fun officialMappingsFromJar(
+        key: String = "official",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        officialMappingsFromJar {
+        officialMappingsFromJar(key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
-    fun searge() {
-        searge(minecraft.version)
-    }
 
-    fun searge(action: MappingDepConfig.() -> Unit) {
-        searge(minecraft.version, action)
-    }
+    @JvmOverloads
+    abstract fun searge(version: String = minecraft.version, key: String = "searge", action: MappingDepConfig.() -> Unit = {})
 
-    fun searge(version: String) {
-        officialMappingsFromJar()
-        searge(version) {}
-    }
-
-    abstract fun searge(version: String, action: MappingDepConfig.() -> Unit)
-
+    @JvmOverloads
     fun searge(
+        version: String = minecraft.version,
+        key: String = "searge",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        searge {
+        searge(version, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
-    fun searge(
-        version: String,
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        searge(version) {
-            action.delegate = this
-            action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
-        }
-    }
+    @JvmOverloads
+    abstract fun hashed(key: String = "hashed", action: MappingDepConfig.() -> Unit = {})
 
-    fun hashed() {
-        hashed {}
-    }
-
-    abstract fun hashed(action: MappingDepConfig.() -> Unit)
-
+    @JvmOverloads
     fun hashed(
+        key: String = "hashed",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        hashed {
+        hashed(key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
-    fun mojmap() {
-        mojmap {}
-    }
+    @JvmOverloads
+    abstract fun mojmap(key: String = "mojmap", action: MappingDepConfig.() -> Unit = {})
 
-    abstract fun mojmap(action: MappingDepConfig.() -> Unit)
-
+    @JvmOverloads
     fun mojmap(
+        key: String = "mojmap",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        mojmap {
+        mojmap(key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
-    fun mcp(channel: String, version: String) {
-        mcp(channel, version) {}
-    }
+    @JvmOverloads
 
-    abstract fun mcp(channel: String, version: String, action: MappingDepConfig.() -> Unit)
+    abstract fun mcp(channel: String, version: String, key: String = "mcp", action: MappingDepConfig.() -> Unit = {})
 
+    @JvmOverloads
     fun mcp(
         channel: String,
         version: String,
+        key: String = "mcp",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        mcp(channel, version) {
+        mcp(channel, version, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
-    fun retroMCP() {
-        retroMCP {}
-    }
+    @JvmOverloads
+    abstract fun retroMCP(key: String = "mcp", action: MappingDepConfig.() -> Unit = {})
 
-    abstract fun retroMCP(action: MappingDepConfig.() -> Unit)
-
+    @JvmOverloads
     fun retroMCP(
+        key: String = "mcp",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        retroMCP {
+        retroMCP(key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
-    fun yarn(build: Int) {
-        yarn(build) {
-        }
+    @JvmOverloads
+    abstract fun yarn(build: Int, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun yarn(build: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+        yarn(build.toInt(), key, action)
     }
 
-    fun yarn(build: String) {
-        yarn(build.toInt())
-    }
-
-    abstract fun yarn(build: Int, action: MappingDepConfig.() -> Unit)
-
-    fun yarn(build: String, action: MappingDepConfig.() -> Unit) {
-        yarn(build.toInt(), action)
-    }
-
+    @JvmOverloads
     fun yarn(
         build: Int,
+        key: String = "yarn",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        yarn(build) {
+        yarn(build, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
+    @JvmOverloads
     fun yarn(
         build: String,
+        key: String = "yarn",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        yarn(build.toInt(), action)
+        yarn(build.toInt(), key, action)
     }
 
-    fun legacyYarn(build: Int) {
-        legacyYarn(build, legacyFabricMappingsVersion)
+    @JvmOverloads
+    abstract fun legacyYarn(build: Int, revision: Int = 1, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun legacyYarn(build: String, revision: Int = 1, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+        legacyYarn(build.toInt(), revision, key, action)
     }
 
-    fun legacyYarn(build: String) {
-        legacyYarn(build.toInt())
+    @JvmOverloads
+    fun legacyYarn(build: Int, revision: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+        legacyYarn(build, revision.toInt(), key, action)
     }
 
-    fun legacyYarn(build: Int, revision: Int) {
-        legacyYarn(build, revision) {
-        }
+    @JvmOverloads
+    fun legacyYarn(build: String, revision: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+        legacyYarn(build.toInt(), revision.toInt(), key, action)
     }
 
-    fun legacyYarn(build: String, revision: String) {
-        legacyYarn(build.toInt(), revision.toInt())
-    }
-
-    fun legacyYarn(build: String, revision: Int) {
-        legacyYarn(build.toInt(), revision)
-    }
-
-    fun legacyYarn(build: Int, revision: String) {
-        legacyYarn(build, revision.toInt())
-    }
-
-
-
-    abstract fun legacyYarn(build: Int, revision: Int, action: MappingDepConfig.() -> Unit)
-
-    fun legacyYarn(build: String, revision: String, action: MappingDepConfig.() -> Unit) {
-        legacyYarn(build.toInt(), revision.toInt(), action)
-    }
-
-    fun legacyYarn(build: String, revision: Int, action: MappingDepConfig.() -> Unit) {
-        legacyYarn(build.toInt(), revision, action)
-    }
-
-    fun legacyYarn(build: Int, revision: String, action: MappingDepConfig.() -> Unit) {
-        legacyYarn(build, revision.toInt(), action)
-    }
-
+    @JvmOverloads
     fun legacyYarn(
         build: Int,
+        revision: Int = 1,
+        key: String = "yarn",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        legacyYarn(build, legacyFabricMappingsVersion, action)
-    }
-
-    fun legacyYarn(
-        build: String,
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        legacyYarn(build.toInt(), action)
-    }
-
-    fun legacyYarn(
-        build: Int,
-        revision: Int,
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        legacyYarn(build, revision) {
+        legacyYarn(build, revision, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
+    @JvmOverloads
     fun legacyYarn(
         build: String,
-        revision: String,
+        revision: Int = 1,
+        key: String = "yarn",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        legacyYarn(build.toInt(), revision.toInt(), action)
+        legacyYarn(build.toInt(), revision, key, action)
     }
 
-    fun legacyYarn(
-        build: String,
-        revision: Int,
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        legacyYarn(build.toInt(), revision, action)
-    }
-
+    @JvmOverloads
     fun legacyYarn(
         build: Int,
         revision: String,
+        key: String = "yarn",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        legacyYarn(build, revision.toInt(), action)
+        legacyYarn(build, revision.toInt(), key, action)
     }
 
-    fun barn(build: Int) {
-        barn(build) {
-        }
+    @JvmOverloads
+    fun legacyYarn(
+        build: String,
+        revision: String,
+        key: String = "yarn",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        legacyYarn(build.toInt(), revision.toInt(), key, action)
     }
 
-    fun barn(build: String) {
-        barn(build.toInt())
+    @JvmOverloads
+    abstract fun barn(build: Int, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun barn(build: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+        barn(build.toInt(), key, action)
     }
 
-    abstract fun barn(build: Int, action: MappingDepConfig.() -> Unit)
-
-    fun barn(build: String, action: MappingDepConfig.() -> Unit) {
-        barn(build.toInt(), action)
-    }
-
+    @JvmOverloads
     fun barn(
         build: Int,
+        key: String = "yarn",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        barn(build) {
+        barn(build, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
+    @JvmOverloads
     fun barn(
         build: String,
+        key: String = "yarn",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        barn(build.toInt(), action)
+        barn(build.toInt(), key, action)
     }
 
-    fun quilt(build: Int) {
-        quilt(build, "intermediary-v2")
+
+    @JvmOverloads
+    abstract fun quilt(build: Int, classifier: String = "intermediary-v2", key: String = "quilt", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun quilt(build: String, classifier: String = "intermediary-v2", key: String = "quilt", action: MappingDepConfig.() -> Unit = {}) {
+        quilt(build.toInt(), classifier, key, action)
     }
 
-    fun quilt(build: String) {
-        quilt(build.toInt())
-    }
-
-    fun quilt(build: Int, action: MappingDepConfig.() -> Unit) {
-        quilt(build, "intermediary-v2", action)
-    }
-
-    fun quilt(build: String, action: MappingDepConfig.() -> Unit) {
-        quilt(build.toInt(), action)
-    }
-
-    fun quilt(build: Int, classifier: String) {
-        quilt(build, classifier) {
-        }
-    }
-
-    fun quilt(build: String, classifier: String) {
-        quilt(build.toInt(), classifier)
-    }
-
-    abstract fun quilt(build: Int, classifier: String, action: MappingDepConfig.() -> Unit)
-
-    fun quilt(build: String, classifier: String, action: MappingDepConfig.() -> Unit) {
-        quilt(build.toInt(), classifier, action)
-    }
-
+    @JvmOverloads
     fun quilt(
         build: Int,
+        classifier: String = "intermediary-v2",
+        key: String = "quilt",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        quilt(build) {
+        quilt(build, classifier, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
+    @JvmOverloads
     fun quilt(
         build: String,
+        classifier: String = "intermediary-v2",
+        key: String = "quilt",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        quilt(build.toInt(), action)
+        quilt(build.toInt(), classifier, key, action)
     }
 
-    fun forgeBuiltinMCP(version: String) {
-        forgeBuiltinMCP(version) {
-        }
-    }
+    @JvmOverloads
+    abstract fun forgeBuiltinMCP(version: String, key: String = "mcp", action: MappingDepConfig.() -> Unit = {})
 
-
-
-    abstract fun forgeBuiltinMCP(version: String, action: MappingDepConfig.() -> Unit)
-
+    @JvmOverloads
     fun forgeBuiltinMCP(
         version: String,
+        key: String = "mcp",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        forgeBuiltinMCP(version) {
+        forgeBuiltinMCP(version, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
     }
 
-    abstract fun mapping(
-        dependency: Any,
-        action: MappingDepConfig.() -> Unit
-    )
+    @JvmOverloads
+    @ApiStatus.Experimental
+    abstract fun mapping(dependency: Any, key: String = dependency.toString(), action: MappingDepConfig.() -> Unit = {})
 
+    @JvmOverloads
+    @ApiStatus.Experimental
     fun mapping(
         dependency: Any,
+        key: String = dependency.toString(),
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        mapping(dependency) {
+        mapping(dependency, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()

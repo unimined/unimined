@@ -91,17 +91,14 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override fun beforeMappingsResolve() {
         project.logger.info("[Unimined/ForgeTransformer] FG3: beforeMappingsResolve")
         provider.mappings {
-            val mcpConfigUserSpecified = mappingsDeps.firstOrNull { it.dep.group == "de.oceanlabs.mcp" && it.dep.name == "mcp_config" }
+            val mcpConfigUserSpecified = mappingsDeps.entries.firstOrNull { it.value.dep.group == "de.oceanlabs.mcp" && it.value.dep.name == "mcp_config" }
             if (mcpConfigUserSpecified != null && !parent.customSearge) {
-                if (mcpConfigUserSpecified.dep.version != mcpConfig.version) {
+                if (mcpConfigUserSpecified.value.dep.version != mcpConfig.version) {
                     project.logger.warn("[Unimined/ForgeTransformer] FG3 does not support custom mcp_config (searge) version specification. Using ${mcpConfig.version} from userdev.")
                 }
-                mappingsDeps.remove(mcpConfigUserSpecified)
+                mappingsDeps.remove(mcpConfigUserSpecified.key)
             }
-            val deps = mappingsDeps.toList()
-            mappingsDeps.clear()
             if (!parent.customSearge) searge(mcpConfig.version!!)
-            mappingsDeps.addAll(deps)
         }
     }
 
