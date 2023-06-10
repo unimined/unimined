@@ -21,8 +21,7 @@ abstract class MappingDepConfig(val dep: Dependency, val mappingsConfig: Mapping
         @ClosureParams(
             value = SimpleType::class,
             options = [
-                "java.lang.String",
-                "java.lang.String"
+                "java.lang.String,java.lang.String"
             ]
         )
         acceptor: Closure<*>,
