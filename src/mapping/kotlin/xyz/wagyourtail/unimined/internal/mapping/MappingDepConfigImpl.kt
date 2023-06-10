@@ -44,6 +44,7 @@ class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val 
         }) {
             containedMapping.build(this)
         }
+        contained.add(containedMapping)
     }
 
     override fun clearContains() {
@@ -60,8 +61,8 @@ class ContainedMappingImpl() : ContainedMapping {
     lateinit var dep: MappingDepConfigImpl
 
     val inputActions = mutableListOf<MappingTreeBuilder.MappingInputBuilder.MappingInput.() -> Unit>()
-    val outputs = mutableListOf<MappingDepConfig.TempMappingNamespace>()
-    var finalized by FinalizeOnWrite(false)
+    private val outputs = mutableListOf<MappingDepConfig.TempMappingNamespace>()
+    private var finalized by FinalizeOnWrite(false)
     val mappingsConfig by lazy { dep.mappingsConfig }
 
     constructor(dep: MappingDepConfigImpl) : this() {
