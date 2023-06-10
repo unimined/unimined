@@ -396,6 +396,10 @@ class MappingTreeBuilder {
             provided.add(f to input)
         }
 
+        fun clearProvides() {
+            provided.clear()
+        }
+
         fun build(fname: String, format: BetterMappingFormat): MappingInput {
             if (!frozen) frozen = true
             val input = MappingInput()

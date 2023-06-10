@@ -31,6 +31,8 @@ abstract class MappingDepConfig(val dep: Dependency, val mappingsConfig: Mapping
             action.call()
         }
     }
+
+    abstract fun clearContains()
 }
 
 

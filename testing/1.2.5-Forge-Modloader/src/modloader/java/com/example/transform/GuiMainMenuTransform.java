@@ -10,7 +10,7 @@ import net.minecraft.src.GuiMainMenu;
 @CTransformer(GuiMainMenu.class)
 public class GuiMainMenuTransform {
 
-    @CInject(method = {"initGui", "func_6448_a", "c"}, target = @CTarget("HEAD"))
+    @CInject(method = {"initGui"}, target = @CTarget("HEAD"))
     public void onInitGui(InjectionCallback callback) {
         mod_ExampleMod.LOGGER.info("This is the main menu!");
     }

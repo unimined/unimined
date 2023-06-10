@@ -48,6 +48,14 @@ class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val 
             containedMapping.finalize(this)
         }
     }
+
+    override fun clearContains() {
+        checkFinalized()
+        inputs.clearProvides()
+        inputs.provides({ _, _ -> true }) {
+            defaultContains.finalize(this)
+        }
+    }
 }
 
 class ContainedMappingImpl() : ContainedMapping {
