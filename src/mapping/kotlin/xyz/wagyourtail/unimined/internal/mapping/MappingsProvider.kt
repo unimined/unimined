@@ -277,6 +277,10 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         if (freeze) {
             throw IllegalStateException("Cannot add mappings after mapping tree has been initialized")
         }
+        project.logger.info("[Unimined/MappingsProvider] Adding mapping dependency $dependency")
+        if (project.logger.isDebugEnabled) {
+            project.logger.debug("[Unimined/MappingsProvider] ${Thread.dumpStack()}")
+        }
         project.dependencies.create(dependency).let {
             mappingsDeps.add(
                 MappingDepConfigImpl(it, this).also(action)
