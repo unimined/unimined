@@ -152,13 +152,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
         mapping("de.oceanlabs.mcp:mcp_${channel}:${version}@zip") {
             if (channel == "legacy") {
-                contains({ f, t ->
+                contains({ _, t ->
                     !t.contains("MCP")
                 }) {
                     onlyExistingSrc()
                     outputs("searge", false) { listOf("official") }
                 }
-                contains({ f, t ->
+                contains({ _, t ->
                     t.contains("MCP")
                 }) {
                     onlyExistingSrc()
@@ -260,16 +260,15 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             action()
         }
         mapping("net.minecraftforge:forge:${minecraft.version}-${version}:src@zip") {
-            contains({ f, t ->
+            contains({ _, t ->
                 !t.contains("MCP")
             }) {
                 onlyExistingSrc()
                 outputs("searge", false) { listOf("official") }
             }
-            contains({ f, t ->
+            contains({ _, t ->
                 t.contains("MCP")
             }) {
-                onlyExistingSrc()
                 outputs("mcp", true) { listOf("searge") }
                 sourceNamespace("searge")
             }
@@ -460,7 +459,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     private class ArgumentMapping(to: String, val index: Int): Mapping(to)
     private class LocalVariableMapping(to: String, val lvIndex: Int, val startOpIdx: Int, val lvtRowIndex: Int): Mapping(to)
 
-    private val mappingProvider: Map<Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>, List<Mapping>> = defaultedMapOf { remap ->
+    private val mappingProvider: Map<Pair<Namespace, Namespace>, List<Mapping>> = defaultedMapOf { remap ->
         project.logger.info("[Unimined/MappingsProvider] resolving internal mappings provider for $remap in ${minecraft.sourceSet}")
         val srcName = remap.first
         val dstName = remap.second
