@@ -361,7 +361,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             mappingBuilder.side(minecraft.side)
 
             // parse each dep
-            for (dep in mappingsDeps) {
+            for (dep in mappingsDeps.values) {
                 dep as MappingDepConfigImpl
                 project.logger.info("[Unimined/MappingsProvider] Loading mappings from ${dep.dep.name}")
                 // resolve dep to files, no pom
