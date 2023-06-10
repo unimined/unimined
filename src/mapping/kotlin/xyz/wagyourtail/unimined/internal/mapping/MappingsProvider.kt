@@ -279,7 +279,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
         project.logger.info("[Unimined/MappingsProvider] Adding mapping dependency $dependency")
         if (project.logger.isDebugEnabled) {
-            project.logger.debug("[Unimined/MappingsProvider] ${Thread.dumpStack()}")
+            project.logger.debug("[Unimined/MappingsProvider] ")
+            Thread.dumpStack()
         }
         project.dependencies.create(dependency).let {
             mappingsDeps.add(
