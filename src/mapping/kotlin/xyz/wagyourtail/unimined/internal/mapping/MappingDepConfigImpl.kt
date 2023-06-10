@@ -16,7 +16,6 @@ class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val 
     mappingsConfig
 ), ContainedMapping by defaultContains {
     val inputs = MappingTreeBuilder.MappingInputBuilder()
-    val outputs = mutableListOf<TempMappingNamespace>()
     private var finalized by FinalizeOnWrite(false)
 
     init {
@@ -27,12 +26,7 @@ class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val 
     }
 
     fun finalize() {
-        if (finalized) return
-        outputs.forEach {
-            mappingsConfig.project.logger.info("[Unimined/MappingDep] $dep adding namespace ${it.actualNamespace.name}") // force resolve
-        }
-
-        finalized = true
+        if (!finalized) finalized = true
     }
 
     fun checkFinalized() {
@@ -40,6 +34,7 @@ class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val 
     }
 
     override fun contains(acceptor: (fname: String, type: String) -> Boolean, action: ContainedMapping.() -> Unit) {
+        checkFinalized()
         val containedMapping = ContainedMappingImpl(this@MappingDepConfigImpl)
         action(containedMapping)
         inputs.provides({ f, t ->
@@ -62,6 +57,7 @@ class ContainedMappingImpl() : ContainedMapping {
     lateinit var dep: MappingDepConfigImpl
 
     val inputActions = mutableListOf<MappingTreeBuilder.MappingInputBuilder.MappingInput.() -> Unit>()
+    val outputs = mutableListOf<MappingDepConfig.TempMappingNamespace>()
     var finalized by FinalizeOnWrite(false)
     val mappingsConfig by lazy { dep.mappingsConfig }
 
@@ -75,6 +71,9 @@ class ContainedMappingImpl() : ContainedMapping {
 
     fun finalize(input: MappingTreeBuilder.MappingInputBuilder.MappingInput) {
         if (!finalized) finalized = true
+        outputs.forEach {
+            mappingsConfig.project.logger.info("[Unimined/MappingDep] $dep adding namespace ${it.actualNamespace.name}") // force resolve
+        }
         inputActions.forEach { input.it() }
     }
 
@@ -144,7 +143,7 @@ class ContainedMappingImpl() : ContainedMapping {
                         }
                     }
             }.also {
-                dep.outputs.add(it)
+                outputs.add(it)
             }
         }
         return object : MappingDepConfig.TempMappingNamespace(namespace, named, canRemapTo) {
@@ -156,12 +155,12 @@ class ContainedMappingImpl() : ContainedMapping {
                 }
             }
         }.also {
-            dep.outputs.add(it)
+            outputs.add(it)
         }
     }
 
     override fun clearOutputs() {
         checkFinalized()
-        dep.outputs.clear()
+        outputs.clear()
     }
 }

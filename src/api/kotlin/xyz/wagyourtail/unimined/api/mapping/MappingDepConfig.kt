@@ -2,6 +2,11 @@ package xyz.wagyourtail.unimined.api.mapping
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.FromAbstractTypeMethods
+import groovy.transform.stc.FromString
+import groovy.transform.stc.SimpleType
+import groovy.transform.stc.SingleSignatureClosureHint
 import org.gradle.api.artifacts.Dependency
 
 /**
@@ -16,6 +21,13 @@ abstract class MappingDepConfig(val dep: Dependency, val mappingsConfig: Mapping
     abstract fun contains(acceptor: (fname: String, type: String) -> Boolean, action: ContainedMapping.() -> Unit)
 
     fun contains(
+        @ClosureParams(
+            value = SimpleType::class,
+            options = [
+                "java.lang.String",
+                "java.lang.String"
+            ]
+        )
         acceptor: Closure<*>,
         @DelegatesTo(
             value = ContainedMapping::class,
