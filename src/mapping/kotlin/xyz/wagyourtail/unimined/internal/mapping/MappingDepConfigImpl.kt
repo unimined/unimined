@@ -17,16 +17,18 @@ class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val 
 ), ContainedMapping by defaultContains {
     val inputs = MappingTreeBuilder.MappingInputBuilder()
     private var finalized by FinalizeOnWrite(false)
+    private val contained = mutableListOf<ContainedMappingImpl>()
 
     init {
         defaultContains.dep = this
         inputs.provides({ _, _ -> true }) {
-            defaultContains.finalize(this)
+            defaultContains.build(this)
         }
     }
 
     fun finalize() {
         if (!finalized) finalized = true
+        contained.forEach(ContainedMappingImpl::finalize)
     }
 
     fun checkFinalized() {
@@ -40,15 +42,16 @@ class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val 
         inputs.provides({ f, t ->
             acceptor(f, t.toString())
         }) {
-            containedMapping.finalize(this)
+            containedMapping.build(this)
         }
     }
 
     override fun clearContains() {
         checkFinalized()
+        contained.clear()
         inputs.clearProvides()
         inputs.provides({ _, _ -> true }) {
-            defaultContains.finalize(this)
+            defaultContains.build(this)
         }
     }
 }
@@ -69,11 +72,17 @@ class ContainedMappingImpl() : ContainedMapping {
         if (finalized) throw IllegalStateException("Cannot modify finalized MappingDepConfig")
     }
 
-    fun finalize(input: MappingTreeBuilder.MappingInputBuilder.MappingInput) {
-        if (!finalized) finalized = true
-        outputs.forEach {
-            mappingsConfig.project.logger.info("[Unimined/MappingDep] $dep adding namespace ${it.actualNamespace.name}") // force resolve
+    fun finalize() {
+        if (!finalized) {
+            finalized = true
+            outputs.forEach {
+                mappingsConfig.project.logger.info("[Unimined/MappingDep] $dep adding namespace ${it.actualNamespace.name}") // force resolve
+            }
         }
+    }
+
+    fun build(input: MappingTreeBuilder.MappingInputBuilder.MappingInput) {
+        finalize()
         inputActions.forEach { input.it() }
     }
 

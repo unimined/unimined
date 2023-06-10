@@ -245,7 +245,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     override fun freeze() {
         for (dep in mappingsDeps) {
-            project.logger.info("[Unimined/MappingsProvider] Finalizing $dep")
+            project.logger.info("[Unimined/MappingsProvider] Finalizing ${dep.dep}")
             (dep as MappingDepConfigImpl).finalize()
         }
         super.freeze()
