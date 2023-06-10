@@ -15,6 +15,7 @@ import xyz.wagyourtail.unimined.util.FinalizeOnWrite
 class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val defaultContains: ContainedMappingImpl = ContainedMappingImpl()): MappingDepConfig(dep,
     mappingsConfig
 ), ContainedMapping by defaultContains {
+    val project = mappingsConfig.project
     val inputs = MappingTreeBuilder.MappingInputBuilder()
     private var finalized by FinalizeOnWrite(false)
     private val contained = mutableListOf<ContainedMappingImpl>()
@@ -29,6 +30,7 @@ class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val 
     fun finalize() {
         if (!finalized) finalized = true
         contained.forEach(ContainedMappingImpl::finalize)
+        project.logger.info("[Unimined/MappingDep] Finalized ($dep)")
     }
 
     fun checkFinalized() {

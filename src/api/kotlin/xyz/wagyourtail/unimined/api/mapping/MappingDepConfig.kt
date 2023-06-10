@@ -3,10 +3,7 @@ package xyz.wagyourtail.unimined.api.mapping
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import groovy.transform.stc.ClosureParams
-import groovy.transform.stc.FromAbstractTypeMethods
-import groovy.transform.stc.FromString
 import groovy.transform.stc.SimpleType
-import groovy.transform.stc.SingleSignatureClosureHint
 import org.gradle.api.artifacts.Dependency
 
 /**
