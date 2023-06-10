@@ -29,6 +29,7 @@ class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val 
 
     fun finalize() {
         if (!finalized) finalized = true
+        defaultContains.finalize()
         contained.forEach(ContainedMappingImpl::finalize)
         project.logger.info("[Unimined/MappingDep] Finalized ($dep)")
     }
