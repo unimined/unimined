@@ -1,0 +1,112 @@
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined' // version '1.0.0'
+}
+
+group 'com.example'
+archivesBaseName 'UniminedExampleMod'
+version '1.0-SNAPSHOT'
+
+// this is just here so we can test the outputs easier and clean between tests
+unimined.useGlobalCache = false
+
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7
+
+sourceSets {
+    modloader {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+    forge {
+        compileClasspath += sourceSets.main.output + sourceSets.modloader.output
+        runtimeClasspath += sourceSets.main.output + sourceSets.modloader.output
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+tasks.register("modloaderJar", Jar) {
+    from sourceSets.modloader.output, sourceSets.main.output
+
+    archiveClassifier = "modloader"
+}
+
+tasks.register("forgeJar", Jar) {
+    from sourceSets.forge.output, sourceSets.main.output
+
+    archiveClassifier = "forge"
+
+}
+
+unimined.minecraft() {
+    version "1.2.5"
+    side "client"
+
+    mappings {
+        mcp("legacy", "6.2-1.2.5")
+    }
+
+    minecraftRemapper.config {
+        ignoreConflicts(true)
+    }
+}
+
+unimined.minecraft(sourceSets.forge) {
+    version "1.2.5"
+    side "client"
+
+    mappings {
+        mcp("legacy", "6.2-1.2.5")
+        stub.withMappings(["searge", "mcp"]) {
+            c("ModLoader", "net/minecraft/src/ModLoader", "net/minecraft/src/ModLoader")
+            c("BaseMod", "net/minecraft/src/BaseMod", "net/minecraft/src/BaseMod")
+        }
+    }
+
+    forge {
+        forge "3.4.9.171"
+        forgeTransformer.transforms("exampleModId.transform")
+    }
+
+    minecraftRemapper.config {
+        ignoreConflicts(true)
+    }
+
+    runs {
+        config("client") {
+            jvmArgs.add("-Djma.debug=true")
+        }
+    }
+}
+
+unimined.minecraft(sourceSets.modloader) {
+    version "1.2.5"
+    side "client"
+
+    mappings {
+        mcp("legacy", "6.2-1.2.5")
+        stub.withMappings(["searge", "mcp"]) {
+            c("ModLoader", "net/minecraft/src/ModLoader", "net/minecraft/src/ModLoader")
+            c("BaseMod", "net/minecraft/src/BaseMod", "net/minecraft/src/BaseMod")
+        }
+    }
+
+    jarMod {
+        transforms("exampleModId.transform")
+    }
+
+    minecraftRemapper.config {
+        ignoreConflicts(true)
+    }
+}
+
+repositories {
+}
+
+dependencies {
+    modloaderJarMod "risugami:modloader:1.2.5"
+}

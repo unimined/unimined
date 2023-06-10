@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
@@ -25,10 +26,9 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
-class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModMinecraftTransformer(
+class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModAgentMinecraftTransformer(
     project,
     parent.provider,
-    jarModProvider = "forge",
     providerName = "FG1"
 ) {
     init {
@@ -122,6 +122,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
                 )
             )
         }
+
         if (wanted.contains("scala-library.jar")) {
             FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/scala-library.jar").use { it1 ->
                 val bytes = it1!!.readBytes()

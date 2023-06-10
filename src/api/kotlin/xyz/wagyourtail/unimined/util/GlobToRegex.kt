@@ -11,6 +11,7 @@ object GlobToRegex {
         "]" to "\\]",
         "^" to "\\^",
         "$" to "\\$",
+        "/./" to "\\/",
         "." to "\\.",
         "(" to "\\(",
         ")" to "\\)",
@@ -30,6 +31,9 @@ object GlobToRegex {
     val patternMatcher = "(?<!\\\\)(?:${globToRegex.keys.joinToString("|") { escapeChars(it) }})".toRegex()
 
     fun apply(glob: String): String {
+        if (glob.startsWith("./")) {
+            return apply(glob.substring(2))
+        }
         return "^" + patternMatcher.replace(glob) {
             globToRegex[it.value]!!
         } + "$"

@@ -331,8 +331,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             description = "Generates sources for $sourceSet's minecraft jar"
         })
 
-        project.logger.info("[Unimined/MinecraftProvider] minecraft file: $minecraftFileDev")
-
         // add export mappings task
         project.tasks.create("exportMappings".withSourceSet(sourceSet), ExportMappingsTaskImpl::class.java, this.mappings).apply {
             group = "unimined"
@@ -341,6 +339,8 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     fun afterEvaluate() {
+        project.logger.info("[Unimined/MinecraftProvider] minecraft file: $minecraftFileDev")
+
         // remap mods
         mods.afterEvaluate()
 
@@ -375,9 +375,19 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun isMinecraftJar(path: Path) =
         minecraftFiles.values.any { it == path } ||
-        path == minecraftData.minecraftClientFile.toPath() ||
-        path == minecraftData.minecraftServerFile.toPath() ||
-        path == mergedOfficialMinecraftFile.toPath()
+            when (side) {
+                EnvType.COMBINED -> {
+                    path == minecraftData.minecraftClientFile.toPath() ||
+                    path == minecraftData.minecraftServerFile.toPath() ||
+                    path == mergedOfficialMinecraftFile.toPath()
+                }
+                EnvType.CLIENT -> {
+                    path == minecraftData.minecraftClientFile.toPath()
+                }
+                EnvType.SERVER, EnvType.DATAGEN -> {
+                    path == minecraftData.minecraftServerFile.toPath()
+                }
+            }
 
 
 

@@ -87,24 +87,16 @@ object OlderMCPReader {
 
         if (visitor.visitContent()) {
             for (clazz in mappingTree.classes) {
-                val cn = clazz.getName(seargeNamespace)
-                if (cn == null) {
-                    continue
-                }
+                val cn = clazz.getName(seargeNamespace) ?: continue
                 visitLastClass = visitor.visitClass(cn)
 
                 if (visitLastClass) {
                     visitor.visitDstName(MappedElementKind.CLASS, 0, cn)
-                    visitor.visitElementContent(MappedElementKind.CLASS)
                 }
             }
 
             for (clazz in mappingTree.classes) {
-                val cln = clazz.getName(seargeNamespace)
-                if (cln == null) {
-                    continue
-                }
-                visitLastClass = visitor.visitClass(cln)
+                visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace) ?: continue)
                 if (visitLastClass) {
                     visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
 
@@ -219,10 +211,7 @@ object OlderMCPReader {
 
         if (visitor.visitContent()) {
             for (clazz in mappingTree.classes) {
-                val cn = clazz.getName(seargeNamespace)
-                if (cn == null) {
-                    continue
-                }
+                val cn = clazz.getName(seargeNamespace) ?: continue
                 visitLastClass = visitor.visitClass(cn)
 
                 if (visitLastClass) {
@@ -232,11 +221,7 @@ object OlderMCPReader {
             }
 
             for (clazz in mappingTree.classes) {
-                val cln = clazz.getName(seargeNamespace)
-                if (cln == null) {
-                    continue
-                }
-                visitLastClass = visitor.visitClass(cln)
+                visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace) ?: continue)
                 if (visitLastClass) {
                     visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
 

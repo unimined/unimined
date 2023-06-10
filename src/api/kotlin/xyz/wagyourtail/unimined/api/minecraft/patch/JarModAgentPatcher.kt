@@ -10,12 +10,6 @@ interface JarModAgentPatcher : JarModPatcher {
 
     /**
      * @since 0.5.0
-     * add a transform file for ClassTransform with the java agent.
-     */
-    var transforms: String?
-
-    /**
-     * @since 0.5.0
      * If should do the compile time transforms so normal jar
      * modding will be compatible with the output instead of requiring JarModAgent
      *
@@ -27,5 +21,17 @@ interface JarModAgentPatcher : JarModPatcher {
 
     @get:ApiStatus.Internal
     val jarModAgent: Configuration
+
+    /**
+     * @since 1.0.0
+     * add a transforms file to the jar mod agent
+     */
+    fun transforms(transform: String)
+
+    /**
+     * @since 1.0.0
+     * add transforms files to the jar mod agent
+     */
+    fun transforms(transforms: List<String>)
 
 }

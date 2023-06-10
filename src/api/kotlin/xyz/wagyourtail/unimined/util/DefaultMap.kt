@@ -10,6 +10,7 @@ class DefaultMap<T, U>(val initializer: (T) -> U, val map: MutableMap<T, U> = mu
         if (!containsKey(key)) {
             map[key] = initializer(key)
         }
+        @Suppress("UNCHECKED_CAST")
         return map[key] as U
     }
 

@@ -90,7 +90,7 @@ object MCPReader {
             var visitLastClass: Boolean
 
             for (clazz in seargeMappings.classes) {
-                val cn = clazz.getName(seargeNamespace)
+                val cn = clazz.getName(seargeNamespace) ?: continue
                 visitLastClass = visitor.visitClass(cn)
 
                 if (visitLastClass) {
@@ -100,7 +100,7 @@ object MCPReader {
             }
 
             for (clazz in seargeMappings.classes) {
-                visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace))
+                visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace) ?: continue)
                 if (visitLastClass) {
                     visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
 
@@ -190,7 +190,7 @@ object MCPReader {
 
         if (visitor.visitContent()) {
             for (clazz in mappingTree.classes) {
-                val cn = clazz.getName(seargeNamespace)
+                val cn = clazz.getName(seargeNamespace) ?: continue
                 visitLastClass = visitor.visitClass(cn)
 
                 if (visitLastClass) {
@@ -200,7 +200,7 @@ object MCPReader {
             }
 
             for (clazz in mappingTree.classes) {
-                visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace))
+                visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace) ?: continue)
                 if (visitLastClass) {
                     visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
 
@@ -286,7 +286,7 @@ object MCPReader {
 
         if (visitor.visitContent()) {
             for (clazz in mappingTree.classes) {
-                visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace))
+                visitLastClass = visitor.visitClass(clazz.getName(seargeNamespace) ?: continue)
                 if (visitLastClass) {
                     visitLastClass = visitor.visitElementContent(MappedElementKind.CLASS)
 

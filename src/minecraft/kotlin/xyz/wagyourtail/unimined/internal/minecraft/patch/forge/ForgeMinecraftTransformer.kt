@@ -26,6 +26,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -39,12 +40,26 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     val forge: Configuration = project.configurations.maybeCreate("forge".withSourceSet(provider.sourceSet))
 
-    @ApiStatus.Internal
-    lateinit var forgeTransformer: JarModMinecraftTransformer
+    @get:ApiStatus.Internal
+    var forgeTransformer: JarModMinecraftTransformer by FinalizeOnWrite(MustSet())
 
     override var accessTransformer: File? = null
 
     override var customSearge: Boolean by FinalizeOnRead(false)
+
+    fun transforms(transform: String) {
+        if (forgeTransformer !is JarModAgentMinecraftTransformer) {
+            throw IllegalStateException("JarModAgentPatcher is not enabled")
+        }
+        (forgeTransformer as JarModAgentMinecraftTransformer).transforms(transform)
+    }
+
+    fun transforms(transforms: List<String>) {
+        if (forgeTransformer !is JarModAgentMinecraftTransformer) {
+            throw IllegalStateException("JarModAgentPatcher is not enabled")
+        }
+        (forgeTransformer as JarModAgentMinecraftTransformer).transforms(transforms)
+    }
 
     override val prodNamespace: MappingNamespaceTree.Namespace
         get() = forgeTransformer.prodNamespace
@@ -277,12 +292,8 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
         val forgeDep = forge.dependencies.first()
 
         // test if pre unified jar
-        if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") < 0) {
-            forgeTransformer = FG1MinecraftTransformer(project, this)
-            forgeTransformer.jarModConfiguration.dependencies.add(forgeDep)
-        } else {
+        if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") > 0) {
             val jar = forge.files(forgeDep).first { it.extension == "zip" || it.extension == "jar" }
-            forgeTransformer = determineForgeProviderFromUniversal(jar)
 
             //parse version json from universal jar and apply
             jar.toPath().readZipInputStreamFor("version.json", false) {
