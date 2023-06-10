@@ -44,6 +44,10 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     fun isEmpty(): Boolean {
         return mappingsDeps.isEmpty()
     }
+
+    @ApiStatus.Experimental
+    abstract fun removeKey(key: String)
+
     @JvmOverloads
     abstract fun intermediary(key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
 

@@ -43,6 +43,11 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     override val mappingsDeps = mutableMapOf<String, MappingDepConfig>()
 
+    override fun removeKey(key: String) {
+        if (freeze) throw IllegalStateException("Cannot remove key after freeze")
+        mappingsDeps.remove(key)
+    }
+
 
     override fun intermediary(key: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.fabricMaven()
