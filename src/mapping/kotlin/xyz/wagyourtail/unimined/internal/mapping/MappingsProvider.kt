@@ -16,10 +16,7 @@ import xyz.wagyourtail.unimined.api.mapping.MemoryMapping
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.defaultedMapOf
-import xyz.wagyourtail.unimined.util.toHex
+import xyz.wagyourtail.unimined.util.*
 import java.io.IOException
 import java.io.StringWriter
 import java.nio.file.Path
@@ -34,7 +31,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             minecraft.side = value
         }
 
-    private var freeze = false
+    private var freeze by FinalizeOnWrite(false)
 
     override var devNamespace: Namespace by FinalizeOnRead(LazyMutable {
         getNamespaces().values.firstOrNull { it.named } ?: throw IllegalStateException("No named namespace found in ${getNamespaces().keys}")
@@ -320,7 +317,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     private fun resolveMappingTree(): MappingTreeView {
         project.logger.lifecycle("[Unimined/MappingsProvider] Resolving mappings for ${minecraft.sourceSet}")
         lateinit var mappings: MappingTreeView
-        freeze = true
+        if (!freeze) freeze = true
 
         if (mappingsDeps.isEmpty()) {
             project.logger.warn("[Unimined/MappingsProvider] No mappings specified!")
@@ -399,7 +396,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
 
     override val combinedNames: String by lazy {
-        freeze = true
+        if (!freeze) freeze = true
         val names = mappingsDeps.map { if (it.dep is FileCollectionDependency) (it.dep as FileCollectionDependency).files.first().nameWithoutExtension else "${it.dep.name}-${it.dep.version}" }.sorted() + (if (hasStubs) listOf("stub-${_stub!!.hash}") else listOf())
         names.joinToString("-")
     }
