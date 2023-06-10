@@ -55,21 +55,21 @@ class PackageRemappingVisitor(next: MappingVisitor?, val namespaces: Set<String>
 
     override fun visitMethod(srcName: String, srcDesc: String): Boolean {
         if (namespaceIds.contains(MappingTree.SRC_NAMESPACE_ID)) {
-            return super.visitMethod(srcName, srcDesc.replace(Regex("L(.+);")) { "L${remapClassName(it.groupValues[1])};" })
+            return super.visitMethod(srcName, srcDesc.replace(Regex("L(.+?);")) { "L${remapClassName(it.groupValues[1])};" })
         }
         return super.visitMethod(srcName, srcDesc)
     }
 
     override fun visitField(srcName: String, srcDesc: String?): Boolean {
         if (namespaceIds.contains(MappingTree.SRC_NAMESPACE_ID)) {
-            return super.visitField(srcName, srcDesc?.replace(Regex("L(.+);")) { "L${remapClassName(it.groupValues[1])};" })
+            return super.visitField(srcName, srcDesc?.replace(Regex("L(.+?);")) { "L${remapClassName(it.groupValues[1])};" })
         }
         return super.visitField(srcName, srcDesc)
     }
 
     override fun visitDstDesc(targetKind: MappedElementKind, namespace: Int, desc: String?) {
         if (namespaceIds.contains(namespace)) {
-            super.visitDstDesc(targetKind, namespace, desc?.replace(Regex("L(.+);")) { "L${remapClassName(it.groupValues[1])};" })
+            super.visitDstDesc(targetKind, namespace, desc?.replace(Regex("L(.+?);")) { "L${remapClassName(it.groupValues[1])};" })
         } else {
             super.visitDstDesc(targetKind, namespace, desc)
         }

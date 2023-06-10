@@ -9,6 +9,7 @@ import net.fabricmc.mappingio.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.util.*
 import java.io.BufferedReader
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Path
@@ -50,7 +51,7 @@ class MappingTreeBuilder {
     fun MappingInputBuilder.MappingInput.wrapInput(reader: BufferedReader?, action: (BufferedReader?) -> Unit) {
         val tempFile = if (reader != null) {
             // cache the reader
-            createTempFile("mapping-input", ".tmp").apply {
+            File.createTempFile("mapping-input", ".tmp").apply {
                 deleteOnExit()
                 // write reader to file
                 bufferedWriter().use { out ->
