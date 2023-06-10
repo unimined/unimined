@@ -17,7 +17,7 @@ class MappingDepConfigImpl(dep: Dependency, mappingsConfig: MappingsConfig, val 
 ), ContainedMapping by defaultContains {
     val inputs = MappingTreeBuilder.MappingInputBuilder()
     val outputs = mutableListOf<TempMappingNamespace>()
-    var finalized by FinalizeOnWrite(false)
+    private var finalized by FinalizeOnWrite(false)
 
     init {
         defaultContains.dep = this

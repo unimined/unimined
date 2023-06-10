@@ -392,11 +392,17 @@ class MappingTreeBuilder {
         private var frozen by FinalizeOnWrite(false)
         private val provided = mutableListOf<Pair<(String, BetterMappingFormat) -> Boolean, MappingInput.() -> Unit>>()
 
+        fun checkFrozen() {
+            if (frozen) throw IllegalStateException("cannot modify frozen builder")
+        }
+
         fun provides(f: (String, BetterMappingFormat) -> Boolean, input: MappingInput.() -> Unit) {
+            checkFrozen()
             provided.add(f to input)
         }
 
         fun clearProvides() {
+            checkFrozen()
             provided.clear()
         }
 
