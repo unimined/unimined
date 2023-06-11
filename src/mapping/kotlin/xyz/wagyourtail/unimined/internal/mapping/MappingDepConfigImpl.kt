@@ -222,6 +222,7 @@ class ContainedMappingImpl() : ContainedMapping {
                 outputs.add(it)
             }
         }
+        val createdException = Exception("Namespace created here")
         return object : MappingDepConfig.TempMappingNamespace(namespace, named, canRemapTo) {
             override val actualNamespace by lazy {
                 try {
@@ -233,14 +234,15 @@ class ContainedMappingImpl() : ContainedMapping {
                         inputActions.add {
                             addNs(it.name)
                         }
-                        namespaceCreationTrace[namespace.lowercase()] = Exception("Namespace created here")
+                        namespaceCreationTrace[namespace.lowercase()] = createdException
                     }
                 } catch (e: IllegalArgumentException) {
                     mappingsConfig.project.logger.error(
                         "[Unimined/MappingDep] ${dep.dep} failed to add namespace $namespace",
                         e
                     )
-                    mappingsConfig.project.logger.error("[Unimined/MappingDep] ${dep.dep} namespace created here", namespaceCreationTrace[namespace.lowercase()])
+                    mappingsConfig.project.logger.error("[Unimined/MappingDep] namespace ${namespace} originally created here", namespaceCreationTrace[namespace.lowercase()])
+                    mappingsConfig.project.logger.error("[Unimined/MappingDep] namespace ${namespace} created for a second time here", createdException)
                     throw e
                 }
             }
