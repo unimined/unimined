@@ -139,6 +139,7 @@ class ContainedMappingImpl() : ContainedMapping {
     override fun skipIfNotIn(namespace: String) {
         checkFinalized()
         inputActions.add {
+            addDepends(namespace)
             forwardVisitor { v, m, _ ->
                 SkipIfNotInFilter(v, m, namespace)
             }
@@ -149,6 +150,13 @@ class ContainedMappingImpl() : ContainedMapping {
         checkFinalized()
         inputActions.add {
             clearForwardVisitor()
+        }
+    }
+
+    override fun clearDepends() {
+        checkFinalized()
+        inputActions.add {
+            clearDepends()
         }
     }
 

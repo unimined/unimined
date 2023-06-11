@@ -113,4 +113,5 @@ interface ContainedMapping {
 
     fun clearOutputs()
     fun skipIfNotIn(namespace: String)
+    fun clearDepends()
 }

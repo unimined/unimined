@@ -64,7 +64,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     override val minecraftRemapper = MinecraftRemapper(project, this)
 
     private val patcherActions = ArrayDeque<() -> Unit>()
-    private val mappingActions = ArrayDeque<() -> Unit>()
     private var lateActionsRunning by FinalizeOnWrite(false)
 
     val minecraft: Configuration = project.configurations.maybeCreate("minecraft".withSourceSet(sourceSet)).also {

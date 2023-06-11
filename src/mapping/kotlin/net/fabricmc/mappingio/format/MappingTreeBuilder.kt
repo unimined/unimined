@@ -24,7 +24,9 @@ class MappingTreeBuilder {
     private var side by FinalizeOnRead(EnvType.COMBINED)
     private var sourceNs by FinalizeOnRead("official")
 
-    private val onBuild = mutableListOf<Pair<Pair<String, Set<String>>, () -> Unit>>()
+    private val onBuild = mutableListOf<OnBuildTask>()
+
+    data class OnBuildTask(val dep: Set<String>, val out: Set<String>, val action: () -> Unit)
 
     private fun checkFrozen() {
         if (frozen) {
@@ -59,8 +61,7 @@ class MappingTreeBuilder {
                 }
             }
         } else null
-        val newKey = (nsSource to nsFilter)
-        val value = newKey to {
+        val task = OnBuildTask((dependsOn + setOf(nsSource) - sourceNs).toSet(), nsFilter) {
             if (tempFile != null) {
                 tempFile.bufferedReader().use {
                     try {
@@ -74,19 +75,17 @@ class MappingTreeBuilder {
             }
         }
         // determine where to put in after list based on being in the output of a previous
+        val remainingDepends = task.dep.toMutableSet()
         for (i in 0 until onBuild.size) {
-            val key = onBuild[i].first
-            if (newKey.second.contains(key.first)) {
-                onBuild.add(i, value)
+            remainingDepends -= onBuild[i].dep
+            if (remainingDepends.isEmpty()) {
+                onBuild.add(i, task)
                 return
             }
-            if (key.second.contains(newKey.first)) {
-                onBuild.add(i + 1, value)
-                return
-            }
+            remainingDepends -= onBuild[i].out
         }
         // source wasn't found in prev's dst's
-        onBuild.add(value)
+        onBuild.add(task)
     }
 
     fun reprocessWithAddedGlobalFMV(newVisitor: (MappingVisitor) -> MappingVisitor) {
@@ -352,7 +351,7 @@ class MappingTreeBuilder {
     fun build(): MappingTreeView {
         if (!frozen) frozen = true
         for (action in onBuild) {
-            action.second()
+            action.action()
         }
         return tree
     }
@@ -364,6 +363,7 @@ class MappingTreeBuilder {
             var fmv: (MappingVisitor, MappingTreeView, EnvType) -> MappingVisitor = { v, _, _ -> v }
             var nsSource: String = "official"
             var afterRemap: (MappingTree) -> Unit = { }
+            val dependsOn: MutableSet<String> = mutableSetOf()
 
             fun mapNs(from: String, to: String) {
                 nsMap[from] = to
@@ -403,6 +403,10 @@ class MappingTreeBuilder {
 
             fun clearAfterRemap() {
                 afterRemap = { }
+            }
+
+            fun addDepends(ns: String) {
+                dependsOn.add(ns)
             }
         }
 
