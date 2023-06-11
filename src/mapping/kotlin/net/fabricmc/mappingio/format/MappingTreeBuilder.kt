@@ -26,7 +26,11 @@ class MappingTreeBuilder {
 
     private val onBuild = mutableListOf<OnBuildTask>()
 
-    data class OnBuildTask(val dep: Set<String>, val out: Set<String>, val action: () -> Unit)
+    data class OnBuildTask(val dep: Set<String>, val out: Set<String>, val action: () -> Unit) {
+        override fun toString(): String {
+            return "OnBuildTask(dep=$dep, out=$out)"
+        }
+    }
 
     private fun checkFrozen() {
         if (frozen) {
@@ -86,6 +90,7 @@ class MappingTreeBuilder {
         }
         // source wasn't found in prev's dst's
         onBuild.add(task)
+        print(onBuild)
     }
 
     fun reprocessWithAddedGlobalFMV(newVisitor: (MappingVisitor) -> MappingVisitor) {
@@ -170,9 +175,11 @@ class MappingTreeBuilder {
                         }
                         if (!combined) {
                             if (side == EnvType.CLIENT && !it.second.endsWith("client.srg")) {
+                                println("Skipping ${it.second}")
                                 return@forEach
                             }
                             if (side == EnvType.SERVER && !it.second.endsWith("server.srg")) {
+                                println("Skipping ${it.second}")
                                 return@forEach
                             }
                         }

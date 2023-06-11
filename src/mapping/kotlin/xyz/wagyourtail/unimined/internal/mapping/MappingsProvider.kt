@@ -165,18 +165,25 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         mapping("de.oceanlabs.mcp:mcp_${channel}:${version}@zip", key) {
             if (channel == "legacy") {
                 contains({ _, t ->
-                    !t.contains("MCP")
+                    t != "MCP"
                 }) {
                     onlyExistingSrc()
                     outputs("searge", false) { listOf("official") }
                 }
                 contains({ _, t ->
-                    t.contains("MCP")
+                    t == "MCP" || t == "OLDER_MCP"
                 }) {
                     onlyExistingSrc()
                     srgToSearge()
                     outputs("mcp", true) { listOf("searge") }
                     sourceNamespace("searge")
+                }
+                contains({_, t ->
+                    t == "OLD_MCP"
+                }) {
+                    onlyExistingSrc()
+                    outputs("searge", false) { listOf("official") }
+                    outputs("mcp", true) { listOf("searge") }
                 }
             } else {
                 onlyExistingSrc()

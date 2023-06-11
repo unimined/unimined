@@ -177,8 +177,6 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
 
-        val forge = parent.forge.resolve().first().toPath()
-
         // resolve dyn libs
         val dynLibFolder = config.workingDir.resolve("lib")
         dynLibFolder.mkdirs()
