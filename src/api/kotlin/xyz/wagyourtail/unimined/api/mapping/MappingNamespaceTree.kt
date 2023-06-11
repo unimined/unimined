@@ -68,6 +68,16 @@ open class MappingNamespaceTree {
         return namespace
     }
 
+    @ApiStatus.Internal
+    fun addOrGetNamespace(name: String, targets: () -> Set<Namespace>, named: Boolean): Namespace {
+        checkFrozen()
+        return namespaces[name.lowercase()]?.apply {
+            val oldTargets = targetRemapFuns[this]!!
+            targetRemapFuns[this] = { targets() + oldTargets() }
+            if (this.named != named) throw IllegalArgumentException("Cannot change named status of namespace $name")
+        } ?: addNamespace(name, targets, named)
+    }
+
     @ApiStatus.Experimental
     fun addTarget(namespace: String, canRemapTo: String) {
         checkFrozen()

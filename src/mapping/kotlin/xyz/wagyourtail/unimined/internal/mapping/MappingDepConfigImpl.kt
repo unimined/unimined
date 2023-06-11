@@ -210,40 +210,12 @@ class ContainedMappingImpl() : ContainedMapping {
 
     override fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): MappingDepConfig.TempMappingNamespace {
         checkFinalized()
-        if (namespace.lowercase() == mappingsConfig.OFFICIAL.name) {
-            return object : MappingDepConfig.TempMappingNamespace(namespace, named, canRemapTo) {
-                override val actualNamespace: MappingNamespaceTree.Namespace
-                    get() = mappingsConfig.OFFICIAL.also {
-                        inputActions.add {
-                            addNs(it.name)
-                        }
-                    }
-            }.also {
-                outputs.add(it)
-            }
-        }
-        val createdException = Exception("Namespace created here")
         return object : MappingDepConfig.TempMappingNamespace(namespace, named, canRemapTo) {
             override val actualNamespace by lazy {
-                try {
-                    mappingsConfig.addNamespace(
-                        namespace,
-                        { canRemapTo().map { mappingsConfig.getNamespace(it.lowercase()) }.toSet() },
-                        named
-                    ).also {
-                        inputActions.add {
-                            addNs(it.name)
-                        }
-                        namespaceCreationTrace[namespace.lowercase()] = createdException
+                mappingsConfig.addOrGetNamespace(namespace, { canRemapTo().map { mappingsConfig.getNamespace(it) }.toSet() }, named).also {
+                    inputActions.add {
+                        addNs(it.name)
                     }
-                } catch (e: IllegalArgumentException) {
-                    mappingsConfig.project.logger.error(
-                        "[Unimined/MappingDep] ${dep.dep} failed to add namespace $namespace",
-                        e
-                    )
-                    mappingsConfig.project.logger.error("[Unimined/MappingDep] namespace ${namespace} originally created here", namespaceCreationTrace[namespace.lowercase()])
-                    mappingsConfig.project.logger.error("[Unimined/MappingDep] namespace ${namespace} created for a second time here", createdException)
-                    throw e
                 }
             }
         }.also {
