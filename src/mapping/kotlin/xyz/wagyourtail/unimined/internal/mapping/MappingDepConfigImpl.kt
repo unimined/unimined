@@ -204,6 +204,12 @@ class ContainedMappingImpl() : ContainedMapping {
         }
     }
 
+    override fun dependsOn(name: String) {
+        inputActions.add {
+            addDepends(name)
+        }
+    }
+
     override fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): MappingDepConfig.TempMappingNamespace {
         checkFinalized()
         return object : MappingDepConfig.TempMappingNamespace(namespace, named, canRemapTo) {

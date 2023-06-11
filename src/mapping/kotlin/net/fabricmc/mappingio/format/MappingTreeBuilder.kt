@@ -26,9 +26,9 @@ class MappingTreeBuilder {
 
     private val onBuild = mutableListOf<OnBuildTask>()
 
-    data class OnBuildTask(val dep: Set<String>, val out: Set<String>, val action: () -> Unit) {
+    data class OnBuildTask(val name: String, val dep: Set<String>, val out: Set<String>, val action: () -> Unit) {
         override fun toString(): String {
-            return "OnBuildTask(dep=$dep, out=$out)"
+            return "OnBuildTask(name=$name, dep=$dep, out=$out)"
         }
     }
 
@@ -54,7 +54,7 @@ class MappingTreeBuilder {
         sourceNs = ns
     }
 
-    fun MappingInputBuilder.MappingInput.wrapInput(reader: BufferedReader?, action: (BufferedReader?) -> Unit) {
+    fun MappingInputBuilder.MappingInput.wrapInput(name: String, reader: BufferedReader?, action: (BufferedReader?) -> Unit) {
         val tempFile = if (reader != null) {
             // cache the reader
             File.createTempFile("mapping-input", ".tmp").apply {
@@ -65,7 +65,7 @@ class MappingTreeBuilder {
                 }
             }
         } else null
-        val task = OnBuildTask((dependsOn + setOf(nsSource) - sourceNs).toSet(), nsFilter) {
+        val task = OnBuildTask(name, (dependsOn + setOf(nsSource) - sourceNs).toSet(), nsFilter) {
             if (tempFile != null) {
                 tempFile.bufferedReader().use {
                     try {
@@ -84,13 +84,14 @@ class MappingTreeBuilder {
             remainingDepends -= onBuild[i].dep
             if (remainingDepends.isEmpty()) {
                 onBuild.add(i, task)
+//                println(onBuild)
                 return
             }
             remainingDepends -= onBuild[i].out
         }
         // source wasn't found in prev's dst's
         onBuild.add(task)
-        print(onBuild)
+//        println(onBuild)
     }
 
     fun reprocessWithAddedGlobalFMV(newVisitor: (MappingVisitor) -> MappingVisitor) {
@@ -175,11 +176,11 @@ class MappingTreeBuilder {
                         }
                         if (!combined) {
                             if (side == EnvType.CLIENT && !it.second.endsWith("client.srg")) {
-                                println("Skipping ${it.second}")
+//                                println("Skipping ${it.second}")
                                 return@forEach
                             }
                             if (side == EnvType.SERVER && !it.second.endsWith("server.srg")) {
-                                println("Skipping ${it.second}")
+//                                println("Skipping ${it.second}")
                                 return@forEach
                             }
                         }
@@ -250,7 +251,7 @@ class MappingTreeBuilder {
     ) {
         val input = inputs.build(fname, type)
         @Suppress("NAME_SHADOWING")
-        input.wrapInput(reader) { reader ->
+        input.wrapInput(fname, reader) { reader ->
             reader!!
             val visitor = MappingNsRenamer(
                 MappingSourceNsSwitch(
@@ -306,13 +307,13 @@ class MappingTreeBuilder {
 
                         "methods.csv" -> {
                             OldMCPReader.readMethod(
-                                side, reader, "official", "searge", "mcp", visitor
+                                side, reader, "official", "searge", "mcp", visitor, tree
                             )
                         }
 
                         "fields.csv" -> {
                             OldMCPReader.readField(
-                                side, reader, "official", "searge", "mcp", visitor
+                                side, reader, "official", "searge", "mcp", visitor, tree
                             )
                         }
 

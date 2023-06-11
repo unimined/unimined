@@ -25,8 +25,8 @@ object OldMCPReader {
         ) && reader.nextCol("\"side\"")
     }
 
-    fun readMethod(envType: EnvType, reader: Reader, visitor: MappingVisitor) {
-        readMethod(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, "searge", MappingUtil.NS_TARGET_FALLBACK, visitor)
+    fun readMethod(envType: EnvType, reader: Reader, visitor: MappingVisitor, mappingTree: MappingTreeView) {
+        readMethod(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, "searge", MappingUtil.NS_TARGET_FALLBACK, visitor, mappingTree)
     }
 
     fun readMethod(
@@ -35,9 +35,10 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-        visitor: MappingVisitor
+        visitor: MappingVisitor,
+        mappingTree: MappingTreeView
     ) {
-        readMethod(envType, ColumnFileReader(reader, ','), notchNamespace, seargeNamespace, targetNamespace, visitor)
+        readMethod(envType, ColumnFileReader(reader, ','), notchNamespace, seargeNamespace, targetNamespace, visitor, mappingTree)
     }
 
     internal fun readMethod(
@@ -46,7 +47,8 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-        visitor: MappingVisitor
+        visitor: MappingVisitor,
+        mappingTree: MappingTreeView
     ) {
 
         reader.mark()
@@ -74,7 +76,7 @@ object OldMCPReader {
                 val name = reader.readCell()
                 val notch = reader.readCell()
                 @Suppress("UNUSED_VARIABLE") val sig = reader.readCell()!!
-                val notchSig = reader.readCell()!!
+                var notchSig = reader.readCell()!!
                 val className = reader.readCell()
                 var classNotch = reader.readCell()
                 val packageName = reader.readCell()
@@ -85,7 +87,7 @@ object OldMCPReader {
                     classNotch = "$packageName/$classNotch"
                 }
 
-//                notchSig = fixNotchSig(notchSig, sig, parentVisitor)
+                notchSig = fixNotchSig(notchSig, sig, mappingTree)
 
                 if (lastClass != classNotch) {
                     lastClass = classNotch
@@ -109,8 +111,8 @@ object OldMCPReader {
         visitor.accept(parentVisitor)
     }
 
-    fun readField(envType: EnvType, reader: Reader, visitor: MappingVisitor) {
-        readField(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, "searge", MappingUtil.NS_TARGET_FALLBACK, visitor)
+    fun readField(envType: EnvType, reader: Reader, visitor: MappingVisitor, mappingTree: MappingTreeView) {
+        readField(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, "searge", MappingUtil.NS_TARGET_FALLBACK, visitor, mappingTree)
     }
 
     fun readField(
@@ -119,9 +121,10 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-        visitor: MappingVisitor
+        visitor: MappingVisitor,
+        mappingTree: MappingTreeView
     ) {
-        readField(envType, ColumnFileReader(reader, ','), notchNamespace, seargeNamespace, targetNamespace, visitor)
+        readField(envType, ColumnFileReader(reader, ','), notchNamespace, seargeNamespace, targetNamespace, visitor, mappingTree)
     }
 
     internal fun readField(
@@ -130,7 +133,8 @@ object OldMCPReader {
         notchNamespace: String,
         seargeNamespace: String,
         targetNamespace: String,
-        visitor: MappingVisitor
+        visitor: MappingVisitor,
+        mappingTree: MappingTreeView
     ) {
 
         reader.mark()
@@ -158,7 +162,7 @@ object OldMCPReader {
                 val name = reader.readCell()
                 val notch = reader.readCell()
                 @Suppress("UNUSED_VARIABLE") val sig = reader.readCell()!!
-                val notchSig = reader.readCell()!!
+                var notchSig = reader.readCell()!!
                 val className = reader.readCell()
                 var classNotch = reader.readCell()
                 val packageName = reader.readCell()
@@ -169,7 +173,7 @@ object OldMCPReader {
                     classNotch = "$packageName/$classNotch"
                 }
 
-//                notchSig = fixNotchSig(notchSig, sig, parentVisitor)
+                notchSig = fixNotchSig(notchSig, sig, mappingTree)
 
                 if (lastClass != classNotch) {
                     lastClass = classNotch
@@ -195,34 +199,34 @@ object OldMCPReader {
 
     private val classSigRegex = Regex("L([^;]+);")
 
-//    private fun fixNotchSig(notchSig: String, sig: String, parentVisitor: MappingTreeView): String {
-//        @Suppress("NAME_SHADOWING") var notchSig = notchSig
-//        val notchSigSpl = classSigRegex.findAll(notchSig).map { it.groupValues[1] }.toList()
-//        val sigSpl = classSigRegex.findAll(sig).map { it.groupValues[1] }.toList()
-//        try {
-//            for (i in notchSigSpl.indices) {
-//                if (notchSigSpl[i] == sigSpl[i]) {
-//                    // find in class map
-//                    var found = false
-//                    for (clazz in parentVisitor.classes) {
-//                        if (clazz.srcName.split("/").last() == notchSigSpl[i]) {
-//                            notchSig = notchSig.replace(notchSigSpl[i], clazz.srcName)
-//                            found = true
-//                            break
-//                        }
-//                    }
-//                    if (!found) {
+    private fun fixNotchSig(notchSig: String, sig: String, mappingTree: MappingTreeView): String {
+        @Suppress("NAME_SHADOWING") var notchSig = notchSig
+        val notchSigSpl = classSigRegex.findAll(notchSig).map { it.groupValues[1] }.toList()
+        val sigSpl = classSigRegex.findAll(sig).map { it.groupValues[1] }.toList()
+        try {
+            for (i in notchSigSpl.indices) {
+                if (notchSigSpl[i] == sigSpl[i]) {
+                    // find in class map
+                    var found = false
+                    for (clazz in mappingTree.classes) {
+                        if (clazz.srcName.split("/").last() == notchSigSpl[i]) {
+                            notchSig = notchSig.replace(notchSigSpl[i], clazz.srcName)
+                            found = true
+                            break
+                        }
+                    }
+                    if (!found) {
 //                        System.err.println("Class not found: ${notchSigSpl[i]}")
-//                    }
-//                }
-//            }
-//        } catch (oob: IndexOutOfBoundsException) {
-//            System.err.println("Notch sig: $notchSig")
-//            System.err.println("Sig: $sig")
-//            throw oob
-//        }
-//        return notchSig
-//    }
+                    }
+                }
+            }
+        } catch (oob: IndexOutOfBoundsException) {
+            System.err.println("Notch sig: $notchSig")
+            System.err.println("Sig: $sig")
+            System.err.println("IndexOutOfBoundsException: ${oob.message}")
+        }
+        return notchSig
+    }
 
     fun readParam(envType: EnvType, reader: Reader, visitor: MemoryMappingTree) {
         readParam(envType, reader, MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK, visitor)

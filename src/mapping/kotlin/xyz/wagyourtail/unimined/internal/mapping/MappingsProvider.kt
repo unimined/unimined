@@ -185,6 +185,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     outputs("searge", false) { listOf("official") }
                     outputs("mcp", true) { listOf("searge") }
                 }
+                contains({f, t ->
+                    t == "OLD_MCP" && !f.contains("classes")
+                }) {
+                    // make classes first
+                    dependsOn("searge")
+                }
             } else {
                 onlyExistingSrc()
                 srgToSearge()

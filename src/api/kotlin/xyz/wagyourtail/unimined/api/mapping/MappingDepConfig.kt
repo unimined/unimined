@@ -88,6 +88,8 @@ interface ContainedMapping {
 
     fun clearAfterRead()
 
+    fun dependsOn(name: String)
+
     /**
      * filters namespaces to have to be from this.
      * applied after mapNamespace
