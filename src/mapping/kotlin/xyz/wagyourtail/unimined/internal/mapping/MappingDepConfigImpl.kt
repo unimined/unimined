@@ -1,9 +1,6 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
-import net.fabricmc.mappingio.format.ChildMethodStripper
-import net.fabricmc.mappingio.format.MappingTreeBuilder
-import net.fabricmc.mappingio.format.NoNewSrcVisitor
-import net.fabricmc.mappingio.format.SrgToSeargeMapper
+import net.fabricmc.mappingio.format.*
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.mapping.ContainedMapping
@@ -139,6 +136,15 @@ class ContainedMappingImpl() : ContainedMapping {
         }
     }
 
+    override fun skipIfNotIn(namespace: String) {
+        checkFinalized()
+        inputActions.add {
+            forwardVisitor { v, m, _ ->
+                SkipIfNotInFilter(v, m, namespace)
+            }
+        }
+    }
+
     override fun clearForwardVisitor() {
         checkFinalized()
         inputActions.add {
@@ -147,6 +153,7 @@ class ContainedMappingImpl() : ContainedMapping {
     }
 
     override fun copyUnnamedFromSrc() {
+        checkFinalized()
         inputActions.add {
             afterRemap { mappings ->
                 val srcKey = mappings.getNamespaceId(nsSource)
@@ -183,6 +190,7 @@ class ContainedMappingImpl() : ContainedMapping {
     }
 
     override fun clearAfterRead() {
+        checkFinalized()
         inputActions.add {
             clearAfterRemap()
         }
