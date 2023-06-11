@@ -204,10 +204,6 @@ class ContainedMappingImpl() : ContainedMapping {
         }
     }
 
-    companion object {
-        private val namespaceCreationTrace: MutableMap<String, Exception> = mutableMapOf()
-    }
-
     override fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): MappingDepConfig.TempMappingNamespace {
         checkFinalized()
         return object : MappingDepConfig.TempMappingNamespace(namespace, named, canRemapTo) {

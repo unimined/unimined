@@ -57,6 +57,14 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     override fun apply() {
         // get and add forge-src to mappings
         parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
+
+        val forge = parent.forge.resolve().first().toPath()
+
+        // resolve dyn libs
+        forge.readZipInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", false) {
+            resolveDynLibs(project.unimined.getLocalCache().resolve("fmllibs").toFile(), getDynLibs(it))
+        }
+
         super.apply()
     }
 
@@ -64,121 +72,105 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         provider.minecraft.extendsFrom(it)
     }
 
-
     lateinit var deps: List<Pair<Pair<String, String>, Dependency>>
 
     fun resolveDynLibs(workingDirectory: File, wanted: Set<String>) {
-        val path = workingDirectory.resolve("lib").toPath().createDirectories()
+        val path = workingDirectory.toPath().createDirectories()
 
-        if (!resolvedForgeDeps) {
-            // provide and copy some old forge deps in
-            deps = listOf(
-                Pair(
-                    Pair("argo-2.25.jar", "argo-2.25.jar"), project.dependencies.create(
-                        "net.sourceforge.argo:argo:2.25"
-                    )
-                ),
-                Pair(
-                    Pair("guava-12.0.1.jar", "guava-12.0.1.jar"), project.dependencies.create(
-                        "com.google.guava:guava:12.0.1"
-                    )
-                ),
-                Pair(
-                    Pair("guava-14.0-rc3.jar", "guava-14.0-rc3.jar"), project.dependencies.create(
-                        "com.google.guava:guava:14.0-rc3"
-                    )
-                ),
-                Pair(
-                    Pair("asm-all-4.1.jar", "asm-all-4.1.jar"), project.dependencies.create(
-                        "org.ow2.asm:asm-all:4.1"
-                    )
-                ),
-                Pair(
-                    Pair("bcprov-jdk15on-1.48.jar", "bcprov-jdk15on-148.jar"), project.dependencies.create(
-                        "org.bouncycastle:bcprov-jdk15on:1.48"
-                    )
-                ),
-                Pair(
-                    Pair("bcprov-jdk15on-1.47.jar", "bcprov-jdk15on-147.jar"), project.dependencies.create(
-                        "org.bouncycastle:bcprov-jdk15on:1.47"
-                    )
-                ),
-            )
-            deps.forEach { dep ->
-                if (wanted.contains(dep.first.second)) {
-                    forgeDeps.dependencies.add(dep.second)
-                }
-            }
-
-            if (wanted.contains("asm-all-4.0.jar")) {
-                FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/asm-all-4.0.jar").use { it1 ->
-                    val bytes = it1!!.readBytes()
-                    path.resolve("asm-all-4.0.jar")
-                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-                }
-
-                forgeDeps.dependencies.add(
-                    project.dependencies.create(
-                        project.files(path.resolve("asm-all-4.0.jar").toString())
-                    )
+        deps = listOf(
+            Pair(
+                Pair("argo-2.25.jar", "argo-2.25.jar"), project.dependencies.create(
+                    "net.sourceforge.argo:argo:2.25"
                 )
-            }
-
-            if (wanted.contains("scala-library.jar")) {
-                FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/scala-library.jar").use { it1 ->
-                    val bytes = it1!!.readBytes()
-                    path.resolve("scala-library.jar")
-                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-                }
-
-                forgeDeps.dependencies.add(
-                    project.dependencies.create(
-                        project.files(path.resolve("scala-library.jar").toString())
-                    )
+            ),
+            Pair(
+                Pair("guava-12.0.1.jar", "guava-12.0.1.jar"), project.dependencies.create(
+                    "com.google.guava:guava:12.0.1"
                 )
-            }
-            if (wanted.contains("argo-small-3.2.jar")) {
-                FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/argo-small-3.2.jar").use { it1 ->
-                    val bytes = it1!!.readBytes()
-                    path.resolve("argo-small-3.2.jar")
-                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-                }
-
-                forgeDeps.dependencies.add(
-                    project.dependencies.create(
-                        project.files(path.resolve("argo-small-3.2.jar").toString())
-                    )
+            ),
+            Pair(
+                Pair("guava-14.0-rc3.jar", "guava-14.0-rc3.jar"), project.dependencies.create(
+                    "com.google.guava:guava:14.0-rc3"
                 )
-            }
-            if (wanted.contains("deobfuscation_data_1.5.2.zip")) {
-                FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.2.zip")
-                    .use { it1 ->
-                        val bytes = it1!!.readBytes()
-                        path.resolve("deobfuscation_data_1.5.2.zip")
-                            .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-                    }
-
-                forgeDeps.dependencies.add(
-                    project.dependencies.create(
-                        project.files(path.resolve("deobfuscation_data_1.5.2.zip").toString())
-                    )
+            ),
+            Pair(
+                Pair("asm-all-4.1.jar", "asm-all-4.1.jar"), project.dependencies.create(
+                    "org.ow2.asm:asm-all:4.1"
                 )
-            }
+            ),
+            Pair(
+                Pair("bcprov-jdk15on-1.48.jar", "bcprov-jdk15on-148.jar"), project.dependencies.create(
+                    "org.bouncycastle:bcprov-jdk15on:1.48"
+                )
+            ),
+            Pair(
+                Pair("bcprov-jdk15on-1.47.jar", "bcprov-jdk15on-147.jar"), project.dependencies.create(
+                    "org.bouncycastle:bcprov-jdk15on:1.47"
+                )
+            ),
+        )
 
-            resolvedForgeDeps = true
-            forgeDeps.resolve()
+        deps.forEach { dep ->
+            if (wanted.contains(dep.first.second)) {
+                forgeDeps.dependencies.add(dep.second)
+            }
         }
 
-        for (dep in deps) {
-            if (wanted.contains(dep.first.second)) {
-                forgeDeps.files(dep.second).forEach { file ->
-                    if (file.name == dep.first.first) {
-                        file.copyTo(path.resolve(dep.first.second).toFile(), true)
-                    } else {
-                        file.copyTo(path.resolve(file.name).toFile(), true)
-                    }
-                }
+        if (wanted.contains("asm-all-4.0.jar")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/asm-all-4.0.jar").use { it1 ->
+                val bytes = it1!!.readBytes()
+                path.resolve("asm-all-4.0.jar")
+                    .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
             }
+
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("asm-all-4.0.jar").toString())
+                )
+            )
+        }
+
+        if (wanted.contains("scala-library.jar")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/scala-library.jar").use { it1 ->
+                val bytes = it1!!.readBytes()
+                path.resolve("scala-library.jar")
+                    .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            }
+
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("scala-library.jar").toString())
+                )
+            )
+        }
+
+        if (wanted.contains("argo-small-3.2.jar")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/argo-small-3.2.jar").use { it1 ->
+                val bytes = it1!!.readBytes()
+                path.resolve("argo-small-3.2.jar")
+                    .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            }
+
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("argo-small-3.2.jar").toString())
+                )
+            )
+        }
+
+        if (wanted.contains("deobfuscation_data_1.5.2.zip")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.2.zip")
+                .use { it1 ->
+                    val bytes = it1!!.readBytes()
+                    path.resolve("deobfuscation_data_1.5.2.zip")
+                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                }
+
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("deobfuscation_data_1.5.2.zip").toString())
+                )
+            )
         }
     }
 
@@ -187,10 +179,13 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         val forge = parent.forge.resolve().first().toPath()
 
-
         // resolve dyn libs
-        forge.readZipInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", false) {
-            resolveDynLibs(config.workingDir, getDynLibs(it))
+        val dynLibFolder = config.workingDir.resolve("lib")
+        dynLibFolder.mkdirs()
+        for (file in forgeDeps.resolve()) {
+            if (file.exists() && file.extension != "pom") {
+                file.copyTo(dynLibFolder.resolve(file.name), overwrite = true)
+            }
         }
 
         config.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${config.workingDir.absolutePath}\"")
