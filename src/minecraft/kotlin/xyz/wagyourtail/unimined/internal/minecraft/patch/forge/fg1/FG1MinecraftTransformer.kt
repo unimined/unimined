@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
@@ -64,108 +65,109 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
     }
 
 
+    lateinit var deps: List<Pair<Pair<String, String>, Dependency>>
+
     fun resolveDynLibs(workingDirectory: File, wanted: Set<String>) {
-        if (resolvedForgeDeps) return
-
-        // provide and copy some old forge deps in
-        val deps = listOf(
-            Pair(
-                Pair("argo-2.25.jar", "argo-2.25.jar"), project.dependencies.create(
-                    "net.sourceforge.argo:argo:2.25"
-                )
-            ),
-            Pair(
-                Pair("guava-12.0.1.jar", "guava-12.0.1.jar"), project.dependencies.create(
-                    "com.google.guava:guava:12.0.1"
-                )
-            ),
-            Pair(
-                Pair("guava-14.0-rc3.jar", "guava-14.0-rc3.jar"), project.dependencies.create(
-                    "com.google.guava:guava:14.0-rc3"
-                )
-            ),
-            Pair(
-                Pair("asm-all-4.1.jar", "asm-all-4.1.jar"), project.dependencies.create(
-                    "org.ow2.asm:asm-all:4.1"
-                )
-            ),
-            Pair(
-                Pair("bcprov-jdk15on-1.48.jar", "bcprov-jdk15on-148.jar"), project.dependencies.create(
-                    "org.bouncycastle:bcprov-jdk15on:1.48"
-                )
-            ),
-            Pair(
-                Pair("bcprov-jdk15on-1.47.jar", "bcprov-jdk15on-147.jar"), project.dependencies.create(
-                    "org.bouncycastle:bcprov-jdk15on:1.47"
-                )
-            ),
-        )
-        deps.forEach { dep ->
-            if (wanted.contains(dep.first.second)) {
-                forgeDeps.dependencies.add(dep.second)
-            }
-        }
-
-        // copy in
         val path = workingDirectory.resolve("lib").toPath().createDirectories()
 
-        if (wanted.contains("asm-all-4.0.jar")) {
-            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/asm-all-4.0.jar").use { it1 ->
-                val bytes = it1!!.readBytes()
-                path.resolve("asm-all-4.0.jar")
-                    .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        if (!resolvedForgeDeps) {
+            // provide and copy some old forge deps in
+            deps = listOf(
+                Pair(
+                    Pair("argo-2.25.jar", "argo-2.25.jar"), project.dependencies.create(
+                        "net.sourceforge.argo:argo:2.25"
+                    )
+                ),
+                Pair(
+                    Pair("guava-12.0.1.jar", "guava-12.0.1.jar"), project.dependencies.create(
+                        "com.google.guava:guava:12.0.1"
+                    )
+                ),
+                Pair(
+                    Pair("guava-14.0-rc3.jar", "guava-14.0-rc3.jar"), project.dependencies.create(
+                        "com.google.guava:guava:14.0-rc3"
+                    )
+                ),
+                Pair(
+                    Pair("asm-all-4.1.jar", "asm-all-4.1.jar"), project.dependencies.create(
+                        "org.ow2.asm:asm-all:4.1"
+                    )
+                ),
+                Pair(
+                    Pair("bcprov-jdk15on-1.48.jar", "bcprov-jdk15on-148.jar"), project.dependencies.create(
+                        "org.bouncycastle:bcprov-jdk15on:1.48"
+                    )
+                ),
+                Pair(
+                    Pair("bcprov-jdk15on-1.47.jar", "bcprov-jdk15on-147.jar"), project.dependencies.create(
+                        "org.bouncycastle:bcprov-jdk15on:1.47"
+                    )
+                ),
+            )
+            deps.forEach { dep ->
+                if (wanted.contains(dep.first.second)) {
+                    forgeDeps.dependencies.add(dep.second)
+                }
             }
 
-            forgeDeps.dependencies.add(
-                project.dependencies.create(
-                    project.files(path.resolve("asm-all-4.0.jar").toString())
-                )
-            )
-        }
-
-        if (wanted.contains("scala-library.jar")) {
-            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/scala-library.jar").use { it1 ->
-                val bytes = it1!!.readBytes()
-                path.resolve("scala-library.jar")
-                    .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-            }
-
-            forgeDeps.dependencies.add(
-                project.dependencies.create(
-                    project.files(path.resolve("scala-library.jar").toString())
-                )
-            )
-        }
-        if (wanted.contains("argo-small-3.2.jar")) {
-            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/argo-small-3.2.jar").use { it1 ->
-                val bytes = it1!!.readBytes()
-                path.resolve("argo-small-3.2.jar")
-                    .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-            }
-
-            forgeDeps.dependencies.add(
-                project.dependencies.create(
-                    project.files(path.resolve("argo-small-3.2.jar").toString())
-                )
-            )
-        }
-        if (wanted.contains("deobfuscation_data_1.5.2.zip")) {
-            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.2.zip")
-                .use { it1 ->
+            if (wanted.contains("asm-all-4.0.jar")) {
+                FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/asm-all-4.0.jar").use { it1 ->
                     val bytes = it1!!.readBytes()
-                    path.resolve("deobfuscation_data_1.5.2.zip")
+                    path.resolve("asm-all-4.0.jar")
                         .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
                 }
 
-            forgeDeps.dependencies.add(
-                project.dependencies.create(
-                    project.files(path.resolve("deobfuscation_data_1.5.2.zip").toString())
+                forgeDeps.dependencies.add(
+                    project.dependencies.create(
+                        project.files(path.resolve("asm-all-4.0.jar").toString())
+                    )
                 )
-            )
-        }
+            }
 
-        resolvedForgeDeps = true
-        forgeDeps.resolve()
+            if (wanted.contains("scala-library.jar")) {
+                FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/scala-library.jar").use { it1 ->
+                    val bytes = it1!!.readBytes()
+                    path.resolve("scala-library.jar")
+                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                }
+
+                forgeDeps.dependencies.add(
+                    project.dependencies.create(
+                        project.files(path.resolve("scala-library.jar").toString())
+                    )
+                )
+            }
+            if (wanted.contains("argo-small-3.2.jar")) {
+                FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/argo-small-3.2.jar").use { it1 ->
+                    val bytes = it1!!.readBytes()
+                    path.resolve("argo-small-3.2.jar")
+                        .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                }
+
+                forgeDeps.dependencies.add(
+                    project.dependencies.create(
+                        project.files(path.resolve("argo-small-3.2.jar").toString())
+                    )
+                )
+            }
+            if (wanted.contains("deobfuscation_data_1.5.2.zip")) {
+                FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/deobfuscation_data_1.5.2.zip")
+                    .use { it1 ->
+                        val bytes = it1!!.readBytes()
+                        path.resolve("deobfuscation_data_1.5.2.zip")
+                            .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                    }
+
+                forgeDeps.dependencies.add(
+                    project.dependencies.create(
+                        project.files(path.resolve("deobfuscation_data_1.5.2.zip").toString())
+                    )
+                )
+            }
+
+            resolvedForgeDeps = true
+            forgeDeps.resolve()
+        }
 
         for (dep in deps) {
             if (wanted.contains(dep.first.second)) {
