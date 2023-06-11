@@ -8,6 +8,8 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.LazyMutable
+import xyz.wagyourtail.unimined.util.getField
 
 /**
  * @since 1.0.0
@@ -33,13 +35,9 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     protected val legacyFabricMappingsVersionFinalize = FinalizeOnRead(1)
     var legacyFabricMappingsVersion by legacyFabricMappingsVersionFinalize
 
-    fun devNamespace(namespace: String) {
-        devNamespace = getNamespace(namespace)
-    }
+    abstract fun devNamespace(namespace: String)
 
-    fun devFallbackNamespace(namespace: String) {
-        devFallbackNamespace = getNamespace(namespace)
-    }
+    abstract fun devFallbackNamespace(namespace: String)
 
     fun isEmpty(): Boolean {
         return mappingsDeps.isEmpty()

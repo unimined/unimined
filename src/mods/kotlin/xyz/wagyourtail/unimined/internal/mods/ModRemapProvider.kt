@@ -30,6 +30,7 @@ import java.nio.file.StandardOpenOption
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.name
+import kotlin.reflect.full.declaredMemberProperties
 
 class ModRemapProvider(config: Set<Configuration>, val project: Project, val provider: MinecraftConfig) : ModRemapConfig(config) {
 
@@ -37,11 +38,15 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
 
     override var fallbackNamespace: MappingNamespaceTree.Namespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
     override fun namespace(ns: String) {
-        namespace = provider.mappings.getNamespace(ns)
+        // kotlin reflection is weird
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = ModRemapProvider::class.getField("namespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(ns) })
     }
 
     override fun fallbackNamespace(ns: String) {
-        fallbackNamespace = provider.mappings.getNamespace(ns)
+        // kotlin reflection is weird
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = ModRemapProvider::class.getField("fallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(ns) })
     }
 
     override var remapAtToLegacy: Boolean by FinalizeOnRead(LazyMutable { (provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true })

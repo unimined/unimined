@@ -49,6 +49,16 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
 
+    override fun devNamespace(namespace: String) {
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = MappingsProvider::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        delegate.setValueIntl(LazyMutable { getNamespace(namespace) })
+    }
+
+    override fun devFallbackNamespace(namespace: String) {
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = MappingsProvider::class.getField("devFallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        delegate.setValueIntl(LazyMutable { getNamespace(namespace) })
+    }
+
     override fun intermediary(key: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.fabricMaven()
         mapping("net.fabricmc:intermediary:${minecraft.version}:v2", key) {

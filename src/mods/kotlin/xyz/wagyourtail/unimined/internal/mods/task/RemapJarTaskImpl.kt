@@ -7,14 +7,14 @@ import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
-import xyz.wagyourtail.unimined.util.getTempFilePath
-import xyz.wagyourtail.unimined.util.openZipFileSystem
+import xyz.wagyourtail.unimined.util.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -25,15 +25,18 @@ import kotlin.io.path.exists
 abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
 
     override fun devNamespace(namespace: String) {
-        devNamespace = provider.mappings.getNamespace(namespace)
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
 
     override fun devFallbackNamespace(namespace: String) {
-        devFallbackNamespace = provider.mappings.getNamespace(namespace)
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("devFallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
 
     override fun prodNamespace(namespace: String) {
-        prodNamespace = provider.mappings.getNamespace(namespace)
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
 
     @TaskAction

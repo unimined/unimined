@@ -113,7 +113,8 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     override fun prodNamespace(namespace: String) {
-        prodNamespace = provider.mappings.getNamespace(namespace)
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = FabricLikeMinecraftTransformer::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
 
     @Deprecated("", replaceWith = ReplaceWith("prodNamespace(namespace)"))

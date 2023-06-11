@@ -14,12 +14,19 @@ import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.*
-import java.util.stream.Stream
-import java.util.stream.StreamSupport
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
+import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.jvm.isAccessible
 
+fun <U : Any> KClass<U>.getField(name: String): KProperty1<U, *>? {
+    return declaredMemberProperties.firstOrNull { it.name == name }?.apply {
+        isAccessible = true
+    }
+}
 
 inline fun <T, U> consumerApply(crossinline action: T.() -> U): (T) -> U {
     return { action(it) }

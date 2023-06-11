@@ -56,8 +56,8 @@ open class JarModAgentMinecraftTransformer(
 
     private val transforms = mutableListOf<String>()
 
-    override fun transforms(transforms: String) {
-        this.transforms.add(transforms)
+    override fun transforms(transform: String) {
+        this.transforms.add(transform)
     }
 
     override fun transforms(transforms: List<String>) {
