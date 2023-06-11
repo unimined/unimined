@@ -11,7 +11,7 @@ class SkipIfNotInFilter(next: MappingVisitor, val mappings: MappingTreeView, val
 
     var filterNsId by Delegates.notNull<Int>()
     var namespaceId by Delegates.notNull<Int>()
-    lateinit var clazz: ClassMappingView
+    var clazz: ClassMappingView? = null
     var skip: MappedElementKind? = null
 
     override fun visitNamespaces(srcNamespace: String, dstNamespaces: MutableList<String>) {
@@ -36,7 +36,7 @@ class SkipIfNotInFilter(next: MappingVisitor, val mappings: MappingTreeView, val
 
     override fun visitClass(srcName: String): Boolean {
         clazz = mappings.getClass(srcName, namespaceId)
-        skip = if (clazz.getDstName(filterNsId) == null) {
+        skip = if (clazz?.getDstName(filterNsId) == null) {
             MappedElementKind.CLASS
         } else {
             null
@@ -52,7 +52,7 @@ class SkipIfNotInFilter(next: MappingVisitor, val mappings: MappingTreeView, val
     }
 
     override fun visitMethod(srcName: String, srcDesc: String): Boolean {
-        val method = clazz.getMethod(srcName, srcDesc, namespaceId)
+        val method = clazz?.getMethod(srcName, srcDesc, namespaceId)
         skip = if (method?.getDstName(filterNsId) == null) {
             MappedElementKind.METHOD
         } else {
@@ -62,7 +62,7 @@ class SkipIfNotInFilter(next: MappingVisitor, val mappings: MappingTreeView, val
     }
 
     override fun visitField(srcName: String, srcDesc: String?): Boolean {
-        val field = clazz.getField(srcName, srcDesc, namespaceId)
+        val field = clazz?.getField(srcName, srcDesc, namespaceId)
         skip = if (field?.getDstName(filterNsId) == null) {
             MappedElementKind.FIELD
         } else {
