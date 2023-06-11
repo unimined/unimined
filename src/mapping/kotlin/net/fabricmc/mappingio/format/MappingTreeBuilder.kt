@@ -76,6 +76,10 @@ class MappingTreeBuilder {
         // determine where to put in after list based on being in the output of a previous
         for (i in 0 until onBuild.size) {
             val key = onBuild[i].first
+            if (newKey.second.contains(key.first)) {
+                onBuild.add(i, value)
+                return
+            }
             if (key.second.contains(newKey.first)) {
                 onBuild.add(i + 1, value)
                 return
