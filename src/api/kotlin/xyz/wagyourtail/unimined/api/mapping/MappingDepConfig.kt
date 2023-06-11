@@ -82,6 +82,13 @@ interface ContainedMapping {
     fun clearForwardVisitor()
 
     /**
+     * insert mappings for targets that are missing from the src namespace after reading
+     */
+    fun copyUnnamedFromSrc()
+
+    fun clearAfterRead()
+
+    /**
      * filters namespaces to have to be from this.
      * applied after mapNamespace
      */

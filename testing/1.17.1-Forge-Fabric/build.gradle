@@ -50,6 +50,8 @@ unimined.minecraft {
     mappings {
         intermediary()
         yarn(project.mapping_version)
+
+        devFallbackNamespace "intermediary"
     }
 
     defaultRemapJar = false
@@ -73,6 +75,8 @@ unimined.minecraft(sourceSets.forge) {
     mappings {
         intermediary()
         yarn(project.mapping_version)
+
+        devFallbackNamespace "intermediary"
     }
 
     forge {

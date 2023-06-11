@@ -49,7 +49,7 @@ unimined.minecraft {
 
     mappings {
         intermediary()
-        yarn(project.mapping_version)
+        mojmap()
 
         devFallbackNamespace "intermediary"
     }
@@ -61,7 +61,7 @@ unimined.minecraft(sourceSets.fabric) {
     version project.minecraft_version
 
     mappings {
-        yarn(project.mapping_version)
+        mojmap()
     }
 
     fabric {
@@ -74,7 +74,7 @@ unimined.minecraft(sourceSets.forge) {
 
     mappings {
         intermediary()
-        yarn(project.mapping_version)
+        mojmap()
 
         devFallbackNamespace "intermediary"
     }

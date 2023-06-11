@@ -4,6 +4,7 @@ import net.fabricmc.mappingio.format.ChildMethodStripper
 import net.fabricmc.mappingio.format.MappingTreeBuilder
 import net.fabricmc.mappingio.format.NoNewSrcVisitor
 import net.fabricmc.mappingio.format.SrgToSeargeMapper
+import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.mapping.ContainedMapping
 import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
@@ -142,6 +143,48 @@ class ContainedMappingImpl() : ContainedMapping {
         checkFinalized()
         inputActions.add {
             clearForwardVisitor()
+        }
+    }
+
+    override fun copyUnnamedFromSrc() {
+        inputActions.add {
+            afterRemap { mappings ->
+                val srcKey = mappings.getNamespaceId(nsSource)
+
+                if (srcKey == MappingTreeView.NULL_NAMESPACE_ID) {
+                    throw IllegalStateException("Source namespace $nsSource does not exist")
+                }
+
+                val outputKeys = outputs.map { mappings.getNamespaceId(it.actualNamespace.name) }.filter { it >= 0 }
+
+                for (clazz in mappings.classes) {
+                    for (key in outputKeys) {
+                        if (clazz.getDstName(key) == null) {
+                            clazz.setDstName(clazz.getName(srcKey), key)
+                        }
+                    }
+                    for (method in clazz.methods) {
+                        for (key in outputKeys) {
+                            if (method.getDstName(key) == null) {
+                                method.setDstName(method.getName(srcKey), key)
+                            }
+                        }
+                    }
+                    for (field in clazz.fields) {
+                        for (key in outputKeys) {
+                            if (field.getDstName(key) == null) {
+                                field.setDstName(field.getName(srcKey), key)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun clearAfterRead() {
+        inputActions.add {
+            clearAfterRemap()
         }
     }
 

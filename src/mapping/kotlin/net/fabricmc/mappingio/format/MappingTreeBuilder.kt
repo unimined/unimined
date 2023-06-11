@@ -344,6 +344,8 @@ class MappingTreeBuilder {
             }
             val postDstNs = tree.dstNamespaces ?: emptyList()
             ns.addAll(postDstNs - preDstNs.toSet())
+
+            input.afterRemap(tree)
         }
     }
 
@@ -361,6 +363,7 @@ class MappingTreeBuilder {
             val nsFilter: MutableSet<String> = mutableSetOf()
             var fmv: (MappingVisitor, MappingTreeView, EnvType) -> MappingVisitor = { v, _, _ -> v }
             var nsSource: String = "official"
+            var afterRemap: (MappingTree) -> Unit = { }
 
             fun mapNs(from: String, to: String) {
                 nsMap[from] = to
@@ -391,6 +394,15 @@ class MappingTreeBuilder {
 
             fun clearForwardVisitor() {
                 fmv = { v, _, _ -> v }
+            }
+
+            fun afterRemap(f: (MappingTree) -> Unit) {
+                val prev = afterRemap
+                afterRemap = { m -> prev(m); f(m) }
+            }
+
+            fun clearAfterRemap() {
+                afterRemap = { }
             }
         }
 
