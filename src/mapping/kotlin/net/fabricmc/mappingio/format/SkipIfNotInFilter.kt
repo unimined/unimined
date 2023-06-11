@@ -53,7 +53,7 @@ class SkipIfNotInFilter(next: MappingVisitor, val mappings: MappingTreeView, val
 
     override fun visitMethod(srcName: String, srcDesc: String): Boolean {
         val method = clazz.getMethod(srcName, srcDesc, namespaceId)
-        skip = if (method.getDstName(filterNsId) == null) {
+        skip = if (method?.getDstName(filterNsId) == null) {
             MappedElementKind.METHOD
         } else {
             null
@@ -63,7 +63,7 @@ class SkipIfNotInFilter(next: MappingVisitor, val mappings: MappingTreeView, val
 
     override fun visitField(srcName: String, srcDesc: String?): Boolean {
         val field = clazz.getField(srcName, srcDesc, namespaceId)
-        skip = if (field.getDstName(filterNsId) == null) {
+        skip = if (field?.getDstName(filterNsId) == null) {
             MappedElementKind.FIELD
         } else {
             null

@@ -74,7 +74,9 @@ unimined.minecraft(sourceSets.forge) {
 
     mappings {
         intermediary()
-        mojmap()
+        mojmap() {
+            skipIfNotIn("intermediary")
+        }
 
         devFallbackNamespace "intermediary"
     }
