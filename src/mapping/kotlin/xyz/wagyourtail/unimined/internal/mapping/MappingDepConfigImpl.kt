@@ -78,7 +78,7 @@ class ContainedMappingImpl() : ContainedMapping {
         if (!finalized) {
             finalized = true
             outputs.forEach {
-                mappingsConfig.project.logger.info("[Unimined/MappingDep] $dep adding namespace ${it.actualNamespace.name}") // force resolve
+                mappingsConfig.project.logger.info("[Unimined/MappingDep] ${dep.dep} adding namespace ${it.actualNamespace.name}") // force resolve
             }
         }
     }
@@ -204,6 +204,10 @@ class ContainedMappingImpl() : ContainedMapping {
         }
     }
 
+    companion object {
+        private val namespaceCreationTrace: MutableMap<String, Exception> = mutableMapOf()
+    }
+
     override fun outputs(namespace: String, named: Boolean, canRemapTo: () -> List<String>): MappingDepConfig.TempMappingNamespace {
         checkFinalized()
         if (namespace.lowercase() == mappingsConfig.OFFICIAL.name) {
@@ -220,10 +224,24 @@ class ContainedMappingImpl() : ContainedMapping {
         }
         return object : MappingDepConfig.TempMappingNamespace(namespace, named, canRemapTo) {
             override val actualNamespace by lazy {
-                mappingsConfig.addNamespace(namespace, { canRemapTo().map { mappingsConfig.getNamespace(it.lowercase()) }.toSet() }, named).also {
-                    inputActions.add {
-                        addNs(it.name)
+                try {
+                    mappingsConfig.addNamespace(
+                        namespace,
+                        { canRemapTo().map { mappingsConfig.getNamespace(it.lowercase()) }.toSet() },
+                        named
+                    ).also {
+                        inputActions.add {
+                            addNs(it.name)
+                        }
+                        namespaceCreationTrace[namespace.lowercase()] = Exception("Namespace created here")
                     }
+                } catch (e: IllegalArgumentException) {
+                    mappingsConfig.project.logger.error(
+                        "[Unimined/MappingDep] ${dep.dep} failed to add namespace $namespace",
+                        e
+                    )
+                    mappingsConfig.project.logger.error("[Unimined/MappingDep] ${dep.dep} namespace created here", namespaceCreationTrace[namespace.lowercase()])
+                    throw e
                 }
             }
         }.also {
