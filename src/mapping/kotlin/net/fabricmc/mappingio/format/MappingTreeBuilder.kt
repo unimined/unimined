@@ -227,7 +227,7 @@ class MappingTreeBuilder {
                     BetterMappingFormat.MCP
                 } else if (str.split("\n")[0].contains("\"name\",\"notch\"")) {
                     BetterMappingFormat.OLD_MCP
-                } else if (str.contains("class (for reference only)")) {
+                } else if (str.contains("Name,Notes")) {
                     BetterMappingFormat.OLDER_MCP
                 } else if (str.contains("\n\t")) {
                     BetterMappingFormat.TSRG
