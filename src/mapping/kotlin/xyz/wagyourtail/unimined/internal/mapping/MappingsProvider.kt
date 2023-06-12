@@ -447,40 +447,40 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         return IMappingProvider.Member(className, memberName, descriptor)
     }
 
-    private fun fixInnerClassName(
-        mappings: MappingTreeView,
-        fromId: Int,
-        toId: Int,
-        fromClassName: String,
-        toClassName: String?
-    ): String? {
-        var fixedClassName = toClassName
-        val outerClass = fromClassName.substring(0, fromClassName.lastIndexOf('$'))
-        val outerClassDef = mappings.getClass(outerClass, fromId)
-        if (outerClassDef != null) {
-            val outerFromClassName = outerClassDef.getName(fromId)
-            var outerToClassName = outerClassDef.getName(toId)
-            if (outerFromClassName != null && outerFromClassName.contains('$')) {
-                outerToClassName = fixInnerClassName(
-                    mappings,
-                    fromId,
-                    toId,
-                    outerFromClassName,
-                    outerToClassName
-                )
-            }
-            val innerClassName = fixedClassName?.substringAfterLast('/')?.substringAfterLast('$') ?: fromClassName.substringAfterLast('$')
-            if (outerToClassName != null && (fixedClassName == null || !fixedClassName.startsWith(outerToClassName))) {
-                fixedClassName = "$outerToClassName$$innerClassName"
-                project.logger.info(
-                    "[Unimined/MappingsProvider] Detected missing inner class, replacing with: {} -> {}",
-                    fromClassName,
-                    fixedClassName
-                )
-            }
-        }
-        return fixedClassName
-    }
+//    private fun fixInnerClassName(
+//        mappings: MappingTreeView,
+//        fromId: Int,
+//        toId: Int,
+//        fromClassName: String,
+//        toClassName: String?
+//    ): String? {
+//        var fixedClassName = toClassName
+//        val outerClass = fromClassName.substring(0, fromClassName.lastIndexOf('$'))
+//        val outerClassDef = mappings.getClass(outerClass, fromId)
+//        if (outerClassDef != null) {
+//            val outerFromClassName = outerClassDef.getName(fromId)
+//            var outerToClassName = outerClassDef.getName(toId)
+//            if (outerFromClassName != null && outerFromClassName.contains('$')) {
+//                outerToClassName = fixInnerClassName(
+//                    mappings,
+//                    fromId,
+//                    toId,
+//                    outerFromClassName,
+//                    outerToClassName
+//                )
+//            }
+//            val innerClassName = fixedClassName?.substringAfterLast('/')?.substringAfterLast('$') ?: fromClassName.substringAfterLast('$')
+//            if (outerToClassName != null && (fixedClassName == null || !fixedClassName.startsWith(outerToClassName))) {
+//                fixedClassName = "$outerToClassName$$innerClassName"
+//                project.logger.info(
+//                    "[Unimined/MappingsProvider] Detected missing inner class, replacing with: {} -> {}",
+//                    fromClassName,
+//                    fixedClassName
+//                )
+//            }
+//        }
+//        return fixedClassName
+//    }
 
     private open class Mapping(val to: String?)
     private class ClassMapping(val from: String, to: String): Mapping(to)
@@ -513,23 +513,23 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             var toClassName = classDef.getName(toId)
 
             if (fromClassName == null) {
-                project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in namespace {}", classDef, srcName)
+                project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in src namespace {}", classDef, srcName)
                 fromClassName = toClassName
             }
 
             // detect missing inner class
-            if (fromClassName != null && fromClassName.contains("$")) {
-                toClassName = fixInnerClassName(
-                    mappingTree,
-                    fromId,
-                    toId,
-                    fromClassName,
-                    toClassName
-                )
-            }
+//            if (fromClassName != null && fromClassName.contains("$")) {
+//                toClassName = fixInnerClassName(
+//                    mappingTree,
+//                    fromId,
+//                    toId,
+//                    fromClassName,
+//                    toClassName
+//                )
+//            }
 
             if (toClassName == null) {
-                project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in namespace {}", classDef, dstName)
+                project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in dst namespace {}", classDef, dstName)
                 toClassName = fromClassName
             }
 
@@ -545,12 +545,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 val toFieldName = fieldDef.getName(toId)
 
                 if (fromFieldName == null) {
-                    project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in namespace {}", fieldDef, srcName)
+                    project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in src namespace {}", fieldDef, srcName)
                     continue
                 }
 
                 if (toFieldName == null) {
-                    project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in namespace {}", fieldDef, dstName)
+                    project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in dst namespace {}", fieldDef, dstName)
                     continue
                 }
 
@@ -562,12 +562,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 val toMethodName = methodDef.getName(toId)
 
                 if (fromMethodName == null) {
-                    project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in namespace {}", methodDef, srcName)
+                    project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in src namespace {}", methodDef, srcName)
                     continue
                 }
 
                 if (toMethodName == null) {
-                    project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in namespace {}", methodDef, dstName)
+                    project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in dst namespace {}", methodDef, dstName)
                     continue
                 }
 
