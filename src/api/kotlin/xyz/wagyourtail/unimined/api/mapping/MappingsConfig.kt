@@ -77,7 +77,11 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        legacyIntermediary(revision, key, action)
+        legacyIntermediary(revision, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
     }
 
     @JvmOverloads
