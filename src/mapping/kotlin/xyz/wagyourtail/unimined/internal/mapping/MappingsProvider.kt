@@ -568,22 +568,29 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
                     acceptor.acceptMethod(method, toMethodName)
 
-                    for (arg in methodDef.args) {
-                        val toArgName = arg.getName(toId)
+                    if (remapLocals) {
+                        for (arg in methodDef.args) {
+                            val toArgName = arg.getName(toId)
 
-                        if (toArgName != null) {
-                            acceptor.acceptMethodArg(method, arg.lvIndex, toArgName)
+                            if (toArgName != null) {
+                                acceptor.acceptMethodArg(method, arg.lvIndex, toArgName)
+                            }
+                        }
+
+                        for (localVar in methodDef.vars) {
+                            val toLocalVarName = localVar.getName(toId)
+
+                            if (toLocalVarName != null) {
+                                acceptor.acceptMethodVar(
+                                    method,
+                                    localVar.lvIndex,
+                                    localVar.startOpIdx,
+                                    localVar.lvtRowIndex,
+                                    toLocalVarName
+                                )
+                            }
                         }
                     }
-
-                    for (localVar in methodDef.vars) {
-                        val toLocalVarName = localVar.getName(toId)
-
-                        if (toLocalVarName != null) {
-                            acceptor.acceptMethodVar(method, localVar.lvIndex, localVar.startOpIdx, localVar.lvtRowIndex, toLocalVarName)
-                        }
-                    }
-
                 }
             }
         }
