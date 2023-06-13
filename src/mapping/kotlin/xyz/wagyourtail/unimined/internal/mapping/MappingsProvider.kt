@@ -505,8 +505,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 var fromClassName = classDef.getName(fromId)
                 var toClassName = classDef.getName(toId)
 
-                if (fromClassName == null && project.logger.isDebugEnabled) {
-                    project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in src namespace {}", classDef, srcName)
+                if (fromClassName == null) {
+                    if (project.logger.isDebugEnabled) project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in src namespace {}", classDef, srcName)
                     fromClassName = toClassName
                 }
 
@@ -521,13 +521,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 //                )
 //            }
 
-                if (toClassName == null && project.logger.isDebugEnabled) {
-                    project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in dst namespace {}", classDef, dstName)
+                if (toClassName == null) {
+                    if (project.logger.isDebugEnabled) project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in dst namespace {}", classDef, dstName)
                     toClassName = fromClassName
                 }
 
-                if (fromClassName == null && project.logger.isDebugEnabled) {
-                    project.logger.debug("[Unimined/MappingsProvider] Class $classDef has no name in either namespace $srcName or $dstName")
+                if (fromClassName == null) {
+                    if (project.logger.isDebugEnabled) project.logger.debug("[Unimined/MappingsProvider] Class $classDef has no name in either namespace $srcName or $dstName")
                     continue
                 }
 
@@ -537,13 +537,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     val fromFieldName = fieldDef.getName(fromId)
                     val toFieldName = fieldDef.getName(toId)
 
-                    if (fromFieldName == null && project.logger.isDebugEnabled) {
-                        project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in src namespace {}", fieldDef, srcName)
+                    if (fromFieldName == null) {
+                        if (project.logger.isDebugEnabled) project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in src namespace {}", fieldDef, srcName)
                         continue
                     }
 
-                    if (toFieldName == null && project.logger.isDebugEnabled) {
-                        project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in dst namespace {}", fieldDef, dstName)
+                    if (toFieldName == null) {
+                        if (project.logger.isDebugEnabled) project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in dst namespace {}", fieldDef, dstName)
                         continue
                     }
 
@@ -554,13 +554,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     val fromMethodName = methodDef.getName(fromId)
                     val toMethodName = methodDef.getName(toId)
 
-                    if (fromMethodName == null && project.logger.isDebugEnabled) {
-                        project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in src namespace {}", methodDef, srcName)
+                    if (fromMethodName == null) {
+                        if (project.logger.isDebugEnabled) project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in src namespace {}", methodDef, srcName)
                         continue
                     }
 
-                    if (toMethodName == null && project.logger.isDebugEnabled) {
-                        project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in dst namespace {}", methodDef, dstName)
+                    if (toMethodName == null) {
+                        if (project.logger.isDebugEnabled) project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in dst namespace {}", methodDef, dstName)
                         continue
                     }
 
