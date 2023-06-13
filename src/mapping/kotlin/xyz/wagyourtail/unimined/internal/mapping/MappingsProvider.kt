@@ -482,42 +482,35 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 //        return fixedClassName
 //    }
 
-    private open class Mapping(val to: String?)
-    private class ClassMapping(val from: String, to: String): Mapping(to)
-    private open class MemberMapping(val from: String, val fromDesc: String?, to: String): Mapping(to)
-    private class MethodMapping(from: String, fromDesc: String, to: String): MemberMapping(from, fromDesc, to)
-    private class FieldMapping(from: String, fromDesc: String?, to: String): MemberMapping(from, fromDesc, to)
-    private class ArgumentMapping(to: String, val index: Int): Mapping(to)
-    private class LocalVariableMapping(to: String, val lvIndex: Int, val startOpIdx: Int, val lvtRowIndex: Int): Mapping(to)
+    override fun getTRMappings(
+        remap: Pair<Namespace, Namespace>,
+        remapLocals: Boolean,
+    ) : (IMappingProvider.MappingAcceptor) -> Unit {
+        return { acceptor ->
+            val srcName = remap.first
+            val dstName = remap.second
 
-    private val mappingProvider: Map<Pair<Namespace, Namespace>, List<Mapping>> = defaultedMapOf { remap ->
-        project.logger.info("[Unimined/MappingsProvider] resolving internal mappings provider for $remap in ${minecraft.sourceSet}")
-        val srcName = remap.first
-        val dstName = remap.second
+            val fromId = mappingTree.getNamespaceId(srcName.name)
+            val toId = mappingTree.getNamespaceId(dstName.name)
 
-        val fromId = mappingTree.getNamespaceId(srcName.name)
-        val toId = mappingTree.getNamespaceId(dstName.name)
-
-        if (fromId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw IllegalArgumentException("Unknown source namespace: $srcName")
-        }
-
-        if (toId == MappingTreeView.NULL_NAMESPACE_ID) {
-            throw IllegalArgumentException("Unknown target namespace: $dstName")
-        }
-
-        val mappings = mutableListOf<Mapping>()
-
-        for (classDef in mappingTree.classes) {
-            var fromClassName = classDef.getName(fromId)
-            var toClassName = classDef.getName(toId)
-
-            if (fromClassName == null) {
-                project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in src namespace {}", classDef, srcName)
-                fromClassName = toClassName
+            if (fromId == MappingTreeView.NULL_NAMESPACE_ID) {
+                throw IllegalArgumentException("Unknown source namespace: $srcName")
             }
 
-            // detect missing inner class
+            if (toId == MappingTreeView.NULL_NAMESPACE_ID) {
+                throw IllegalArgumentException("Unknown target namespace: $dstName")
+            }
+
+            for (classDef in mappingTree.classes) {
+                var fromClassName = classDef.getName(fromId)
+                var toClassName = classDef.getName(toId)
+
+                if (fromClassName == null && project.logger.isDebugEnabled) {
+                    project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in src namespace {}", classDef, srcName)
+                    fromClassName = toClassName
+                }
+
+                // detect missing inner class
 //            if (fromClassName != null && fromClassName.contains("$")) {
 //                toClassName = fixInnerClassName(
 //                    mappingTree,
@@ -528,126 +521,69 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 //                )
 //            }
 
-            if (toClassName == null) {
-                project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in dst namespace {}", classDef, dstName)
-                toClassName = fromClassName
-            }
+                if (toClassName == null && project.logger.isDebugEnabled) {
+                    project.logger.debug("[Unimined/MappingsProvider] Target class {} has no name in dst namespace {}", classDef, dstName)
+                    toClassName = fromClassName
+                }
 
-            if (fromClassName == null) {
-                project.logger.debug("[Unimined/MappingsProvider] Class $classDef has no name in either namespace $srcName or $dstName")
-                continue
-            }
-
-            mappings.add(ClassMapping(fromClassName, toClassName))
-
-            for (fieldDef in classDef.fields) {
-                val fromFieldName = fieldDef.getName(fromId)
-                val toFieldName = fieldDef.getName(toId)
-
-                if (fromFieldName == null) {
-                    project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in src namespace {}", fieldDef, srcName)
+                if (fromClassName == null && project.logger.isDebugEnabled) {
+                    project.logger.debug("[Unimined/MappingsProvider] Class $classDef has no name in either namespace $srcName or $dstName")
                     continue
                 }
 
-                if (toFieldName == null) {
-                    project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in dst namespace {}", fieldDef, dstName)
-                    continue
+                acceptor.acceptClass(fromClassName, toClassName)
+
+                for (fieldDef in classDef.fields) {
+                    val fromFieldName = fieldDef.getName(fromId)
+                    val toFieldName = fieldDef.getName(toId)
+
+                    if (fromFieldName == null && project.logger.isDebugEnabled) {
+                        project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in src namespace {}", fieldDef, srcName)
+                        continue
+                    }
+
+                    if (toFieldName == null && project.logger.isDebugEnabled) {
+                        project.logger.debug("[Unimined/MappingsProvider] Target field {} has no name in dst namespace {}", fieldDef, dstName)
+                        continue
+                    }
+
+                    acceptor.acceptField(memberOf(fromClassName, fromFieldName, fieldDef.getDesc(fromId)), toFieldName)
                 }
 
-                mappings.add(FieldMapping(fromFieldName, fieldDef.getDesc(fromId), toFieldName))
-            }
+                for (methodDef in classDef.methods) {
+                    val fromMethodName = methodDef.getName(fromId)
+                    val toMethodName = methodDef.getName(toId)
 
-            for (methodDef in classDef.methods) {
-                val fromMethodName = methodDef.getName(fromId)
-                val toMethodName = methodDef.getName(toId)
-
-                if (fromMethodName == null) {
-                    project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in src namespace {}", methodDef, srcName)
-                    continue
-                }
-
-                if (toMethodName == null) {
-                    project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in dst namespace {}", methodDef, dstName)
-                    continue
-                }
-
-                mappings.add(MethodMapping(fromMethodName, methodDef.getDesc(fromId)!!, toMethodName))
-
-                for (arg in methodDef.args) {
-                    val toArgName = arg.getName(toId)
-
-                    if (toArgName != null) {
-                        mappings.add(ArgumentMapping(toArgName, arg.lvIndex))
-                    }
-                }
-
-                for (localVar in methodDef.vars) {
-                    val toLocalVarName = localVar.getName(toId)
-
-                    if (toLocalVarName != null) {
-                        mappings.add(
-                            LocalVariableMapping(
-                                toLocalVarName,
-                                localVar.lvIndex,
-                                localVar.startOpIdx,
-                                localVar.lvtRowIndex
-                            )
-                        )
-                    }
-                }
-
-            }
-        }
-
-        mappings
-    }
-
-    override fun getTRMappings(
-        remap: Pair<Namespace, Namespace>,
-        remapLocals: Boolean,
-    ) : (IMappingProvider.MappingAcceptor) -> Unit {
-        val mappings = mappingProvider[remap] ?: throw IllegalStateException("mapping provider returned null for $remap, this should never happen!")
-        return { acceptor ->
-            var lastClass: String? = null
-            var lastMethod: IMappingProvider.Member? = null
-            for (mapping in mappings) {
-                when (mapping) {
-                    is ClassMapping -> {
-                        lastClass = mapping.from
-                        lastMethod = null
-                        acceptor.acceptClass(mapping.from, mapping.to)
+                    if (fromMethodName == null && project.logger.isDebugEnabled) {
+                        project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in src namespace {}", methodDef, srcName)
+                        continue
                     }
 
-                    is MethodMapping -> {
-                        if (lastClass == null) throw IllegalStateException("Method mapping before class mapping")
-                        lastMethod = memberOf(lastClass, mapping.from, mapping.fromDesc)
-
-                        acceptor.acceptMethod(lastMethod, mapping.to)
+                    if (toMethodName == null && project.logger.isDebugEnabled) {
+                        project.logger.debug("[Unimined/MappingsProvider] Target method {} has no name in dst namespace {}", methodDef, dstName)
+                        continue
                     }
 
-                    is FieldMapping -> {
-                        if (lastClass == null) throw IllegalStateException("Field mapping before class mapping")
-                        lastMethod = null
-                        acceptor.acceptField(memberOf(lastClass, mapping.from, mapping.fromDesc), mapping.to)
+                    val method = memberOf(fromClassName, fromMethodName, methodDef.getDesc(fromId)!!)
+
+                    acceptor.acceptMethod(method, toMethodName)
+
+                    for (arg in methodDef.args) {
+                        val toArgName = arg.getName(toId)
+
+                        if (toArgName != null) {
+                            acceptor.acceptMethodArg(method, arg.lvIndex, toArgName)
+                        }
                     }
 
-                    is ArgumentMapping -> {
-                        if (lastMethod == null) throw IllegalStateException("Argument mapping before method mapping")
-                        if (!remapLocals) continue
-                        acceptor.acceptMethodArg(lastMethod, mapping.index, mapping.to)
+                    for (localVar in methodDef.vars) {
+                        val toLocalVarName = localVar.getName(toId)
+
+                        if (toLocalVarName != null) {
+                            acceptor.acceptMethodVar(method, localVar.lvIndex, localVar.startOpIdx, localVar.lvtRowIndex, toLocalVarName)
+                        }
                     }
 
-                    is LocalVariableMapping -> {
-                        if (lastMethod == null) throw IllegalStateException("Local variable mapping before method mapping")
-                        if (!remapLocals) continue
-                        acceptor.acceptMethodVar(
-                            lastMethod,
-                            mapping.lvIndex,
-                            mapping.startOpIdx,
-                            mapping.lvtRowIndex,
-                            mapping.to
-                        )
-                    }
                 }
             }
         }
