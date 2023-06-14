@@ -92,6 +92,13 @@ open class MappingNamespaceTree {
         if (toNS != toFallbackNS && !toFallbackNS.targets.contains(toNS)) {
             throw IllegalArgumentException("Cannot remap from \"$toFallbackNS\" to \"$toNS\". $this")
         }
+        if (fromNS == toFallbackNS) {
+            return if (toFallbackNS == toNS) {
+                listOf()
+            } else {
+                listOf(toNS)
+            }
+        }
         if (fromNS != fromFallbackNS) {
             if (!fromNS.targets.contains(fromFallbackNS)) {
                 throw IllegalArgumentException("Cannot remap from \"$fromNS\" to \"$fromFallbackNS\". $this")

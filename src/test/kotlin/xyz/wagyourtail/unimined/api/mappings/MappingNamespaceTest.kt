@@ -160,4 +160,44 @@ class MappingNamespaceTest {
         )
     }
 
+    @Test
+    fun remapFromMCPtoMCP() {
+        val mnt = MappingNamespaceTree()
+        val SEARGE = mnt.addNamespace("searge", { setOf(mnt.OFFICIAL) }, false)
+        val MCP = mnt.addNamespace("mcp", { setOf(mnt.OFFICIAL, SEARGE) }, true)
+        assertEquals(
+            listOf(
+            ),
+            mnt.getRemapPath(
+                MCP,
+                SEARGE,
+                MCP,
+                MCP
+            )
+        )
+    }
+
+    @Test
+    fun remapFromYarntoMCP() {
+        val mnt = MappingNamespaceTree()
+        val SEARGE = mnt.addNamespace("searge", { setOf(mnt.OFFICIAL) }, false)
+        val INTERMEDIARY = mnt.addNamespace("intermediary", { setOf(mnt.OFFICIAL) }, false)
+        val YARN = mnt.addNamespace("yarn", { setOf(INTERMEDIARY) }, true)
+        val MCP = mnt.addNamespace("mcp", { setOf(SEARGE) }, true)
+        assertEquals(
+            listOf(
+                INTERMEDIARY,
+                mnt.OFFICIAL,
+                SEARGE,
+                MCP
+            ),
+            mnt.getRemapPath(
+                YARN,
+                INTERMEDIARY,
+                SEARGE,
+                MCP
+            )
+        )
+    }
+
 }
