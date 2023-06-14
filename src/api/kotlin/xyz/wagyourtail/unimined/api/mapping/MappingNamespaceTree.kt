@@ -110,21 +110,15 @@ open class MappingNamespaceTree {
                 } else {
                     path + toNS
                 }
-                if (retPath.size > 2) {
-                    // if it remaps back like
-                    // searge -> official -> searge -> mcp
-                    // remove the first 1, as this is a detected extra remap step
-                    if (retPath[0] == retPath[2]) {
-                        return retPath.subList(3, retPath.size)
+                // if it remaps back like
+                // searge -> official -> searge -> mcp
+                // remove the middle, as this is a detected extra remap step
+                var i = 0
+                while (i < retPath.size - 2) {
+                    if (retPath[i] == retPath[i + 2]) {
+                        retPath = retPath.subList(0, i) + retPath.subList(i + 2, retPath.size)
                     }
-                }
-                if (retPath.size > 2) {
-                    // if it remaps back like
-                    // official -> searge -> mcp -> searge
-                    // remove the last 2, as this is a detected backwards remap
-                    if (retPath[retPath.size - 1] == retPath[retPath.size - 3]) {
-                        return retPath.subList(1, retPath.size - 2)
-                    }
+                    i++
                 }
                 return retPath.subList(1, retPath.size)
             }
