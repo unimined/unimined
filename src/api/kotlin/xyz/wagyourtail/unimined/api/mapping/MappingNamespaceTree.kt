@@ -96,24 +96,11 @@ open class MappingNamespaceTree {
             if (!fromNS.targets.contains(fromFallbackNS)) {
                 throw IllegalArgumentException("Cannot remap from \"$fromNS\" to \"$fromFallbackNS\". $this")
             }
-            queue.add(listOf(fromFallbackNS))
+            queue.add(listOf(fromNS, fromFallbackNS))
         } else {
             queue.add(listOf(fromNS))
         }
-//        if (fromFallbackNS == toFallbackNS) {
-//            return if (toNS == toFallbackNS) {
-//                queue.first().subList(1, queue.first().size)
-//            } else {
-//                queue.first().subList(1, queue.first().size) + toNS
-//            }
-//        }
-//        if (fromNS == toFallbackNS) {
-//            return if (toNS == toFallbackNS) {
-//                emptyList()
-//            } else {
-//                listOf(toNS)
-//            }
-//        }
+
         while (queue.isNotEmpty()) {
             val path = queue.removeAt(0)
             val last = path.last()
@@ -122,9 +109,6 @@ open class MappingNamespaceTree {
                     path
                 } else {
                     path + toNS
-                }
-                if (fromNS != fromFallbackNS) {
-                    retPath = listOf(fromNS) + retPath
                 }
                 if (retPath.size > 2) {
                     // if it remaps back like
@@ -145,11 +129,13 @@ open class MappingNamespaceTree {
                 return retPath.subList(1, retPath.size)
             }
             for (target in last.targets) {
-                if (target !in path) {
+                // keep from infinite looping, 4 is probably sufficient that complex remaps will still work
+                if (path.count(target::equals) < 4) {
                     queue.add(path + target)
                 }
             }
         }
+
         throw IllegalArgumentException("Cannot remap from \"$fromNS\" to \"$toNS\". $this")
     }
 

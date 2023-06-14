@@ -16,7 +16,6 @@ class MappingNamespaceTest {
         }
     }
 
-
     @Test
     fun remapToForgeOfficial() {
         // remap from searge/official to mojmap/searge,
@@ -136,6 +135,27 @@ class MappingNamespaceTest {
                 mnt.OFFICIAL,
                 SEARGE,
                 MCP
+            )
+        )
+    }
+
+    @Test
+    fun remapFromIntermediaryMojmapToSearge() {
+        val mnt = MappingNamespaceTree()
+        val SEARGE = mnt.addNamespace("searge", { setOf(mnt.OFFICIAL) }, false)
+        val INTERMEDIARY = mnt.addNamespace("intermediary", { setOf(mnt.OFFICIAL) }, false)
+        val MOJMAP = mnt.addNamespace("mojmap", { setOf(mnt.OFFICIAL, SEARGE, INTERMEDIARY) }, true)
+        assertEquals(
+            listOf(
+                INTERMEDIARY,
+                mnt.OFFICIAL,
+                SEARGE
+            ),
+            mnt.getRemapPath(
+                MOJMAP,
+                INTERMEDIARY,
+                SEARGE,
+                SEARGE
             )
         )
     }
