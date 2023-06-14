@@ -309,7 +309,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         project.logger.info("[Unimined/ModRemapper] Remapping mods to ${remap.first}/${remap.second}")
         for ((artifact, tag) in deps) {
             remapModInternal(remapper, artifact, tag, remap)
-            output[artifact] = tag.second.first
+            output[artifact] = tag.second.second.toFile()
         }
         remapper.first.finish()
         return output
