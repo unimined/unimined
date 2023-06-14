@@ -105,28 +105,19 @@ open class MappingNamespaceTree {
             val path = queue.removeAt(0)
             val last = path.last()
             if (last == toFallbackNS) {
-                var retPath = if (toNS == toFallbackNS) {
+                return if (toNS == toFallbackNS) {
                     path
                 } else {
                     path + toNS
-                }
-                // if it remaps back like
-                // searge -> official -> searge -> mcp
-                // remove the middle, as this is a detected extra remap step
-                var i = 0
-                while (i < retPath.size - 2) {
-                    if (retPath[i] == retPath[i + 2]) {
-                        retPath = retPath.subList(0, i) + retPath.subList(i + 2, retPath.size)
-                    }
-                    i++
-                }
-                return retPath.subList(1, retPath.size)
+                }.drop(1)
             }
             for (target in last.targets) {
-                // keep from infinite looping, 4 is probably sufficient that complex remaps will still work
-                if (path.count(target::equals) < 4) {
-                    queue.add(path + target)
-                }
+                // don't allow back remapping
+                if (path.size > 1 && path[path.size - 2] == target) continue
+                queue.add(path + target)
+            }
+            if (path.size > 20) {
+                throw IllegalStateException("Path too long: $path")
             }
         }
 
