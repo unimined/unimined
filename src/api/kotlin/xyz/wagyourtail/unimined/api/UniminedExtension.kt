@@ -40,7 +40,7 @@ val Project.unimined
 abstract class UniminedExtension(val project: Project) {
 
     var useGlobalCache: Boolean by FinalizeOnRead(true)
-    var forceReload: Boolean by FinalizeOnRead(java.lang.Boolean.getBoolean("unimined.forceReload"))
+    var forceReload: Boolean by FinalizeOnRead(project.properties["unimined.forceReload"] == "true")
 
     var fabricApi = project.extensions.create("fabricApi", FabricLikeApiExtension::class.java)
 
