@@ -102,3 +102,23 @@ sourceSets {
 
 dependencies {
 }
+
+processFabricResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+processForgeResources {
+    inputs.property "version", project.version
+
+    filesMatching("META-INF/mods.toml") {
+        expand "version": project.version
+    }
+
+    filesMatching("mcmod.info") {
+        expand "version": project.version
+    }
+}

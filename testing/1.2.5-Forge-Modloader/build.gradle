@@ -110,3 +110,16 @@ repositories {
 dependencies {
     modloaderJarMod "risugami:modloader:1.2.5"
 }
+
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("META-INF/mods.toml") {
+        expand "version": project.version
+    }
+
+    filesMatching("mcmod.info") {
+        expand "version": project.version
+    }
+}
