@@ -251,17 +251,17 @@ object AccessTransformerMinecraftTransformer {
 
     private fun RemapModernTransformer(line: String, tremapper: TinyRemapper, logger: Logger): String {
         try {
-            val remapper = tremapper.environment.remapper
+            val remapper = tremapper.environment
             val classMatch = modernClass.matchEntire(line)
             if (classMatch != null) {
                 val (access, owner, comment) = classMatch.destructured
-                val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
+                val remappedOwner = remapper.remapper.map(owner.replace(".", "/")).replace("/", ".")
                 return "$access $remappedOwner $comment"
             }
             val methodMatch = modernMethod.matchEntire(line)
             if (methodMatch != null) {
                 val (access, owner, name, desc, comment) = methodMatch.destructured
-                val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
+                val remappedOwner = remapper.remapper.map(owner.replace(".", "/")).replace("/", ".")
                 if (name == "*") {
                     if (desc == "()") {
                         return "$access $remappedOwner $name$desc $comment"
@@ -273,15 +273,15 @@ object AccessTransformerMinecraftTransformer {
                         fixedDesc += "V"
                     }
                 }
-                val remappedName = remapper.mapMethodName(owner.replace(".", "/"), name, fixedDesc)
-                val remappedDesc = remapper.mapMethodDesc(fixedDesc)
+                val remappedName = remapper.remapper.mapMethodName(owner.replace(".", "/"), name, fixedDesc)
+                val remappedDesc = remapper.remapper.mapMethodDesc(fixedDesc)
                 return "$access $remappedOwner $remappedName$remappedDesc $comment"
             }
             val fieldMatch = modernField.matchEntire(line)
             if (fieldMatch != null) {
                 val (access, owner, name, comment) = fieldMatch.destructured
-                val remappedOwner = remapper.map(owner.replace(".", "/")).replace("/", ".")
-                val remappedName = remapper.mapFieldName(owner.replace(".", "/"), name, null)
+                val remappedOwner = remapper.remapper.map(owner.replace(".", "/")).replace("/", ".")
+                val remappedName = remapper.getClass(owner.replace(".", "/"))?.fields?.firstOrNull { it.name == name }?.newName ?: name
                 return "$access $remappedOwner $remappedName $comment"
             }
             logger.info("Failed to match: $line")
