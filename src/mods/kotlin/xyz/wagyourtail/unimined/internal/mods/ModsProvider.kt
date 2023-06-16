@@ -19,7 +19,10 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
     private val remapConfigs = mutableMapOf<Set<Configuration>, ModRemapProvider.() -> Unit>()
 
     private val modImplementation = project.configurations.maybeCreate("modImplementation".withSourceSet(minecraft.sourceSet)).also {
-        project.configurations.getByName("implementation".withSourceSet(minecraft.sourceSet)).extendsFrom(it)
+        minecraft.sourceSet.apply {
+            compileClasspath += it
+            runtimeClasspath += it
+        }
         remap(it)
     }
 

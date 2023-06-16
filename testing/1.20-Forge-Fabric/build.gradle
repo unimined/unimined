@@ -103,6 +103,7 @@ sourceSets {
 dependencies {
     // we need this in main where it isn't by default
     mainImplementation "org.spongepowered:mixin:0.8.5-SNAPSHOT"
+    fabricModImplementation "net.fabricmc.fabric-api:fabric-api:0.83.0+1.20"
 }
 
 processFabricResources {
