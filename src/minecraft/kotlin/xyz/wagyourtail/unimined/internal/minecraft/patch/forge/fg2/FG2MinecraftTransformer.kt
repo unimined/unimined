@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTra
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.openZipFileSystem
+import xyz.wagyourtail.unimined.util.readZipContents
 import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import java.net.URI
 import java.nio.file.FileSystems
@@ -116,24 +117,59 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
+
+        val forgeUniversal = parent.forge.dependencies.last()
+        val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+
+        val contents = forgeJar.toPath().readZipContents()
+
+        // test if fmltweaker is in cpw or net.minecraftforge
+        val tweakClassClient = parent.tweakClassClient ?: if (contents.contains("cpw/mods/fml/common/launcher/FMLTweaker.class")) {
+            "cpw.mods.fml.common.launcher.FMLTweaker"
+        } else if (contents.contains("net/minecraftforge/fml/common/launcher/FMLTweaker.class")) {
+            "net.minecraftforge.fml.common.launcher.FMLTweaker"
+        } else {
+            null
+        }
+        if (tweakClassClient != null) {
+            config.args += listOf("--tweakClass",
+                tweakClassClient
+            )
+        }
+
         config.mainClass = parent.mainClass ?: config.mainClass
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
         config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
         config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-        config.args += listOf("--tweakClass",
-            parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"
-        )
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
+
+        val forgeUniversal = parent.forge.dependencies.last()
+        val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+
+        val contents = forgeJar.toPath().readZipContents()
+
+        // test if fmltweaker is in cpw or net.minecraftforge
+        val tweakClassServer = parent.tweakClassServer ?: if (contents.contains("cpw/mods/fml/common/launcher/FMLServerTweaker.class")) {
+            "cpw.mods.fml.common.launcher.FMLServerTweaker"
+        } else if (contents.contains("net/minecraftforge/fml/common/launcher/FMLServerTweaker.class")) {
+            "net.minecraftforge.fml.common.launcher.FMLServerTweaker"
+        } else {
+            null
+        }
+
+        if (tweakClassServer != null) {
+            config.args += listOf("--tweakClass",
+                tweakClassServer
+            )
+        }
+
         config.mainClass = parent.mainClass ?: config.mainClass
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
         config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
         config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-        config.args += listOf("--tweakClass",
-            parent.tweakClassServer ?: "net.minecraftforge.fml.common.launcher.FMLServerTweaker"
-        )
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {

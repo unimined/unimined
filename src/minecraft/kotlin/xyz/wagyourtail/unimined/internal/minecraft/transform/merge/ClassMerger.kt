@@ -10,15 +10,28 @@ class ClassMerger(
     val toMergedFields: (FieldNode, EnvType) -> Unit = { _, _ -> },
     val toMergedMethods: (MethodNode, EnvType) -> Unit = { _, _ -> }
 ) {
-
     fun accept(client: ClassNode?, server: ClassNode?): ClassNode {
         if (client == null) {
-            toMergedClass(server!!, EnvType.SERVER)
-            return server
+            if (server!!.access and Opcodes.ACC_INTERFACE == 0) {
+                toMergedClass(server, EnvType.SERVER)
+                return server
+            } else {
+                // make interface methods & fields sided
+                server.methods?.forEach { toMergedMethods(it, EnvType.SERVER) }
+                server.fields?.forEach { toMergedFields(it, EnvType.SERVER) }
+                return server
+            }
         }
         if (server == null) {
-            toMergedClass(client, EnvType.CLIENT)
-            return client
+            if (client.access and Opcodes.ACC_INTERFACE == 0) {
+                toMergedClass(client, EnvType.CLIENT)
+                return client
+            } else {
+                // make interface methods & fields sided
+                client.methods?.forEach { toMergedMethods(it, EnvType.CLIENT) }
+                client.fields?.forEach { toMergedFields(it, EnvType.CLIENT) }
+                return client
+            }
         }
         if (!areClassMetadataEqual(client, server)) {
             throw IllegalArgumentException("Class metadata is not equal!")
