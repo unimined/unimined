@@ -79,11 +79,6 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         deps = listOf(
             Pair(
-                Pair("argo-2.25.jar", "argo-2.25.jar"), project.dependencies.create(
-                    "net.sourceforge.argo:argo:2.25"
-                )
-            ),
-            Pair(
                 Pair("guava-12.0.1.jar", "guava-12.0.1.jar"), project.dependencies.create(
                     "com.google.guava:guava:12.0.1"
                 )
@@ -154,6 +149,20 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             forgeDeps.dependencies.add(
                 project.dependencies.create(
                     project.files(path.resolve("argo-small-3.2.jar").toString())
+                )
+            )
+        }
+
+        if (wanted.contains("argo-2.25.jar")) {
+            FG1MinecraftTransformer::class.java.getResourceAsStream("/fmllibs/argo-2.25.jar").use { it1 ->
+                val bytes = it1!!.readBytes()
+                path.resolve("argo-2.25.jar")
+                    .writeBytes(bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            }
+
+            forgeDeps.dependencies.add(
+                project.dependencies.create(
+                    project.files(path.resolve("argo-2.25.jar").toString())
                 )
             )
         }
