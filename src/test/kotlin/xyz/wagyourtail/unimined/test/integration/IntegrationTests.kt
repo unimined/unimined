@@ -18,6 +18,7 @@ class IntegrationTests {
         println("Running gradle in $dir")
         val buildDir = dir.resolve("build")
         if (buildDir.exists()) buildDir.deleteRecursively()
+
         val settings = dir.resolve("settings.gradle")
         if (settings.exists()) {
             val lines = settings.toFile().readLines().toMutableList()
@@ -27,6 +28,10 @@ class IntegrationTests {
                 settings.writeText(lines.joinToString("\n"))
             }
         }
+
+        val uniminedDir = dir.resolve(".gradle").resolve("unimined")
+        if (uniminedDir.exists()) uniminedDir.deleteRecursively()
+
         val classpath = System.getProperty("java.class.path").split(File.pathSeparatorChar).map { File(it) }
         val result = GradleRunner.create()
             .withProjectDir(dir.toFile())
