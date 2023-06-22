@@ -12,7 +12,6 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.openZipFileSystem
@@ -62,7 +61,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
 
         // resolve dyn libs
         forge.readZipInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", false) {
-            resolveDynLibs(project.unimined.getLocalCache().resolve("fmllibs").toFile(), getDynLibs(it))
+            resolveDynLibs(provider.localCache.resolve("fmllibs").toFile(), getDynLibs(it))
         }
 
         super.apply()

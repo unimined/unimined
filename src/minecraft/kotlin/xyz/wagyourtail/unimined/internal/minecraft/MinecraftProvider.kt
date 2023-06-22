@@ -366,7 +366,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 //                XMLBuilder("packaging", true, true).append("jar"),
 //            )
 //        // write pom file
-//        val pomFile = project.unimined.getLocalCache().resolve("poms").resolve("$minecraftDepName-$version.pom")
+//        val pomFile = localCache.resolve("poms").resolve("$minecraftDepName-$version.pom")
 //        pomFile.parent.createDirectories()
 //        pomFile.writeText(xml.toString())
 //        pomFile.toFile()

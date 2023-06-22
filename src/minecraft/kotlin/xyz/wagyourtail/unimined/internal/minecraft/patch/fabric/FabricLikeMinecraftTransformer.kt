@@ -91,7 +91,7 @@ abstract class FabricLikeMinecraftTransformer(
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
     override var devMappings: Path? by FinalizeOnRead(LazyMutable {
-        project.unimined.getLocalCache()
+        provider.localCache
             .resolve("mappings")
             .createDirectories()
             .resolve("intermediary2named.jar")
@@ -214,7 +214,7 @@ abstract class FabricLikeMinecraftTransformer(
         if (accessWidener != null) {
             val output = MinecraftJar(
                 baseMinecraft,
-                parentPath = project.unimined.getLocalCache().resolve("fabric").createDirectories(),
+                parentPath = provider.localCache.resolve("fabric").createDirectories(),
                 awOrAt = "aw+${accessWidener!!.toPath().getSha1()}"
             )
             if (!output.path.exists() || project.unimined.forceReload) {
@@ -236,7 +236,7 @@ abstract class FabricLikeMinecraftTransformer(
             }
         } else baseMinecraft
 
-    val intermediaryClasspath: Path = project.unimined.getLocalCache().resolve("remapClasspath.txt".withSourceSet(provider.sourceSet))
+    val intermediaryClasspath: Path = provider.localCache.resolve("remapClasspath.txt".withSourceSet(provider.sourceSet))
 
     override fun afterEvaluate() {
         project.logger.lifecycle("[Unimined/Fabric] Generating intermediary classpath.")
@@ -264,7 +264,7 @@ abstract class FabricLikeMinecraftTransformer(
             val json = JsonParser.parseReader(InputStreamReader(Files.newInputStream(mod))).asJsonObject
 
             Files.createDirectories(fs.getPath("META-INF/jars/"))
-            val includeCache = project.unimined.getLocalCache().resolve("includeCache")
+            val includeCache = provider.localCache.resolve("includeCache")
             Files.createDirectories(includeCache)
             for (dep in include.dependencies) {
                 val path = fs.getPath("META-INF/jars/${dep.name}-${dep.version}.jar")

@@ -303,7 +303,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         }
     }
 
-    val legacyClasspath = project.unimined.getLocalCache().createDirectories().resolve("legacy_classpath.txt")
+    val legacyClasspath = provider.localCache.createDirectories().resolve("legacy_classpath.txt")
 
     private fun getArgValue(config: RunConfig, arg: String): String {
         if (arg.startsWith("{")) {

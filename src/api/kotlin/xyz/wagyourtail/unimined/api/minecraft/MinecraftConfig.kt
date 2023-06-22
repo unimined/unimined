@@ -18,6 +18,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.mod.ModsConfig
 import xyz.wagyourtail.unimined.api.runs.RunsConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.MustSet
@@ -221,5 +222,10 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
 
     @ApiStatus.Internal
     abstract fun isMinecraftJar(path: Path): Boolean
+
     abstract val minecraftDependency: ModuleDependency
+
+    @get:ApiStatus.Internal
+    val localCache by lazy { project.unimined.getLocalCache(sourceSet) }
+
 }

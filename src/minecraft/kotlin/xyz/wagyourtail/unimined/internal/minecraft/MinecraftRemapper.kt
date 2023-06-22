@@ -40,7 +40,7 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
         return minecraft.let(consumerApply {
             val mappingsId = provider.mappings.combinedNames
             val parent = if (provider.mappings.hasStubs) {
-                project.unimined.getLocalCache().resolve("minecraft").resolve(mappingsId).createDirectories()
+                provider.localCache.resolve("minecraft").resolve(mappingsId).createDirectories()
             } else {
                 if (parentPath.name != mappingsId) {
                     parentPath.resolve(mappingsId).createDirectories()

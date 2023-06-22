@@ -97,8 +97,10 @@ sourceSets {
         )
         outputOf(
             sourceSets["api"],
-            sourceSets["mapping"],
             sourceSets["minecraft"],
+            sourceSets["mapping"],
+            sourceSets["mods"],
+            sourceSets["runs"],
             main.get()
         )
     }

@@ -13,23 +13,44 @@ unimined.useGlobalCache = false
 sourceCompatibility = JavaVersion.VERSION_1_7
 targetCompatibility = JavaVersion.VERSION_1_7
 
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
 unimined.minecraft {
     version "1.3.2"
 
+    mappings {
+        stub.withMappings(["searge", "mcp"]) {
+            c("ModLoader", "net/minecraft/src/ModLoader", "net/minecraft/src/ModLoader")
+            c("BaseMod", "net/minecraft/src/BaseMod", "net/minecraft/src/BaseMod")
+        }
+    }
+
     forge {
         forge "4.3.5.318"
+        forgeTransformer.transforms("exampleModId.transform")
     }
 
     minecraftRemapper.config {
         ignoreConflicts(true)
     }
+
+    runs {
+        config("client") {
+            jvmArgs.add("-Djma.debug=true")
+        }
+    }
 }
+
 
 repositories {
 }
 
 dependencies {
 }
+
 
 processResources {
     inputs.property "version", project.version

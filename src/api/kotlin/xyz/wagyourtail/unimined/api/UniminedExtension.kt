@@ -89,7 +89,13 @@ abstract class UniminedExtension(val project: Project) {
 
     @ApiStatus.Internal
     fun getLocalCache(): Path {
-        return project.rootProject.buildDir.toPath().resolve("unimined").createDirectories()
+        return project.projectDir.toPath().resolve(".gradle").resolve("unimined").resolve("local").createDirectories()
+    }
+
+    @ApiStatus.Internal
+    fun getLocalCache(sourceSet: SourceSet): Path {
+        if (sourceSet.name == "main") return getLocalCache()
+        return getLocalCache().resolve(sourceSet.name).createDirectories()
     }
 
     @ApiStatus.Internal
@@ -97,7 +103,7 @@ abstract class UniminedExtension(val project: Project) {
         return if (useGlobalCache) {
             project.gradle.gradleUserHomeDir.toPath().resolve("caches").resolve("unimined").createDirectories()
         } else {
-            getLocalCache().resolve("fakeglobal").createDirectories()
+            project.rootProject.projectDir.toPath().resolve(".gradle").resolve("unimined").createDirectories()
         }
     }
 

@@ -425,7 +425,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     private fun mappingCacheFile(): Path =
-        (if (hasStubs) project.unimined.getLocalCache() else project.unimined.getGlobalCache())
+        (if (hasStubs) minecraft.localCache else project.unimined.getGlobalCache())
             .resolve("mappings").resolve("mappings-${side}-${combinedNames}.tiny")
 
 

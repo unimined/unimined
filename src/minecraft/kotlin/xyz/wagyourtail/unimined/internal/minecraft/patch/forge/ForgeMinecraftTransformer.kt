@@ -255,7 +255,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
     var srgToMCPAsSRG: Path by FinalizeOnRead(LazyMutable {
-        project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.srg").apply {
+        provider.localCache.resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.srg").apply {
             val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
                 location = toFile()
                 type = ExportMappingsTask.MappingExportTypes.SRG
@@ -270,7 +270,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
     var srgToMCPAsMCP: Path by FinalizeOnRead(LazyMutable {
-        project.unimined.getLocalCache().resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.jar").apply {
+        provider.localCache.resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.jar").apply {
             val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
                 location = toFile()
                 type = ExportMappingsTask.MappingExportTypes.MCP
@@ -427,7 +427,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
             project.logger.lifecycle("[Unimined/ForgeTransformer] Using user access transformer $accessTransformer")
             val output = MinecraftJar(
                 baseMinecraft,
-                parentPath = project.unimined.getLocalCache().resolve("forge"),
+                parentPath = provider.localCache.resolve("forge"),
                 awOrAt = "at+${accessTransformer!!.toPath().getSha1()}"
             )
             if (!output.path.exists() || project.unimined.forceReload) {
