@@ -7,7 +7,6 @@ import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
-import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.FileCollectionDependency
 import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
@@ -297,6 +296,24 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 outputs("mcp", true) { listOf("searge") }
                 sourceNamespace("searge")
             }
+            action()
+        }
+    }
+
+    override fun parchment(
+        mcVersion: String,
+        version: String,
+        checked: Boolean,
+        key: String,
+        action: MappingDepConfig.() -> Unit
+    ) {
+        project.unimined.parchmentMaven()
+        val artifact = "org.parchmentmc.data:parchment-${mcVersion}:${version}" + (if (checked) ":checked" else "") + "@zip"
+        mapping(artifact, key) {
+            this as MappingDepConfigImpl
+            sourceNamespace("mojmap")
+            outputs("mojmap", true) { listOf() }
+            allowDuplicateOutputs()
             action()
         }
     }

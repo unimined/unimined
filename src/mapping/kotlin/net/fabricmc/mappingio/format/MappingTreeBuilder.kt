@@ -39,7 +39,7 @@ class MappingTreeBuilder {
     }
 
     private fun checkInput(input: MappingInputBuilder.MappingInput) {
-        if (input.nsFilter.intersect(ns).isNotEmpty()) {
+        if (input.nsFilter.intersect(ns).isNotEmpty() && !input.allowDuplicate) {
             throw IllegalArgumentException("Namespace ${input.nsFilter.intersect(ns)} already exists in the tree")
         }
     }
@@ -372,6 +372,7 @@ class MappingTreeBuilder {
             var nsSource: String = "official"
             var afterRemap: (MappingTree) -> Unit = { }
             val dependsOn: MutableSet<String> = mutableSetOf()
+            var allowDuplicate: Boolean = false
 
             fun mapNs(from: String, to: String) {
                 nsMap[from] = to

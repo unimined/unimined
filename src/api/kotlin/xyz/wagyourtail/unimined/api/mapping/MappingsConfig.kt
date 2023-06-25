@@ -8,8 +8,6 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.getField
 
 /**
  * @since 1.0.0
@@ -387,6 +385,31 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         action: Closure<*>
     ) {
         forgeBuiltinMCP(version, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    @JvmOverloads
+    abstract fun parchment(
+        mcVersion: String = minecraft.version,
+        version: String,
+        checked: Boolean = false,
+        key: String = "parchment",
+        action: MappingDepConfig.() -> Unit = {}
+    )
+
+    @JvmOverloads
+    fun parchment(
+        mcVersion: String = minecraft.version,
+        version: String,
+        checked: Boolean = false,
+        key: String = "parchment",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        parchment(mcVersion, version, checked, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()

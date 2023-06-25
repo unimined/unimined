@@ -115,4 +115,6 @@ abstract class UniminedExtension(val project: Project) {
     abstract fun mcphackersIvy()
     abstract fun quiltMaven()
     abstract fun babricMaven()
+    abstract fun parchmentMaven()
+
 }

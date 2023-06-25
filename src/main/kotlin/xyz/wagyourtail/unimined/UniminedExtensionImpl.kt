@@ -168,7 +168,6 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
             it.url = URI.create("https://repo.legacyfabric.net/repository/legacyfabric")
         }
     }
-
     override fun legacyFabricMaven() {
         project.logger.info("[Unimined] adding legacy fabric maven: $legacyFabricMaven")
     }
@@ -224,6 +223,17 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     override fun mcphackersIvy() {
         project.logger.info("[Unimined] adding mcphackers ivy: $mcphackersIvy")
+    }
+
+    val parchmentMaven by lazy {
+        project.repositories.maven {
+            it.name = "parchment"
+            it.url = URI.create("https://maven.parchmentmc.org/")
+        }
+    }
+
+    override fun parchmentMaven() {
+        project.logger.info("[Unimined] adding parchment maven: $parchmentMaven")
     }
 
     init {

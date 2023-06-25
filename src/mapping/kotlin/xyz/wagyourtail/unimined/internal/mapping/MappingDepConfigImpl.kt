@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
+import net.fabricmc.mappingio.MappingVisitor
+import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
 import net.fabricmc.mappingio.format.*
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.artifacts.Dependency
@@ -143,6 +145,30 @@ class ContainedMappingImpl() : ContainedMapping {
             forwardVisitor { v, m, _ ->
                 SkipIfNotInFilter(v, m, namespace)
             }
+        }
+    }
+
+
+    override fun forwardVisitor(visitor: (MappingVisitor, MappingTreeView, String) -> ForwardingMappingVisitor) {
+        checkFinalized()
+        inputActions.add {
+            forwardVisitor { v, m, e ->
+                visitor(v, m, e.name)
+            }
+        }
+    }
+
+    override fun allowDuplicateOutputs() {
+        checkFinalized()
+        inputActions.add {
+            allowDuplicate = true
+        }
+    }
+
+    override fun disallowDuplicateOutputs() {
+        checkFinalized()
+        inputActions.add {
+            allowDuplicate = false
         }
     }
 

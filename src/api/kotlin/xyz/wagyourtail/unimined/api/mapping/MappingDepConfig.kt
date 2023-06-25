@@ -4,7 +4,12 @@ import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
+import net.fabricmc.mappingio.MappingVisitor
+import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
+import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.artifacts.Dependency
+import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.minecraft.EnvType
 
 /**
  * @since 1.0.0
@@ -116,4 +121,28 @@ interface ContainedMapping {
     fun clearOutputs()
     fun skipIfNotIn(namespace: String)
     fun clearDepends()
+
+    @ApiStatus.Experimental
+    fun forwardVisitor(visitor: (MappingVisitor, MappingTreeView, String) -> ForwardingMappingVisitor)
+
+    @ApiStatus.Experimental
+    fun forwardVisitor(
+        @ClosureParams(
+            value = SimpleType::class,
+            options = [
+                "net.fabricmc.mappingio.MappingVisitor,net.fabricmc.mappingio.tree.MappingTreeView,java.lang.String"
+            ]
+        )
+        visitor: Closure<*>
+    ) {
+        forwardVisitor { v, tree, env ->
+            visitor.call(v, tree, env) as ForwardingMappingVisitor
+        }
+    }
+
+    @ApiStatus.Experimental
+    fun allowDuplicateOutputs()
+
+    fun disallowDuplicateOutputs()
+
 }
