@@ -318,6 +318,15 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
     }
 
+    override fun postProcess(key: String, mappings: MappingsConfig.() -> Unit, merger: MappingDepConfig.() -> Unit) {
+        val mappingsConfig = MappingsProvider(project, minecraft)
+        mappingsConfig.mappings()
+        mappingsConfig.resolveMappingTree()
+        mapping(project.dependencies.create(
+            project.files(mappingsConfig.mappingCacheFile()),
+        ), key, merger)
+    }
+
     override fun mapping(dependency: Any, key: String, action: MappingDepConfig.() -> Unit) {
         if (freeze) {
             throw IllegalStateException("Cannot add mappings after mapping tree has been initialized")
@@ -448,7 +457,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     override val combinedNames: String by lazy {
         if (!freeze) freeze = true
-        val names = mappingsDeps.values.map { if (it.dep is FileCollectionDependency) (it.dep as FileCollectionDependency).files.first().nameWithoutExtension else "${it.dep.name}-${it.dep.version}" }.sorted() + (if (hasStubs) listOf("stub-${_stub!!.hash}") else listOf())
+        val names = mappingsDeps.map { if (it.value.dep is FileCollectionDependency) ("${it.key}-${(it.value.dep as FileCollectionDependency).files.first().getSha1()}") else "${it.key}-${it.value.dep.version}" }.sorted() + (if (hasStubs) listOf("stub-${_stub!!.hash}") else listOf())
         names.joinToString("-")
     }
 

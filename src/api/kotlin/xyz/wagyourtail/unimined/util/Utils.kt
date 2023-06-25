@@ -107,6 +107,8 @@ fun Path.getSha1(): String {
     return hashBytes.joinToString("") { String.format("%02x", it) }
 }
 
+fun File.getSha1() = toPath().getSha1()
+
 
 //fun runJarInSubprocess(
 //    jar: Path,

@@ -416,6 +416,28 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    @ApiStatus.Experimental
+    abstract fun postProcess(key: String, mappings: MappingsConfig.() -> Unit, merger: MappingDepConfig.() -> Unit)
+
+    @ApiStatus.Experimental
+    fun postProcess(
+        key: String,
+        @DelegatesTo(value = MappingsConfig::class, strategy = Closure.DELEGATE_FIRST)
+        mappings: Closure<*>,
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        merger: Closure<*>
+    ) {
+        postProcess(key, {
+            mappings.delegate = this
+            mappings.resolveStrategy = Closure.DELEGATE_FIRST
+            mappings.call()
+        }) {
+            merger.delegate = this
+            merger.resolveStrategy = Closure.DELEGATE_FIRST
+            merger.call()
+        }
+    }
+
     @JvmOverloads
     @ApiStatus.Experimental
     abstract fun mapping(dependency: Any, key: String = dependency.toString(), action: MappingDepConfig.() -> Unit = {})
