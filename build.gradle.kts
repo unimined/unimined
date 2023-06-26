@@ -132,10 +132,14 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core:2.20.0")
 
     // remapper
-    implementation("net.fabricmc:tiny-remapper:0.8.6")
+    implementation("net.fabricmc:tiny-remapper:0.8.7") {
+        exclude(group = "org.ow2.asm")
+    }
 
     // mappings
-    implementation("net.fabricmc:mapping-io:0.3.0")
+    implementation("net.fabricmc:mapping-io:0.3.0") {
+        exclude(group = "org.ow2.asm")
+    }
 
     // jetbrains annotations
     implementation("org.jetbrains:annotations-java5:23.0.0")
@@ -154,7 +158,8 @@ dependencies {
 
     // at
     implementation("net.minecraftforge:accesstransformers:8.0.7") {
-        exclude(mapOf("group" to "org.apache.logging.log4j"))
+        exclude(group = "org.apache.logging.log4j")
+        exclude(group = "org.ow2.asm")
     }
 
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
@@ -162,7 +167,9 @@ dependencies {
     }
 
     // class transform
-    implementation("net.lenni0451.classtransform:core:1.8.4")
+    implementation("net.lenni0451.classtransform:core:1.8.4") {
+        exclude(group = "org.ow2.asm")
+    }
 }
 
 tasks.jar {
