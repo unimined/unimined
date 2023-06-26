@@ -115,9 +115,14 @@ dependencies {
     implementation("com.google.guava:guava:31.1-jre")
 
     // gson
-    implementation("com.google.code.gson:gson:2.9.0") {
+    implementation("com.google.code.gson:gson:2.9.0")
 
-    }
+    // asm
+    implementation("org.ow2.asm:asm:9.5")
+    implementation("org.ow2.asm:asm-commons:9.5")
+    implementation("org.ow2.asm:asm-tree:9.5")
+    implementation("org.ow2.asm:asm-analysis:9.5")
+    implementation("org.ow2.asm:asm-util:9.5")
 
     // artifact transformer
     implementation("net.minecraftforge:artifactural:3.0.14")
