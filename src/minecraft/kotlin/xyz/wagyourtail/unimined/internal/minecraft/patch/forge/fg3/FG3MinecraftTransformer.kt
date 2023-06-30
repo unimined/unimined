@@ -280,7 +280,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             val stoutLevel = project.gradle.startParameter.logLevel
             val stdout = System.out
             if (stoutLevel > LogLevel.INFO) {
-                System.setOut(PrintStream(NullOutputStream.INSTANCE))
+                System.setOut(PrintStream(NullOutputStream.NULL_OUTPUT_STREAM))
             }
             project.logger.info("Running binpatcher with args: ${args.joinToString(" ")}")
             try {

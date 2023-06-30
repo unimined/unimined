@@ -33,12 +33,12 @@ object SubprocessExecutor {
             if (shouldShowVerboseStdout(project)) {
                 spec.standardOutput = System.out
             } else {
-                spec.standardOutput = NullOutputStream.INSTANCE
+                spec.standardOutput = NullOutputStream.NULL_OUTPUT_STREAM
             }
             if (shouldShowVerboseStderr(project)) {
                 spec.errorOutput = System.err
             } else {
-                spec.errorOutput = NullOutputStream.INSTANCE
+                spec.errorOutput = NullOutputStream.NULL_OUTPUT_STREAM
             }
         }
     }
