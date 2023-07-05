@@ -47,24 +47,6 @@ open class FabricLikeApiExtension {
     }
 
     val locations = mapOf<String, APILocations>(
-        "quilt" to object : APILocations() {
-            override fun getUrl(version: String): String {
-                return "https://maven.quiltmc.org/repository/release/org/quiltmc/quilted-fabric-api/quilted-fabric-api/$version/quilted-fabric-api-$version.pom"
-            }
-
-            override fun getArtifactName(moduleName: String, version: String?): String {
-                return "org.quiltmc.quilted-fabric-api:$moduleName:$version"
-            } 
-        },
-        "qsl" to object : APILocations() {
-            override fun getUrl(version: String): String {
-                return "https://maven.quiltmc.org/repository/release/org/quiltmc/qsl/$version/qsl-$version.pom"
-            }
-
-            override fun getArtifactName(moduleName: String, version: String?): String {
-                return "org.quiltmc.qsl:$moduleName:$version"
-            } 
-        },
         "fabric" to object : APILocations() {
             override fun getUrl(version: String): String {
                 return "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$version/fabric-api-$version.pom"
@@ -82,6 +64,24 @@ open class FabricLikeApiExtension {
             override fun getArtifactName(moduleName: String, version: String?): String {
                 return "net.legacyfabric.legacy-fabric-api:$moduleName:$version"
             }
+        },
+        "quilt" to object : APILocations() {
+            override fun getUrl(version: String): String {
+                return "https://maven.quiltmc.org/repository/release/org/quiltmc/quilted-fabric-api/quilted-fabric-api/$version/quilted-fabric-api-$version.pom"
+            }
+
+            override fun getArtifactName(moduleName: String, version: String?): String {
+                return "org.quiltmc.quilted-fabric-api:$moduleName:$version"
+            } 
+        },
+        "qsl" to object : APILocations() {
+            override fun getUrl(version: String): String {
+                return "https://maven.quiltmc.org/repository/release/org/quiltmc/qsl/$version/qsl-$version.pom"
+            }
+
+            override fun getArtifactName(moduleName: String, version: String?): String {
+                return "org.quiltmc.qsl:$moduleName:$version"
+            } 
         }
     )
 
@@ -121,7 +121,5 @@ open class FabricLikeApiExtension {
     fun legacyFabricModule(moduleName: String, version: String): String {
         return locations["legacyFabric"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
     }
-
-    //TODO: figure out quilted fabric / qsl, would then want to rename extension from fabricApi
 
 }
