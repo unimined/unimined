@@ -64,6 +64,24 @@ open class FabricLikeApiExtension {
             override fun getArtifactName(moduleName: String, version: String?): String {
                 return "net.legacyfabric.legacy-fabric-api:$moduleName:$version"
             }
+        },
+        "quilt" to object : APILocations() {
+            override fun getUrl(version: String): String {
+                return "https://maven.quiltmc.org/repository/release/org/quiltmc/quilted-fabric-api/quilted-fabric-api/$version/quilted-fabric-api-$version.pom"
+            }
+
+            override fun getArtifactName(moduleName: String, version: String?): String {
+                return "org.quiltmc.quilted-fabric-api:$moduleName:$version"
+            } 
+        },
+        "qsl" to object : APILocations() {
+            override fun getUrl(version: String): String {
+                return "https://maven.quiltmc.org/repository/release/org/quiltmc/qsl/$version/qsl-$version.pom"
+            }
+
+            override fun getArtifactName(moduleName: String, version: String?): String {
+                return "org.quiltmc.qsl:$moduleName:$version"
+            } 
         }
     )
 
@@ -84,10 +102,24 @@ open class FabricLikeApiExtension {
     /**
      * @since 1.0.0
      */
+    fun quiltFabricModule(moduleName: String, version: String): String {
+        return locations["quilt"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
+    }
+
+
+    /**
+     * @since 1.0.0
+     */
+    fun qslModule(moduleName: String, version: String): String {
+        return locations["qsl"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
+    }
+
+
+    /**
+     * @since 1.0.0
+     */
     fun legacyFabricModule(moduleName: String, version: String): String {
         return locations["legacyFabric"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
     }
-
-    //TODO: figure out quilted fabric / qsl, would then want to rename extension from fabricApi
 
 }
