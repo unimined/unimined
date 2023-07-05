@@ -67,7 +67,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         )
         exclude(
             mapOf(
-                "group" to "net.quiltmc",
+                "group" to "org.quiltmc",
                 "module" to "quilt-loader"
             )
         )
