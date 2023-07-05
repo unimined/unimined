@@ -368,7 +368,6 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             BufferedReader(InputStreamReader(input)).use { reader ->
                 val json = JsonParser.parseReader(reader)
                 json.asJsonObject.remove("jars")
-                json.asJsonObject.remove("quilt_loader")
                 BufferedWriter(
                     OutputStreamWriter(
                         BufferedOutputStream(
