@@ -37,6 +37,7 @@ val Project.unimined
  * @see MinecraftConfig
  * @since 1.0.0
  */
+@Suppress("OVERLOADS_ABSTRACT", "UNUSED")
 abstract class UniminedExtension(val project: Project) {
 
     var useGlobalCache: Boolean by FinalizeOnRead(true)
@@ -48,39 +49,28 @@ abstract class UniminedExtension(val project: Project) {
         project.extensions.getByType(SourceSetContainer::class.java)
     }
 
-    fun minecraft(action: MinecraftConfig.() -> Unit): MinecraftConfig {
-        return minecraft(sourceSets.getByName("main"), action)
-    }
+    /**
+     * @since 1.0.0
+     */
+    @JvmOverloads
+    abstract fun minecraft(
+        sourceSet: SourceSet = sourceSets.getByName("main"),
+        lateApply: Boolean = false,
+        action: MinecraftConfig.() -> Unit
+    )
+
 
     /**
      * @since 1.0.0
      */
-    abstract fun minecraft(sourceSet: SourceSet, action: MinecraftConfig.() -> Unit): MinecraftConfig
-
-
-    /**
-     * @since 1.0.0
-     */
+    @JvmOverloads
     fun minecraft(
+        sourceSet: SourceSet = sourceSets.getByName("main"),
+        lateApply: Boolean = false,
         @DelegatesTo(value = MinecraftConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        minecraft(sourceSets.getByName("main")) {
-            action.delegate = this
-            action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
-        }
-    }
-
-    /**
-     * @since 1.0.0
-     */
-    fun minecraft(
-        sourceSet: SourceSet,
-        @DelegatesTo(value = MinecraftConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        minecraft(sourceSet) {
+        minecraft(sourceSet, lateApply) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()

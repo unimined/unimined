@@ -22,20 +22,18 @@ import java.nio.file.Path
 
 open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) {
 
-    val minecrafts = mutableMapOf<SourceSet, MinecraftProvider>()
+    val minecrafts = defaultedMapOf<SourceSet, MinecraftProvider> {
+        MinecraftProvider(project, it)
+    }
 
-
-    override fun minecraft(sourceSet: SourceSet, action: MinecraftConfig.() -> Unit): MinecraftConfig {
-        if (minecrafts.containsKey(sourceSet)) {
-            project.logger.warn("[Unimined] minecraft config for ${sourceSet.name} already exists")
-            return minecrafts[sourceSet]!!
+    override fun minecraft(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
+        if (minecrafts.containsKey(sourceSet) && minecrafts[sourceSet].applied) {
+            throw IllegalStateException("minecraft config for ${sourceSet.name} already applied, cannot configure further!")
+        } else if (!minecrafts.containsKey(sourceSet)) {
+            project.logger.info("[Unimined] registering minecraft config for ${sourceSet.name}")
         }
-        project.logger.info("[Unimined] registering minecraft config for ${sourceSet.name}")
-        val mc = MinecraftProvider(project, sourceSet)
-        minecrafts[sourceSet] = mc
-        mc.action()
-        mc.apply()
-        return mc
+        minecrafts[sourceSet].action()
+        if (!lateApply) minecrafts[sourceSet].apply()
     }
 
     private fun getMinecraftDepNames(): Set<String> = minecrafts.values.map { it.minecraftDepName }.toSet()
@@ -259,7 +257,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
-    fun getSourceSetFromMinecraft(path: Path): SourceSet? {
+    private fun getSourceSetFromMinecraft(path: Path): SourceSet? {
         for ((set, mc) in minecrafts) {
             if (mc.isMinecraftJar(path)) {
                 return set
@@ -268,7 +266,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         return null
     }
 
-    fun afterEvaluate() {
+    private fun afterEvaluate() {
         for ((sourceSet, mc) in minecrafts) {
             mc.afterEvaluate()
             val mcFiles = sourceSet.runtimeClasspath.files.mapNotNull { getSourceSetFromMinecraft(it.toPath()) }

@@ -66,6 +66,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     private val patcherActions = ArrayDeque<() -> Unit>()
     private var lateActionsRunning by FinalizeOnWrite(false)
 
+    var applied: Boolean by FinalizeOnWrite(false)
+        private set
+
     val minecraft: Configuration = project.configurations.maybeCreate("minecraft".withSourceSet(sourceSet)).also {
         sourceSet.compileClasspath += it
         sourceSet.runtimeClasspath += it
@@ -240,6 +243,8 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     fun apply() {
+        if (applied) return
+        applied = true
         project.logger.lifecycle("[Unimined/Minecraft] Applying minecraft config for $sourceSet")
 
         lateActionsRunning = true
@@ -338,6 +343,8 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     fun afterEvaluate() {
+        if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
+
         project.logger.info("[Unimined/MinecraftProvider] minecraft file: $minecraftFileDev")
 
         // remap mods
