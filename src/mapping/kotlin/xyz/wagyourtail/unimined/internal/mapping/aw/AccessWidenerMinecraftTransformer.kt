@@ -24,7 +24,10 @@ import kotlin.io.path.*
 
 object AccessWidenerMinecraftTransformer {
 
-    class AwRemapper(val source: String, val target: String, val catchNsError: Boolean, val logger: Logger): OutputConsumerPath.ResourceRemapper {
+    class AwRemapper(val source: String, val target: String, val catchNsError: Boolean, val logger: Logger?): OutputConsumerPath.ResourceRemapper {
+
+        constructor(source: String, target: String): this(source, target, false, null)
+
         override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
             // read the beginning of the file and see if it begins with "accessWidener"
             return relativePath.extension.equals("accesswidener", true) ||
@@ -49,7 +52,7 @@ object AccessWidenerMinecraftTransformer {
                 if (!catchNsError) {
                     throw t
                 } else {
-                    logger.warn("[Unimined/AccessWidenerTransformer] Skipping access widener $relativePath due to namespace mismatch, writing original!!")
+                    logger!!.warn("[Unimined/AccessWidenerTransformer] Skipping access widener $relativePath due to namespace mismatch, writing original!!")
                     Files.write(destinationDirectory.resolve(relativePath), aw, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
                 }
             }

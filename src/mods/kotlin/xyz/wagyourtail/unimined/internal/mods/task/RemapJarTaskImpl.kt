@@ -134,7 +134,8 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                     listOf(
                         AccessWidenerMinecraftTransformer.AwRemapper(
                             if (fromNs.named) "named" else fromNs.name,
-                            if (toNs.named) "named" else toNs.name),
+                            if (toNs.named) "named" else toNs.name
+                        ),
                         AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.getOrElse((provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true)!!),
                         betterMixinExtension.resourceRemapper()
                     )
