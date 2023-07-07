@@ -74,7 +74,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         )
         exclude(
             mapOf(
-                "group" to "net.quiltmc",
+                "group" to "org.quiltmc",
                 "module" to "quilt-loader"
             )
         )
@@ -377,7 +377,6 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             BufferedReader(InputStreamReader(input)).use { reader ->
                 val json = JsonParser.parseReader(reader)
                 json.asJsonObject.remove("jars")
-                json.asJsonObject.remove("quilt_loader")
                 BufferedWriter(
                     OutputStreamWriter(
                         BufferedOutputStream(
