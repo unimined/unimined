@@ -3,6 +3,8 @@ package xyz.wagyourtail.unimined.internal.mapping
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
 import net.fabricmc.mappingio.format.*
+import net.fabricmc.mappingio.tree.MappingTree
+import net.fabricmc.mappingio.tree.MappingTree.ClassMapping
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.mapping.ContainedMapping
@@ -183,6 +185,44 @@ class ContainedMappingImpl() : ContainedMapping {
         checkFinalized()
         inputActions.add {
             clearDepends()
+        }
+    }
+
+    private fun fixNest(mappings: MappingTree, target: ClassMapping, srcKey: Int, dstKey: Int): String? {
+        val srcName = target.getName(srcKey)
+        if (srcName?.contains('$') != true) return target.getName(dstKey)
+        val parent = mappings.getClass(srcName.substringBeforeLast('$'), srcKey) ?: return target.getName(dstKey)
+        val fixedParent = fixNest(mappings, parent, srcKey, dstKey) ?: return target.getName(dstKey)
+        val dstName = target.getDstName(dstKey)
+        if (dstName == null) {
+            target.setDstName(fixedParent + "$" + srcName.substringAfterLast('$'), dstKey)
+        } else {
+            target.setDstName(fixedParent + "$" + dstName.substringAfterLast('/').substringAfterLast('$'), dstKey)
+        }
+        return target.getName(dstKey)
+    }
+
+    override fun renest() {
+        checkFinalized()
+        inputActions.add {
+            afterRemap { mappings ->
+                val srcKey = mappings.getNamespaceId(nsSource)
+
+                if (srcKey == MappingTreeView.NULL_NAMESPACE_ID) {
+                    throw IllegalStateException("Source namespace $nsSource does not exist")
+                }
+
+                val outputKeys = outputs.map { mappings.getNamespaceId(it.actualNamespace.name) }.filter { it >= 0 }
+
+                for (clazz in mappings.classes) {
+                    val srcName = clazz.getName(srcKey)
+                    if (srcName?.contains("$") == true) {
+                        for (key in outputKeys) {
+                            fixNest(mappings, clazz, srcKey, key)
+                        }
+                    }
+                }
+            }
         }
     }
 

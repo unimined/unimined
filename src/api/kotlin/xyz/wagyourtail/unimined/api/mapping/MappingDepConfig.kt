@@ -145,4 +145,5 @@ interface ContainedMapping {
 
     fun disallowDuplicateOutputs()
 
+    fun renest()
 }

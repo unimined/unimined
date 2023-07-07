@@ -36,6 +36,9 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
     override var namespace: MappingNamespaceTree.Namespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
 
     override var fallbackNamespace: MappingNamespaceTree.Namespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
+
+    private var catchAWNs by FinalizeOnRead(false)
+
     override fun namespace(ns: String) {
         // kotlin reflection is weird
         val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = ModRemapProvider::class.getField("namespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
@@ -46,6 +49,10 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         // kotlin reflection is weird
         val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = ModRemapProvider::class.getField("fallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(ns) })
+    }
+
+    override fun catchAWNamespaceAssertion() {
+        catchAWNs = true
     }
 
     override var remapAtToLegacy: Boolean by FinalizeOnRead(LazyMutable { (provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true })
@@ -331,7 +338,9 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 listOf(
                     AccessWidenerMinecraftTransformer.AwRemapper(
                         if (remap.first.named) "named" else remap.first.name,
-                        if (remap.second.named) "named" else remap.second.name
+                        if (remap.second.named) "named" else remap.second.name,
+                        catchAWNs,
+                        project.logger
                     ),
                     innerJarStripper,
                     AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapAtToLegacy)

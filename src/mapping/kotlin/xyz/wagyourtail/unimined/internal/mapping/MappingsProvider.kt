@@ -219,6 +219,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             outputs("yarn", true) { listOf("intermediary") }
             mapNamespace("named", "yarn")
             sourceNamespace("intermediary")
+            renest()
             action()
         }
     }

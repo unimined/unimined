@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.util.openZipFileSystem
 import java.io.BufferedReader
+import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
@@ -23,7 +24,7 @@ import kotlin.io.path.*
 
 object AccessWidenerMinecraftTransformer {
 
-    class AwRemapper(val source: String, val target: String): OutputConsumerPath.ResourceRemapper {
+    class AwRemapper(val source: String, val target: String, val catchNsError: Boolean, val logger: Logger): OutputConsumerPath.ResourceRemapper {
         override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
             // read the beginning of the file and see if it begins with "accessWidener"
             return relativePath.extension.equals("accesswidener", true) ||
@@ -37,12 +38,21 @@ object AccessWidenerMinecraftTransformer {
             remapper: TinyRemapper
         ) {
             val awr = AccessWidenerWriter()
-            AccessWidenerReader(AccessWidenerRemapper(awr, remapper.environment.remapper, source, target)).read(
-                BufferedReader(InputStreamReader(input))
-            )
-            val output = destinationDirectory.resolve(relativePath)
-            output.parent.createDirectories()
-            Files.write(output, awr.write(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            val aw = input.readBytes()
+            try {
+                AccessWidenerReader(AccessWidenerRemapper(awr, remapper.environment.remapper, source, target)).read(BufferedReader(InputStreamReader(ByteArrayInputStream(aw), StandardCharsets.UTF_8)))
+                val output = destinationDirectory.resolve(relativePath)
+                output.parent.createDirectories()
+                Files.write(output, awr.write(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            } catch (t: IllegalArgumentException) {
+                if (t.message?.startsWith("Cannot remap access widener from namespace") != true) throw t
+                if (!catchNsError) {
+                    throw t
+                } else {
+                    logger.warn("[Unimined/AccessWidenerTransformer] Skipping access widener $relativePath due to namespace mismatch, writing original!!")
+                    Files.write(destinationDirectory.resolve(relativePath), aw, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+                }
+            }
         }
     }
 

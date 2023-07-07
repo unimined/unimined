@@ -19,6 +19,8 @@ abstract class ModRemapConfig(val configurations: Set<Configuration>) {
 
     abstract fun fallbackNamespace(ns: String)
 
+    abstract fun catchAWNamespaceAssertion()
+
     @set:ApiStatus.Experimental
     abstract var remapAtToLegacy: Boolean
 
