@@ -116,7 +116,7 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
         }
         tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
-        remapper.readClassPathAsync(*provider.minecraftLibraries.files.map { it.toPath() }.toTypedArray())
+        remapper.readClassPathAsync(*provider.minecraftLibraries.files.map { it.toPath() }.filter { it.exists() }.toTypedArray())
         try {
             remapper.readInputsAsync(from)
             OutputConsumerPath.Builder(target).build().use {
