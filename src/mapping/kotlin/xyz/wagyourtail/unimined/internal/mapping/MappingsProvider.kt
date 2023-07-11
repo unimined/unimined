@@ -89,10 +89,16 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     override fun babricIntermediary(key: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.babricMaven()
-        if (side == EnvType.COMBINED) throw IllegalStateException("Cannot use babricIntermediary with side COMBINED")
         mapping("babric:intermediary:${minecraft.version}:v2", key) {
-            mapNamespace(side.classifier!!, "official")
-            outputs("intermediary", false) { listOf("official") }
+            if (side != EnvType.COMBINED) {
+                mapNamespace(side.classifier!!, "official")
+                outputs("intermediary", false) { listOf("official") }
+            } else {
+                sourceNamespace("intermediary")
+                outputs("intermediary", false) { emptyList() }
+                outputs(EnvType.CLIENT.classifier!!, false) { listOf("intermediary") }
+                outputs(EnvType.SERVER.classifier!!, false) { listOf("intermediary") }
+            }
         }
     }
 

@@ -38,6 +38,9 @@ tasks.register("modloaderJar", Jar) {
 
 repositories {
     mavenLocal()
+    maven {
+        url "https://maven.wagyourtail.xyz/releases"
+    }
     mavenCentral()
 }
 
@@ -46,7 +49,8 @@ unimined.minecraft() {
     side "client"
 
     mappings {
-        mcp("legacy", "4.3-b1.7.3")
+        babricIntermediary()
+        barn(9)
     }
 
     minecraftRemapper.config {
@@ -56,10 +60,9 @@ unimined.minecraft() {
 
 unimined.minecraft(sourceSets.babric) {
     version "b1.7.3"
-    side "client"
 
     mappings {
-        mcp("legacy", "4.3-b1.7.3")
+        barn(9)
     }
 
     babric {
@@ -76,7 +79,8 @@ unimined.minecraft(sourceSets.modloader) {
     side "client"
 
     mappings {
-        mcp("legacy", "4.3-b1.7.3")
+        babricIntermediary()
+        barn(9)
         stub.withMappings(["searge", "mcp"]) {
             c("ModLoader", "net/minecraft/src/ModLoader", "net/minecraft/src/ModLoader")
             c("BaseMod", "net/minecraft/src/BaseMod", "net/minecraft/src/BaseMod")
