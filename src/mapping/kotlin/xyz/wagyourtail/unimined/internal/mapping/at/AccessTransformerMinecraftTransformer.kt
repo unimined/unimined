@@ -19,10 +19,11 @@ import kotlin.io.path.*
 
 object AccessTransformerMinecraftTransformer {
 
-    class AtRemapper(val logger: Logger, val remapToLegacy: Boolean = false): OutputConsumerPath.ResourceRemapper {
+    class AtRemapper(val logger: Logger, val remapToLegacy: Boolean = false, val atPaths: List<String> = emptyList()): OutputConsumerPath.ResourceRemapper {
+
         override fun canTransform(remapper: TinyRemapper, relativePath: Path): Boolean {
             return relativePath.name == "accesstransformer.cfg" ||
-                    relativePath.name.endsWith("_at.cfg")
+                    relativePath.name.endsWith("_at.cfg") || atPaths.contains(relativePath.name)
         }
 
         override fun transform(

@@ -27,6 +27,7 @@ import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.util.jar.JarFile
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.name
@@ -330,6 +331,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
     ) {
         val inpFile = input.second.first
         val targetFile = input.second.second
+        val manifest = (JarFile(inpFile).use { it.manifest }?.mainAttributes?.getValue("FMLAT") as String?)?.split(" ") ?: emptyList()
         project.logger.info("[Unimined/ModRemapper] Remapping mod from $inpFile -> $targetFile with mapping target ${remap.first}/${remap.second}")
         OutputConsumerPath.Builder(targetFile).build().use {
             it.addNonClassFiles(
@@ -343,7 +345,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                         project.logger
                     ),
                     innerJarStripper,
-                    AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapAtToLegacy)
+                    AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapAtToLegacy, manifest)
                 ) + NonClassCopyMode.FIX_META_INF.remappers + (
                         if (remapper.second != null) {
                             listOf(remapper.second!!.resourceReampper(input.first))

@@ -59,6 +59,19 @@ abstract class UniminedExtension(val project: Project) {
         action: MinecraftConfig.() -> Unit
     )
 
+    /**
+     * @since 1.0.0
+     */
+    @JvmOverloads
+    fun minecraft(
+        vararg sourceSets: SourceSet,
+        lateApply: Boolean = false,
+        action: MinecraftConfig.() -> Unit
+    ) {
+        for (sourceSet in sourceSets) {
+            minecraft(sourceSet, lateApply, action)
+        }
+    }
 
     /**
      * @since 1.0.0
@@ -76,6 +89,22 @@ abstract class UniminedExtension(val project: Project) {
             action.call()
         }
     }
+
+    /**
+     * @since 1.0.0
+     */
+    @JvmOverloads
+    fun minecraft(
+        sourceSets: List<SourceSet>,
+        lateApply: Boolean = false,
+        @DelegatesTo(value = MinecraftConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        for (sourceSet in sourceSets) {
+            minecraft(sourceSet, lateApply, action)
+        }
+    }
+
 
     @ApiStatus.Internal
     fun getLocalCache(): Path {

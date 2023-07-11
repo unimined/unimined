@@ -18,6 +18,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.Mcp
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2At
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.getFile
 import xyz.wagyourtail.unimined.util.openZipFileSystem
@@ -87,6 +88,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
         // get forge userdev jar
         forgeUd.getFile(forgeUd.dependencies.last())
     }
+
+    override val transform = (listOf<(FileSystem) -> Unit>(
+        FixFG2At::fixForgeATs
+    ) + super.transform).toMutableList()
 
     override fun beforeMappingsResolve() {
         project.logger.info("[Unimined/ForgeTransformer] FG3: beforeMappingsResolve")

@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.api.task
 
+import org.gradle.api.JavaVersion
 import org.gradle.api.internal.ConventionTask
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -7,7 +8,7 @@ import org.gradle.api.tasks.Optional
 import org.jetbrains.annotations.ApiStatus
 import java.io.File
 
-abstract class GenSourcesTask(): ConventionTask() {
+abstract class GenSourcesTask : ConventionTask() {
     @get:Input
     @get:Optional
     @get:ApiStatus.Experimental
@@ -30,6 +31,10 @@ abstract class GenSourcesTask(): ConventionTask() {
     }
 
     init {
-        decompiler.convention("org.quiltmc:quiltflower:1.8.1")
+        if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_11)) {
+            decompiler.convention("org.quiltmc:quiltflower:1.9.0")
+        } else {
+            decompiler.convention("org.quiltmc:quiltflower:1.8.1")
+        }
     }
 }

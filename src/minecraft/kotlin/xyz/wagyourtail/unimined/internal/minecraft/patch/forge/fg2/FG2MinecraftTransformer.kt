@@ -7,16 +7,15 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2At
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.ModLoaderPatches
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.openZipFileSystem
 import xyz.wagyourtail.unimined.util.readZipContents
 import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import java.net.URI
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
+import java.nio.file.*
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
@@ -62,6 +61,10 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransf
             }
         }
     }
+
+    override val transform = (listOf<(FileSystem) -> Unit>(
+        FixFG2At::fixForgeATs
+    ) + super.transform).toMutableList()
 
     override fun apply() {
         super.apply()

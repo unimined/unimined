@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.api.task.GenSourcesTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
 import java.io.File
+import java.io.OutputStream
 import java.net.URI
 import java.nio.file.Path
 import javax.inject.Inject
@@ -41,6 +42,7 @@ abstract class GenSourcesTaskImpl @Inject constructor(@get:Internal val provider
     }
 
     //TODO: gen mod sources
+    //TODO: line mapping
 
     private val placeholderPattern = Regex("\\{([^}]+?)}")
 
