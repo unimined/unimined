@@ -84,30 +84,36 @@ object BytecodeToMappings {
                             val cNode = ClassNode()
                             ClassReader(s.inputStream()).accept(cNode, 0)
                             if (visitor.visitClass(cNode.name)) {
-                                cNode.methods.forEach { method ->
-                                    // check if bridge
-                                    if (method.access and Opcodes.ACC_BRIDGE == 0) {
-                                        // check if bridge points to
-                                        if (!cNode.methods.any {
-                                                it.access and Opcodes.ACC_BRIDGE != 0 &&
-                                                        it.instructions.any {
-                                                            it.opcode == Opcodes.INVOKEVIRTUAL &&
-                                                                    it is MethodInsnNode &&
-                                                                    it.owner == cNode.name &&
-                                                                    it.name == method.name &&
-                                                                    it.desc == method.desc
-                                                        }
-                                            }) {
-                                            // check if super type contains
-                                            if (!getParentNodes(cNode).any { clazz ->
-                                                    clazz.methods.any {
-                                                        it.name == method.name && it.desc == method.desc && it.access and Opcodes.ACC_PRIVATE == 0
-                                                    }
-                                                }) {
-                                                visitor.visitMethod(method.name, method.desc)
-                                            }
-                                        }
+                                for (method in cNode.methods) {
+                                    // not a bridge
+                                    if (method.access and Opcodes.ACC_BRIDGE != 0) {
+                                        continue
                                     }
+
+//                                    // check if bridge points to
+//                                    if (cNode.methods.any {
+//                                            it.access and Opcodes.ACC_BRIDGE != 0 &&
+//                                                    it.instructions.any {
+//                                                        it.opcode == Opcodes.INVOKEVIRTUAL &&
+//                                                                it is MethodInsnNode &&
+//                                                                it.owner == cNode.name &&
+//                                                                it.name == method.name &&
+//                                                                it.desc == method.desc
+//                                                    }
+//                                        }) {
+//                                        continue
+//                                    }
+
+                                    // check if super type contains
+                                    if (getParentNodes(cNode).any { clazz ->
+                                            clazz.methods.any {
+                                                it.name == method.name && it.desc == method.desc && it.access and Opcodes.ACC_PRIVATE == 0
+                                            }
+                                        }) {
+                                        continue
+                                    }
+
+                                    visitor.visitMethod(method.name, method.desc)
                                 }
                                 cNode.fields.forEach { field ->
                                     visitor.visitField(field.name, field.desc)
