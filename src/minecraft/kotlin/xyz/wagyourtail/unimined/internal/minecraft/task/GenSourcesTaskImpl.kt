@@ -31,7 +31,6 @@ abstract class GenSourcesTaskImpl @Inject constructor(@get:Internal val provider
         val args = resolvePlaceholders(args, provider.minecraftFileDev.toPath(), outputJar.toPath())
 
         val result = SubprocessExecutor.exec(project) { spec ->
-            spec.workingDir(provider.minecraftFileDev.parentFile)
             spec.classpath(decompilerJar)
             spec.args(args)
         }
