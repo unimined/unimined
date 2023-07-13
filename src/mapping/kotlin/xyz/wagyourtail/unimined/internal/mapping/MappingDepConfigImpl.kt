@@ -132,7 +132,7 @@ class ContainedMappingImpl() : ContainedMapping {
             forwardVisitor { v, _, e ->
                 val mcFile = when (e) {
                     EnvType.CLIENT -> mappingsConfig.minecraft.minecraftData.minecraftClientFile
-                    EnvType.COMBINED -> mappingsConfig.minecraft.mergedOfficialMinecraftFile
+                    EnvType.COMBINED -> mappingsConfig.minecraft.mergedOfficialMinecraftFile ?: throw IllegalStateException("Merge not available for this version")
                     EnvType.SERVER, EnvType.DATAGEN -> mappingsConfig.minecraft.minecraftData.minecraftServerFile
                 }
                 ChildMethodStripper(v, mcFile.toPath())

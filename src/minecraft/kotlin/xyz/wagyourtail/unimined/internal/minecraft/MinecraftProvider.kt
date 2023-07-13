@@ -90,10 +90,15 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override val mergedOfficialMinecraftFile: File by lazy {
+    override val mergedOfficialMinecraftFile: File? by lazy {
         val client = minecraftData.minecraftClient
         val server = minecraftData.minecraftServer
-        NoTransformMinecraftTransformer(project, this).merge(client, server).path.toFile()
+        val noTransform = NoTransformMinecraftTransformer(project, this)
+        if (noTransform.canCombine) {
+            noTransform.merge(client, server).path.toFile()
+        } else {
+            null
+        }
     }
 
     private val minecraftFiles: Map<Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>, Path> = defaultedMapOf {
@@ -389,7 +394,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                 EnvType.COMBINED -> {
                     path == minecraftData.minecraftClientFile.toPath() ||
                     path == minecraftData.minecraftServerFile.toPath() ||
-                    path == mergedOfficialMinecraftFile.toPath()
+                    path == mergedOfficialMinecraftFile?.toPath()
                 }
                 EnvType.CLIENT -> {
                     path == minecraftData.minecraftClientFile.toPath()

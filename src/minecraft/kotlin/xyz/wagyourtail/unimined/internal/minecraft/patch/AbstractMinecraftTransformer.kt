@@ -11,7 +11,6 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixParamAnnotations
@@ -50,6 +49,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar = merge(clientjar, serverjar, false)
 
     fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, ignoreFallback: Boolean): MinecraftJar {
+        if (!canCombine) throw UnsupportedOperationException("Merging is not supported for this version")
         if (clientjar.mappingNamespace != serverjar.mappingNamespace ||(!ignoreFallback && clientjar.fallbackNamespace != serverjar.fallbackNamespace)) {
             throw IllegalArgumentException("client and server jars must have the same mapping namespace")
         }

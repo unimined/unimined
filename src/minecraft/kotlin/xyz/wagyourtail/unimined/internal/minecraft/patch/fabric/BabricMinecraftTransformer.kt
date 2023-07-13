@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftRemapper
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.LazyMutable
 
 class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider): FabricMinecraftTransformer(project, provider) {
 

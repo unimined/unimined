@@ -81,7 +81,7 @@ unimined.minecraft(sourceSets.modloader) {
     mappings {
         babricIntermediary()
         barn(9)
-        stub.withMappings(["searge", "mcp"]) {
+        stub.withMappings(["intermediary", "barn"]) {
             c("ModLoader", "net/minecraft/src/ModLoader", "net/minecraft/src/ModLoader")
             c("BaseMod", "net/minecraft/src/BaseMod", "net/minecraft/src/BaseMod")
         }
