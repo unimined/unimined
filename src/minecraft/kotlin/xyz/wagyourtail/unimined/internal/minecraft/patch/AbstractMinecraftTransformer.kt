@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixParamAnnotations
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
@@ -46,8 +47,10 @@ abstract class AbstractMinecraftTransformer protected constructor(
     fun isAnonClass(node: ClassNode): Boolean =
         node.innerClasses?.firstOrNull { it.name == node.name }.let { it != null && it.innerName == null }
 
-    open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
-        if (clientjar.mappingNamespace != serverjar.mappingNamespace || clientjar.fallbackNamespace != serverjar.fallbackNamespace) {
+    open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar = merge(clientjar, serverjar, false)
+
+    fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, ignoreFallback: Boolean): MinecraftJar {
+        if (clientjar.mappingNamespace != serverjar.mappingNamespace ||(!ignoreFallback && clientjar.fallbackNamespace != serverjar.fallbackNamespace)) {
             throw IllegalArgumentException("client and server jars must have the same mapping namespace")
         }
         val merged = MinecraftJar(
@@ -208,4 +211,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     open fun afterEvaluate() {}
+
+    open fun libraryFilter(library: Library): Boolean {
+        return true
+    }
 }
