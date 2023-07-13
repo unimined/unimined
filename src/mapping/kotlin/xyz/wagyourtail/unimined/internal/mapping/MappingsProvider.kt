@@ -24,11 +24,7 @@ import kotlin.io.path.*
 
 class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsConfig(project, minecraft) {
 
-    override var side: EnvType
-        get() = minecraft.side
-        set(value) {
-            minecraft.side = value
-        }
+    override var side: EnvType by FinalizeOnRead(LazyMutable { minecraft.side })
 
     private var freeze by FinalizeOnWrite(false)
 
@@ -89,10 +85,30 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     override fun babricIntermediary(key: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.babricMaven()
-        if (side == EnvType.COMBINED) throw IllegalStateException("Cannot use babricIntermediary with side COMBINED")
-        mapping("babric:intermediary:${minecraft.version}:v2", key) {
-            mapNamespace(side.classifier!!, "official")
-            outputs("intermediary", false) { listOf("official") }
+        if (side != EnvType.COMBINED) {
+            mapping("babric:intermediary:${minecraft.version}:v2", key) {
+                mapNamespace(side.classifier!!, "official")
+                outputs("intermediary", false) { listOf("official") }
+            }
+        } else {
+            postProcess("$key-client", {
+                side = EnvType.CLIENT
+                babricIntermediary(key, action)
+            }) {
+                sourceNamespace("intermediary")
+                mapNamespace("official", EnvType.CLIENT.classifier!!)
+                outputs("intermediary", false) { emptyList() }
+                outputs(EnvType.CLIENT.classifier!!, false) { listOf("intermediary") }
+            }
+            postProcess("$key-server", {
+                side = EnvType.SERVER
+                babricIntermediary(key, action)
+            }) {
+                sourceNamespace("intermediary")
+                mapNamespace("official", EnvType.SERVER.classifier!!)
+                outputs("intermediary", false) { emptyList() }
+                outputs(EnvType.SERVER.classifier!!, false) { listOf("intermediary") }
+            }
         }
     }
 

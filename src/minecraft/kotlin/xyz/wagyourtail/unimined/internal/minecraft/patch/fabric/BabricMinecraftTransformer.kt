@@ -2,10 +2,12 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftRemapper
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
 class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider): FabricMinecraftTransformer(project, provider) {
@@ -28,9 +30,35 @@ class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         val INTERMEDIARY = provider.mappings.getNamespace("intermediary")
-        val intermediaryClientJar = provider.minecraftRemapper.provide(clientjar, provider.mappings.OFFICIAL, INTERMEDIARY)
-        val intermediaryServerJar = provider.minecraftRemapper.provide(serverjar, provider.mappings.OFFICIAL, INTERMEDIARY)
-        return super.merge(intermediaryClientJar, intermediaryServerJar)
+        val CLIENT = provider.mappings.getNamespace("client")
+        val SERVER = provider.mappings.getNamespace("server")
+        val clientJarFixed = MinecraftJar(
+            clientjar.parentPath,
+            clientjar.name,
+            clientjar.envType,
+            clientjar.version,
+            clientjar.patches,
+            CLIENT,
+            CLIENT,
+            clientjar.awOrAt,
+            clientjar.extension,
+            clientjar.path
+        )
+        val serverJarFixed = MinecraftJar(
+            serverjar.parentPath,
+            serverjar.name,
+            serverjar.envType,
+            serverjar.version,
+            serverjar.patches,
+            SERVER,
+            SERVER,
+            serverjar.awOrAt,
+            serverjar.extension,
+            serverjar.path
+        )
+        val intermediaryClientJar = provider.minecraftRemapper.provide(clientJarFixed, INTERMEDIARY, CLIENT)
+        val intermediaryServerJar = provider.minecraftRemapper.provide(serverJarFixed, INTERMEDIARY, SERVER)
+        return super.merge(intermediaryClientJar, intermediaryServerJar, true)
     }
 
     override fun addMavens() {
@@ -40,4 +68,10 @@ class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     override val includeGlobs: List<String>
         get() = super.includeGlobs + "argo/**"
+
+
+    override fun libraryFilter(library: Library): Boolean {
+        // babric provides its own asm, exclude asm-all from vanilla minecraftLibraries
+        return !library.name.startsWith("org.ow2.asm:asm-all")
+    }
 }

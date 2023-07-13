@@ -196,6 +196,10 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         for (library in libraries) {
             if (library.rules.all { it.testRule() }) {
                 project.logger.info("[Unimined/Minecraft] Added dependency ${library.name}")
+                if (!(mcPatcher as AbstractMinecraftTransformer).libraryFilter(library)) {
+                    project.logger.info("[Unimined/Minecraft] Excluding dependency ${library.name} as it is filtered by the patcher")
+                    continue
+                }
                 val native = library.natives[OSUtils.oSId]
                 if (library.url != null || library.downloads?.artifact != null || native == null) {
                     val dep = project.dependencies.create(library.name)
