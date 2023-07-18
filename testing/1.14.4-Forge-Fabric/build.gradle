@@ -107,6 +107,10 @@ dependencies {
     mainImplementation "org.spongepowered:mixin:0.8.5-SNAPSHOT"
 }
 
+jar {
+    enabled = false
+}
+
 processFabricResources {
     inputs.property "version", project.version
 

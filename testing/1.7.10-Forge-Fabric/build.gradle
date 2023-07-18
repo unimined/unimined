@@ -103,6 +103,10 @@ sourceSets {
 dependencies {
 }
 
+jar {
+    enabled = false
+}
+
 processFabricResources {
     inputs.property "version", project.version
 

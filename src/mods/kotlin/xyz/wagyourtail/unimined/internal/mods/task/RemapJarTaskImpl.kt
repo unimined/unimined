@@ -19,6 +19,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import javax.inject.Inject
+import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 
@@ -69,7 +70,8 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         for (i in path.indices) {
             val step = path[i]
             project.logger.info("[Unimined/RemapJar]    $step")
-            val nextTarget = getTempFilePath("${inputFile.get().asFile.nameWithoutExtension}-temp-${step.name}", ".jar")
+            val nextTarget = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("${inputFile.get().asFile.nameWithoutExtension}-temp-${step.name}.jar")
+            nextTarget.deleteIfExists()
             val mcNamespace = prevNamespace
             val mcFallbackNamespace = prevPrevNamespace
 
@@ -122,6 +124,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         remapper.readClassPathAsync(mc)
         betterMixinExtension.preRead(from, "${project.rootProject.name}.refmap.json")
         remapper.readInputsAsync(from)
+        target.parent.createDirectories()
         try {
             OutputConsumerPath.Builder(target).build().use {
                 it.addNonClassFiles(

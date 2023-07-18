@@ -111,6 +111,9 @@ dependencies {
     modloaderJarMod "risugami:modloader:1.2.5"
 }
 
+jar {
+    enabled = false
+}
 
 processResources {
     inputs.property "version", project.version
