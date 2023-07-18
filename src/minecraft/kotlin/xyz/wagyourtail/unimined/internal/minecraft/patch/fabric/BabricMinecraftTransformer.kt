@@ -70,9 +70,4 @@ class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider):
     override val includeGlobs: List<String>
         get() = super.includeGlobs + "argo/**"
 
-
-    override fun libraryFilter(library: Library): Boolean {
-        // babric provides its own asm, exclude asm-all from vanilla minecraftLibraries
-        return !library.name.startsWith("org.ow2.asm:asm-all")
-    }
 }

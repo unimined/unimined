@@ -20,6 +20,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransf
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -397,5 +398,10 @@ abstract class FabricLikeMinecraftTransformer(
 
     override fun applyServerRunTransform(config: RunConfig) {
         config.mainClass = mainClass?.get("server")?.asString ?: config.mainClass
+    }
+
+    override fun libraryFilter(library: Library): Boolean {
+        // fabric provides its own asm, exclude asm-all from vanilla minecraftLibraries
+        return !library.name.startsWith("org.ow2.asm:asm-all")
     }
 }

@@ -53,12 +53,10 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             prodNs
         )
 
-        if (devNs == prodNs || path.isEmpty()) {
-            Files.copy(
-                inputFile.get().asFile.toPath(),
-                outputs.files.files.first().toPath(),
-                StandardCopyOption.REPLACE_EXISTING
-            )
+        if (path.isEmpty()) {
+            // copy into output
+            from(inputFile)
+            copy()
             return
         }
 
@@ -71,10 +69,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         for (i in path.indices) {
             val step = path[i]
             project.logger.info("[Unimined/RemapJar]    $step")
-            val nextTarget = if (step != last)
-                getTempFilePath("${inputFile.get().asFile.nameWithoutExtension}-temp-${step.name}", ".jar")
-            else
-                outputs.files.files.first().toPath()
+            val nextTarget = getTempFilePath("${inputFile.get().asFile.nameWithoutExtension}-temp-${step.name}", ".jar")
             val mcNamespace = prevNamespace
             val mcFallbackNamespace = prevPrevNamespace
 
@@ -87,8 +82,9 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             prevPrevNamespace = prevNamespace
             prevNamespace = step
         }
-
-        provider.mcPatcher.afterRemapJarTask(this, outputs.files.files.first().toPath())
+        provider.mcPatcher.afterRemapJarTask(this, prevTarget)
+        from(project.zipTree(prevTarget))
+        copy()
     }
 
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
@@ -151,7 +147,6 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         target.openZipFileSystem(mapOf("mutable" to true)).use {
             betterMixinExtension.write(it)
         }
-
     }
 
 }
