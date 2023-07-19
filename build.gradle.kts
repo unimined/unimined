@@ -274,3 +274,27 @@ publishing {
         }
     }
 }
+
+// A task to output a json file with a list of all the test to run
+tasks.create("writeActionsTestMatrix") {
+    doLast {
+        val testMatrix = arrayListOf<String>()
+
+        file("src/test/kotlin/xyz/wagyourtail/unimined/test/integration").listFiles()?.forEach {
+            if (it.name.endsWith("Test.kt")) {
+
+                val className = it.name.replace(".kt", "")
+                testMatrix.add("xyz.wagyourtail.unimined.test.integration.${className}")
+            }
+        }
+
+        testMatrix.add("xyz.wagyourtail.unimined.api.mappings.*")
+
+        testMatrix.add("xyz.wagyourtail.unimined.util.*")
+
+        val json = groovy.json.JsonOutput.toJson(testMatrix)
+        val output = file("build/test_matrix.json")
+        output.parentFile.mkdir()
+        output.writeText(json)
+    }
+}
