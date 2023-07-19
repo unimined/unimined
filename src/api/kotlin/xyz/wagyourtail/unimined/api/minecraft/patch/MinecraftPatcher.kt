@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 /**
  * The class responsible for patching minecraft.
- * @see [FabricLikePatcher], [JarModPatcher], [ForgePatcher]
+ * @see [FabricLikePatcher], [JarModPatcher], [ForgeLikePatcher]
  * @since 0.2.3
  */
 interface MinecraftPatcher {

@@ -134,9 +134,9 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
-    val forgeMaven by lazy {
+    val minecraftForgeMaven by lazy {
         project.repositories.maven {
-            it.name = "forge"
+            it.name = "minecraftForge"
             it.url = URI("https://maven.minecraftforge.net/")
             it.metadataSources {
                 it.mavenPom()
@@ -145,8 +145,23 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
-    override fun forgeMaven() {
-        project.logger.info("[Unimined] adding forge maven: $forgeMaven")
+    override fun minecraftForgeMaven() {
+        project.logger.info("[Unimined] adding forge maven: $minecraftForgeMaven")
+    }
+
+    val neoForgedMaven by lazy {
+        project.repositories.maven {
+            it.name = "neoForged"
+            it.url = URI("https://maven.neoforged.net/releases")
+            it.metadataSources {
+                it.mavenPom()
+                it.artifact()
+            }
+        }
+    }
+
+    override fun neoForgedMaven() {
+        project.logger.info("[Unimined] adding neoForged maven: $neoForgedMaven")
     }
 
     val fabricMaven by lazy {

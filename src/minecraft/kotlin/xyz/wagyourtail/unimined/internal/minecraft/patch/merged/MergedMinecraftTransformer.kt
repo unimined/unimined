@@ -2,10 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.merged
 
 import org.gradle.api.Project
 import org.objectweb.asm.tree.ClassNode
-import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
-import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.minecraft.patch.JarModAgentPatcher
-import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
@@ -14,7 +11,9 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.QuiltMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import java.nio.file.FileSystem
 
@@ -98,8 +97,19 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         patchers.add(fabric)
     }
 
-    override fun forge(action: ForgePatcher.() -> Unit) {
-        val forge = ForgeMinecraftTransformer(project, provider)
+    @Deprecated("Please specify which forge.", replaceWith = ReplaceWith("minecraftForge(action)"))
+    override fun forge(action: ForgeLikePatcher.() -> Unit) {
+        minecraftForge(action)
+    }
+
+    override fun minecraftForge(action: MinecraftForgePatcher.() -> Unit) {
+        val forge = MinecraftForgeMinecraftTransformer(project, provider)
+        forge.action()
+        patchers.add(forge)
+    }
+
+    override fun neoForged(action: NeoForgedPatcher.() -> Unit) {
+        val forge = NeoForgedMinecraftTransformer(project, provider)
         forge.action()
         patchers.add(forge)
     }

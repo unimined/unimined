@@ -8,7 +8,7 @@ import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.gradle.process.JavaExecSpec
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.util.getFile
 import xyz.wagyourtail.unimined.util.readZipInputStreamFor
@@ -88,7 +88,7 @@ data class McpExecutor(
     }
 
     private fun mappings(step: McpConfigStep): Path {
-        val transformer = ((provider.mcPatcher as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
+        val transformer = ((provider.mcPatcher as ForgeLikeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
         val configuration = project.configurations.detachedConfiguration()
         configuration.dependencies.add(transformer.mcpConfig)
         configuration.resolve()
@@ -182,7 +182,7 @@ data class McpExecutor(
         }
 
         override fun mappings(): Path {
-            val transformer = ((provider.mcPatcher as ForgeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
+            val transformer = ((provider.mcPatcher as ForgeLikeMinecraftTransformer).forgeTransformer as FG3MinecraftTransformer)
             val configuration = project.configurations.detachedConfiguration()
             configuration.dependencies.add(transformer.mcpConfig)
             configuration.resolve()

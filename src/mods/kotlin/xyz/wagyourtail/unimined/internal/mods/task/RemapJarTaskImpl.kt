@@ -7,17 +7,14 @@ import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
-import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
 import xyz.wagyourtail.unimined.util.*
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import javax.inject.Inject
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
@@ -135,7 +132,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                             if (fromNs.named) "named" else fromNs.name,
                             if (toNs.named) "named" else toNs.name
                         ),
-                        AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.getOrElse((provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true)!!),
+                        AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher)?.remapAtToLegacy == true)!!),
                         betterMixinExtension.resourceRemapper()
                     )
                 )

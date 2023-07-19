@@ -2,9 +2,7 @@ package xyz.wagyourtail.unimined.api.minecraft
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
-import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
-import xyz.wagyourtail.unimined.api.minecraft.patch.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.*
 
 /**
  * usage:
@@ -153,22 +151,35 @@ interface PatchProviders {
     /**
      * enables the forge patcher.
      * @param action the action to configure the patcher.
-     * @see ForgePatcher
+     * @see ForgeLikePatcher
      * @since 0.1.0
      */
-    fun forge(action: ForgePatcher.() -> Unit)
+    @Deprecated(
+        message = "Please specify which forge.",
+        replaceWith = ReplaceWith(
+            expression = "minecraftForge(action)"
+        )
+    )
+    fun forge(action: ForgeLikePatcher.() -> Unit)
 
     /**
      * enables the forge patcher.
      * @param action the action to perform on the patcher.
      * @since 0.1.0
      */
+    @Deprecated(
+        message = "Please specify which forge.",
+        replaceWith = ReplaceWith(
+            expression = "minecraftForge(action)"
+        )
+    )
     fun forge(
         @DelegatesTo(
-            value = ForgePatcher::class,
+            value = ForgeLikePatcher::class,
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {
+        @Suppress("DEPRECATION")
         forge {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
@@ -180,8 +191,79 @@ interface PatchProviders {
      * enables the forge patcher.
      * @since 0.1.0
      */
+
+    @Deprecated(
+        message = "Please specify which forge.",
+        replaceWith = ReplaceWith(
+            expression = "minecraftForge()"
+        )
+    )
     fun forge() {
+        @Suppress("DEPRECATION")
         forge {}
+    }
+
+    /**
+     * enables the minecraft forge patcher.
+     * @since 1.0.0
+     */
+    fun minecraftForge(action: MinecraftForgePatcher.() -> Unit)
+
+    /**
+     * enables the minecraft forge patcher.
+     * @since 1.0.0
+     */
+    fun minecraftForge(
+        @DelegatesTo(
+            value = MinecraftForgePatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        minecraftForge {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the minecraft forge patcher.
+     * @since 1.0.0
+     */
+    fun minecraftForge() {
+        minecraftForge {}
+    }
+
+    /**
+     * enables the NeoForged patcher.
+     * @since 1.0.0
+     */
+    fun neoForged(action: NeoForgedPatcher.() -> Unit)
+
+    /**
+     * enables the NeoForged patcher.
+     * @since 1.0.0
+     */
+
+    fun neoForged(
+        @DelegatesTo(
+            value = NeoForgedPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        neoForged {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the NeoForged patcher.
+     * @since 1.0.0
+     */
+    fun neoForged() {
+        neoForged {}
     }
 
     /**

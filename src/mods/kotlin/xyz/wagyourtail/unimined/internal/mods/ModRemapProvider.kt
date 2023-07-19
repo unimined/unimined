@@ -16,7 +16,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ResolvedArtifact
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.mod.ModRemapConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
@@ -56,7 +56,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         catchAWNs = true
     }
 
-    override var remapAtToLegacy: Boolean by FinalizeOnRead(LazyMutable { (provider.mcPatcher as? ForgePatcher)?.remapAtToLegacy == true })
+    override var remapAtToLegacy: Boolean by FinalizeOnRead(LazyMutable { (provider.mcPatcher as? ForgeLikePatcher)?.remapAtToLegacy == true })
 
     var tinyRemapSettings: TinyRemapper.Builder.() -> Unit by FinalizeOnRead {}
 

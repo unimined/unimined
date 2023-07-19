@@ -24,7 +24,9 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.QuiltMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.merged.MergedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
@@ -171,8 +173,21 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override fun forge(action: ForgePatcher.() -> Unit) {
-        mcPatcher = ForgeMinecraftTransformer(project, this).also {
+    @Deprecated("Please specify which forge.", replaceWith = ReplaceWith("minecraftForge(action)"))
+    override fun forge(action: ForgeLikePatcher.() -> Unit) {
+        minecraftForge(action)
+    }
+
+    override fun minecraftForge(action: MinecraftForgePatcher.() -> Unit) {
+        mcPatcher = MinecraftForgeMinecraftTransformer(project, this).also {
+            patcherActions.addFirst {
+                action(it)
+            }
+        }
+    }
+
+    override fun neoForged(action: NeoForgedPatcher.() -> Unit) {
+        mcPatcher = NeoForgedMinecraftTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)
             }

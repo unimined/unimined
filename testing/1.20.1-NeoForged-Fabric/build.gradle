@@ -82,8 +82,8 @@ unimined.minecraft(sourceSets.forge) {
         devFallbackNamespace "intermediary"
     }
 
-    forge {
-        forge project.forge_version
+    neoForged {
+        loader project.forge_version
         mixinConfig "modid.mixins.json"
     }
 }

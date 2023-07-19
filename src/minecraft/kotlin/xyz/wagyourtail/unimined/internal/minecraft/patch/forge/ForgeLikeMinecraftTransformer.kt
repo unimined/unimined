@@ -1,9 +1,9 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
@@ -11,7 +11,7 @@ import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.patch.ForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
@@ -21,11 +21,7 @@ import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2.FG2MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
@@ -35,17 +31,23 @@ import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 
-class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
-        AbstractMinecraftTransformer(project, provider, "forge"), ForgePatcher {
+abstract class ForgeLikeMinecraftTransformer(project: Project, provider: MinecraftProvider, providerName: String,):
+        AbstractMinecraftTransformer(project, provider, providerName), ForgeLikePatcher {
 
     val forge: Configuration = project.configurations.maybeCreate("forge".withSourceSet(provider.sourceSet))
 
     @get:ApiStatus.Internal
-    var forgeTransformer: JarModMinecraftTransformer by FinalizeOnWrite(MustSet())
+    abstract var forgeTransformer: JarModMinecraftTransformer
 
     override var accessTransformer: File? = null
 
     override var customSearge: Boolean by FinalizeOnRead(false)
+
+    protected abstract fun addMavens()
+
+    init {
+        addMavens()
+    }
 
     fun transforms(transform: String) {
         if (forgeTransformer !is JarModAgentMinecraftTransformer) {
@@ -99,41 +101,6 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     override fun beforeMappingsResolve() {
         forgeTransformer.beforeMappingsResolve()
-    }
-
-    override fun forge(dep: Any, action: Dependency.() -> Unit) {
-        forge.dependencies.add(if (dep is String && !dep.contains(":")) {
-            if (!canCombine) {
-                if (provider.side == EnvType.COMBINED) throw IllegalStateException("Cannot use forge dependency pre 1.3 without specifying non-combined side")
-                project.dependencies.create("net.minecraftforge:forge:${provider.version}-${dep}:${provider.side.classifier}@zip")
-            } else {
-                val zip = provider.minecraftData.mcVersionCompare(provider.version, "1.6") < 0
-                project.dependencies.create("net.minecraftforge:forge:${provider.version}-${dep}:universal@${if (zip) "zip" else "jar"}")
-            }
-        } else {
-            project.dependencies.create(dep)
-        }.apply(action))
-
-        if (forge.dependencies.isEmpty()) {
-            throw IllegalStateException("No forge dependency found!")
-        }
-
-        if (forge.dependencies.size > 1) {
-            throw IllegalStateException("Multiple forge dependencies found, make sure you only have one forge dependency!")
-        }
-
-        val forgeDep = forge.dependencies.first()
-
-        if (forgeDep.group != "net.minecraftforge" || !(forgeDep.name == "minecraftforge" || forgeDep.name == "forge")) {
-            throw IllegalStateException("Invalid forge dependency found, if you are using multiple dependencies in the forge configuration, make sure the last one is the forge dependency!")
-        }
-
-        forgeTransformer = if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") < 0) {
-            FG1MinecraftTransformer(project, this)
-        } else {
-            val jar = forge.files(forgeDep).first { it.extension == "zip" || it.extension == "jar" }
-            determineForgeProviderFromUniversal(jar)
-        }
     }
 
     private val actualSideMarker by lazy {
@@ -285,7 +252,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
     })
 
     init {
-        project.unimined.forgeMaven()
+        project.unimined.minecraftForgeMaven()
     }
 
     override fun apply() {
@@ -299,15 +266,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
             jar.toPath().readZipInputStreamFor("version.json", false) {
                 JsonParser.parseReader(InputStreamReader(it)).asJsonObject
             }?.let { versionJson ->
-                val libraries = parseAllLibraries(versionJson.getAsJsonArray("libraries"))
-                mainClass = versionJson.get("mainClass").asString
-                val args = versionJson.get("minecraftArguments").asString
-                provider.addLibraries(libraries.filter {
-                    !it.name.startsWith("net.minecraftforge:minecraftforge:") && !it.name.startsWith(
-                        "net.minecraftforge:forge:"
-                    )
-                })
-                tweakClassClient = args.split("--tweakClass")[1].trim()
+                parseVersionJson(versionJson)
             }
         }
 
@@ -315,45 +274,7 @@ class ForgeMinecraftTransformer(project: Project, provider: MinecraftProvider):
         super.apply()
     }
 
-    private fun determineForgeProviderFromUniversal(universal: File): JarModMinecraftTransformer {
-        val files = mutableSetOf<ForgeFiles>()
-        universal.toPath().forEachInZip { path, _ ->
-            if (ForgeFiles.ffMap.contains(path)) {
-                files.add(ForgeFiles.ffMap[path]!!)
-            }
-        }
-
-        var forgeTransformer: JarModMinecraftTransformer? = null
-        for (vers in ForgeVersion.values()) {
-            if (files.containsAll(vers.accept) && files.none { it in vers.deny }) {
-                project.logger.debug("[Unimined/ForgeTransformer] Files $files")
-                forgeTransformer = when (vers) {
-                    ForgeVersion.FG1 -> {
-                        project.logger.lifecycle("[Unimined/ForgeTransformer] Selected FG1")
-                        FG1MinecraftTransformer(project, this)
-                    }
-
-                    ForgeVersion.FG2 -> {
-                        project.logger.lifecycle("[Unimined/ForgeTransformer] Selected FG2")
-                        FG2MinecraftTransformer(project, this)
-                    }
-
-                    ForgeVersion.FG3 -> {
-                        project.logger.lifecycle("[Unimined/ForgeTransformer] Selected FG3")
-                        FG3MinecraftTransformer(project, this)
-                    }
-                }
-                break
-            }
-        }
-
-        if (forgeTransformer == null) {
-            throw IllegalStateException("Unable to determine forge version from universal jar!")
-        }
-        // TODO apply some additional properties at this time
-
-        return forgeTransformer
-    }
+    abstract fun parseVersionJson(json: JsonObject)
 
     override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         return forgeTransformer.merge(clientjar, serverjar)

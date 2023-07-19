@@ -4,7 +4,6 @@ import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.artifacts.Dependency
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.minecraft.patch.JarModPatcher
 import java.io.File
 import java.nio.file.Path
 
@@ -12,7 +11,7 @@ import java.nio.file.Path
  * The class responsible for patching minecraft for forge.
  * @since 0.2.3
  */
-interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
+interface ForgeLikePatcher: JarModPatcher, AccessTransformablePatcher {
 
     /**
      * location of access transformer file to apply to the minecraft jar.
@@ -55,8 +54,8 @@ interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
         mixinConfig = configs.toList()
     }
 
-    fun forge(dep: Any) {
-        forge(dep) {}
+    fun loader(dep: Any) {
+        loader(dep) {}
     }
 
     /**
@@ -64,16 +63,16 @@ interface ForgePatcher: JarModPatcher, AccessTransformablePatcher {
      * must be called
      * @since 1.0.0
      */
-    fun forge(dep: Any, action: Dependency.() -> Unit)
+    fun loader(dep: Any, action: Dependency.() -> Unit)
 
-    fun forge(
+    fun loader(
         dep: Any,
         @DelegatesTo(
             value = Dependency::class,
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {
-        forge(dep) {
+        loader(dep) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()

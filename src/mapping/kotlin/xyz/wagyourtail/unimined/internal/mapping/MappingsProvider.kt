@@ -125,7 +125,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun searge(version: String, key: String, action: MappingDepConfig.() -> Unit) {
-        project.unimined.forgeMaven()
+        project.unimined.minecraftForgeMaven()
         val mappings = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.12.2") < 0) {
             "de.oceanlabs.mcp:mcp:${version}:srg@zip"
         } else {
@@ -175,7 +175,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 action()
             }
         } else {
-            project.unimined.forgeMaven()
+            project.unimined.minecraftForgeMaven()
         }
         mapping("de.oceanlabs.mcp:mcp_${channel}:${version}@zip", key) {
             if (channel == "legacy") {
@@ -296,7 +296,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun forgeBuiltinMCP(version: String, key: String, action: MappingDepConfig.() -> Unit) {
-        project.unimined.forgeMaven()
+        project.unimined.minecraftForgeMaven()
         officialMappingsFromJar {
             action()
         }

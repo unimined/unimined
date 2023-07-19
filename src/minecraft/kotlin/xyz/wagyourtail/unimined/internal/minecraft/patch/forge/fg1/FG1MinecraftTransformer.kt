@@ -10,7 +10,7 @@ import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
@@ -26,7 +26,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
-class FG1MinecraftTransformer(project: Project, val parent: ForgeMinecraftTransformer): JarModAgentMinecraftTransformer(
+class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModAgentMinecraftTransformer(
     project,
     parent.provider,
     providerName = "FG1"
