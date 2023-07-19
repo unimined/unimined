@@ -55,7 +55,7 @@ open class JarModMinecraftTransformer(
         return minecraft.let(consumerApply {
             val target = MinecraftJar(
                 minecraft,
-                patches = minecraft.patches + combinedNames
+                patches = minecraft.patches + providerName + combinedNames
             )
             if (target.path.exists() && !project.unimined.forceReload) {
                 return@consumerApply target

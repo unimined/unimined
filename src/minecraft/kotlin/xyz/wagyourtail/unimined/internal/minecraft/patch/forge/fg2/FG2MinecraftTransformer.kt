@@ -24,7 +24,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     project,
     parent.provider,
     jarModProvider = "forge",
-    providerName = "FG2"
+    providerName = "${parent.providerName}-FG2"
 ) {
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG2 transformer")
@@ -84,7 +84,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         val forgeUniversal = parent.forge.dependencies.last()
         val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
 
-        val outFolder = minecraft.path.parent.resolve("${forgeUniversal.version}")
+        val outFolder = minecraft.path.parent.resolve(providerName).resolve("${forgeUniversal.version}")
             .createDirectories()
 
         val patchedMC = MinecraftJar(

@@ -29,7 +29,7 @@ import kotlin.io.path.*
 class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModAgentMinecraftTransformer(
     project,
     parent.provider,
-    providerName = "FG1"
+    providerName = "${parent.providerName}-FG1"
 ) {
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG1 transformer")

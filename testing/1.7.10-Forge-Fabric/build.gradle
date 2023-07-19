@@ -79,8 +79,8 @@ unimined.minecraft(sourceSets.forge) {
         mcp("stable", "12-1.7.10")
     }
 
-    forge {
-        forge project.forge_version
+    minecraftForge {
+        loader project.forge_version
         mixinConfig "modid.mixins.json"
     }
 }

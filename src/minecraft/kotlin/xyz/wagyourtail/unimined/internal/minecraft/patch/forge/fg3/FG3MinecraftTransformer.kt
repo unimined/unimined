@@ -33,7 +33,7 @@ import java.nio.file.*
 import kotlin.io.path.*
 
 class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModMinecraftTransformer(
-    project, parent.provider, jarModProvider = "forge", providerName = "FG3"
+    project, parent.provider, providerName = "${parent.providerName}-FG3"
 ) {
 
     init {
@@ -186,7 +186,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         val output = MinecraftJar(
             clientjar,
             parentPath = provider.minecraftData.mcVersionFolder
-                .resolve("forge"),
+                .resolve(providerName),
             envType = EnvType.COMBINED,
             mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) provider.mappings.OFFICIAL else provider.mappings.getNamespace("searge"),
             fallbackNamespace = provider.mappings.OFFICIAL
@@ -249,7 +249,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         project.logger.info("minecraft: $minecraft")
         val forgeUniversal = parent.forge.dependencies.last()
 
-        val outFolder = minecraft.path.parent.resolve("${forgeUniversal.version}")
+        val outFolder = minecraft.path.parent.resolve("${providerName}-${forgeUniversal.version}")
             .createDirectories()
 
         val patchedMC = MinecraftJar(
