@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URI
 
@@ -213,6 +214,12 @@ tasks.build {
 
 tasks.test {
     useJUnitPlatform()
+
+    testLogging {
+        events.add(TestLogEvent.PASSED)
+        events.add(TestLogEvent.SKIPPED)
+        events.add(TestLogEvent.FAILED)
+    }
 }
 
 tasks.withType<JavaCompile> {
