@@ -247,6 +247,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         project.logger.lifecycle("[Unimined/Forge] transforming minecraft jar for FG3")
         project.logger.info("minecraft: $minecraft")
+
+        // get and add forge-src to jar mods
+        parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
+
         val forgeUniversal = parent.forge.dependencies.last()
 
         val outFolder = minecraft.path.parent.resolve("${providerName}-${forgeUniversal.version}")
