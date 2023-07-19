@@ -23,6 +23,7 @@ import kotlin.io.path.writeBytes
 class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModMinecraftTransformer(
     project,
     parent.provider,
+    jarModProvider = "forge",
     providerName = "${parent.providerName}-FG2"
 ) {
     init {
@@ -71,9 +72,6 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         project.logger.lifecycle("[Unimined/Forge] transforming minecraft jar for FG2")
         project.logger.info("minecraft: $minecraft")
-
-        // get and add forge-src to jar mods
-        parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
 
         val shadedForge = super.transform(
             if (minecraft.envType == EnvType.COMBINED) minecraft else transformIntern(

@@ -33,7 +33,7 @@ import java.nio.file.*
 import kotlin.io.path.*
 
 class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModMinecraftTransformer(
-    project, parent.provider, providerName = "${parent.providerName}-FG3"
+    project, parent.provider, jarModProvider = "forge", providerName = "${parent.providerName}-FG3"
 ) {
 
     init {
@@ -247,9 +247,6 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         project.logger.lifecycle("[Unimined/Forge] transforming minecraft jar for FG3")
         project.logger.info("minecraft: $minecraft")
-
-        // get and add forge-src to jar mods
-        parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
 
         val forgeUniversal = parent.forge.dependencies.last()
 
