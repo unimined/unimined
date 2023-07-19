@@ -66,7 +66,6 @@ class IntegrationTests {
     }
 
     @Test
-    @Disabled
     fun test1_6_4() {
         val result = runGradle(Paths.get(".").resolve("testing").resolve("1.6.4-Forge"))
         result.task(":build")?.outcome?.let {
@@ -83,7 +82,6 @@ class IntegrationTests {
     }
 
     @Test
-    @Disabled
     fun test1_8_9() {
         val result = runGradle(Paths.get(".").resolve("testing").resolve("1.8.9-Forge-Fabric"))
         result.task(":build")?.outcome?.let {
@@ -133,9 +131,24 @@ class IntegrationTests {
     }
 
     @Test
-    @Disabled
+    fun test1_20() {
+        val result = runGradle(Paths.get(".").resolve("testing").resolve("1.20-Forge-Fabric"))
+        result.task(":build")?.outcome?.let {
+            if (it != TaskOutcome.SUCCESS) throw Exception("build failed")
+        } ?: throw Exception("build failed")
+    }
+
+    @Test
     fun test1_20_1() {
         val result = runGradle(Paths.get(".").resolve("testing").resolve("1.20.1-NeoForged-Fabric"))
+        result.task(":build")?.outcome?.let {
+            if (it != TaskOutcome.SUCCESS) throw Exception("build failed")
+        } ?: throw Exception("build failed")
+    }
+
+    @Test
+    fun testb1_7_3() {
+        val result = runGradle(Paths.get(".").resolve("testing").resolve("b1.7.3-Babric-Modloader"))
         result.task(":build")?.outcome?.let {
             if (it != TaskOutcome.SUCCESS) throw Exception("build failed")
         } ?: throw Exception("build failed")
