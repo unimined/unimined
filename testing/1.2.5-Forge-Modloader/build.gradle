@@ -53,6 +53,8 @@ unimined.minecraft() {
     minecraftRemapper.config {
         ignoreConflicts(true)
     }
+
+    defaultRemapJar = false
 }
 
 unimined.minecraft(sourceSets.forge) {
@@ -67,8 +69,8 @@ unimined.minecraft(sourceSets.forge) {
         }
     }
 
-    forge {
-        forge "3.4.9.171"
+    minecraftForge {
+        loader "3.4.9.171"
         forgeTransformer.transforms("exampleModId.transform")
     }
 

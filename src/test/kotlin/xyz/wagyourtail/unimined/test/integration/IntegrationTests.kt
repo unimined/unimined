@@ -134,8 +134,8 @@ class IntegrationTests {
 
     @Test
     @Disabled
-    fun test1_20() {
-        val result = runGradle(Paths.get(".").resolve("testing").resolve("1.20-Forge-Fabric"))
+    fun test1_20_1() {
+        val result = runGradle(Paths.get(".").resolve("testing").resolve("1.20.1-NeoForged-Fabric"))
         result.task(":build")?.outcome?.let {
             if (it != TaskOutcome.SUCCESS) throw Exception("build failed")
         } ?: throw Exception("build failed")

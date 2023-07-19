@@ -28,8 +28,8 @@ unimined.minecraft {
         }
     }
 
-    forge {
-        forge "4.3.5.318"
+    minecraftForge {
+        loader "4.3.5.318"
         forgeTransformer.transforms("exampleModId.transform")
     }
 
