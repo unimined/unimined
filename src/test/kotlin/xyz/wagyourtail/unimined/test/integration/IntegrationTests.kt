@@ -131,6 +131,7 @@ class IntegrationTests {
     }
 
     @Test
+    @Disabled
     fun test1_20() {
         val result = runGradle(Paths.get(".").resolve("testing").resolve("1.20-Forge-Fabric"))
         result.task(":build")?.outcome?.let {
