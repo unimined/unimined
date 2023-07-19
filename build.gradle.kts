@@ -22,6 +22,9 @@ java {
 repositories {
     mavenCentral()
     maven {
+        url = URI.create("https://maven.neoforged.net/releases")
+    }
+    maven {
         url = URI.create("https://maven.minecraftforge.net/")
     }
     maven {
@@ -125,9 +128,11 @@ dependencies {
     implementation("org.ow2.asm:asm-util:9.5")
 
     // artifact transformer
-    implementation("net.minecraftforge:artifactural:3.0.14")
+    implementation("net.neoforged:artifactural:3.0.17") {
+        isTransitive = false
+    }
     implementation("net.minecraftforge:unsafe:0.2.0") {
-        exclude(mapOf("group" to "org.apache.logging.log4j"))
+        exclude(group = "org.apache.logging.log4j")
     }
     implementation("org.apache.logging.log4j:log4j-core:2.20.0")
 
