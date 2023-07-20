@@ -43,10 +43,6 @@ open class JarModAgentMinecraftTransformer(
     override var compiletimeTransforms: Boolean = false
 
     override var jarModAgent = project.configurations.maybeCreate("jarModAgent".withSourceSet(provider.sourceSet)).also {
-//        provider.minecraft.extendsFrom(it)
-    }
-
-    val jarModAgentLibraries = project.configurations.maybeCreate("jarModAgentLibraries".withSourceSet(provider.sourceSet)).also {
         provider.minecraft.extendsFrom(it)
     }
 
@@ -70,14 +66,11 @@ open class JarModAgentMinecraftTransformer(
             jarModAgent.dependencies.add(
                 project.dependencies.create(
                     "xyz.wagyourtail.unimined:jarmod-agent:0.1.2-SNAPSHOT:all"
-                )
+                ).also {
+                    (it as ExternalDependency).isTransitive = false
+                }
             )
         }
-        jarModAgentLibraries.dependencies.add(
-            project.dependencies.create("net.lenni0451.classtransform:core:1.8.4").also {
-                (it as? ExternalDependency)?.isTransitive = false
-            }
-        )
 
         super.apply()
     }
