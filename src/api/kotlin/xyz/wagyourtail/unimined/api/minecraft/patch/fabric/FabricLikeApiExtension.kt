@@ -83,7 +83,7 @@ open class FabricLikeApiExtension {
                 return "org.quiltmc.qsl:$moduleName:$version"
             } 
         },
-        "stAPI" to object : APILocations() {
+        "station" to object : APILocations() {
             override fun getUrl(version: String): String {
                 return "https://maven.glass-launcher.net/snapshots/net/modificationstation/StationAPI/$version/StationAPI-$version.pom"
             }
@@ -167,8 +167,8 @@ open class FabricLikeApiExtension {
     /**
      * @since 1.0.0
      */
-    fun stAPIModule(moduleName: String, version: String): String {
-        return locations["stAPI"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
+    fun stationModule(moduleName: String, version: String): String {
+        return locations["station"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
     }
 
 }
