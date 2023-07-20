@@ -109,6 +109,10 @@ fun Path.getSha1(): String {
 
 fun File.getSha1() = toPath().getSha1()
 
+fun Path.getShortSha1(): String = getSha1().substring(0, 7)
+
+fun File.getShortSha1() = toPath().getShortSha1()
+
 
 //fun runJarInSubprocess(
 //    jar: Path,

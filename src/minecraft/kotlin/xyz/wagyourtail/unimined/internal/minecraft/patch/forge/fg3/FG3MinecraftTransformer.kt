@@ -205,7 +205,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
     private fun createClientExtra(
         baseMinecraftClient: MinecraftJar,
-        @Suppress("UNUSED_PARAMETER") baseMinecraftServer: MinecraftJar,
+        @Suppress("UNUSED_PARAMETER") baseMinecraftServer: MinecraftJar?,
         patchedMinecraft: Path
     ) {
         val clientExtra = patchedMinecraft.parent.createDirectories()
@@ -250,34 +250,69 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
         val forgeUniversal = parent.forge.dependencies.last()
 
-        val outFolder = minecraft.path.parent.resolve("${providerName}-${forgeUniversal.version}")
-            .createDirectories()
+        val outFolder = minecraft.path.parent.resolve(providerName).resolve(forgeUniversal.version).createDirectories()
+
+        val inputMC = if (minecraft.envType != EnvType.COMBINED) {
+            // if userdev cfg says notch
+            if (userdevCfg["notchObf"]?.asBoolean == true) {
+                throw IllegalStateException("Forge userdev3 (legacy fg3, aka 1.12.2) is not supported for non-combined environments currently.")
+            }
+            // run mcp_config to rename
+
+            val output = MinecraftJar(
+                minecraft,
+                parentPath = provider.minecraftData.mcVersionFolder
+                    .resolve(providerName),
+                mappingNamespace = provider.mappings.getNamespace("searge"),
+                fallbackNamespace = provider.mappings.OFFICIAL,
+                patches = minecraft.patches + "mcp_config"
+            )
+            if (minecraft.envType == EnvType.CLIENT) {
+                createClientExtra(minecraft, null, output.path)
+            }
+            if (!output.path.exists() || project.unimined.forceReload) {
+                executeMcp("rename", output.path, EnvType.CLIENT)
+            }
+            output
+        } else {
+            minecraft
+        }
 
         val patchedMC = MinecraftJar(
-            minecraft,
+            inputMC,
             name = "forge",
             parentPath = outFolder
         )
 
-        // if userdev cfg says notch
-        if (userdevCfg["notchObf"]?.asBoolean == true && minecraft.envType != EnvType.COMBINED) {
-            throw IllegalStateException("Forge userdev3 (legacy fg3, aka 1.12.2) is not supported for non-combined environments currently.")
-        }
 
         //  extract binpatches
-        val binPatchFile = forgeUd.toPath().readZipInputStreamFor(userdevCfg["binpatches"].asString) {
-            outFolder.resolve("binpatches.lzma").apply {
-                writeBytes(
-                    it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
-                )
+        val binPatchFile = if (patchedMC.envType == EnvType.COMBINED) {
+            forgeUd.toPath().readZipInputStreamFor(userdevCfg["binpatches"].asString) {
+                outFolder.resolve("binpatches-joined.lzma").apply {
+                    writeBytes(
+                        it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
+                    )
+                }
+            }
+        } else {
+            // get from forge installer
+            project.configurations.detachedConfiguration(project.dependencies.create(
+                "${forgeUniversal.group}:${forgeUniversal.name}:${forgeUniversal.version}:installer"
+            )).resolve().first { it.extension == "jar" }.toPath().readZipInputStreamFor("data/${patchedMC.envType.classifier}.lzma") {
+                outFolder.resolve("binpatches-${patchedMC.envType.classifier}.lzma").apply {
+                    writeBytes(
+                        it.readBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
+                    )
+                }
             }
         }
+
 
         if (!patchedMC.path.exists() || project.unimined.forceReload) {
             patchedMC.path.deleteIfExists()
             val args = (userdevCfg["binpatcher"].asJsonObject["args"].asJsonArray.map {
                 when (it.asString) {
-                    "{clean}" -> minecraft.path.toString()
+                    "{clean}" -> inputMC.path.toString()
                     "{patch}" -> binPatchFile.toString()
                     "{output}" -> patchedMC.path.toString()
                     else -> it.asString

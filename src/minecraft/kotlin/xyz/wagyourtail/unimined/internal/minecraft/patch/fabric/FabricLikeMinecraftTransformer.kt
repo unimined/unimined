@@ -216,7 +216,7 @@ abstract class FabricLikeMinecraftTransformer(
             val output = MinecraftJar(
                 baseMinecraft,
                 parentPath = provider.localCache.resolve("fabric").createDirectories(),
-                awOrAt = "aw+${accessWidener!!.toPath().getSha1()}"
+                awOrAt = "aw+${accessWidener!!.toPath().getShortSha1()}"
             )
             if (!output.path.exists() || project.unimined.forceReload) {
                 if (AccessWidenerMinecraftTransformer.transform(

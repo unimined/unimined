@@ -349,7 +349,7 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
             val output = MinecraftJar(
                 baseMinecraft,
                 parentPath = provider.localCache.resolve("forge"),
-                awOrAt = "at+${accessTransformer!!.toPath().getSha1()}"
+                awOrAt = "at+${accessTransformer!!.toPath().getShortSha1()}"
             )
             if (!output.path.exists() || project.unimined.forceReload) {
                 AccessTransformerMinecraftTransformer.transform(

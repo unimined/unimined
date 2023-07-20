@@ -474,7 +474,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     override val combinedNames: String by lazy {
         if (!freeze) freeze = true
-        val names = mappingsDeps.map { if (it.value.dep is FileCollectionDependency) ("${it.key}-${(it.value.dep as FileCollectionDependency).files.first().getSha1()}") else "${it.key}-${it.value.dep.version}" }.sorted() + (if (hasStubs) listOf("stub-${_stub!!.hash}") else listOf())
+        val names = mappingsDeps.map { if (it.value.dep is FileCollectionDependency) ("${it.key}-${(it.value.dep as FileCollectionDependency).files.first().getShortSha1()}") else "${it.key}-${it.value.dep.version}" }.sorted() + (if (hasStubs) listOf("stub-${_stub!!.hash}") else listOf())
         names.joinToString("-")
     }
 
