@@ -135,7 +135,8 @@ dependencies {
 
     // artifact transformer
     implementation("net.neoforged:artifactural:3.0.17") {
-        isTransitive = false
+        exclude(group = "dev.gradleplugins", module = "gradle-api")
+        exclude(group = "net.minecraftforge", module = "unsafe")
     }
     implementation("net.minecraftforge:unsafe:0.2.0") {
         exclude(group = "org.apache.logging.log4j")
