@@ -277,18 +277,6 @@ publishing {
             }
         }
     }
-    publications {
-        create<MavenPublication>("maven") {
-            groupId = project.group as String
-            artifactId = project.properties["archives_base_name"] as String? ?: project.name
-            version = project.version as String
-
-            artifact(tasks["sourcesJar"]) {
-                classifier = "sources"
-            }
-            artifact(tasks["jar"]) {}
-        }
-    }
 }
 
 // A task to output a json file with a list of all the test to run
