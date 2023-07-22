@@ -39,32 +39,14 @@ import java.util.stream.Stream;
 public class KotlinRemapperClassloader extends URLClassLoader {
     // Packages that should be loaded from the gradle plugin classloader.
     private static final List<String> PARENT_PACKAGES = Arrays.asList(
-        "net.fabricmc.tinyremapper",
-        "net.fabricmc.loom.util.kotlin",
-        "org.objectweb.asm",
-        "org.slf4j"
+            "net.fabricmc.tinyremapper",
+            "net.fabricmc.loom.util.kotlin",
+            "org.objectweb.asm",
+            "org.slf4j"
     );
 
     private KotlinRemapperClassloader(URL[] urls) {
         super(urls, null);
-    }
-
-    public static KotlinRemapperClassloader create(KotlinClasspath classpathProvider) {
-        // Include the libraries that are not on the kotlin classpath.
-        final Stream<URL> loomUrls = getClassUrls(
-            KotlinMetadataTinyRemapperExtensionImpl.class // Loom
-        );
-
-        final URL[] urls = Stream.concat(
-            loomUrls,
-            classpathProvider.classpath().stream()
-        ).toArray(URL[]::new);
-
-        return new KotlinRemapperClassloader(urls);
-    }
-
-    private static Stream<URL> getClassUrls(Class<?>... classes) {
-        return Arrays.stream(classes).map(klass -> klass.getProtectionDomain().getCodeSource().getLocation());
     }
 
     @Override
@@ -74,6 +56,25 @@ public class KotlinRemapperClassloader extends URLClassLoader {
         }
 
         return super.loadClass(name, resolve);
+    }
+
+    public static KotlinRemapperClassloader create(KotlinClasspath classpathProvider) {
+        // Include the libraries that are not on the kotlin classpath.
+        final Stream<URL> loomUrls = getClassUrls(
+                KotlinMetadataTinyRemapperExtensionImpl.class, // Loom (Kotlin)
+                JvmExtensionWrapper.class // Loom (Java)
+        );
+
+        final URL[] urls = Stream.concat(
+                loomUrls,
+                classpathProvider.classpath().stream()
+        ).toArray(URL[]::new);
+
+        return new KotlinRemapperClassloader(urls);
+    }
+
+    private static Stream<URL> getClassUrls(Class<?>... classes) {
+        return Arrays.stream(classes).map(klass -> klass.getProtectionDomain().getCodeSource().getLocation());
     }
 
     /**
@@ -87,5 +88,4 @@ public class KotlinRemapperClassloader extends URLClassLoader {
             throw new RuntimeException("Failed to create instance", e);
         }
     }
-
 }

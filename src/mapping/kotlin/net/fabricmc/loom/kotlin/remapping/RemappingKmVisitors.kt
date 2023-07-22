@@ -27,7 +27,9 @@ package net.fabricmc.loom.kotlin.remapping
 import kotlinx.metadata.*
 import kotlinx.metadata.jvm.*
 import org.objectweb.asm.commons.Remapper
+import kotlin.contracts.ExperimentalContracts
 
+@OptIn(ExperimentalContracts::class)
 class RemappingKmVisitors(private val remapper: Remapper) {
     private fun remapJvmMethodSignature(signature: JvmMethodSignature?): JvmMethodSignature? {
         if (signature != null) {

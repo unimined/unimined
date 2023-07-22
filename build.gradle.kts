@@ -114,6 +114,11 @@ dependencies {
 
     runtimeOnly(gradleApi())
 
+    // kotlin metadata
+    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.6.2") {
+        isTransitive = false
+    }
+
     // guava
     implementation("com.google.guava:guava:31.1-jre")
 
@@ -191,6 +196,16 @@ tasks.jar {
         attributes(
             "Implementation-Version" to project.version
         )
+    }
+}
+
+tasks.create("getArtifacts") {
+    doLast {
+        project.configurations.implementation.get().isCanBeResolved = true
+        println(1)
+        for (dependency in project.configurations.implementation.get().resolvedConfiguration.resolvedArtifacts) {
+            println("${dependency.moduleVersion.id.group ?: "unknown"}:${dependency.name}:${dependency.moduleVersion.id.version ?: "unknown"}${dependency.classifier?.let { ":$it" } ?: ""}${dependency.extension?.let { "@$it" } ?: ""}")
+        }
     }
 }
 
