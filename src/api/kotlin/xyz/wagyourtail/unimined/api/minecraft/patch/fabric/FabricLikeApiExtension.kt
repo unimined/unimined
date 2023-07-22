@@ -10,7 +10,7 @@ open class FabricLikeApiExtension {
 
     abstract class APILocations {
 
-        private val xmlDoc = defaultedMapOf<String, Document> { version ->
+        internal val xmlDoc = defaultedMapOf<String, Document> { version ->
             val url = URI(getUrl(version))
             url.stream().use {
                 val dbf = DocumentBuilderFactory.newInstance()
@@ -22,7 +22,7 @@ open class FabricLikeApiExtension {
         abstract fun getUrl(version: String): String
         abstract fun getArtifactName(moduleName: String, version: String?): String
 
-        fun module(moduleName: String, version: String): String? {
+        open fun module(moduleName: String, version: String): String? {
             val elements = xmlDoc[version].getElementsByTagName("dependency")
             for (i in 0 until elements.length) {
                 val element = elements.item(i)
@@ -82,6 +82,47 @@ open class FabricLikeApiExtension {
             override fun getArtifactName(moduleName: String, version: String?): String {
                 return "org.quiltmc.qsl:$moduleName:$version"
             } 
+        },
+        "station" to object : APILocations() {
+            override fun getUrl(version: String): String {
+                return "https://maven.glass-launcher.net/snapshots/net/modificationstation/StationAPI/$version/StationAPI-$version.pom"
+            }
+
+            override fun getArtifactName(moduleName: String, version: String?): String {
+                TODO("Not yet implemented")
+            }
+
+            fun getArtifactName(moduleName: String, mainVersion: String, version: String?): String {
+                return "net.modificationstation.StationAPI.$mainVersion:$moduleName:$version"
+            }
+
+            override fun module(moduleName: String, version: String): String? {
+                val elements = xmlDoc[version].getElementsByTagName("dependency")
+
+                for (i in 0 until elements.length) {
+                    val element = elements.item(i)
+                    var correct = false
+                    var vers: String? = null
+
+                    for (j in 0 until element.childNodes.length) {
+                        val child = element.childNodes.item(j)
+
+                        if (child.nodeName == "artifactId" && child.textContent == moduleName) {
+                            correct = true
+                        }
+
+                        if (child.nodeName == "version") {
+                            vers = child.textContent
+                        }
+                    }
+
+                    if (correct) {
+                        return getArtifactName(moduleName, version, vers)
+                    }
+                }
+
+                return null
+            }
         }
     )
 
@@ -120,6 +161,14 @@ open class FabricLikeApiExtension {
      */
     fun legacyFabricModule(moduleName: String, version: String): String {
         return locations["legacyFabric"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
+    }
+
+
+    /**
+     * @since 1.0.0
+     */
+    fun stationModule(moduleName: String, version: String): String {
+        return locations["station"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
     }
 
 }
