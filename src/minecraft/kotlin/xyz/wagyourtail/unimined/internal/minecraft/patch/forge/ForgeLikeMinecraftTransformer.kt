@@ -47,6 +47,7 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
 
     init {
         addMavens()
+        provider.minecraftRemapper.addResourceRemapper { AccessTransformerMinecraftTransformer.AtRemapper(project.logger) }
     }
 
     fun transforms(transform: String) {

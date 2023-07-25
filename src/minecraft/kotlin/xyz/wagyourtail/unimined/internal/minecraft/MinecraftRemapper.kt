@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft
 
 import net.fabricmc.tinyremapper.NonClassCopyMode
 import net.fabricmc.tinyremapper.OutputConsumerPath
+import net.fabricmc.tinyremapper.OutputConsumerPath.ResourceRemapper
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
@@ -10,9 +11,9 @@ import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.remap.MinecraftRemapConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
-import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.consumerApply
+import xyz.wagyourtail.unimined.util.getField
 import java.nio.file.Path
 import kotlin.io.path.*
 
@@ -32,6 +33,24 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
 
     override fun config(remapperBuilder: TinyRemapper.Builder.() -> Unit) {
         tinyRemapperConf = remapperBuilder
+    }
+
+    var extraResourceRemappers by FinalizeOnRead { listOf<ResourceRemapper>() }
+
+    var extraExtensions by FinalizeOnRead { listOf<TinyRemapper.Extension>() }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun addResourceRemapper(remapper: () -> ResourceRemapper) {
+        val prev: FinalizeOnRead<() -> List<ResourceRemapper>> = MinecraftRemapper::class.getField("extraResourceRemappers")!!.getDelegate(this) as FinalizeOnRead<() -> List<ResourceRemapper>>
+        val value = prev.value as () -> List<ResourceRemapper>
+        extraResourceRemappers = { value() + remapper() }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun addExtension(extension: () -> TinyRemapper.Extension) {
+        val prev: FinalizeOnRead<() -> List<TinyRemapper.Extension>> = MinecraftRemapper::class.getField("extraExtensions")!!.getDelegate(this) as FinalizeOnRead<() -> List<TinyRemapper.Extension>>
+        val value = prev.value as () -> List<TinyRemapper.Extension>
+        extraExtensions = { value() + extension() }
     }
 
     @ApiStatus.Internal
@@ -114,6 +133,9 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
         if (replaceJSRWithJetbrains) {
             remapperB.withMappings { JSR_TO_JETBRAINS.forEach(it::acceptClass) }
         }
+        for (extraExtension in extraExtensions()) {
+            remapperB.extension(extraExtension)
+        }
         tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         remapper.readClassPathAsync(*provider.minecraftLibraries.files.map { it.toPath() }.toTypedArray())
@@ -121,8 +143,9 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
             remapper.readInputsAsync(from)
             OutputConsumerPath.Builder(target).build().use {
                 it.addNonClassFiles(
-                    from, remapper,
-                    listOf(AccessTransformerMinecraftTransformer.AtRemapper(project.logger)) + NonClassCopyMode.FIX_META_INF.remappers
+                    from,
+                    remapper,
+                    extraResourceRemappers() + NonClassCopyMode.FIX_META_INF.remappers
                 )
                 remapper.apply(it)
             }

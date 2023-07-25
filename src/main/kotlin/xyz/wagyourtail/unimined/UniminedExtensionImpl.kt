@@ -249,6 +249,17 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding parchment maven: $parchmentMaven")
     }
 
+    val sonatypeStaging by lazy {
+        project.repositories.maven {
+            it.name = "sonatypeStaging"
+            it.url = URI.create("https://oss.sonatype.org/content/repositories/staging/")
+        }
+    }
+
+    override fun sonatypeStaging() {
+        project.logger.info("[Unimined] adding sonatype staging maven: $sonatypeStaging")
+    }
+
     init {
         project.repositories.maven {
             it.name = "minecraft"

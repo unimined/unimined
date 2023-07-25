@@ -137,4 +137,5 @@ abstract class UniminedExtension(val project: Project) {
     abstract fun parchmentMaven()
 
     abstract fun neoForgedMaven()
+    abstract fun sonatypeStaging()
 }

@@ -38,6 +38,12 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG3 transformer")
+        parent.provider.minecraftRemapper.addResourceRemapper { JsCoreModRemapper(project.logger) }
+        parent.provider.minecraftRemapper.addExtension { StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
+//            it.matches(Regex("^net/minecraftforge/.*"))
+            it == "net/minecraftforge/registries/ObjectHolderRegistry"
+        } }
+        unprotectRuntime = true
     }
 
     override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }

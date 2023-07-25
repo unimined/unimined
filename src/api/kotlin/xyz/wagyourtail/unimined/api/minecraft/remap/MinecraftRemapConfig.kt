@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.api.minecraft.remap
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.jetbrains.annotations.ApiStatus
 
@@ -30,4 +31,9 @@ abstract class MinecraftRemapConfig {
     }
 
     abstract var replaceJSRWithJetbrains: Boolean
+    @ApiStatus.Experimental
+    abstract fun addResourceRemapper(remapper: () -> OutputConsumerPath.ResourceRemapper)
+
+    @ApiStatus.Experimental
+    abstract fun addExtension(extension: () -> TinyRemapper.Extension)
 }

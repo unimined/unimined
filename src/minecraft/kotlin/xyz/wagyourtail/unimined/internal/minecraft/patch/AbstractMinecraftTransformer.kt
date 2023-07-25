@@ -39,6 +39,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
         throw RuntimeException("Error merging class ${cl.name}", e)
     }
 
+    override var unprotectRuntime by FinalizeOnRead(false)
+
     override var canCombine: Boolean by FinalizeOnRead(LazyMutable {
         provider.minecraftData.mcVersionCompare(provider.version, "1.3") > -1
     })
@@ -163,12 +165,22 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     @ApiStatus.Internal
     open fun applyClientRunTransform(config: RunConfig) {
-
+        if (unprotectRuntime) {
+            val unprotect = project.configurations.detachedConfiguration(
+                project.dependencies.create("io.github.juuxel:unprotect:1.3.0")
+            ).resolve().first { it.extension == "jar" }
+            config.jvmArgs.add("-javaagent:${unprotect.absolutePath}")
+        }
     }
 
     @ApiStatus.Internal
     open fun applyServerRunTransform(config: RunConfig) {
-
+        if (unprotectRuntime) {
+            val unprotect = project.configurations.detachedConfiguration(
+                project.dependencies.create("io.github.juuxel:unprotect:1.3.0")
+            ).resolve().first { it.extension == "jar" }
+            config.jvmArgs.add("-javaagent:${unprotect.absolutePath}")
+        }
     }
 
     @ApiStatus.Internal
