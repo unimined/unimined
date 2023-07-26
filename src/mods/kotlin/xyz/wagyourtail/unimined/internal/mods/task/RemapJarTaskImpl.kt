@@ -4,6 +4,7 @@ import net.fabricmc.loom.util.kotlin.KotlinClasspathService
 import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
+import org.gradle.api.resources.TextResource
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
@@ -95,7 +96,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                 inp.copyTo(out)
             }
             this.manifest {
-                it.from(project.files(inpTmp))
+                it.from(inpTmp)
             }
         }
 
