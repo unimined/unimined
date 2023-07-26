@@ -15,10 +15,13 @@ import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransf
 import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
 import xyz.wagyourtail.unimined.util.*
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import java.util.jar.Manifest
 import javax.inject.Inject
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
+import kotlin.io.path.outputStream
 
 abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
 
@@ -83,6 +86,19 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         }
         provider.mcPatcher.afterRemapJarTask(this, prevTarget)
         from(project.zipTree(prevTarget))
+
+        // merge in manifest from input jar
+        inputFile.get().asFile.toPath().readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
+            // write to temp file
+            val inpTmp = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("input-manifest.MF")
+            inpTmp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
+                inp.copyTo(out)
+            }
+            this.manifest {
+                it.from(project.files(inpTmp))
+            }
+        }
+
         copy()
     }
 

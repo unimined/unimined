@@ -49,7 +49,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }
 
     override val merger: ClassMerger
-        get() = throw UnsupportedOperationException("ForgeGradle 3 does not support merging with unofficial merger.")
+        get() = throw UnsupportedOperationException("FG3+ does not support merging with unofficial merger.")
 
 
     @ApiStatus.Internal
