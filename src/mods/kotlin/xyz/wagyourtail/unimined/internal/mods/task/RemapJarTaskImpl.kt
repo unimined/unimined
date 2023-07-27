@@ -4,7 +4,6 @@ import net.fabricmc.loom.util.kotlin.KotlinClasspathService
 import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
-import org.gradle.api.resources.TextResource
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
@@ -17,7 +16,6 @@ import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtensi
 import xyz.wagyourtail.unimined.util.*
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.util.jar.Manifest
 import javax.inject.Inject
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists

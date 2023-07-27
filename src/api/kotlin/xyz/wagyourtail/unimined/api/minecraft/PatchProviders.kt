@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.api.minecraft
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
 
 /**
@@ -299,4 +300,7 @@ interface PatchProviders {
     fun jarMod() {
         jarMod {}
     }
+
+    @ApiStatus.Experimental
+    fun <T: MinecraftPatcher> customPatcher(mcPatcher: T, action: T.() -> Unit)
 }

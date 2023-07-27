@@ -9,7 +9,6 @@ import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.mapping.ContainedMapping
 import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.util.FinalizeOnWrite

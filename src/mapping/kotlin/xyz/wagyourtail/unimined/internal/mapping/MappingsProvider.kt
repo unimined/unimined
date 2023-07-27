@@ -2,7 +2,10 @@ package xyz.wagyourtail.unimined.internal.mapping
 
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
-import net.fabricmc.mappingio.format.*
+import net.fabricmc.mappingio.format.MappingTreeBuilder
+import net.fabricmc.mappingio.format.ProGuardReader
+import net.fabricmc.mappingio.format.Tiny2Reader2
+import net.fabricmc.mappingio.format.Tiny2Writer2
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import net.fabricmc.tinyremapper.IMappingProvider

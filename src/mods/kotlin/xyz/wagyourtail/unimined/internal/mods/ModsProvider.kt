@@ -10,7 +10,6 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
-import java.lang.IllegalArgumentException
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 

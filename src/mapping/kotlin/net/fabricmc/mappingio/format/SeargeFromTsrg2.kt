@@ -3,7 +3,6 @@ package net.fabricmc.mappingio.format
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.tree.MappingTreeView
-import net.fabricmc.mappingio.tree.MemoryMappingTree
 
 object SeargeFromTsrg2 {
 

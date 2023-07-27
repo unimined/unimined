@@ -2,7 +2,6 @@ package xyz.wagyourtail.unimined.api.mapping
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import groovy.lang.GString
 import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus

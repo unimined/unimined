@@ -4,7 +4,6 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
-import net.fabricmc.mappingio.tree.MemoryMappingTree
 import java.io.Reader
 
 object ParchmentReader {

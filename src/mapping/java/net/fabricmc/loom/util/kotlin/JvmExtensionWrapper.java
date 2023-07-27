@@ -24,27 +24,15 @@
 
 package net.fabricmc.loom.util.kotlin;
 
-import java.util.List;
-
 import kotlinx.metadata.KmAnnotation;
 import kotlinx.metadata.KmProperty;
-import kotlinx.metadata.internal.extensions.KmClassExtension;
-import kotlinx.metadata.internal.extensions.KmConstructorExtension;
-import kotlinx.metadata.internal.extensions.KmFunctionExtension;
-import kotlinx.metadata.internal.extensions.KmPackageExtension;
-import kotlinx.metadata.internal.extensions.KmPropertyExtension;
-import kotlinx.metadata.internal.extensions.KmTypeExtension;
-import kotlinx.metadata.internal.extensions.KmTypeParameterExtension;
+import kotlinx.metadata.internal.extensions.*;
 import kotlinx.metadata.jvm.JvmFieldSignature;
 import kotlinx.metadata.jvm.JvmMethodSignature;
-import kotlinx.metadata.jvm.internal.JvmClassExtension;
-import kotlinx.metadata.jvm.internal.JvmConstructorExtension;
-import kotlinx.metadata.jvm.internal.JvmFunctionExtension;
-import kotlinx.metadata.jvm.internal.JvmPackageExtension;
-import kotlinx.metadata.jvm.internal.JvmPropertyExtension;
-import kotlinx.metadata.jvm.internal.JvmTypeExtension;
-import kotlinx.metadata.jvm.internal.JvmTypeParameterExtension;
+import kotlinx.metadata.jvm.internal.*;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 /*
  * This is a fun meme. All of these kotlin classes are marked as "internal" so Kotlin code cannot compile against them.

@@ -9,7 +9,6 @@ import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.readZipInputStreamFor
-import java.lang.IllegalArgumentException
 import java.nio.file.Path
 
 class ChildMethodStripper(next: MappingVisitor, val minecraft: Path) : ForwardingMappingVisitor(next) {

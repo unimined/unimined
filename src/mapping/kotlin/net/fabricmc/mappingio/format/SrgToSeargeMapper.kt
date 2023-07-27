@@ -4,7 +4,6 @@ import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
 import net.fabricmc.mappingio.tree.MappingTreeView
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
 class SrgToSeargeMapper(next: MappingVisitor?, val srgNs: String, val seargeNs: String, val mojmapNs: String, mojmapSupplier: () -> MappingTreeView): ForwardingMappingVisitor(next) {
     var idx = -1
