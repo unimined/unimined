@@ -88,16 +88,16 @@ class MemoryMapping {
     @JvmName("withMappingsKt")
     fun withMappings(vararg mappings: String, action: MemoryMappingWithMappings.() -> Unit) {
         srcNamespace = "official"
-        action(MemoryMappingWithMappings(this, *mappings))
+        action(MemoryMappingWithMappings(this, mappings.toList()))
     }
 
     /**
      * @since 0.4.10
      */
     @JvmName("withMappingsKt")
-    fun withMappings(src: String, vararg mappings: String, action: MemoryMappingWithMappings.() -> Unit) {
+    fun withMappings(src: String, mappings: List<String>, action: MemoryMappingWithMappings.() -> Unit) {
         srcNamespace = src
-        action(MemoryMappingWithMappings(this, *mappings))
+        action(MemoryMappingWithMappings(this, mappings))
     }
 
     /**
@@ -175,7 +175,7 @@ class MemoryMapping {
  * with a bound set of mappings
  * @since 0.1.0
  */
-class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, vararg val mappings: String) {
+class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, val mappings: List<String>) {
 
     /**
      * Add a class mapping.
@@ -194,9 +194,9 @@ class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, vararg val map
      * @param action A closure to add mappings to the class.
      * @since 0.1.0
      */
-    fun c(srcName: String, vararg targets: String, action: ClassMappingWithMappings.() -> Unit) {
+    fun c(srcName: String, targets: List<String>, action: ClassMappingWithMappings.() -> Unit) {
         memoryMapping.c(srcName, *(mappings zip targets).toTypedArray()) {
-            action(ClassMappingWithMappings(this, *mappings))
+            action(ClassMappingWithMappings(this, mappings))
         }
     }
 
@@ -211,7 +211,7 @@ class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, vararg val map
      * @since 0.5.0
      */
     fun c(srcName: String, targets: List<String>, @DelegatesTo(value = ClassMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
-        c(srcName, *targets.toTypedArray()) {
+        c(srcName, targets) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -340,7 +340,7 @@ class ClassMapping(srcName: String, vararg targets: Pair<String, String>): Mappi
      */
     @JvmName("withMappingsKt")
     fun withMappings(vararg mappings: String, action: ClassMappingWithMappings.() -> Unit) {
-        action(ClassMappingWithMappings(this, *mappings))
+        action(ClassMappingWithMappings(this, mappings.toList()))
     }
 
     /**
@@ -354,7 +354,7 @@ class ClassMapping(srcName: String, vararg targets: Pair<String, String>): Mappi
         mappings: List<String>,
         @DelegatesTo(value = ClassMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
     ) {
-        action.delegate = ClassMappingWithMappings(this, *mappings.toTypedArray())
+        action.delegate = ClassMappingWithMappings(this, mappings)
         action.resolveStrategy = Closure.DELEGATE_FIRST
         action.call()
     }
@@ -394,7 +394,7 @@ class ClassMapping(srcName: String, vararg targets: Pair<String, String>): Mappi
  * with a bound set of mappings
  * @since 0.1.0
  */
-class ClassMappingWithMappings(val classMapping: ClassMapping, vararg val mappings: String) {
+class ClassMappingWithMappings(val classMapping: ClassMapping, val mappings: List<String>) {
     /**
      * Add a field mapping.
      * @param srcName The source name of the field.
@@ -441,7 +441,7 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, vararg val mappin
      */
     fun m(srcName: String, srcDesc: String, vararg targets: String, action: MethodMappingWithMappings.() -> Unit) {
         classMapping.m(srcName, srcDesc, *(mappings zip targets).toTypedArray()) {
-            action(MethodMappingWithMappings(this, *mappings))
+            action(MethodMappingWithMappings(this, mappings))
         }
     }
 
@@ -523,7 +523,7 @@ class MethodMapping(srcName: String, val srcDesc: String, vararg targets: Pair<S
      */
     @JvmName("withMappingsKt")
     fun withMappings(vararg mappings: String, action: MethodMappingWithMappings.() -> Unit) {
-        action(MethodMappingWithMappings(this, *mappings))
+        action(MethodMappingWithMappings(this, mappings.toList()))
     }
 
     /**
@@ -537,7 +537,7 @@ class MethodMapping(srcName: String, val srcDesc: String, vararg targets: Pair<S
         mappings: List<String>,
         @DelegatesTo(value = MethodMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
     ) {
-        action.delegate = MethodMappingWithMappings(this, *mappings.toTypedArray())
+        action.delegate = MethodMappingWithMappings(this, mappings)
         action.resolveStrategy = Closure.DELEGATE_FIRST
         action.call()
     }
@@ -577,7 +577,7 @@ class MethodMapping(srcName: String, val srcDesc: String, vararg targets: Pair<S
  * with a set of mappings bound to it.
  * @since 0.1.0
  */
-class MethodMappingWithMappings(val methodMapping: MethodMapping, vararg val mappings: String) {
+class MethodMappingWithMappings(val methodMapping: MethodMapping, val mappings: List<String>) {
 
     /**
      * Add a parameter mapping.

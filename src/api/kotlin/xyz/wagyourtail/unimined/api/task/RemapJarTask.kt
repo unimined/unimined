@@ -7,6 +7,7 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.jvm.tasks.Jar
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
@@ -38,6 +39,11 @@ abstract class RemapJarTask : Jar() {
     @get:Input
     @get:Optional
     abstract val remapATToLegacy: Property<Boolean?>
+
+    @get:Internal
+    @set:Internal
+    @set:ApiStatus.Experimental
+    abstract var allowImplicitWildcards: Boolean
 
     abstract fun devNamespace(namespace: String)
 

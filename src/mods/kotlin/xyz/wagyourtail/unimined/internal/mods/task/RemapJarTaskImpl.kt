@@ -39,6 +39,8 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
 
+    override var allowImplicitWildcards by FinalizeOnRead(false)
+
     @TaskAction
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
     fun run() {
@@ -122,7 +124,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         if (classpath != null) {
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
-        val betterMixinExtension = BetterMixinExtension(project.gradle.startParameter.logLevel)
+        val betterMixinExtension = BetterMixinExtension(project.gradle.startParameter.logLevel, allowImplicitWildcards = allowImplicitWildcards)
         remapperB.extension(betterMixinExtension)
         provider.minecraftRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()

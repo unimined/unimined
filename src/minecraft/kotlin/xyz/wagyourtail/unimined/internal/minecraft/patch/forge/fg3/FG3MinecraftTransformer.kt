@@ -20,10 +20,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2At
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
-import xyz.wagyourtail.unimined.util.getFile
-import xyz.wagyourtail.unimined.util.openZipFileSystem
-import xyz.wagyourtail.unimined.util.readZipInputStreamFor
-import xyz.wagyourtail.unimined.util.withSourceSet
+import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
@@ -128,21 +125,14 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         }
 
         if (userdevCfg.has("inject")) {
-            project.logger.lifecycle("[Unimined/ForgeTransformer] Injecting forge userdev into minecraft jar")
+            project.logger.lifecycle("[Unimined/ForgeTransformer] Attempting inject forge userdev into minecraft jar")
             this.addTransform { outputJar ->
-                forgeUd.toPath().openZipFileSystem().use { inputJar ->
-                    val inject = inputJar.getPath("/" + userdevCfg.get("inject").asString)
-                    if (Files.exists(inject)) {
-                        project.logger.info("[Unimined/ForgeTransformer] Injecting forge userdev into minecraft jar")
-                        Files.walk(inject).forEach { path ->
-                            project.logger.debug("[Unimined/ForgeTransformer] Testing $path")
-                            if (!Files.isDirectory(path)) {
-                                val target = outputJar.getPath("/${path.relativeTo(inject)}")
-                                project.logger.debug("[Unimined/ForgeTransformer] Injecting $path into minecraft jar")
-                                Files.createDirectories(target.parent)
-                                Files.copy(path, target, StandardCopyOption.REPLACE_EXISTING)
-                            }
-                        }
+                forgeUd.toPath().forEachInZip { s, input ->
+                    if (s.startsWith(userdevCfg.get("inject").asString)) {
+                        val target = outputJar.getPath(s.substring(userdevCfg.get("inject").asString.length))
+                        project.logger.info("[Unimined/ForgeTransformer] Injecting $s into minecraft jar")
+                        Files.createDirectories(target.parent)
+                        Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING)
                     }
                 }
             }
