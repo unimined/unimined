@@ -288,7 +288,7 @@ abstract class FabricLikeMinecraftTransformer(
                             }
                             artifactString += dep.name
 
-                            innerjson.addProperty("id", artifactString)
+                            innerjson.addProperty("id", artifactString.lowercase())
                             innerjson.addProperty("version", dep.version)
                             innerjson.addProperty("name", dep.name)
                             val custom = JsonObject()
