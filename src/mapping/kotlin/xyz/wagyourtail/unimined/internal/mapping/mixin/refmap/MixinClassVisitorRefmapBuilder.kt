@@ -199,8 +199,16 @@ class MixinClassVisitorRefmapBuilder(
                                     val mappedName = mapper.mapName(it)
                                     val mappedDesc = mapper.mapDesc(it)
                                     if (implicitWildcard) {
+                                        // BUGFIX: it appears 1 length don't lowercase when checking the refmap
+                                        if (targetName.length == 1) {
+                                            refmap.addProperty(targetName.capitalize(), mappedName)
+                                        }
                                         refmap.addProperty(targetName, mappedName)
                                     } else {
+                                        // BUGFIX: it appears 1 length don't lowercase when checking the refmap
+                                        if (targetName.length == 1) {
+                                            refmap.addProperty(targetName.capitalize(), "$mappedName:$mappedDesc")
+                                        }
                                         refmap.addProperty(targetName, "$mappedName:$mappedDesc")
                                     }
                                 }
