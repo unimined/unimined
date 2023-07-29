@@ -7,7 +7,7 @@ import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.gradle.api.logging.LogLevel
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
-import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
+import xyz.wagyourtail.unimined.internal.mapping.mixin.BetterMixinExtension
 
 class StringClassNameRemapExtension(
     loggerLevel: LogLevel = LogLevel.WARN,

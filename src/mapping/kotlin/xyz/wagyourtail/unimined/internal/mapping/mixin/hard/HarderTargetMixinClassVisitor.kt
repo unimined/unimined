@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.internal.mapping.mixin.refmap
+package xyz.wagyourtail.unimined.internal.mapping.mixin.hard
 
 import net.fabricmc.tinyremapper.extension.mixin.common.Logger
 import net.fabricmc.tinyremapper.extension.mixin.common.MapUtility
@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 
 
+//TODO: replace this in a similar way to RefmapBuilderClassVisitor
 class HarderTargetMixinClassVisitor(
     private val tasks: MutableList<Consumer<CommonData>>,
     delegate: ClassVisitor?,

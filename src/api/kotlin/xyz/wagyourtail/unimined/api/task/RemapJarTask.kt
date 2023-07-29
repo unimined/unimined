@@ -1,5 +1,8 @@
 package xyz.wagyourtail.unimined.api.task
 
+import groovy.lang.Closure
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -40,6 +43,10 @@ abstract class RemapJarTask : Jar() {
     @get:Optional
     abstract val remapATToLegacy: Property<Boolean?>
 
+    @get:Input
+    @get:Optional
+    abstract val mixinExtraRemapping: Property<Boolean>
+
     @get:Internal
     @set:Internal
     @set:ApiStatus.Experimental
@@ -52,7 +59,8 @@ abstract class RemapJarTask : Jar() {
     abstract fun prodNamespace(namespace: String)
 
     init {
-        remapATToLegacy.convention(null as Boolean?)
+        remapATToLegacy.convention(null as Boolean?).finalizeValueOnRead()
+        mixinExtraRemapping.convention(false).finalizeValueOnRead()
     }
 
 }

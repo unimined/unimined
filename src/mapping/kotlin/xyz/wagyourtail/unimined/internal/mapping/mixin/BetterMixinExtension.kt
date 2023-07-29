@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.internal.mapping.mixin.refmap
+package xyz.wagyourtail.unimined.internal.mapping.mixin
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
@@ -14,10 +14,16 @@ import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import net.fabricmc.tinyremapper.extension.mixin.common.data.CommonData
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.gradle.api.logging.LogLevel
+import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.internal.mapping.mixin.hard.HarderTargetMixinClassVisitor
+import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.RefmapBuilderClassVisitor
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.forEachInZip
+import xyz.wagyourtail.unimined.util.getField
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileSystem
@@ -31,8 +37,8 @@ import kotlin.io.path.writeText
 class BetterMixinExtension(
     val loggerLevel: LogLevel = LogLevel.WARN,
     val targets: Set<MixinExtension.AnnotationTarget> = MixinExtension.AnnotationTarget.values().toSet(),
-    val fallbackWhenNotInJson: Boolean = false,
-    val allowImplicitWildcards: Boolean = false,
+    fallbackWhenNotInJson: Boolean = false,
+    allowImplicitWildcards: Boolean = false,
 ):
         TinyRemapper.Extension,
         TinyRemapper.ApplyVisitorProvider,
@@ -41,6 +47,21 @@ class BetterMixinExtension(
     private val tasks: MutableMap<Int, MutableList<Consumer<CommonData>>> = defaultedMapOf { mutableListOf() }
 
     private val defaultRefmapPath = mutableMapOf<InputTag?, String>()
+
+    @set:ApiStatus.Internal
+    var fallbackWhenNotInJson by FinalizeOnRead(fallbackWhenNotInJson)
+
+    @set:ApiStatus.Internal
+    var allowImplicitWildcards by FinalizeOnRead(allowImplicitWildcards)
+
+    private var modifyRefmapBuilder: (RefmapBuilderClassVisitor) -> Unit by FinalizeOnRead { }
+
+    @ApiStatus.Experimental
+    fun modifyRefmapBuilder(modify: (RefmapBuilderClassVisitor) -> Unit) {
+        val delegate: FinalizeOnRead<(RefmapBuilderClassVisitor) -> Unit> = BetterMixinExtension::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<(RefmapBuilderClassVisitor) -> Unit>
+        val old = delegate.value as (RefmapBuilderClassVisitor) -> Unit
+        modifyRefmapBuilder = { old(it); modify(it) }
+    }
 
     companion object {
         private val GSON = GsonBuilder().setPrettyPrinting().create()
@@ -115,7 +136,7 @@ class BetterMixinExtension(
                         combinedMappings[key] = value.asString
                     }
                 }
-                MixinClassVisitorRefmapBuilder(
+                RefmapBuilderClassVisitor(
                     CommonData(cls.environment, logger),
                     cls.name,
                     target,
@@ -134,7 +155,9 @@ class BetterMixinExtension(
                         }
                     },
                     allowImplicitWildcards = allowImplicitWildcards
-                )
+                ).also {
+                    modifyRefmapBuilder(it)
+                }
             } else if (fallbackWhenNotInJson) {
                 fallback.preApplyVisitor(cls, next)
             } else {

@@ -38,6 +38,7 @@ abstract class ModRemapConfig(val configurations: Set<Configuration>) {
         NONE,
         TINY_HARD,
         TINY_HARDSOFT,
-        UNIMINED
+        UNIMINED,
+        UNIMINED_WITH_MIXINEXTRA
     }
 }

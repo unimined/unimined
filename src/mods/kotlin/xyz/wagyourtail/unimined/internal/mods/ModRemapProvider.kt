@@ -21,7 +21,8 @@ import xyz.wagyourtail.unimined.api.mod.ModRemapConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
+import xyz.wagyourtail.unimined.internal.mapping.mixin.BetterMixinExtension
+import xyz.wagyourtail.unimined.internal.mapping.mixinextra.MixinExtra
 import xyz.wagyourtail.unimined.util.*
 import java.io.*
 import java.nio.file.Files
@@ -135,12 +136,17 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
         val mixinExtension = when (mixinRemap) {
-            MixinRemap.UNIMINED -> {
+            MixinRemap.UNIMINED, MixinRemap.UNIMINED_WITH_MIXINEXTRA -> {
                 val mixin = BetterMixinExtension(
                     project.gradle.startParameter.logLevel,
                     fallbackWhenNotInJson = true,
                     allowImplicitWildcards = true
                 )
+                if (mixinRemap == MixinRemap.UNIMINED_WITH_MIXINEXTRA) {
+                    mixin.modifyRefmapBuilder {
+                        MixinExtra.addMixinExtra(it)
+                    }
+                }
                 remapperB.extension(mixin)
                 mixin
             }
