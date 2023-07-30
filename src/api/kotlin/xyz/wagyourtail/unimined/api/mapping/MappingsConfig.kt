@@ -4,6 +4,7 @@ import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Dependency
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
@@ -440,7 +441,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
 
     @JvmOverloads
     @ApiStatus.Experimental
-    abstract fun mapping(dependency: Any, key: String = dependency.toString(), action: MappingDepConfig.() -> Unit = {})
+    abstract fun mapping(dependency: Any, key: String = if (dependency is Dependency) dependency.name else dependency.toString(), action: MappingDepConfig.() -> Unit = {})
 
     @JvmOverloads
     @ApiStatus.Experimental
