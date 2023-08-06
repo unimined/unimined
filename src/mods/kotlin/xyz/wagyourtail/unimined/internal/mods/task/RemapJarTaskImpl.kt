@@ -17,10 +17,7 @@ import xyz.wagyourtail.unimined.util.*
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import javax.inject.Inject
-import kotlin.io.path.createDirectories
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.exists
-import kotlin.io.path.outputStream
+import kotlin.io.path.*
 
 abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
 
@@ -66,6 +63,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                 it.from(inpTmp)
             }
         }
+        val inputFile = provider.mcPatcher.beforeRemapJarTask(this, inputFile.get().asFile.toPath())
 
         if (path.isEmpty()) {
             // copy into output
@@ -75,15 +73,15 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         }
 
         val last = path.last()
-        project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.get().asFile.name} from $devNs/$devFNs to $prodNs")
+        project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.name} from $devNs/$devFNs to $prodNs")
         project.logger.info("[Unimined/RemapJar]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
-        var prevTarget = inputFile.get().asFile.toPath()
+        var prevTarget = inputFile
         var prevNamespace = devNs
         var prevPrevNamespace = devFNs
         for (i in path.indices) {
             val step = path[i]
             project.logger.info("[Unimined/RemapJar]    $step")
-            val nextTarget = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("${inputFile.get().asFile.nameWithoutExtension}-temp-${step.name}.jar")
+            val nextTarget = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("${inputFile.nameWithoutExtension}-temp-${step.name}.jar")
             nextTarget.deleteIfExists()
             val mcNamespace = prevNamespace
             val mcFallbackNamespace = prevPrevNamespace

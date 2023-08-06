@@ -192,6 +192,10 @@ abstract class AbstractMinecraftTransformer protected constructor(
         return baseMinecraft
     }
 
+    override fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path {
+        return input
+    }
+
     @ApiStatus.Internal
     override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
         // do nothing

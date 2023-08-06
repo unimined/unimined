@@ -42,6 +42,9 @@ interface MinecraftPatcher {
     }
 
     @ApiStatus.Internal
+    fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path
+
+    @ApiStatus.Internal
     fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path)
 
     @get:ApiStatus.Internal
