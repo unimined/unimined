@@ -1,7 +1,5 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod
 
-import net.lenni0451.classtransform.TransformerManager
-import net.lenni0451.classtransform.utils.tree.IClassProvider
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalDependency
 import xyz.wagyourtail.unimined.api.minecraft.patch.JarModAgentPatcher
@@ -9,22 +7,15 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
 import xyz.wagyourtail.unimined.internal.mods.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.util.getTempFilePath
-import xyz.wagyourtail.unimined.util.openZipFileSystem
 import xyz.wagyourtail.unimined.util.withSourceSet
-import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
-import java.io.InputStreamReader
-import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.function.Supplier
-import kotlin.io.path.createDirectories
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.nameWithoutExtension
-import kotlin.io.path.writeBytes
+import kotlin.io.path.*
 
 
 open class JarModAgentMinecraftTransformer(
@@ -38,6 +29,7 @@ open class JarModAgentMinecraftTransformer(
     companion object {
         private const val JMA_TRANSFORMERS = "jma.transformers"
         private const val JMA_PRIORITY_CLASSPATH = "jma.priorityClasspath"
+        private const val JMA_DEBUG = "jma.debug"
     }
 
     @Deprecated("may violate mojang's EULA... use at your own risk. this is not recommended and is only here for legacy reasons and testing.")
@@ -66,7 +58,7 @@ open class JarModAgentMinecraftTransformer(
             project.unimined.wagYourMaven("snapshots")
             jarModAgent.dependencies.add(
                 project.dependencies.create(
-                    "xyz.wagyourtail.unimined:jarmod-agent:0.1.2-SNAPSHOT:all"
+                    "xyz.wagyourtail.unimined:jarmod-agent:0.1.3-SNAPSHOT:all"
                 ).also {
                     (it as ExternalDependency).isTransitive = false
                 }
@@ -106,85 +98,22 @@ open class JarModAgentMinecraftTransformer(
             val output = getTempFilePath("${input.nameWithoutExtension}-jma", ".jar")
             Files.copy(input, output)
             try {
-                val classpath =
-                    (remapJarTask as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
+                val classpath = (remapJarTask as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
 
-                // add input to classpath
-                classpath.add(input.toFile())
-
-                //TODO: remove and add back mods with correct mappings
-                val classLoader = URLClassLoader(classpath.map { it.toURI().toURL() }.toTypedArray())
-
-                project.logger.lifecycle("[Unimined/JarModAgentTransformer] Loading transforms for $output from $transforms")
-                project.logger.info("[Unimined/JarModAgentTransformer] Classpath: $classpath")
-
-                val transformer = TransformerManager(object : IClassProvider {
-                    override fun getClass(name: String): ByteArray? {
-                        return classLoader.getResourceAsStream(name.replace('.', '/') + ".class")?.readBytes()
-                    }
-
-                    override fun getAllClasses(): MutableMap<String, Supplier<ByteArray>> {
-                        throw UnsupportedOperationException()
-                    }
-                })
-
-                // add transformers
-                val transformers: MutableList<String> = ArrayList()
-
-                for (transforms in this.transforms) {
-                    classLoader.getResourceAsStream(transforms).use { `is` ->
-                        if (`is` == null) {
-                            throw IOException("Could not find transform file: $transforms")
-                        }
-                        project.logger.info("[Unimined/JarModAgentTransformer] Loading transforms: $transforms")
-                        BufferedReader(InputStreamReader(`is`)).use { reader ->
-                            var line: String?
-                            while (reader.readLine().also { line = it } != null) {
-                                transformers.add(line!!)
-                            }
-                        }
-                    }
+                val result = SubprocessExecutor.exec(project) {
+                    it.jvmArgs = listOf(
+                        "-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}",
+                        "-D${JMA_DEBUG}=true")
+                    it.args = listOf(
+                        input.absolutePathString(),
+                        classpath.joinToString(File.pathSeparator) { it.absolutePath },
+                        output.absolutePathString(),
+                    )
+                    it.mainClass.set("xyz.wagyourtail.unimined.jarmodagent.JarModAgent")
+                    it.classpath = jarModAgent
                 }
-
-                var fail = 0
-                for (tf in transformers) {
-                    try {
-                        transformer.addTransformer(tf)
-                    } catch (e: Exception) {
-                        project.logger.error("[Unimined/JarModAgentTransformer] Failed to load transform: $transformer")
-                        e.printStackTrace()
-                        fail++
-                    }
-                }
-                if (fail > 0) {
-                    throw RuntimeException("Failed to load $fail transforms")
-                }
-
-                // transform
-                project.logger.lifecycle("[Unimined/JarModAgentTransformer] Transforming...")
-                output.openZipFileSystem(mapOf("mutable" to true, "create" to true)).use { out ->
-                    val fd = TransformerManager::class.java.getDeclaredField("transformedClasses")
-                    fd.isAccessible = true
-                    @Suppress("UNCHECKED_CAST") val transformedClasses = fd.get(transformer) as Set<String>
-                    for (name in transformedClasses) {
-                        val bytes = classLoader.getResourceAsStream(name.replace('.', '/') + ".class")?.readBytes()
-                        if (bytes == null) {
-                            project.logger.warn("[Unimined/JarModAgentTransformer] Failed to find class $name")
-                            continue
-                        }
-                        project.logger.info("[Unimined/JarModAgentTransformer] Transforming $name")
-                        val path = out.getPath(name.replace('.', '/') + ".class")
-                        path.parent?.createDirectories()
-                        path.writeBytes(transformer.transform(name, bytes))
-                    }
-
-                    // shade net.lenni0451.classtransform.InjectionCallback
-                    val injectionCallback =
-                        JarModAgentMinecraftTransformer::class.java.classLoader.getResourceAsStream("net/lenni0451/classtransform/InjectionCallback.class")!!
-                            .readBytes()
-                    val path = out.getPath("net/lenni0451/classtransform/InjectionCallback.class")
-                    path.parent?.createDirectories()
-                    path.writeBytes(injectionCallback)
+                if (result.exitValue != 0) {
+                    throw IOException("Failed to run JarModAgent transformer: ${result.exitValue}")
                 }
             } catch (e: Exception) {
                 project.logger.error("[Unimined/JarModAgentTransformer] Failed to transform $input")
