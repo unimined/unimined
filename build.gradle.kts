@@ -177,11 +177,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false
     }
-
-    // class transform
-    implementation("net.lenni0451.classtransform:core:1.8.4") {
-        exclude(group = "org.ow2.asm")
-    }
 }
 
 tasks.jar {

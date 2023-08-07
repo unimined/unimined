@@ -62,6 +62,8 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
             it.group = "unimined_internal"
             it.doLast {
                 for (configName in runConfigs.keys) {
+                    if (transformedRunConfig[configName].disabled) continue
+                    project.logger.info("[Unimined/Runs] Creating idea run config for $configName")
                     transformedRunConfig[configName].createIdeaRunConfig()
                 }
             }
@@ -71,6 +73,7 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
 
     private fun createGradleRuns() {
         for (configName in runConfigs.keys) {
+            if (transformedRunConfig[configName].disabled) continue
             project.logger.info("[Unimined/Runs] Creating gradle task for $configName")
             transformedRunConfig[configName].createGradleTask(project.tasks, "unimined_runs")
         }

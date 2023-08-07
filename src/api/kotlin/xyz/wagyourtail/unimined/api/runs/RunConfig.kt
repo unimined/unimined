@@ -31,6 +31,7 @@ data class RunConfig(
     var workingDir: File,
     val env: MutableMap<String, String>,
     val runFirst: MutableList<Task> = mutableListOf(),
+    var disabled : Boolean = false,
 ) {
 
     fun copy(): RunConfig {
@@ -47,6 +48,7 @@ data class RunConfig(
             workingDir,
             env.toMutableMap(),
             runFirst.toMutableList(),
+            disabled
         )
     }
 
