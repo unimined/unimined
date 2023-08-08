@@ -78,9 +78,9 @@ class RefmapBuilderClassVisitor(
     val allowImplicitWildcards: Boolean = false
 ) : ClassVisitor(Constant.ASM_VERSION, delegate) {
 
-    internal val mapper = commonData.mapper
-    internal val resolver = commonData.resolver
-    internal val logger = commonData.logger
+    val mapper = commonData.mapper
+    val resolver = commonData.resolver
+    val logger = commonData.logger
 
     val classAnnotationVisitors: MutableList<Pair<ClassAnnotationPredicate, ClassAnnotationVisitor>> = mutableListOf(
         MixinAnnotationVisitor.Companion::shouldVisit to ::MixinAnnotationVisitor
@@ -101,7 +101,7 @@ class RefmapBuilderClassVisitor(
 
     val targetClasses = mutableSetOf<String>()
 
-    var remap = AtomicBoolean(true)
+    val remap = AtomicBoolean(true)
 
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
         if (descriptor != null) {

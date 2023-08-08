@@ -20,8 +20,7 @@ class HarderTargetMixinClassVisitor(
     delegate: ClassVisitor?,
     private val existingMappings: Map<String, String>,
     private val logger: Logger
-):
-        ClassVisitor(Constant.ASM_VERSION, delegate) {
+): ClassVisitor(Constant.ASM_VERSION, delegate) {
     private var _class: MxClass? = null
 
     // @Mixin

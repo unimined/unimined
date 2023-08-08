@@ -1,38 +1,22 @@
-package xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.annotations.clazz
+package xyz.wagyourtail.unimined.internal.mapping.mixin.hard.annotations.clazz
 
-import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.Type
-import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.RefmapBuilderClassVisitor
-import xyz.wagyourtail.unimined.util.orElseOptional
-import java.util.*
+import xyz.wagyourtail.unimined.internal.mapping.mixin.hard.HardTargetRemappingClassVisitor
 
-@Suppress("UNUSED_PARAMETER")
 class MixinAnnotationVisitor(
     descriptor: String,
     visible: Boolean,
     parent: AnnotationVisitor,
-    refmapBuilder: RefmapBuilderClassVisitor
+    hardTargetRemapper: HardTargetRemappingClassVisitor
 ) : AnnotationVisitor(Constant.ASM_VERSION, parent) {
 
-    companion object {
-
-        fun shouldVisit(descriptor: String, visible: Boolean, refmapBuilder: RefmapBuilderClassVisitor): Boolean {
-            return descriptor == Annotation.MIXIN
-        }
-
-    }
-
-    private val remap = refmapBuilder.remap
-    private val resolver = refmapBuilder.resolver
-    private val logger = refmapBuilder.logger
-    private val existingMappings = refmapBuilder.existingMappings
-    private val mapper = refmapBuilder.mapper
-    private val refmap = refmapBuilder.refmap
-    private val mixinName = refmapBuilder.mixinName
-    private val targetClasses = refmapBuilder.targetClasses
+    private val remap = hardTargetRemapper.remap
+    private val logger = hardTargetRemapper.logger
+    private val existingMappings = hardTargetRemapper.existingMappings
+    private val targetClasses = hardTargetRemapper.targetClasses
 
     private val classTargets = mutableListOf<String>()
     private val classValues = mutableListOf<String>()
@@ -74,25 +58,20 @@ class MixinAnnotationVisitor(
     override fun visitEnd() {
         super.visitEnd()
         if (remap.get()) {
-            logger.info("existing mappings: $existingMappings")
             for (target in classTargets.toSet()) {
-                val clz = resolver.resolveClass(target.replace('.', '/'))
-                    .orElseOptional {
-                        existingMappings[target]?.let {
-                            logger.info("remapping $it from existing refmap")
-                            classTargets.remove(target)
-                            classTargets.add(it)
-                            resolver.resolveClass(it)
-                        } ?: Optional.empty()
-                    }
-                clz.ifPresent {
-                    refmap.addProperty(target, mapper.mapName(it))
+                existingMappings[target]?.let {
+                    classTargets.remove(target)
+                    classTargets.add(it)
                 }
-                if (!clz.isPresent) {
-                    logger.warn("Failed to resolve class $target in mixin ${mixinName.replace('/', '.')}")
+            }
+            for (target in classValues.toSet()) {
+                existingMappings[target]?.let {
+                    classValues.remove(target)
+                    classValues.add(it)
                 }
             }
         }
         targetClasses.addAll((classValues + classTargets.map { it.replace('.', '/') }).toSet())
     }
+
 }

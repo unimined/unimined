@@ -53,12 +53,24 @@ open class JarModAgentMinecraftTransformer(
         this.transforms.addAll(transforms)
     }
 
+    override fun agentVersion(vers: String) {
+        project.unimined.wagYourMaven("releases")
+        project.unimined.wagYourMaven("snapshots")
+        jarModAgent.dependencies.add(
+            project.dependencies.create(
+                "xyz.wagyourtail.unimined:jarmod-agent:$vers:all"
+            ).also {
+                (it as ExternalDependency).isTransitive = false
+            }
+        )
+    }
+
     override fun apply() {
         if (jarModAgent.dependencies.isEmpty()) {
             project.unimined.wagYourMaven("snapshots")
             jarModAgent.dependencies.add(
                 project.dependencies.create(
-                    "xyz.wagyourtail.unimined:jarmod-agent:0.1.3-SNAPSHOT:all"
+                    "xyz.wagyourtail.unimined:jarmod-agent:0.1.4-SNAPSHOT:all"
                 ).also {
                     (it as ExternalDependency).isTransitive = false
                 }
