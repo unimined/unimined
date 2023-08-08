@@ -15,11 +15,18 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.QuiltMinecraftTr
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.MustSet
 import java.nio.file.FileSystem
 
 class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider): AbstractMinecraftTransformer(project, provider, "merged"), MergedPatcher {
 
     val patchers = mutableListOf<AbstractMinecraftTransformer>()
+
+    var customLibraryFilter: (Library) -> Boolean by FinalizeOnRead(MustSet())
+
+    override var libraryFilter: MergedPatcher.LibraryFilter by FinalizeOnRead(MergedPatcher.LibraryFilter.ALL)
 
     override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit
         get() = patchers.first().onMergeFail
@@ -124,6 +131,19 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
     override fun <T : MinecraftPatcher> customPatcher(mcPatcher: T, action: T.() -> Unit) {
         mcPatcher.action()
         patchers.add(mcPatcher as AbstractMinecraftTransformer)
+    }
+
+    override fun customLibraryFilter(filter: (String) -> Boolean) {
+        libraryFilter = MergedPatcher.LibraryFilter.CUSTOM
+        customLibraryFilter = { filter(it.name) }
+    }
+
+    override fun libraryFilter(library: Library): Boolean {
+        return when (libraryFilter) {
+            MergedPatcher.LibraryFilter.ANY -> patchers.any { it.libraryFilter(library) }
+            MergedPatcher.LibraryFilter.ALL -> patchers.all { it.libraryFilter(library) }
+            MergedPatcher.LibraryFilter.CUSTOM -> customLibraryFilter(library)
+        }
     }
 
 }
