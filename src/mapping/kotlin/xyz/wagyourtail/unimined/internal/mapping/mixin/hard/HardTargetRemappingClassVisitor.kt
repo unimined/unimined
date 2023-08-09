@@ -4,13 +4,12 @@ import net.fabricmc.tinyremapper.extension.mixin.common.Logger
 import net.fabricmc.tinyremapper.extension.mixin.common.data.CommonData
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import net.fabricmc.tinyremapper.extension.mixin.common.data.MxClass
-import net.fabricmc.tinyremapper.extension.mixin.hard.data.SoftInterface
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
+import xyz.wagyourtail.unimined.internal.mapping.mixin.hard.annotations.clazz.MixinAnnotationVisitor
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.Consumer
 
 typealias ClassAnnotationPredicate = (
     descriptor: String,
@@ -69,22 +68,22 @@ typealias FieldAnnotationVisitor = (
 ) -> AnnotationVisitor
 
 class HardTargetRemappingClassVisitor(
-    val tasks: MutableList<(CommonData) -> Unit>,
     delegate: ClassVisitor?,
+    val mixinName: String,
     val existingMappings: Map<String, String>,
     val logger: Logger,
     val onEnd: () -> Unit = {}
 ) : ClassVisitor(Constant.ASM_VERSION, delegate) {
 
     lateinit var mxClass: MxClass
-    val interfaces: MutableList<SoftInterface> = mutableListOf()
 
+    val tasks: MutableList<(CommonData) -> Unit> = mutableListOf()
     val targetClasses = mutableSetOf<String>()
     val remap = AtomicBoolean(true)
 
 
     val classAnnotationVisitors: MutableList<Pair<ClassAnnotationPredicate, ClassAnnotationVisitor>> = mutableListOf(
-
+        MixinAnnotationVisitor.Companion::shouldVisit to ::MixinAnnotationVisitor
     )
 
     val methodAnnotationVisitors: MutableList<Pair<MethodAnnotationPredicate, MethodAnnotationVisitor>> = mutableListOf(
@@ -98,6 +97,17 @@ class HardTargetRemappingClassVisitor(
     fun insertVisitor(visitor: (ClassVisitor) -> ClassVisitor) {
         val old = this.cv
         this.cv = visitor(old)
+    }
+
+    fun addRemapTask(task: CommonData.() -> Unit) {
+        tasks.add(task)
+    }
+
+    /**
+     * should only really be used by tasks that mutate {@link #targetClasses}
+     */
+    fun addRemapTaskFirst(task: CommonData.() -> Unit) {
+        tasks.add(0, task)
     }
 
     override fun visit(
@@ -168,6 +178,12 @@ class HardTargetRemappingClassVisitor(
     override fun visitEnd() {
         super.visitEnd()
         onEnd()
+    }
+
+    fun runRemap(data: CommonData) {
+        for (task in tasks) {
+            task(data)
+        }
     }
 
 }

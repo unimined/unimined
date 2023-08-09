@@ -17,8 +17,7 @@ import org.gradle.api.logging.LogLevel
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
-import xyz.wagyourtail.unimined.internal.mapping.mixin.hard.HarderTargetMixinClassVisitor
+import xyz.wagyourtail.unimined.internal.mapping.mixin.hard.HardTargetRemappingClassVisitor
 import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.RefmapBuilderClassVisitor
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.defaultedMapOf
@@ -210,7 +209,9 @@ class BetterMixinExtension(
                     }
                 }
                 logger.info("[HardTarget] Found mixin class: $className / $mrjVersion")
-                return HarderTargetMixinClassVisitor(tasks[mrjVersion]!!, next, combinedMappings, logger)
+                val visitor = HardTargetRemappingClassVisitor(next, className, combinedMappings, logger)
+                tasks[mrjVersion]!!.add(visitor::runRemap)
+                return visitor
             } else if (fallbackWhenNotInJson) {
                 return hardFallbackFunction(fallback, mrjVersion, className, next) as ClassVisitor?
             } else {
