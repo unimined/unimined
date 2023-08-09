@@ -7,13 +7,14 @@ import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.mapping.mixin.BetterMixinExtension
-import xyz.wagyourtail.unimined.internal.mapping.mixinextra.MixinExtra
+import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
+import xyz.wagyourtail.unimined.internal.mapping.extension.mixinextra.MixinExtra
 import xyz.wagyourtail.unimined.util.*
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -21,6 +22,8 @@ import javax.inject.Inject
 import kotlin.io.path.*
 
 abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
+
+    private var mixinRemapOptions: MixinRemapOptions.() -> Unit by FinalizeOnRead {}
 
     override fun devNamespace(namespace: String) {
         val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
@@ -35,6 +38,10 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     override fun prodNamespace(namespace: String) {
         val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
+    }
+
+    override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
+        mixinRemapOptions = action
     }
 
     override var allowImplicitWildcards by FinalizeOnRead(false)
@@ -123,24 +130,30 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         if (classpath != null) {
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
-        val betterMixinExtension = BetterMixinExtension(project.gradle.startParameter.logLevel, allowImplicitWildcards = allowImplicitWildcards)
-        if (mixinExtraRemapping.get()) {
-            betterMixinExtension.modifyRefmapBuilder {
-                MixinExtra.addMixinExtra(it)
-            }
-        }
+        val betterMixinExtension = MixinRemapExtension(
+            project.gradle.startParameter.logLevel,
+            allowImplicitWildcards
+        )
+        betterMixinExtension.enableBaseMixin()
+        mixinRemapOptions(betterMixinExtension)
         remapperB.extension(betterMixinExtension)
         provider.minecraftRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
-        remapper.readClassPathAsync(
-            *provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
+        project.logger.debug("[Unimined/RemapJar] classpath: ")
+        (provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
+            .filter { !provider.isMinecraftJar(it) }
+            .filter { it.exists() } + listOf(mc))
+            .joinToString { "\n[Unimined/RemapJar]  -  $it" }
+            .let { project.logger.debug(it) }
+        project.logger.debug("[Unimined/RemapJar] input: $from")
+        betterMixinExtension.readClassPath(remapper,
+            *(provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
                 .filter { !provider.isMinecraftJar(it) }
-                .filter { it.exists() }
+                .filter { it.exists() } + listOf(mc))
                 .toTypedArray()
-        )
-        remapper.readClassPathAsync(mc)
-        betterMixinExtension.preRead(from, "${project.rootProject.name}.refmap.json")
-        remapper.readInputsAsync(from)
+        ).thenCompose {
+            betterMixinExtension.readInput(remapper, null, from)
+        }
         target.parent.createDirectories()
         try {
             OutputConsumerPath.Builder(target).build().use {
@@ -153,7 +166,6 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                             if (toNs.named) "named" else toNs.name
                         ),
                         AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher)?.remapAtToLegacy == true)!!),
-                        betterMixinExtension.resourceRemapper()
                     )
                 )
                 remapper.apply(it)
@@ -165,7 +177,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         remapper.finish()
 
         target.openZipFileSystem(mapOf("mutable" to true)).use {
-            betterMixinExtension.write(it)
+            betterMixinExtension.insertExtra(null, it)
         }
     }
 
