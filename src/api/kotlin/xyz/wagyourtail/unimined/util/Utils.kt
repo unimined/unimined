@@ -223,7 +223,7 @@ fun Path.forEachFile(action: (Path) -> Unit) {
 
 fun ByteArray.toHex() = joinToString(separator = "") { byte -> "%02x".format(byte) }
 
-fun <T> Optional<T>.orElse(invoke: () -> Optional<T>): Optional<T> {
+fun <T> Optional<T>.orElseOptional(invoke: () -> Optional<T>): Optional<T> {
     return if (isPresent) {
         this
     } else {
@@ -245,6 +245,8 @@ fun String.withSourceSet(sourceSet: SourceSet) =
     if (sourceSet.name == "main") this else "${sourceSet.name}${this.capitalized()}"
 
 fun String.decapitalized(): String = if (this.isEmpty()) this else this[0].lowercase() + this.substring(1)
+
+fun String.capitalized(): String = if (this.isEmpty()) this else this[0].uppercase() + this.substring(1)
 
 @Suppress("UNCHECKED_CAST")
 fun <K, V> Map<K, V?>.nonNullValues(): Map<K, V> = filterValues { it != null } as Map<K, V>

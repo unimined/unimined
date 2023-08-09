@@ -7,14 +7,14 @@ import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.gradle.api.logging.LogLevel
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
-import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
+import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
 
 class StringClassNameRemapExtension(
     loggerLevel: LogLevel = LogLevel.WARN,
     val classFilter: (String) -> Boolean = { true }
 ) : TinyRemapper.Extension, TinyRemapper.ApplyVisitorProvider {
 
-    private val logger: Logger = Logger(BetterMixinExtension.translateLogLevel(loggerLevel))
+    private val logger: Logger = Logger(MixinRemapExtension.translateLogLevel(loggerLevel))
     override fun attach(builder: TinyRemapper.Builder) {
         builder.extraPreApplyVisitor(this)
     }

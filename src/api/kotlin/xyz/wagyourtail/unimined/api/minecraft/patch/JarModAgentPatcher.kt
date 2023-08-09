@@ -34,4 +34,5 @@ interface JarModAgentPatcher : JarModPatcher {
      */
     fun transforms(transforms: List<String>)
 
+    fun agentVersion(vers: String)
 }

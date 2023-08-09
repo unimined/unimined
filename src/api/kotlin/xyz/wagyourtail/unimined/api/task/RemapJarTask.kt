@@ -1,5 +1,9 @@
 package xyz.wagyourtail.unimined.api.task
 
+import groovy.lang.Closure
+import groovy.lang.DelegatesTo
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -9,6 +13,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
 /**
@@ -51,8 +56,21 @@ abstract class RemapJarTask : Jar() {
 
     abstract fun prodNamespace(namespace: String)
 
+    abstract fun mixinRemap(action: MixinRemapOptions.() -> Unit)
+
+    fun mixinRemap(
+        @DelegatesTo(value = MixinRemapOptions::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        mixinRemap {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     init {
-        remapATToLegacy.convention(null as Boolean?)
+        remapATToLegacy.convention(null as Boolean?).finalizeValueOnRead()
     }
 
 }
