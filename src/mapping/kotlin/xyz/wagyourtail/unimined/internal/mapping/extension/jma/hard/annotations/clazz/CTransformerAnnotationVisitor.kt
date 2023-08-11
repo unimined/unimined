@@ -1,15 +1,15 @@
-package xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.annotations.clazz
+package xyz.wagyourtail.unimined.internal.mapping.extension.jma.hard.annotations.clazz
 
-import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.Type
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgent
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.HardTargetRemappingClassVisitor
 import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.*
 
-class MixinAnnotationVisitor(
+class CTransformerAnnotationVisitor(
     descriptor: String,
     visible: Boolean,
     parent: AnnotationVisitor?,
@@ -20,12 +20,11 @@ class MixinAnnotationVisitor(
     companion object {
 
         fun shouldVisit(descriptor: String, visible: Boolean, hardTargetRemapper: HardTargetRemappingClassVisitor): Boolean {
-            return descriptor == Annotation.MIXIN
+            return descriptor == JarModAgent.Annotation.CTRANSFORMER
         }
 
     }
 
-    private val remap = hardTargetRemapper.remap
     private val logger = hardTargetRemapper.logger
     private val existingMappings = hardTargetRemapper.existingMappings
     private val targetClasses = hardTargetRemapper.targetClasses
@@ -37,14 +36,11 @@ class MixinAnnotationVisitor(
     override fun visit(name: String, value: Any) {
         super.visit(name, value)
         logger.info("Found annotation value $name: $value")
-        if (name == AnnotationElement.REMAP) {
-            remap.set(value as Boolean)
-        }
     }
 
     override fun visitArray(name: String?): AnnotationVisitor {
         return when (name) {
-            AnnotationElement.TARGETS -> {
+            JarModAgent.AnnotationElement.NAME -> {
                 return object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
                     override fun visit(name: String?, value: Any) {
                         classTargets.add(value as String)
@@ -72,18 +68,16 @@ class MixinAnnotationVisitor(
         super.visitEnd()
         targetClasses.addAll((classValues + classTargets.map { it.replace('.', '/') }).toSet())
         hardTargetRemapper.addRemapTaskFirst {
-            if (remap.get()) {
-                for (target in targetClasses) {
-                    val clz = resolver.resolveClass(target.replace('.', '/')).orElseOptional {
-                        existingMappings[target]?.let {
-                            targetClasses.remove(target)
-                            targetClasses.add(it)
-                            resolver.resolveClass(it)
-                        } ?: Optional.empty()
-                    }
-                    if (!clz.isPresent) {
-                        logger.warn("Failed to resolve class $target in mixin ${mixinName.replace('/', '.')}")
-                    }
+            for (target in targetClasses) {
+                val clz = resolver.resolveClass(target.replace('.', '/')).orElseOptional {
+                    existingMappings[target]?.let {
+                        targetClasses.remove(target)
+                        targetClasses.add(it)
+                        resolver.resolveClass(it)
+                    } ?: Optional.empty()
+                }
+                if (!clz.isPresent) {
+                    logger.warn("Failed to resolve class $target in mixin ${mixinName.replace('/', '.')}")
                 }
             }
         }

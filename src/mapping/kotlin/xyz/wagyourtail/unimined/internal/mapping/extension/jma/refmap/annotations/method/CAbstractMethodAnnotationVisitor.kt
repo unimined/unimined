@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.annotations.method
+package xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.annotations.method
 
 import net.fabricmc.tinyremapper.extension.mixin.common.ResolveUtility
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
@@ -10,7 +10,7 @@ import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
-abstract class AbstractMethodAnnotationVisitor(
+abstract class CAbstractMethodAnnotationVisitor(
     descriptor: String,
     visible: Boolean,
     parent: AnnotationVisitor,
@@ -73,12 +73,22 @@ abstract class AbstractMethodAnnotationVisitor(
                 for (targetDesc in targetDescs) {
                     var implicitWildcard = targetDesc == null && allowImplicitWildcards
                     for (targetClass in targetClasses) {
-                        val target = resolver.resolveMethod(
-                            targetClass,
-                            targetName,
-                            targetDesc,
-                            (if (wildcard || implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
-                        ).orElseOptional {
+                        val target = if (targetDesc != null && targetDesc.endsWith(")")) {
+                            resolver.resolveClass(targetClass).map {
+                                it.resolveMethods(targetName, targetDesc, true, null, null)
+                            }.flatMap {
+                                if (it.size > 1 && !(wildcard || implicitWildcard)) throw IllegalStateException("Found multiple methods for $targetMethod ($targetDesc) in $targetClass: $it")
+                                Optional.ofNullable(it.firstOrNull())
+                            }
+                        } else {
+                            resolver.resolveMethod(
+                                targetClass,
+                                targetName,
+                                targetDesc,
+                                (if (wildcard || implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
+                            )
+                        }
+                        .orElseOptional {
                             existingMappings[targetMethod]?.let { existing ->
                                 logger.info("Remapping using existing mapping for $targetMethod: $existing")
                                 if (wildcard) {

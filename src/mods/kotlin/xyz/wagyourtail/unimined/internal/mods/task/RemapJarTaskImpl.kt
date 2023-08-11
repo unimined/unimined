@@ -60,20 +60,20 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             prodNs
         )
 
-        // merge in manifest from input jar
-        inputFile.get().asFile.toPath().readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
-            // write to temp file
-            val inpTmp = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("input-manifest.MF")
-            inpTmp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
-                inp.copyTo(out)
-            }
-            this.manifest {
-                it.from(inpTmp)
-            }
-        }
         val inputFile = provider.mcPatcher.beforeRemapJarTask(this, inputFile.get().asFile.toPath())
 
         if (path.isEmpty()) {
+            // merge in manifest from input jar
+            inputFile.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
+                // write to temp file
+                val inpTmp = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("input-manifest.MF")
+                inpTmp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
+                    inp.copyTo(out)
+                }
+                this.manifest {
+                    it.from(inpTmp)
+                }
+            }
             // copy into output
             from(project.zipTree(inputFile))
             copy()
@@ -104,6 +104,19 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             prevNamespace = step
         }
         provider.mcPatcher.afterRemapJarTask(this, prevTarget)
+
+        // merge in manifest from prev target jar
+        prevTarget.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
+            // write to temp file
+            val inpTmp = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("input-manifest.MF")
+            inpTmp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
+                inp.copyTo(out)
+            }
+            this.manifest {
+                it.from(inpTmp)
+            }
+        }
+
         from(project.zipTree(prevTarget))
         copy()
     }

@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.annotations
+package xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.annotations
 
 import net.fabricmc.tinyremapper.extension.mixin.common.ResolveUtility
 import net.fabricmc.tinyremapper.extension.mixin.common.StringUtility
@@ -10,7 +10,7 @@ import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
-class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, private val refmapBuilder: RefmapBuilderClassVisitor) : AnnotationVisitor(Constant.ASM_VERSION, parent) {
+class CTargetAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, private val refmapBuilder: RefmapBuilderClassVisitor) : AnnotationVisitor(Constant.ASM_VERSION, parent) {
     private val remapAt by lazy { AtomicBoolean(remap.get()) }
     private var targetName: String? = null
 
@@ -23,17 +23,12 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
 
     override fun visit(name: String, value: Any) {
         super.visit(name, value)
-        if (name == AnnotationElement.REMAP) remapAt.set(value as Boolean)
         if (name == AnnotationElement.TARGET) targetName = (value as String).replace(" ", "")
     }
 
     override fun visitAnnotation(name: String, descriptor: String): AnnotationVisitor {
-        return if (name == AnnotationElement.DESC) {
-            return DescAnnotationVisitor(super.visitAnnotation(name, descriptor), remapAt, refmapBuilder)
-        } else {
-            logger.warn("Found annotation in target descriptor: $name $descriptor")
-            super.visitAnnotation(name, descriptor)
-        }
+        logger.warn("Found annotation in target descriptor: $name $descriptor")
+        return super.visitAnnotation(name, descriptor)
     }
 
     private val targetField = Regex("^(L[^;]+;|[^.]+?\\.)([^:]+):(.+)$")

@@ -11,6 +11,9 @@ import org.gradle.api.logging.LogLevel
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.ClassVisitor
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.hard.JMAHard
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.JMARefmap
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.JarModAgentMetaData
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.OfficialMixinMetaData
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.BaseMixinHard
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.HardTargetRemappingClassVisitor
@@ -77,7 +80,9 @@ class MixinRemapExtension(
     }
 
     override fun enableJarModAgent() {
-        TODO()
+        modifyMetadataReader(::JarModAgentMetaData)
+        modifyHardRemapper(JMAHard::hardRemapper)
+        modifyRefmapBuilder(JMARefmap::refmapBuilder)
     }
 
 
