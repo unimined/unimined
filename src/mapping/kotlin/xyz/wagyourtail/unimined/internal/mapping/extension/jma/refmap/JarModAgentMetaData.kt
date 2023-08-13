@@ -91,15 +91,24 @@ class JarModAgentMetaData(parent: MixinRemapExtension) : MixinRemapExtension.Mix
     }
 
     override fun writeExtra(fs: FileSystem) {
-        val manifest = Manifest(fs.getPath("META-INF/MANIFEST.MF").inputStream())
+        if (refmaps.isNotEmpty()) {
+            val manifest = Manifest(fs.getPath("META-INF/MANIFEST.MF").inputStream())
 
-        manifest.mainAttributes.putValue("JarModAgent-Refmaps", refmaps.keys.joinToString(" "))
-        fs.getPath("META-INF/MANIFEST.MF").outputStream(StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE).use {
-            manifest.write(it)
-        }
+            manifest.mainAttributes.putValue("JarModAgent-Refmaps", refmaps.keys.joinToString(" "))
 
-        for ((name, json) in refmaps) {
-            fs.getPath(name).writeText(GSON.toJson(json), Charsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+            fs.getPath("META-INF/MANIFEST.MF")
+                .outputStream(StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE).use {
+                manifest.write(it)
+            }
+
+            for ((name, json) in refmaps) {
+                fs.getPath(name).writeText(
+                    GSON.toJson(json),
+                    Charsets.UTF_8,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.CREATE
+                )
+            }
         }
     }
 

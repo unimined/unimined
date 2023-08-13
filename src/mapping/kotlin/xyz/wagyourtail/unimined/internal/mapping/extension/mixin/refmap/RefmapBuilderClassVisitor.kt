@@ -89,8 +89,14 @@ class RefmapBuilderClassVisitor(
     val methodAnnotationVisitors: MutableList<Pair<MethodAnnotationPredicate, MethodAnnotationVisitor>> = mutableListOf()
 
     val targetClasses = mutableSetOf<String>()
-
     val remap = AtomicBoolean(true)
+
+    val extraData: MutableMap<String, Any> = mutableMapOf()
+
+    fun insertVisitor(visitor: (ClassVisitor) -> ClassVisitor) {
+        val old = this.cv
+        this.cv = visitor(old)
+    }
 
     override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
         if (descriptor != null) {

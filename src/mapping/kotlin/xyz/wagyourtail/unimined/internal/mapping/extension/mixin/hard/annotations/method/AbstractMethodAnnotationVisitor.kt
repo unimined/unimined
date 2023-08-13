@@ -18,7 +18,7 @@ abstract class AbstractMethodAnnotationVisitor(
     protected val hardTargetRemapper: HardTargetRemappingClassVisitor
 ) : AnnotationVisitor(Constant.ASM_VERSION, parent) {
 
-    protected val remap = AtomicBoolean(hardTargetRemapper.remap.get())
+    protected open val remap = AtomicBoolean(hardTargetRemapper.remap.get())
     protected val logger = hardTargetRemapper.logger
     protected val existingMappings = hardTargetRemapper.existingMappings
     protected val targetClasses = hardTargetRemapper.targetClasses

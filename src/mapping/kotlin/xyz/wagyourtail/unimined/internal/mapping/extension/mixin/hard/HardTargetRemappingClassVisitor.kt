@@ -79,6 +79,7 @@ class HardTargetRemappingClassVisitor(
     val tasks: MutableList<(CommonData) -> Unit> = mutableListOf()
     val targetClasses = mutableSetOf<String>()
     val remap = AtomicBoolean(true)
+    val extraData: MutableMap<String, Any> = mutableMapOf()
 
 
     val classAnnotationVisitors: MutableList<Pair<ClassAnnotationPredicate, ClassAnnotationVisitor>> = mutableListOf()

@@ -5,8 +5,10 @@ import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgent
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.dontRemap
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.HardTargetRemappingClassVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.annotations.method.AbstractMethodAnnotationVisitor
+import java.util.concurrent.atomic.AtomicBoolean
 
 class COverrideAnnotationVisitor(
     descriptor: String,
@@ -48,6 +50,7 @@ class COverrideAnnotationVisitor(
     }
 
     val names: MutableList<String> = mutableListOf()
+    override val remap = AtomicBoolean(!hardTargetRemapper.dontRemap(descriptor))
 
     override fun visitArray(name: String): AnnotationVisitor {
         val delegate = super.visitArray(name)

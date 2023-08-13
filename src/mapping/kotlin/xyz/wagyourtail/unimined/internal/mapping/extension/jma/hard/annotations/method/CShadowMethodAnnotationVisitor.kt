@@ -4,8 +4,10 @@ import net.fabricmc.tinyremapper.extension.mixin.common.ResolveUtility
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgent
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.dontRemap
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.HardTargetRemappingClassVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.annotations.method.AbstractMethodAnnotationVisitor
+import java.util.concurrent.atomic.AtomicBoolean
 
 class CShadowMethodAnnotationVisitor(
     descriptor: String,
@@ -47,6 +49,7 @@ class CShadowMethodAnnotationVisitor(
     }
 
     var name: String? = null
+    override val remap = AtomicBoolean(!hardTargetRemapper.dontRemap(descriptor))
 
     override fun visit(name: String?, value: Any?) {
         if (name == AnnotationElement.VALUE) {

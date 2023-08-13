@@ -5,12 +5,13 @@ import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.Type
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgent
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.dontRemap
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.HardTargetRemappingClassVisitor
 import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.*
 
 class CTransformerAnnotationVisitor(
-    descriptor: String,
+    val descriptor: String,
     visible: Boolean,
     parent: AnnotationVisitor?,
     private val hardTargetRemapper: HardTargetRemappingClassVisitor
@@ -25,6 +26,7 @@ class CTransformerAnnotationVisitor(
 
     }
 
+    private val remap = !hardTargetRemapper.dontRemap(descriptor)
     private val logger = hardTargetRemapper.logger
     private val existingMappings = hardTargetRemapper.existingMappings
     private val targetClasses = hardTargetRemapper.targetClasses
@@ -68,16 +70,18 @@ class CTransformerAnnotationVisitor(
         super.visitEnd()
         targetClasses.addAll((classValues + classTargets.map { it.replace('.', '/') }).toSet())
         hardTargetRemapper.addRemapTaskFirst {
-            for (target in targetClasses) {
-                val clz = resolver.resolveClass(target.replace('.', '/')).orElseOptional {
-                    existingMappings[target]?.let {
-                        targetClasses.remove(target)
-                        targetClasses.add(it)
-                        resolver.resolveClass(it)
-                    } ?: Optional.empty()
-                }
-                if (!clz.isPresent) {
-                    logger.warn("Failed to resolve class $target in mixin ${mixinName.replace('/', '.')}")
+            if (remap) {
+                for (target in targetClasses) {
+                    val clz = resolver.resolveClass(target.replace('.', '/')).orElseOptional {
+                        existingMappings[target]?.let {
+                            targetClasses.remove(target)
+                            targetClasses.add(it)
+                            resolver.resolveClass(it)
+                        } ?: Optional.empty()
+                    }
+                    if (!clz.isPresent) {
+                        logger.warn("Failed to resolve class $target in mixin ${mixinName.replace('/', '.')}")
+                    }
                 }
             }
         }

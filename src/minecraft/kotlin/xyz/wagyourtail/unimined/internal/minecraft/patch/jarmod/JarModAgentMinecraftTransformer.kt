@@ -32,6 +32,14 @@ open class JarModAgentMinecraftTransformer(
         private const val JMA_DEBUG = "jma.debug"
     }
 
+    init {
+        provider.mods.modImplementation {
+            mixinRemap {
+                enableJarModAgent()
+            }
+        }
+    }
+
     @Deprecated("may violate mojang's EULA... use at your own risk. this is not recommended and is only here for legacy reasons and testing.")
     override var compiletimeTransforms: Boolean = false
 
@@ -104,6 +112,9 @@ open class JarModAgentMinecraftTransformer(
     }
 
     override fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path {
+        remapJarTask.mixinRemap {
+            enableJarModAgent()
+        }
         @Suppress("DEPRECATION")
         return if (compiletimeTransforms && transforms.isNotEmpty()) {
             project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${remapJarTask.name}...")

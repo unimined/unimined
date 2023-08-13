@@ -5,13 +5,15 @@ import net.fabricmc.tinyremapper.extension.mixin.common.StringUtility
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgent
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.dontRemap
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.RefmapBuilderClassVisitor
 import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 class CTargetAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, private val refmapBuilder: RefmapBuilderClassVisitor) : AnnotationVisitor(Constant.ASM_VERSION, parent) {
-    private val remapAt by lazy { AtomicBoolean(remap.get()) }
+    private val remapAt = !refmapBuilder.dontRemap(JarModAgent.Annotation.CTARGET)
     private var targetName: String? = null
 
     private val resolver = refmapBuilder.resolver
@@ -47,7 +49,7 @@ class CTargetAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean,
 
     override fun visitEnd() {
         super.visitEnd()
-        if (remapAt.get() && targetName != null) {
+        if (remapAt && targetName != null) {
             val matchFd = targetField.matchEntire(targetName!!)
             if (matchFd != null) {
                 var (targetOwner, targetName, targetDesc) = matchToParts(matchFd)
@@ -87,7 +89,7 @@ class CTargetAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean,
                 }
                 if (!target.isPresent || !targetClass.isPresent) {
                     logger.warn(
-                        "Failed to resolve At target $targetName in mixin ${
+                        "Failed to resolve At target L$targetOwner;$targetName:$targetDesc in mixin ${
                             mixinName.replace(
                                 '/',
                                 '.'
@@ -136,7 +138,7 @@ class CTargetAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean,
                 }
                 if (!target.isPresent || !targetClass.isPresent) {
                     logger.warn(
-                        "Failed to resolve At target $targetName in mixin ${
+                        "Failed to resolve At target L$targetOwner;$targetName$targetDesc in mixin ${
                             mixinName.replace(
                                 '/',
                                 '.'

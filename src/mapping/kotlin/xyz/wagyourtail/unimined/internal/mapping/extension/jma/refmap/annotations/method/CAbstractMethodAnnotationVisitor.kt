@@ -4,6 +4,7 @@ import net.fabricmc.tinyremapper.extension.mixin.common.ResolveUtility
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.dontRemap
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.RefmapBuilderClassVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.splitMethodNameAndDescriptor
 import xyz.wagyourtail.unimined.util.orElseOptional
@@ -24,7 +25,7 @@ abstract class CAbstractMethodAnnotationVisitor(
 
     abstract val annotationName: String
 
-    protected val remap = AtomicBoolean(refmapBuilder.remap.get())
+    protected val remap = AtomicBoolean(!refmapBuilder.dontRemap(descriptor))
     protected var targetNames = mutableListOf<String>()
 
     protected val resolver = refmapBuilder.resolver

@@ -55,6 +55,10 @@ unimined.minecraft() {
     }
 
     defaultRemapJar = false
+
+    runs.config("client") {
+        mainClass =
+    }
 }
 
 unimined.minecraft(sourceSets.forge) {

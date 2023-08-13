@@ -6,6 +6,7 @@ import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.Type
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgent
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.dontRemap
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.RefmapBuilderClassVisitor
 import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.*
@@ -26,7 +27,7 @@ class CTransformerAnnotationVisitor(
 
     }
 
-    private val remap = refmapBuilder.remap
+    private val remap = !refmapBuilder.dontRemap(descriptor)
     private val resolver = refmapBuilder.resolver
     private val logger = refmapBuilder.logger
     private val existingMappings = refmapBuilder.existingMappings
@@ -71,7 +72,7 @@ class CTransformerAnnotationVisitor(
 
     override fun visitEnd() {
         super.visitEnd()
-        if (remap.get()) {
+        if (remap) {
             logger.info("existing mappings: $existingMappings")
             for (target in classTargets.toSet()) {
                 val clz = resolver.resolveClass(target.replace('.', '/'))

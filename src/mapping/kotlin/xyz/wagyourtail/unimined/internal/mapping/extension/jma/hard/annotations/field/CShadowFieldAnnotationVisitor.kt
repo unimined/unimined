@@ -5,6 +5,7 @@ import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.FieldVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgent
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.dontRemap
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.HardTargetRemappingClassVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.annotations.method.AbstractMethodAnnotationVisitor
 import java.util.concurrent.atomic.AtomicBoolean
@@ -24,7 +25,7 @@ class CShadowFieldAnnotationVisitor(
     parent
 ) {
 
-    protected val remap = AtomicBoolean(hardTargetRemapper.remap.get())
+    protected val remap = !hardTargetRemapper.dontRemap(descriptor)
     protected val logger = hardTargetRemapper.logger
     protected val existingMappings = hardTargetRemapper.existingMappings
     protected val targetClasses = hardTargetRemapper.targetClasses
@@ -57,8 +58,9 @@ class CShadowFieldAnnotationVisitor(
     }
 
     override fun visitEnd() {
+        super.visitEnd()
         hardTargetRemapper.addRemapTask {
-            if (remap.get() && name == null) {
+            if (remap && name == null) {
                 for (target in targetClasses) {
                     val resolved = resolver.resolveField(target, fieldName, fieldDescriptor, ResolveUtility.FLAG_UNIQUE or ResolveUtility.FLAG_RECURSIVE)
                     resolved.ifPresent {
@@ -72,7 +74,6 @@ class CShadowFieldAnnotationVisitor(
                 logger.warn("Could not find target field for @Shadow $fieldName:$fieldDescriptor in $mixinName")
             }
         }
-        super.visitEnd()
     }
 
 }
