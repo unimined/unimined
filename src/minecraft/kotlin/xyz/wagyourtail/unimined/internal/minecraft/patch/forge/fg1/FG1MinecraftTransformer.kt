@@ -203,10 +203,6 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         val out = fixForge(baseMinecraft)
         return out.path.openZipFileSystem().use { fs ->
             val ats = listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) }
-            // make sure remap at's to modern
-            for (at in ats) {
-                AccessTransformerMinecraftTransformer.toModern(at)
-            }
             // apply at's
             parent.applyATs(
                 out,
@@ -227,9 +223,8 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             }
 
             Files.copy(baseMinecraft.path, target.path, StandardCopyOption.REPLACE_EXISTING)
-            val mc = URI.create("jar:${target.path.toUri()}")
             try {
-                FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
+                target.path.openZipFileSystem().use { out ->
                     val dynPath = out.getPath("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
 
                     val dyn = if (dynPath.exists()) dynPath.inputStream().use { it ->
@@ -249,6 +244,10 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                                 deleteRecursively()
                             }
                         }
+                    }
+                    val ats = listOf(out.getPath("forge_at.cfg"), out.getPath("fml_at.cfg")).filter { Files.exists(it) }
+                    for (at in ats) {
+                        AccessTransformerMinecraftTransformer.toModern(at)
                     }
                 }
             } catch (e: Throwable) {
