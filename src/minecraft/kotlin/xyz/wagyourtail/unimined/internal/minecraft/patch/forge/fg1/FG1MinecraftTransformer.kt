@@ -224,7 +224,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
             Files.copy(baseMinecraft.path, target.path, StandardCopyOption.REPLACE_EXISTING)
             try {
-                target.path.openZipFileSystem().use { out ->
+                target.path.openZipFileSystem(mapOf("mutable" to true)).use { out ->
                     val dynPath = out.getPath("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
 
                     val dyn = if (dynPath.exists()) dynPath.inputStream().use { it ->
