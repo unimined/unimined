@@ -34,7 +34,7 @@ object AccessTransformerMinecraftTransformer {
         ) {
             val output = destinationDirectory.resolve(relativePath)
             output.parent.createDirectories()
-            BufferedReader(input.reader()).use { reader ->
+            input.bufferedReader().use { reader ->
                 TransformFromLegacyTransformer(reader).use { fromLegacy ->
                     RemapModernTransformer(fromLegacy.buffered(), remapper, logger).use { remapped ->
                         Files.newBufferedWriter(
@@ -55,6 +55,16 @@ object AccessTransformerMinecraftTransformer {
                 }
             }
         }
+    }
+
+    fun toModern(path: Path) {
+        val writer = StringWriter()
+        path.bufferedReader().use {
+            AccessTransformerMinecraftTransformer.TransformFromLegacyTransformer(it).use { fromLegacy ->
+                fromLegacy.copyTo(writer)
+            }
+        }
+        path.writeText(writer.toString(), StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING)
     }
 
     private val legacyMethod = Regex(
