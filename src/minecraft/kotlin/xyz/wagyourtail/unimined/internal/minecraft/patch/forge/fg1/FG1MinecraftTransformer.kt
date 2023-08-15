@@ -212,7 +212,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.OFFICIAL) {
+        if (!baseMinecraft.patches.contains("fixForge")) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",
