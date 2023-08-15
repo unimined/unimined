@@ -9,6 +9,7 @@ import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
@@ -201,9 +202,16 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         val out = fixForge(baseMinecraft)
         return out.path.openZipFileSystem().use { fs ->
+            val ats = listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) }
+            // make sure remap at's to modern
+            for (at in ats) {
+                AccessTransformerMinecraftTransformer.toModern(at)
+            }
+            // apply at's
             parent.applyATs(
                 out,
-                listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
+                ats
+            )
         }
     }
 
