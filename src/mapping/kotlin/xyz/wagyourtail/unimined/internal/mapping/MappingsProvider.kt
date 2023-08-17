@@ -219,10 +219,10 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
     }
 
-    override fun retroMCP(key: String, action: MappingDepConfig.() -> Unit) {
+    override fun retroMCP(version: String, key: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.mcphackersIvy()
-        mapping("io.github.mcphackers:mcp:${minecraft.version}@zip", key) {
-            if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.3") < 0) {
+        mapping("io.github.mcphackers:mcp:${version}@zip", key) {
+            if (minecraft.minecraftData.mcVersionCompare(version, "1.3") < 0) {
                 if (side == EnvType.COMBINED) throw IllegalStateException("Cannot use retroMCP with side COMBINED")
                 mapNamespace(side.classifier!!, "official")
             }

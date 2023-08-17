@@ -195,15 +195,16 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-    abstract fun retroMCP(key: String = "mcp", action: MappingDepConfig.() -> Unit = {})
+    abstract fun retroMCP(version: String = minecraft.version, key: String = "mcp", action: MappingDepConfig.() -> Unit = {})
 
     @JvmOverloads
     fun retroMCP(
+        version: String = minecraft.version,
         key: String = "mcp",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        retroMCP(key) {
+        retroMCP(version, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
