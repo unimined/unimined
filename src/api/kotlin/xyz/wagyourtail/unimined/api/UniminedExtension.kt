@@ -9,6 +9,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikeApiExtension
+import xyz.wagyourtail.unimined.util.DefaultMap
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
@@ -138,4 +139,5 @@ abstract class UniminedExtension(val project: Project) {
 
     abstract fun neoForgedMaven()
     abstract fun sonatypeStaging()
+    abstract val minecrafts: DefaultMap<SourceSet, MinecraftConfig>
 }

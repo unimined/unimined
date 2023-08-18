@@ -22,7 +22,7 @@ import java.nio.file.Path
 
 open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) {
 
-    val minecrafts = defaultedMapOf<SourceSet, MinecraftProvider> {
+    override val minecrafts = defaultedMapOf<SourceSet, MinecraftProvider> {
         MinecraftProvider(project, it)
     }
 

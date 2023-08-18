@@ -2,9 +2,11 @@
 
 package xyz.wagyourtail.unimined.util
 
+import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
 import java.io.File
 import java.io.IOException
@@ -21,6 +23,9 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
+
+val Project.sourceSets
+    get() = extensions.findByType(SourceSetContainer::class.java)!!
 
 fun <U : Any> KClass<U>.getField(name: String): KProperty1<U, *>? {
     return declaredMemberProperties.firstOrNull { it.name == name }?.apply {

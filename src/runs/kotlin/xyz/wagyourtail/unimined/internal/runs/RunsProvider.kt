@@ -4,7 +4,9 @@ import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.runs.RunsConfig
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.util.defaultedMapOf
+import xyz.wagyourtail.unimined.util.sourceSets
 import xyz.wagyourtail.unimined.util.withSourceSet
 
 class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsConfig() {
@@ -54,13 +56,25 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
                 genIntellijRunsTask()
                 createGradleRuns()
             }
+        } else {
+            project.afterEvaluate {
+                if (project.tasks.findByName("genIntellijRuns") == null) {
+
+                }
+            }
         }
     }
 
     private fun genIntellijRunsTask() {
         val genIntellijRuns = project.tasks.register("genIntellijRuns".withSourceSet(minecraft.sourceSet)) {
-            it.group = "unimined_internal"
+            if (minecraft.sourceSet == project.sourceSets.getByName("main")) {
+                it.group = "unimined_runs"
+                it.dependsOn(*project.unimined.minecrafts.keys.map { "genIntellijRuns".withSourceSet(minecraft.sourceSet) }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
+            } else {
+                it.group = "unimined_internal"
+            }
             it.doLast {
+
                 for (configName in runConfigs.keys) {
                     if (transformedRunConfig[configName].disabled) continue
                     project.logger.info("[Unimined/Runs] Creating idea run config for $configName")
@@ -68,7 +82,9 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
                 }
             }
         }
-        project.tasks.named("idea").configure { it.finalizedBy(genIntellijRuns) }
+        project.afterEvaluate {
+            project.tasks.named("idea").configure { it.finalizedBy(genIntellijRuns) }
+        }
     }
 
     private fun createGradleRuns() {
