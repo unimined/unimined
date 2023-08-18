@@ -22,21 +22,21 @@ import java.nio.file.Path
 
 open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) {
 
-    override val minecrafts = defaultedMapOf<SourceSet, MinecraftProvider> {
+    override val minecrafts = defaultedMapOf<SourceSet, MinecraftConfig> {
         MinecraftProvider(project, it)
     }
 
     override fun minecraft(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
-        if (minecrafts.containsKey(sourceSet) && minecrafts[sourceSet].applied) {
+        if (minecrafts.containsKey(sourceSet) && (minecrafts[sourceSet] as MinecraftProvider).applied) {
             throw IllegalStateException("minecraft config for ${sourceSet.name} already applied, cannot configure further!")
         } else if (!minecrafts.containsKey(sourceSet)) {
             project.logger.info("[Unimined] registering minecraft config for ${sourceSet.name}")
         }
         minecrafts[sourceSet].action()
-        if (!lateApply) minecrafts[sourceSet].apply()
+        if (!lateApply) (minecrafts[sourceSet] as MinecraftProvider).apply()
     }
 
-    private fun getMinecraftDepNames(): Set<String> = minecrafts.values.map { it.minecraftDepName }.toSet()
+    private fun getMinecraftDepNames(): Set<String> = minecrafts.values.map { (it as MinecraftProvider).minecraftDepName }.toSet()
 
     private fun depNameToSourceSet(depName: String): SourceSet {
         val sourceSetName = depName.substringAfter("+", "main")
@@ -294,7 +294,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     private fun afterEvaluate() {
         for ((sourceSet, mc) in minecrafts) {
-            mc.afterEvaluate()
+            (mc as MinecraftProvider).afterEvaluate()
             val mcFiles = sourceSet.runtimeClasspath.files.mapNotNull { getSourceSetFromMinecraft(it.toPath()) }
             if (mcFiles.size > 1) {
                 throw IllegalStateException("multiple minecraft jars in runtime classpath of $sourceSet, from $mcFiles")

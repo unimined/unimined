@@ -59,9 +59,20 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
         } else {
             project.afterEvaluate {
                 if (project.tasks.findByName("genIntellijRuns") == null) {
-
+                    project.tasks.register("genIntellijRuns") {
+                        it.group = "unimined_runs"
+                        it.dependsOn(*project.unimined.minecrafts.keys.map { "genIntellijRuns".withSourceSet(minecraft.sourceSet) }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
+                    }
                 }
             }
+        }
+    }
+
+    private fun doGenIntellijRuns() {
+        for (configName in runConfigs.keys) {
+            if (transformedRunConfig[configName].disabled) continue
+            project.logger.info("[Unimined/Runs] Creating idea run config for $configName")
+            transformedRunConfig[configName].createIdeaRunConfig()
         }
     }
 
@@ -74,16 +85,13 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
                 it.group = "unimined_internal"
             }
             it.doLast {
-
-                for (configName in runConfigs.keys) {
-                    if (transformedRunConfig[configName].disabled) continue
-                    project.logger.info("[Unimined/Runs] Creating idea run config for $configName")
-                    transformedRunConfig[configName].createIdeaRunConfig()
-                }
+                doGenIntellijRuns()
             }
         }
         project.afterEvaluate {
-            project.tasks.named("idea").configure { it.finalizedBy(genIntellijRuns) }
+            if (java.lang.Boolean.getBoolean("idea.sync.active")) {
+                doGenIntellijRuns()
+            }
         }
     }
 

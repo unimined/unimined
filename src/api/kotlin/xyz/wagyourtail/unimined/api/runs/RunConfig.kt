@@ -64,7 +64,7 @@ data class RunConfig(
         }
 
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
-            .addStringOption("name", "${project.path}+${taskName} $description")
+            .addStringOption("name", "${project.path}+${launchClasspath.name} $description")
             .addStringOption("type", "Application")
             .addStringOption("factoryName", "Application")
             .append(

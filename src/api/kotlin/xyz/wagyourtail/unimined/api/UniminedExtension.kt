@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikeApiExtension
 import xyz.wagyourtail.unimined.util.DefaultMap
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.sourceSets
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 
@@ -47,8 +48,11 @@ abstract class UniminedExtension(val project: Project) {
     var fabricApi = project.extensions.create("fabricApi", FabricLikeApiExtension::class.java)
 
     private val sourceSets by lazy {
-        project.extensions.getByType(SourceSetContainer::class.java)
+        project.sourceSets
     }
+
+    @get:ApiStatus.Internal
+    abstract val minecrafts: DefaultMap<SourceSet, MinecraftConfig>
 
     /**
      * @since 1.0.0
@@ -139,5 +143,4 @@ abstract class UniminedExtension(val project: Project) {
 
     abstract fun neoForgedMaven()
     abstract fun sonatypeStaging()
-    abstract val minecrafts: DefaultMap<SourceSet, MinecraftConfig>
 }
