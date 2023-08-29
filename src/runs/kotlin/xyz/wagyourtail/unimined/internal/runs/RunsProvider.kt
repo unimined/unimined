@@ -59,9 +59,15 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
         } else {
             project.afterEvaluate {
                 if (project.tasks.findByName("genIntellijRuns") == null) {
-                    project.tasks.register("genIntellijRuns") {
-                        it.group = "unimined_runs"
-                        it.dependsOn(*project.unimined.minecrafts.keys.map { "genIntellijRuns".withSourceSet(minecraft.sourceSet) }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
+                    project.tasks.register("genIntellijRuns") { task ->
+                        task.group = "unimined_runs"
+                        if (minecraft.sourceSet != project.sourceSets.getByName("main")) {
+                            task.dependsOn(*project.unimined.minecrafts.keys.map {
+                                "genIntellijRuns".withSourceSet(
+                                    minecraft.sourceSet
+                                )
+                            }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
+                        }
                     }
                 }
             }
