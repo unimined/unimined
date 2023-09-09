@@ -6,18 +6,17 @@ import net.fabricmc.tinyremapper.api.TrClass
 import net.fabricmc.tinyremapper.api.TrEnvironment
 import org.objectweb.asm.ClassVisitor
 import xyz.wagyourtail.unimined.util.defaultedMapOf
-import java.io.InputStream
 import java.nio.file.FileSystem
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.util.concurrent.CompletableFuture
-import kotlin.io.path.outputStream
 
 abstract class PerInputTagExtension<T : PerInputTagExtension.InputTagExtension> : TinyRemapper.Extension {
     object SKIP
 
     private val inputTagExtensions: MutableMap<Any?, InputTagExtension> = defaultedMapOf {
-        if (it == SKIP) object : InputTagExtension {}
+        if (it == SKIP) object : InputTagExtension {
+            override val inputTag: InputTag? = null
+        }
         else register(it as InputTag?)
     }
 
@@ -76,8 +75,10 @@ abstract class PerInputTagExtension<T : PerInputTagExtension.InputTagExtension> 
 
     interface InputTagExtension {
 
+        val inputTag: InputTag?
+
         fun readInput(remapper: TinyRemapper, vararg input: Path): CompletableFuture<*> {
-            return remapper.readInputsAsync(*input)
+            return remapper.readInputsAsync(inputTag, *input)
         }
 
         fun analyzeVisitor(mrjVersion: Int, className: String, next: ClassVisitor): ClassVisitor { return next; }

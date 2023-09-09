@@ -86,15 +86,15 @@ class MixinRemapExtension(
     }
 
 
-    fun resetMetadataReader() {
+    override fun resetMetadataReader() {
         metadataReader = mutableListOf()
     }
 
-    fun resetHardRemapper() {
+    override fun resetHardRemapper() {
         modifyHardRemapper = {}
     }
 
-    fun resetRefmapBuilder() {
+    override fun resetRefmapBuilder() {
         modifyRefmapBuilder = {}
     }
 
@@ -105,7 +105,7 @@ class MixinRemapExtension(
     }
 
 
-    class MixinTarget(tag: InputTag?, val extension: MixinRemapExtension) : InputTagExtension {
+    open class MixinTarget(override val inputTag: InputTag?, val extension: MixinRemapExtension) : InputTagExtension {
         protected val metadata: MergedMetadata = MergedMetadata(extension)
         protected val tasks: MutableMap<Int, MutableList<(CommonData) -> Unit>> = defaultedMapOf { mutableListOf() }
 
@@ -182,12 +182,12 @@ class MixinRemapExtension(
                         onEnd = {
                             if (target.size() > 0) {
                                 extension.logger.info("[RefmapBuilder] adding ${target.size()} mappings for ${cls.name}")
-                                val refmap = metadata.getRefmapFor(dot(cls.name))
-                                if (!refmap.has("mappings")) {
-                                    refmap.add("mappings", JsonObject())
+                                val refmapJson = metadata.getRefmapFor(dot(cls.name))
+                                if (!refmapJson.has("mappings")) {
+                                    refmapJson.add("mappings", JsonObject())
                                 }
-                                val mappings = refmap.get("mappings").asJsonObject
-                                mappings.add(cls.name, target)
+                                val refmapMappings = refmapJson.get("mappings").asJsonObject
+                                refmapMappings.add(cls.name, target)
                             }
                         },
                         allowImplicitWildcards = extension.allowImplicitWildcards

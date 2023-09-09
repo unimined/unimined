@@ -275,7 +275,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             val file = data.first
             val target = data.second.first
             val needsRemap = !data.second.second
-            project.logger.info("[Unimined/ModRemapper] remap ${needsRemap}; ${file} -> ${target}")
+            project.logger.info("[Unimined/ModRemapper] remap ${needsRemap}; $file -> $target")
             if (file.isDirectory) {
                 throw InvalidUserDataException("Cannot remap directory ${file.absolutePath}")
             } else {
