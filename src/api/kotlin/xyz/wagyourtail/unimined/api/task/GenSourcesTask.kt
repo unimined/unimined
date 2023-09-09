@@ -19,7 +19,7 @@ abstract class GenSourcesTask : ConventionTask() {
     val args: MutableList<String> = mutableListOf(
         "-dcl=1",
         "-jrt=1",
-        "-e={configurations.minecraftLibraries}",
+        "-e={configurations.<sourceSet>minecraftLibraries}",
         "{inputJar}",
         "{outputJar}"
     )

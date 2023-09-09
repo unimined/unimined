@@ -55,7 +55,7 @@ data class RunConfig(
     fun createIdeaRunConfig() {
         val file = project.rootDir.resolve(".idea")
             .resolve("runConfigurations")
-            .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+$taskName.xml")
+            .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+${taskName.withSourceSet(launchClasspath)}.xml")
 
 
         val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
@@ -64,7 +64,7 @@ data class RunConfig(
         }
 
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
-            .addStringOption("name", "${project.path}+${taskName} $description")
+            .addStringOption("name", "${project.path}+${launchClasspath.name} $description")
             .addStringOption("type", "Application")
             .addStringOption("factoryName", "Application")
             .append(

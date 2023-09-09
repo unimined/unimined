@@ -5,6 +5,7 @@ import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.task.GenSourcesTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
+import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
@@ -48,7 +49,10 @@ abstract class GenSourcesTaskImpl @Inject constructor(@get:Internal val provider
         return args.map { arg ->
             placeholderPattern.replace(arg) {
                 if (it.groupValues[1].startsWith("configurations.")) {
-                    val configName = it.groupValues[1].substringAfter("configurations.")
+                    var configName = it.groupValues[1].substringAfter("configurations.")
+                    if (configName.startsWith("<sourceSet>")) {
+                        configName = configName.substringAfter("<sourceSet>").withSourceSet(provider.sourceSet)
+                    }
                     val config = project.configurations.getByName(configName)
                     val resolved = config.resolve()
                     resolved.joinToString(separator = File.pathSeparator) { it.absolutePath }

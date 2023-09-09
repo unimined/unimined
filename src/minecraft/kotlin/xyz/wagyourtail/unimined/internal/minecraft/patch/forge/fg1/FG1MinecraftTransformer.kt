@@ -216,7 +216,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.OFFICIAL) {
+        if (!baseMinecraft.patches.contains("fixForge")) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",
@@ -227,9 +227,8 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             }
 
             Files.copy(baseMinecraft.path, target.path, StandardCopyOption.REPLACE_EXISTING)
-            val mc = URI.create("jar:${target.path.toUri()}")
             try {
-                FileSystems.newFileSystem(mc, mapOf("mutable" to true), null).use { out ->
+                target.path.openZipFileSystem(mapOf("mutable" to true)).use { out ->
                     val dynPath = out.getPath("cpw/mods/fml/relauncher/CoreFMLLibraries.class")
 
                     val dyn = if (dynPath.exists()) dynPath.inputStream().use { it ->
@@ -249,6 +248,10 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                                 deleteRecursively()
                             }
                         }
+                    }
+                    val ats = listOf(out.getPath("forge_at.cfg"), out.getPath("fml_at.cfg")).filter { Files.exists(it) }
+                    for (at in ats) {
+                        AccessTransformerMinecraftTransformer.toModern(at)
                     }
                 }
             } catch (e: Throwable) {
