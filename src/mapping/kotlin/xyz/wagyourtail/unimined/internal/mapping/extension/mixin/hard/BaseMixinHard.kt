@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard
 
-import ShadowFieldAnnotationVisitor
+import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.annotations.field.ShadowFieldAnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.annotations.clazz.ImplementsAnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.annotations.clazz.MixinAnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.annotations.method.OverwriteAnnotationVisitor

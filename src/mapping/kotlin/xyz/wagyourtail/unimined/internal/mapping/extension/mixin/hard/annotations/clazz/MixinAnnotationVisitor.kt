@@ -78,6 +78,7 @@ class MixinAnnotationVisitor(
                         existingMappings[target]?.let {
                             targetClasses.remove(target)
                             targetClasses.add(it)
+                            logger.info("renaming $target to $it")
                             resolver.resolveClass(it)
                         } ?: Optional.empty()
                     }
