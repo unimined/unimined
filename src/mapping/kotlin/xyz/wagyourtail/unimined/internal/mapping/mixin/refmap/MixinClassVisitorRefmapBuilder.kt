@@ -679,7 +679,7 @@ class MixinClassVisitorRefmapBuilder(
                                         existingMappings[targetMethod]?.let {
                                             logger.info("remapping $it from existing refmap")
                                             if (wildcard) {
-                                                val mName = it.substringAfter(";").substring(0, it.length - 1)
+                                                val mName = it.substringAfter(";").let { it.substring(0, it.length - 1) }
                                                 resolver.resolveMethod(
                                                     targetClass,
                                                     mName,
