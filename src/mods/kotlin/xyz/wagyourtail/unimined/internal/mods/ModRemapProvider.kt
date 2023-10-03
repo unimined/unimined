@@ -8,7 +8,6 @@ import net.fabricmc.tinyremapper.InputTag
 import net.fabricmc.tinyremapper.NonClassCopyMode
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
-import net.fabricmc.tinyremapper.extension.mixin.MixinExtension
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -23,7 +22,6 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
-import xyz.wagyourtail.unimined.internal.mapping.extension.mixinextra.MixinExtra
 import xyz.wagyourtail.unimined.util.*
 import java.io.*
 import java.nio.file.Files

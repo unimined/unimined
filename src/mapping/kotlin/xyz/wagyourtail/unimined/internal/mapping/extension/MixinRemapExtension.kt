@@ -6,9 +6,12 @@ import net.fabricmc.tinyremapper.TinyRemapper
 import net.fabricmc.tinyremapper.api.TrClass
 import net.fabricmc.tinyremapper.api.TrEnvironment
 import net.fabricmc.tinyremapper.extension.mixin.common.Logger
+import net.fabricmc.tinyremapper.extension.mixin.common.data.Annotation
 import net.fabricmc.tinyremapper.extension.mixin.common.data.CommonData
+import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.gradle.api.logging.LogLevel
 import org.jetbrains.annotations.ApiStatus
+import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.hard.JMAHard
@@ -140,7 +143,14 @@ class MixinRemapExtension(
                     tasks[mrjVersion]!!.add(visitor::runRemap)
                     visitor
                 } else {
-                    next
+                    object : ClassVisitor(Constant.ASM_VERSION, next) {
+                        override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor? {
+                            if (descriptor == Annotation.MIXIN) {
+                                extension.logger.warn("[HardTarget] found mixin class $className without entry!")
+                            }
+                            return super.visitAnnotation(descriptor, visible)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 throw IllegalStateException("Error while processing class $className: ${e.javaClass.simpleName}: ${e.message}", e)
@@ -195,7 +205,14 @@ class MixinRemapExtension(
                     extension.modifyRefmapBuilder(visitor)
                     visitor
                 } else {
-                    next
+                    object : ClassVisitor(Constant.ASM_VERSION, next) {
+                        override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor? {
+                            if (descriptor == Annotation.MIXIN) {
+                                extension.logger.warn("[RefmapBuilder] found mixin class ${cls.name} without entry!")
+                            }
+                            return super.visitAnnotation(descriptor, visible)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 throw IllegalStateException("Error while processing class ${cls.name}: ${e.javaClass.simpleName}: ${e.message}", e)
