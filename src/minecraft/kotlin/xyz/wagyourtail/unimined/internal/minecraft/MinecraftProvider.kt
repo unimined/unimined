@@ -76,7 +76,8 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     override val minecraftLibraries: Configuration = project.configurations.maybeCreate("minecraftLibraries".withSourceSet(sourceSet)).also {
-        minecraft.extendsFrom(it)
+        sourceSet.compileClasspath += it
+        sourceSet.runtimeClasspath += it
         it.setTransitive(false)
     }
 

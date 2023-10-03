@@ -69,7 +69,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     }
 
     private val forgeDeps: Configuration = project.configurations.maybeCreate("forgeDeps".withSourceSet(provider.sourceSet)).also {
-        provider.minecraft.extendsFrom(it)
+        provider.minecraftLibraries.extendsFrom(it)
     }
 
     lateinit var deps: List<Pair<Pair<String, String>, Dependency>>

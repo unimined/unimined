@@ -49,7 +49,7 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     val fabric: Configuration = project.configurations.maybeCreate(providerName.withSourceSet(provider.sourceSet)).also {
-        provider.minecraft.extendsFrom(it)
+        provider.minecraftLibraries.extendsFrom(it)
     }
 
     private val fabricJson: Configuration = project.configurations.detachedConfiguration()
