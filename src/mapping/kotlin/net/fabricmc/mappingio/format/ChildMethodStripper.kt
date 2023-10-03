@@ -52,12 +52,12 @@ class ChildMethodStripper(next: MappingVisitor, val minecraft: Path) : Forwardin
     def getParentNodes(cNode):
         currentNode = classMap[cNode]
         while currentNode != null:
+            yield currentNode
             for interface in currentNode.interfaces:
                 intf = classMap[interface]
                 if intf != null:
                     for p in getParentNodes(intf):
                         yield p
-            yield currentNode
             currentNode = classMap[currentNode.superName]
      */
 
@@ -68,7 +68,7 @@ class ChildMethodStripper(next: MappingVisitor, val minecraft: Path) : Forwardin
             currentNode = currentNode?.let { classMap[it.superName] }
             c
         }.flatMap { node ->
-            node.interfaces
+            listOf(node) + node.interfaces
                 .mapNotNull { classMap[it] }
                 .flatMap { listOf(it) + getParentNodes(it.name) }
         }.drop(1)

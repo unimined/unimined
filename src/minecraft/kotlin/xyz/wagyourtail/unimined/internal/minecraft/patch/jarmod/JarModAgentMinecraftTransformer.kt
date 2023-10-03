@@ -44,7 +44,7 @@ open class JarModAgentMinecraftTransformer(
     override var compiletimeTransforms: Boolean = false
 
     override var jarModAgent = project.configurations.maybeCreate("jarModAgent".withSourceSet(provider.sourceSet)).also {
-        provider.minecraft.extendsFrom(it)
+        provider.minecraftLibraries.extendsFrom(it)
     }
 
     val jmaFile by lazy {

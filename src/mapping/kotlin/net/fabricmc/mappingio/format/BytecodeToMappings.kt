@@ -46,7 +46,7 @@ object BytecodeToMappings {
                     currentNode = currentNode?.let { classMap[it.superName] }
                     c
                 }.flatMap { node ->
-                    node.interfaces
+                    listOf(node) + node.interfaces
                         .mapNotNull { classMap[it] }
                         .flatMap { listOf(it) + getParentNodes(it) }
                 }.drop(1)
