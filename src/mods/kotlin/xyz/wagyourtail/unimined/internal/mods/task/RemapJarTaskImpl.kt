@@ -152,6 +152,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         remapperB.extension(betterMixinExtension)
         provider.minecraftRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
+        val tag = remapper.createInputTag()
         project.logger.debug("[Unimined/RemapJar] classpath: ")
         (provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
             .filter { !provider.isMinecraftJar(it) }
@@ -165,7 +166,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                 .filter { it.exists() } + listOf(mc))
                 .toTypedArray()
         ).thenCompose {
-            betterMixinExtension.readInput(remapper, null, from)
+            betterMixinExtension.readInput(remapper, tag, from)
         }
         target.parent.createDirectories()
         try {
@@ -181,7 +182,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                         AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher)?.remapAtToLegacy == true)!!),
                     )
                 )
-                remapper.apply(it)
+                remapper.apply(it, tag)
             }
         } catch (e: Exception) {
             target.deleteIfExists()
@@ -190,7 +191,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         remapper.finish()
 
         target.openZipFileSystem(mapOf("mutable" to true)).use {
-            betterMixinExtension.insertExtra(null, it)
+            betterMixinExtension.insertExtra(tag, it)
         }
     }
 

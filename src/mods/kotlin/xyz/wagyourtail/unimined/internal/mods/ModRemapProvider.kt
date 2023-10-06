@@ -317,7 +317,6 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         val targetFile = input.second.second
         val manifest = (JarFile(inpFile).use { it.manifest }?.mainAttributes?.getValue("FMLAT") as String?)?.split(" ") ?: emptyList()
         project.logger.info("[Unimined/ModRemapper] Remapping mod from $inpFile -> $targetFile with mapping target ${remap.first}/${remap.second}")
-        remapper.second.setTag(input.first)
         OutputConsumerPath.Builder(targetFile).build().use {
             it.addNonClassFiles(
                 inpFile.toPath(),

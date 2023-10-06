@@ -36,7 +36,7 @@ class MixinRemapExtension(
 
     val allowImplicitWildcards by FinalizeOnRead(allowImplicitWildcards)
 
-    override fun register(tag: InputTag?): MixinTarget {
+    override fun register(tag: InputTag): MixinTarget {
         return MixinTarget(tag, this).apply {
             metadataReader.forEach {
                 this.addMetadata(it(this@MixinRemapExtension))
@@ -108,7 +108,7 @@ class MixinRemapExtension(
     }
 
 
-    open class MixinTarget(override val inputTag: InputTag?, val extension: MixinRemapExtension) : InputTagExtension {
+    open class MixinTarget(override val inputTag: InputTag, val extension: MixinRemapExtension) : InputTagExtension {
         protected val metadata: MergedMetadata = MergedMetadata(extension)
         protected val tasks: MutableMap<Int, MutableList<(CommonData) -> Unit>> = defaultedMapOf { mutableListOf() }
 
@@ -143,14 +143,7 @@ class MixinRemapExtension(
                     tasks[mrjVersion]!!.add(visitor::runRemap)
                     visitor
                 } else {
-                    object : ClassVisitor(Constant.ASM_VERSION, next) {
-                        override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor? {
-                            if (descriptor == Annotation.MIXIN) {
-                                extension.logger.warn("[HardTarget] found mixin class $className without entry!")
-                            }
-                            return super.visitAnnotation(descriptor, visible)
-                        }
-                    }
+                    return next
                 }
             } catch (e: Exception) {
                 throw IllegalStateException("Error while processing class $className: ${e.javaClass.simpleName}: ${e.message}", e)
