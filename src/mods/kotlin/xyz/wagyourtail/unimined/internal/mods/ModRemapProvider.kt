@@ -292,6 +292,8 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         return future.thenApply { output }
     }
 
+    private fun ResolvedArtifact.stringify() = "${this.moduleVersion.id.group}:${this.name}:${this.moduleVersion.id.version}${this.classifier?.let { ":$it" } ?: ""}${this.extension?.let { "@$it" } ?: ""}"
+
     private fun remapInternal(
         remapper: Pair<TinyRemapper, MixinRemapExtension>,
         deps: Map<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>>,
@@ -300,7 +302,11 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         val output = mutableMapOf<ResolvedArtifact, File>()
         project.logger.info("[Unimined/ModRemapper] Remapping mods to ${remap.first}/${remap.second}")
         for ((artifact, tag) in deps) {
-            remapModInternal(remapper, artifact, tag, remap)
+            try {
+                remapModInternal(remapper, artifact, tag, remap)
+            } catch (e: Exception) {
+                throw IllegalStateException("Failed to remap ${artifact.stringify()} to ${remap.first}/${remap.second}", e)
+            }
             output[artifact] = tag.second.second.toFile()
         }
         remapper.first.finish()

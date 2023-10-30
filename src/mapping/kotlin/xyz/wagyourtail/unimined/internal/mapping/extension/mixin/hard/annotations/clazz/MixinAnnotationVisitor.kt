@@ -70,23 +70,25 @@ class MixinAnnotationVisitor(
 
     override fun visitEnd() {
         super.visitEnd()
-        targetClasses.addAll((classValues + classTargets.map { it.replace('.', '/') }).toSet())
         hardTargetRemapper.addRemapTaskFirst {
             if (remap.get()) {
-                for (target in targetClasses) {
-                    val clz = resolver.resolveClass(target.replace('.', '/')).orElseOptional {
-                        existingMappings[target]?.let {
-                            targetClasses.remove(target)
-                            targetClasses.add(it)
-                            logger.info("renaming $target to $it")
-                            resolver.resolveClass(it)
-                        } ?: Optional.empty()
-                    }
+                logger.info("existing mappings: $existingMappings")
+                for (target in classTargets.toSet()) {
+                    val clz = resolver.resolveClass(target.replace('.', '/'))
+                        .orElseOptional {
+                            existingMappings[target]?.let {
+                                logger.info("remapping $it from existing refmap")
+                                classTargets.remove(target)
+                                classTargets.add(it)
+                                resolver.resolveClass(it)
+                            } ?: Optional.empty()
+                        }
                     if (!clz.isPresent) {
                         logger.warn("Failed to resolve class $target in mixin ${mixinName.replace('/', '.')}")
                     }
                 }
             }
+            targetClasses.addAll((classValues + classTargets.map { it.replace('.', '/') }).toSet())
         }
     }
 

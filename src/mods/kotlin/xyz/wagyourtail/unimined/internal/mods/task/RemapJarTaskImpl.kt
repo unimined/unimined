@@ -167,32 +167,35 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                 .toTypedArray()
         ).thenCompose {
             betterMixinExtension.readInput(remapper, tag, from)
-        }
-        target.parent.createDirectories()
-        try {
-            OutputConsumerPath.Builder(target).build().use {
-                it.addNonClassFiles(
-                    from,
-                    remapper,
-                    listOf(
-                        AccessWidenerMinecraftTransformer.AwRemapper(
-                            if (fromNs.named) "named" else fromNs.name,
-                            if (toNs.named) "named" else toNs.name
-                        ),
-                        AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher)?.remapAtToLegacy == true)!!),
+        }.thenRun {
+            target.parent.createDirectories()
+            try {
+                OutputConsumerPath.Builder(target).build().use {
+                    it.addNonClassFiles(
+                        from,
+                        remapper,
+                        listOf(
+                            AccessWidenerMinecraftTransformer.AwRemapper(
+                                if (fromNs.named) "named" else fromNs.name,
+                                if (toNs.named) "named" else toNs.name
+                            ),
+                            AccessTransformerMinecraftTransformer.AtRemapper(
+                                project.logger,
+                                remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher)?.remapAtToLegacy == true)!!
+                            ),
+                        )
                     )
-                )
-                remapper.apply(it, tag)
+                    remapper.apply(it, tag)
+                }
+            } catch (e: Exception) {
+                target.deleteIfExists()
+                throw e
             }
-        } catch (e: Exception) {
-            target.deleteIfExists()
-            throw e
-        }
-        remapper.finish()
-
-        target.openZipFileSystem(mapOf("mutable" to true)).use {
-            betterMixinExtension.insertExtra(tag, it)
-        }
+            remapper.finish()
+            target.openZipFileSystem(mapOf("mutable" to true)).use {
+                betterMixinExtension.insertExtra(tag, it)
+            }
+        }.join()
     }
 
 }
