@@ -269,6 +269,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
     ): CompletableFuture<Map<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>?>> {
         val output = mutableMapOf<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>?>()
         var future = remapper
+        val futures = mutableListOf<CompletableFuture<*>>()
         for ((artifact, data) in deps) {
             val file = data.first
             val target = data.second.first
@@ -277,7 +278,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             if (file.isDirectory) {
                 throw InvalidUserDataException("Cannot remap directory ${file.absolutePath}")
             } else {
-                future.thenCompose {
+                futures += future.thenCompose {
                     if (needsRemap) {
                         val tag = it.first.createInputTag()
                         output[artifact] = tag to (file to target)
@@ -289,7 +290,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 }
             }
         }
-        return future.thenApply { output }
+        return CompletableFuture.allOf(*futures.toTypedArray()).thenApply { output }
     }
 
     private fun ResolvedArtifact.stringify() = "${this.moduleVersion.id.group}:${this.name}:${this.moduleVersion.id.version}${this.classifier?.let { ":$it" } ?: ""}${this.extension?.let { "@$it" } ?: ""}"
