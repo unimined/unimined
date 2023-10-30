@@ -22,7 +22,11 @@ class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvide
 
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         forge.dependencies.add(if (dep is String && !dep.contains(":")) {
-            project.dependencies.create("net.neoforged:forge:${provider.version}-$dep:universal")
+            if (dep.startsWith("47")) {
+                project.dependencies.create("net.neoforged:forge:${provider.version}-$dep:universal")
+            } else {
+                project.dependencies.create("net.neoforged:neoforge:${provider.version.removePrefix("1.")}.$dep:universal")
+            }
         } else {
             project.dependencies.create(dep)
         }.apply(action))
@@ -37,7 +41,7 @@ class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvide
 
         val forgeDep = forge.dependencies.first()
 
-        if (forgeDep.group != "net.neoforged" || forgeDep.name != "forge") {
+        if (forgeDep.group != "net.neoforged" || (forgeDep.name != "forge" && forgeDep.name != "neoforge")) {
             throw IllegalStateException("Invalid forge dependency found, if you are using multiple dependencies in the forge configuration, make sure the last one is the forge dependency!")
         }
 
@@ -49,7 +53,7 @@ class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvide
         val libraries = parseAllLibraries(json.getAsJsonArray("libraries"))
         mainClass = json.get("mainClass").asString
         val args = json.get("minecraftArguments").asString
-        provider.addLibraries(libraries.filter { !it.name.startsWith("net.neoforged:forge:") })
+        provider.addLibraries(libraries.filter { !it.name.startsWith("net.neoforged:forge:") || !it.name.startsWith("net.neoforged:neoforge:") })
         tweakClassClient = args.split("--tweakClass")[1].trim()
     }
 

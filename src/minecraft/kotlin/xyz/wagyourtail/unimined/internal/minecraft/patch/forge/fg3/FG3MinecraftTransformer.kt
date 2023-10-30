@@ -43,7 +43,13 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         unprotectRuntime = true
     }
 
-    override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }
+    override val prodNamespace by lazy {
+        if (userdevCfg["mcp"].asString.contains("neoform")) {
+            provider.mappings.getNamespace("mojmap")
+        } else {
+            provider.mappings.getNamespace("searge")
+        }
+    }
 
     override val merger: ClassMerger
         get() = throw UnsupportedOperationException("FG3+ does not support merging with unofficial merger.")
@@ -58,6 +64,12 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         project.dependencies.create(
             userdevCfg["mcp"]?.asString ?: "de.oceanlabs.mcp:mcp_config:${provider.version}@zip"
         )
+    }
+
+    val obfNamespace by lazy {
+        if (userdevCfg["notchObf"]?.asBoolean == true) "official"
+        else if (userdevCfg["mcp"].asString.contains("neoform")) "mojmap"
+        else "searge"
     }
 
     val mcpConfigData by lazy {
@@ -99,14 +111,18 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     override fun beforeMappingsResolve() {
         project.logger.info("[Unimined/ForgeTransformer] FG3: beforeMappingsResolve")
         provider.mappings {
-            val mcpConfigUserSpecified = mappingsDeps.entries.firstOrNull { it.value.dep.group == "de.oceanlabs.mcp" && it.value.dep.name == "mcp_config" }
-            if (mcpConfigUserSpecified != null && !parent.customSearge) {
-                if (mcpConfigUserSpecified.value.dep.version != mcpConfig.version) {
-                    project.logger.warn("[Unimined/ForgeTransformer] FG3 does not support custom mcp_config (searge) version specification. Using ${mcpConfig.version} from userdev.")
+            if (obfNamespace == "mojmap") {
+                mojmap()
+            } else {
+                val mcpConfigUserSpecified = mappingsDeps.entries.firstOrNull { it.value.dep.group == "de.oceanlabs.mcp" && it.value.dep.name == "mcp_config" }
+                if (mcpConfigUserSpecified != null && !parent.customSearge) {
+                    if (mcpConfigUserSpecified.value.dep.version != mcpConfig.version) {
+                        project.logger.warn("[Unimined/ForgeTransformer] FG3 does not support custom mcp_config (searge) version specification. Using ${mcpConfig.version} from userdev.")
+                    }
+                    mappingsDeps.remove(mcpConfigUserSpecified.key)
                 }
-                mappingsDeps.remove(mcpConfigUserSpecified.key)
+                if (!parent.customSearge) searge(mcpConfig.version!!)
             }
-            if (!parent.customSearge) searge(mcpConfig.version!!)
         }
     }
 
@@ -142,9 +158,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             val mainClass = get("main").asString
             if (!mainClass.startsWith("net.minecraftforge.legacydev")) {
                 project.logger.info("[Unimined/ForgeTransformer] Inserting mcp mappings")
-                provider.minecraftLibraries.dependencies.add(
-                    project.dependencies.create(project.files(parent.srgToMCPAsMCP))
-                )
+                if (obfNamespace != "mojmap") {
+                    provider.minecraftLibraries.dependencies.add(
+                        project.dependencies.create(project.files(parent.srgToMCPAsMCP))
+                    )
+                }
             }
         }
 
@@ -184,7 +202,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             parentPath = provider.minecraftData.mcVersionFolder
                 .resolve(providerName),
             envType = EnvType.COMBINED,
-            mappingNamespace = if (userdevCfg["notchObf"]?.asBoolean == true) provider.mappings.OFFICIAL else provider.mappings.getNamespace("searge"),
+            mappingNamespace = provider.mappings.getNamespace(obfNamespace),
             fallbackNamespace = provider.mappings.OFFICIAL
         )
         createClientExtra(clientjar, serverjar, output.path)
@@ -194,7 +212,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         if (userdevCfg["notchObf"]?.asBoolean == true) {
             executeMcp("merge", output.path, EnvType.COMBINED)
         } else {
-            executeMcp("rename", output.path, EnvType.COMBINED)
+            if (obfNamespace == "mojmap") {
+                executeMcp("rename", output.path, EnvType.COMBINED)
+            } else {
+                executeMcp("rename", output.path, EnvType.COMBINED)
+            }
         }
         return output
     }
@@ -259,7 +281,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                 minecraft,
                 parentPath = provider.minecraftData.mcVersionFolder
                     .resolve(providerName),
-                mappingNamespace = provider.mappings.getNamespace("searge"),
+                mappingNamespace = if (obfNamespace == "mojmap") provider.mappings.OFFICIAL else provider.mappings.getNamespace("searge"),
                 fallbackNamespace = provider.mappings.OFFICIAL,
                 patches = minecraft.patches + "mcp_config"
             )
@@ -353,7 +375,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                     val libs = mapOf(*provider.minecraftLibraries.dependencies.map { it.group + ":" + it.name + ":" + it.version to it }
                         .toTypedArray())
                     userdevCfg.get("modules").asJsonArray.joinToString(File.pathSeparator) {
-                        val dep = libs[it.asString]
+                        val dep = libs[it.asString.removeSuffix("@jar")]
                             ?: throw IllegalStateException("Module ${it.asString} not found in mc libraries")
                         provider.minecraftLibraries.getFile(dep).toString()
                     }
