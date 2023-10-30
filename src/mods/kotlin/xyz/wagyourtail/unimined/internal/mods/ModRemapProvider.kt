@@ -282,10 +282,10 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                     if (needsRemap) {
                         val tag = it.first.createInputTag()
                         output[artifact] = tag to (file to target)
-                        it.second.readInput(it.first, tag, file.toPath()).thenApply { it }
+                        it.second.readInput(it.first, tag, file.toPath())
                     } else {
                         output[artifact] = null
-                        it.second.readClassPath(it.first, file.toPath()).thenApply { it }
+                        it.second.readClassPath(it.first, file.toPath())
                     }
                 }
             }

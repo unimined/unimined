@@ -61,7 +61,7 @@ abstract class PerInputTagExtension<T : PerInputTagExtension.InputTagExtension> 
     }
 
     private fun analyzeVisitor(mrjVersion: Int, className: String, next: ClassVisitor): ClassVisitor {
-        return inputTagExtensions.values.reduce(next) { ni -> analyzeVisitor(mrjVersion, className, ni) }
+        return inputTagExtensions.values.toList().reduce(next) { ni -> analyzeVisitor(mrjVersion, className, ni) }
     }
 
     private fun stateProcessor(environment: TrEnvironment) {
