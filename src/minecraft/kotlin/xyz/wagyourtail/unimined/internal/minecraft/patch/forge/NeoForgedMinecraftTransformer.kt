@@ -12,7 +12,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.util.FinalizeOnWrite
 import xyz.wagyourtail.unimined.util.MustSet
 
-class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "NeoForged"), NeoForgedPatcher {
+class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "NeoForged"), NeoForgedPatcher<JarModMinecraftTransformer> {
 
     override var forgeTransformer: JarModMinecraftTransformer by FinalizeOnWrite(MustSet())
 

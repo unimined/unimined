@@ -174,11 +174,11 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     @Deprecated("Please specify which forge.", replaceWith = ReplaceWith("minecraftForge(action)"))
-    override fun forge(action: ForgeLikePatcher.() -> Unit) {
+    override fun forge(action: ForgeLikePatcher<*>.() -> Unit) {
         minecraftForge(action)
     }
 
-    override fun minecraftForge(action: MinecraftForgePatcher.() -> Unit) {
+    override fun minecraftForge(action: MinecraftForgePatcher<*>.() -> Unit) {
         mcPatcher = MinecraftForgeMinecraftTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)
@@ -186,7 +186,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override fun neoForged(action: NeoForgedPatcher.() -> Unit) {
+    override fun neoForged(action: NeoForgedPatcher<*>.() -> Unit) {
         mcPatcher = NeoForgedMinecraftTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)

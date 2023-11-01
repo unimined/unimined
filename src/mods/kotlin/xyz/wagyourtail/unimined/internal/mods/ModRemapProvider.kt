@@ -57,7 +57,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         catchAWNs = true
     }
 
-    override var remapAtToLegacy: Boolean by FinalizeOnRead(LazyMutable { (provider.mcPatcher as? ForgeLikePatcher)?.remapAtToLegacy == true })
+    override var remapAtToLegacy: Boolean by FinalizeOnRead(LazyMutable { (provider.mcPatcher as? ForgeLikePatcher<*>)?.remapAtToLegacy == true })
     override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
         mixinRemap = action
     }

@@ -161,7 +161,7 @@ interface PatchProviders {
             expression = "minecraftForge(action)"
         )
     )
-    fun forge(action: ForgeLikePatcher.() -> Unit)
+    fun forge(action: ForgeLikePatcher<*>.() -> Unit)
 
     /**
      * enables the forge patcher.
@@ -208,7 +208,7 @@ interface PatchProviders {
      * enables the minecraft forge patcher.
      * @since 1.0.0
      */
-    fun minecraftForge(action: MinecraftForgePatcher.() -> Unit)
+    fun minecraftForge(action: MinecraftForgePatcher<*>.() -> Unit)
 
     /**
      * enables the minecraft forge patcher.
@@ -239,7 +239,7 @@ interface PatchProviders {
      * enables the NeoForged patcher.
      * @since 1.0.0
      */
-    fun neoForged(action: NeoForgedPatcher.() -> Unit)
+    fun neoForged(action: NeoForgedPatcher<*>.() -> Unit)
 
     /**
      * enables the NeoForged patcher.

@@ -17,7 +17,7 @@ import xyz.wagyourtail.unimined.util.MustSet
 import xyz.wagyourtail.unimined.util.forEachInZip
 import java.io.File
 
-class MinecraftForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "MinecraftForge"), MinecraftForgePatcher {
+class MinecraftForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "MinecraftForge"), MinecraftForgePatcher<JarModMinecraftTransformer> {
 
     override var forgeTransformer: JarModMinecraftTransformer by FinalizeOnWrite(MustSet())
 

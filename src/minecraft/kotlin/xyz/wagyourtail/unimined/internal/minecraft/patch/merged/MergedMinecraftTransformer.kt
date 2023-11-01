@@ -105,17 +105,17 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
     }
 
     @Deprecated("Please specify which forge.", replaceWith = ReplaceWith("minecraftForge(action)"))
-    override fun forge(action: ForgeLikePatcher.() -> Unit) {
+    override fun forge(action: ForgeLikePatcher<*>.() -> Unit) {
         minecraftForge(action)
     }
 
-    override fun minecraftForge(action: MinecraftForgePatcher.() -> Unit) {
+    override fun minecraftForge(action: MinecraftForgePatcher<*>.() -> Unit) {
         val forge = MinecraftForgeMinecraftTransformer(project, provider)
         forge.action()
         patchers.add(forge)
     }
 
-    override fun neoForged(action: NeoForgedPatcher.() -> Unit) {
+    override fun neoForged(action: NeoForgedPatcher<*>.() -> Unit) {
         val forge = NeoForgedMinecraftTransformer(project, provider)
         forge.action()
         patchers.add(forge)

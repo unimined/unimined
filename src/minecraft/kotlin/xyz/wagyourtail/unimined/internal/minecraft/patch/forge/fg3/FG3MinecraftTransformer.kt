@@ -50,6 +50,8 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             provider.mappings.getNamespace("searge")
         }
     }
+    
+    var binpatchFile: Path? = null
 
     override val merger: ClassMerger
         get() = throw UnsupportedOperationException("FG3+ does not support merging with unofficial merger.")
@@ -212,11 +214,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         if (userdevCfg["notchObf"]?.asBoolean == true) {
             executeMcp("merge", output.path, EnvType.COMBINED)
         } else {
-            if (obfNamespace == "mojmap") {
-                executeMcp("rename", output.path, EnvType.COMBINED)
-            } else {
-                executeMcp("rename", output.path, EnvType.COMBINED)
-            }
+            executeMcp("rename", output.path, EnvType.COMBINED)
         }
         return output
     }
@@ -304,7 +302,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
 
         //  extract binpatches
-        val binPatchFile = if (patchedMC.envType == EnvType.COMBINED) {
+        val binPatchFile = this.binpatchFile ?: if (patchedMC.envType == EnvType.COMBINED) {
             forgeUd.toPath().readZipInputStreamFor(userdevCfg["binpatches"].asString) {
                 outFolder.resolve("binpatches-joined.lzma").apply {
                     writeBytes(

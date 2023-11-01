@@ -173,7 +173,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                             ),
                             AccessTransformerMinecraftTransformer.AtRemapper(
                                 project.logger,
-                                remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher)?.remapAtToLegacy == true)!!
+                                remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher<*>)?.remapAtToLegacy == true)!!
                             ),
                         )
                     )

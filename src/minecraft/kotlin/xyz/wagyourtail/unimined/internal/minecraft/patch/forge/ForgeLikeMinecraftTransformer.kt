@@ -32,12 +32,9 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 
 abstract class ForgeLikeMinecraftTransformer(project: Project, provider: MinecraftProvider, providerName: String,):
-        AbstractMinecraftTransformer(project, provider, providerName), ForgeLikePatcher {
+        AbstractMinecraftTransformer(project, provider, providerName), ForgeLikePatcher<JarModMinecraftTransformer> {
 
     val forge: Configuration = project.configurations.maybeCreate("forge".withSourceSet(provider.sourceSet))
-
-    @get:ApiStatus.Internal
-    abstract var forgeTransformer: JarModMinecraftTransformer
 
     override var accessTransformer: File? = null
 

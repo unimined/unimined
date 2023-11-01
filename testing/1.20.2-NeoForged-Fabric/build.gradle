@@ -73,7 +73,6 @@ unimined.minecraft(sourceSets.fabric) {
 
 unimined.minecraft(sourceSets.forge) {
     version project.minecraft_version
-    side "client"
 
     mappings {
         intermediary()
@@ -86,6 +85,11 @@ unimined.minecraft(sourceSets.forge) {
     neoForged {
         loader project.forge_version
         mixinConfig "modid.mixins.json"
+        forgeTransformer.binpatchFile = project.projectDir.toPath().resolve("output.lzma")
+    }
+
+    minecraftRemapper.config {
+        ignoreConflicts(true)
     }
 }
 
