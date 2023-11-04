@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigData
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
@@ -296,7 +297,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
         val patchedMC = MinecraftJar(
             inputMC,
-            name = "forge",
+            name = if (parent is NeoForgedMinecraftTransformer) "neoforge" else "forge",
             parentPath = outFolder
         )
 
