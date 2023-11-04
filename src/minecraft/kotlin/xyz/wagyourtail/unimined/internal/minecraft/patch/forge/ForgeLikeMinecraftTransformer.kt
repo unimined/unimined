@@ -34,7 +34,9 @@ import kotlin.io.path.exists
 abstract class ForgeLikeMinecraftTransformer(project: Project, provider: MinecraftProvider, providerName: String,):
         AbstractMinecraftTransformer(project, provider, providerName), ForgeLikePatcher<JarModMinecraftTransformer> {
 
-    val forge: Configuration = project.configurations.maybeCreate("forge".withSourceSet(provider.sourceSet))
+    val forge: Configuration = project.configurations.maybeCreate("forge".withSourceSet(provider.sourceSet)).apply {
+        isTransitive = false
+    }
 
     override var accessTransformer: File? = null
 
