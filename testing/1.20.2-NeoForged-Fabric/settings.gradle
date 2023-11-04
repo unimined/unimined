@@ -28,4 +28,4 @@ pluginManagement {
 // so we can use the unimined directly provided by the super project
 includeBuild('../../')
 
-rootProject.name = '1.20.1-NeoForged-Fabric'
+rootProject.name = '1.20.2-NeoForged-Fabric'

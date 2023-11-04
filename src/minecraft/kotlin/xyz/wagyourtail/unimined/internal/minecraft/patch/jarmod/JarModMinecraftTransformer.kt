@@ -32,7 +32,9 @@ open class JarModMinecraftTransformer(
 
     override var deleteMetaInf: Boolean = false
 
-    val jarModConfiguration = project.configurations.maybeCreate(jarModProvider.withSourceSet(provider.sourceSet))
+    val jarModConfiguration = project.configurations.maybeCreate(jarModProvider.withSourceSet(provider.sourceSet)).apply {
+        isTransitive = false
+    }
 
     override val transform = (listOf<(FileSystem) -> Unit>(
         ModLoaderPatches::fixURIisNotHierarchicalException,
