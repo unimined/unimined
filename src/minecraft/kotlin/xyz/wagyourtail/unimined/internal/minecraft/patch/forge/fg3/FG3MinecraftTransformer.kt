@@ -483,6 +483,9 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                 config.jvmArgs += props.map { "-D${it.key}=${getArgValue(config, it.value)}" }
                 config.env += mapOf("FORGE_SPEC" to userdevCfg.get("spec").asNumber.toString())
                 config.env += env.map { it.key to getArgValue(config, it.value) }
+                config.env.computeIfAbsent("MOD_CLASSES") {
+                    getArgValue(config, "{source_roots}")
+                }
             }
         }
     }
