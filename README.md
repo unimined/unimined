@@ -1,6 +1,6 @@
 # Unimined
 
-unified minecraft modding environment.
+unified minecraft modding environment with support for legacy environments.
 
 ## Supported Loaders
 * Fabric
