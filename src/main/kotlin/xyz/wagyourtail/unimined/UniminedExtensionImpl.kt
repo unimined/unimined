@@ -97,7 +97,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
                                         if (info.extension == "pom") {
                                             return Artifact.none()
                                         }
-                                        project.logger.info("[Unimined/ArtifactProvider] providing ${info.classifier ?: "combined"} jar")
+                                        project.logger.info("[Unimined/ArtifactProvider] providing ${info.classifier ?: "combined"} jar: ${info}")
                                         return StreamableArtifact.ofFile(
                                             info,
                                             ArtifactType.BINARY,

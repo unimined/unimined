@@ -22,6 +22,10 @@ sourceSets {
         compileClasspath += sourceSets.main.output
         runtimeClasspath += sourceSets.main.output
     }
+    lexforge {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
 }
 
 tasks.register("fabricJar", Jar) {
@@ -31,6 +35,12 @@ tasks.register("fabricJar", Jar) {
 }
 
 tasks.register("forgeJar", Jar) {
+    from sourceSets.forge.output, sourceSets.main.output
+
+    archiveClassifier = "forge"
+}
+
+tasks.register("lexforgeJar", Jar) {
     from sourceSets.forge.output, sourceSets.main.output
 
     archiveClassifier = "forge"
@@ -93,6 +103,27 @@ unimined.minecraft(sourceSets.forge) {
     }
 }
 
+unimined.minecraft(sourceSets.lexforge) {
+    version project.minecraft_version
+
+    mappings {
+        intermediary()
+        mojmap()
+        parchment("1.19.3", "2023.03.12-nightly-SNAPSHOT")
+
+        devFallbackNamespace "intermediary"
+    }
+
+    minecraftForge {
+        loader project.lexforge_version
+        mixinConfig "modid.mixins.json"
+    }
+
+    minecraftRemapper.config {
+        ignoreConflicts(true)
+    }
+}
+
 configurations {
     mainImplementation
     implementation {
@@ -126,6 +157,14 @@ processFabricResources {
 }
 
 processForgeResources {
+    inputs.property "version", project.version
+
+    filesMatching("META-INF/mods.toml") {
+        expand "version": project.version
+    }
+}
+
+processLexforgeResources {
     inputs.property "version", project.version
 
     filesMatching("META-INF/mods.toml") {
