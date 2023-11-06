@@ -92,6 +92,13 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     var defaultRemapJar: Boolean by FinalizeOnRead(true)
 
     /**
+     * if the jar task for defaultRemapJar doesn't exist, should unimined create it?
+     * if so, it will be created with `from(this.sourceSet.output, sourceSets.main.output)`
+     * and it's archiveClassifier will be this.sourceSet.name
+     */
+    var createJarTask: Boolean by FinalizeOnRead(true)
+
+    /**
      * the minecraft version to use
      */
     fun version(version: String) {
@@ -223,6 +230,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     @ApiStatus.Internal
     abstract fun isMinecraftJar(path: Path): Boolean
 
+    @get:ApiStatus.Internal
     abstract val minecraftDependency: ModuleDependency
 
     @get:ApiStatus.Internal

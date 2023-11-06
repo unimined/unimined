@@ -390,6 +390,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
                 "{asset_index}" -> provider.minecraftData.metadata.assetIndex?.id ?: ""
                 "{source_roots}" -> {
+                    // TODO: detect other forge mods, and change mod name properly
                     (detectProjectSourceSets().flatMap {
                         listOf(
                             it.output.resourcesDir

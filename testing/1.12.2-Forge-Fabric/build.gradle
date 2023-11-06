@@ -24,18 +24,6 @@ sourceSets {
     }
 }
 
-tasks.register("fabricJar", Jar) {
-    from sourceSets.fabric.output, sourceSets.main.output
-
-    archiveClassifier = "fabric"
-}
-
-tasks.register("forgeJar", Jar) {
-    from sourceSets.forge.output, sourceSets.main.output
-
-    archiveClassifier = "forge"
-}
-
 repositories {
     maven {
         name = "wagyourtail releases"

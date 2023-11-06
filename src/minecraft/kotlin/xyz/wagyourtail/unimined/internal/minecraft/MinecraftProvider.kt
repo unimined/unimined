@@ -323,12 +323,20 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         // create remapjar task
         if (defaultRemapJar) {
-            val task = project.tasks.findByName("jar".withSourceSet(sourceSet))
+            var task = project.tasks.findByName("jar".withSourceSet(sourceSet))
+            if (task == null && createJarTask) {
+                project.logger.info("[Unimined/Minecraft] Creating default jar task for $sourceSet")
+                task = project.tasks.create("jar".withSourceSet(sourceSet), Jar::class.java) {
+                    it.group = "build"
+                    it.from(sourceSet.output, project.sourceSets.getByName("main").output)
+                    it.archiveClassifier.set(sourceSet.name)
+                }
+            }
             if (task != null && task is Jar) {
                 val classifier: String= task.archiveClassifier.getOrElse("")
                 task.apply {
                     if (classifier.isNotEmpty()) {
-                        archiveClassifier.set(archiveClassifier.get() + "-dev")
+                        archiveClassifier.set("$classifier-dev")
                     } else {
                         archiveClassifier.set("dev")
                     }

@@ -29,19 +29,6 @@ repositories {
     mavenCentral()
 }
 
-tasks.register("modloaderJar", Jar) {
-    from sourceSets.modloader.output, sourceSets.main.output
-
-    archiveClassifier = "modloader"
-}
-
-tasks.register("forgeJar", Jar) {
-    from sourceSets.forge.output, sourceSets.main.output
-
-    archiveClassifier = "forge"
-
-}
-
 unimined.minecraft() {
     version "1.2.5"
     side "client"

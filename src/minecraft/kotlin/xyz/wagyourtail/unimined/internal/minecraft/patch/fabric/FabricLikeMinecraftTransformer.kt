@@ -393,6 +393,7 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     fun getGroup(): String {
+        // todo: detect other fabric mods and do :: properly
         return (detectProjectSourceSets().flatMap {
             listOf(
                 it.output.resourcesDir
