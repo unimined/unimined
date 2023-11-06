@@ -20,6 +20,9 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 * rework mcpconfig runner to be more kotlin and less old version of arch-loom code
 * Fabric injected interfaces
 * Forge JarJar
+* Support for launch configs in other dev envs
+  * vscode
+  * eclipse
 
 ## Recommended Setup
 1. take one of the versions from [testing](./testing)
