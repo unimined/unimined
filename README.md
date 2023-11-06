@@ -7,6 +7,9 @@ unified minecraft modding environment.
 * Quilt
 * Forge
 * Neoforge
+* Modloader
+* [JarModAgent](https://github.com/unimined/JarModAgent)
+* just plain jarmodding
 
 ## Planned Loaders
 * Bukkit Derrivitives (at least paper)
