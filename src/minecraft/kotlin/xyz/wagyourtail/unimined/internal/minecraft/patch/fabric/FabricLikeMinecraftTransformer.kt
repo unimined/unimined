@@ -407,6 +407,7 @@ abstract class FabricLikeMinecraftTransformer(
 
     override fun applyServerRunTransform(config: RunConfig) {
         config.mainClass = mainClass?.get("server")?.asString ?: config.mainClass
+        config.jvmArgs += "-Dfabric.classPathGroups=${getGroup()}"
     }
 
     override fun libraryFilter(library: Library): Boolean {
