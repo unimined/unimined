@@ -392,8 +392,17 @@ abstract class FabricLikeMinecraftTransformer(
         ).toFile()
     }
 
+    fun getGroup(): String {
+        return (detectProjectSourceSets().flatMap {
+            listOf(
+                it.output.resourcesDir
+            ) + it.output.classesDirs
+        }).joinToString(File.pathSeparator)
+    }
+
     override fun applyClientRunTransform(config: RunConfig) {
         config.mainClass = mainClass?.get("client")?.asString ?: config.mainClass
+        config.jvmArgs += "-Dfabric.classPathGroups=${getGroup()}"
     }
 
     override fun applyServerRunTransform(config: RunConfig) {

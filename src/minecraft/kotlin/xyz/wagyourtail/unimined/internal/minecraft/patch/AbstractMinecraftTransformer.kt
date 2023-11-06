@@ -1,6 +1,8 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch
 
 import org.gradle.api.Project
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
@@ -230,5 +232,19 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     open fun libraryFilter(library: Library): Boolean {
         return true
+    }
+
+    protected fun detectProjectSourceSets(): Set<SourceSet> {
+        val sourceSets = mutableSetOf<SourceSet>()
+        val projects = project.rootProject.allprojects
+        for (project in projects) {
+            for (sourceSet in project.extensions.findByType(SourceSetContainer::class.java)?.asMap?.values
+                ?: listOf()) {
+                if (sourceSet.output.files.intersect(provider.sourceSet.runtimeClasspath.files).isNotEmpty()) {
+                    sourceSets.add(sourceSet)
+                }
+            }
+        }
+        return sourceSets
     }
 }
