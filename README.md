@@ -21,7 +21,13 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 * Fabric injected interfaces
 * Forge JarJar
 
-## Setup
+## Recommended Setup
 1. take one of the versions from [testing](./testing)
 1. remove `includeBuild('../../')` from `settings.gradle`
 1. put a proper version number for the plugin in `build.grade`
+
+## Other Setups
+
+### Arch-Loom Style
+* direct porting of arch-loom projects without changing the directory structure is possible.
+* instructions pending...
