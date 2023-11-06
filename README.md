@@ -1,12 +1,15 @@
 # Unimined
 
-unified minecraft modding environment.
+unified minecraft modding environment with support for legacy environments.
 
 ## Supported Loaders
 * Fabric
 * Quilt
 * Forge
 * Neoforge
+* Modloader
+* [JarModAgent](https://github.com/unimined/JarModAgent)
+* just plain jarmodding
 
 ## Planned Loaders
 * Bukkit Derrivitives (at least paper)
@@ -20,6 +23,9 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 * rework mcpconfig runner to be more kotlin and less old version of arch-loom code
 * Fabric injected interfaces
 * Forge JarJar
+* Support for launch configs in other dev envs
+  * vscode
+  * eclipse
 
 ## Recommended Setup
 1. take one of the versions from [testing](./testing)
