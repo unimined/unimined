@@ -270,10 +270,10 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
             }
         }
 
-        val task = project.tasks.findByName("jar".withSourceSet(provider.sourceSet))
-        if (task != null && task is Jar) {
-            task.manifest {
-                it.attributes["MixinConfigs"] = mixinConfig.joinToString(",")
+        if (mixinConfig.isNotEmpty()) {
+            val task = project.tasks.findByName("jar".withSourceSet(provider.sourceSet))
+            if (task != null && task is Jar) {
+                task.manifest.attributes["MixinConfigs"] = mixinConfig.joinToString(",")
             }
         }
 
