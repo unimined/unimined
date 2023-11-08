@@ -26,6 +26,12 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 * Support for launch configs in other dev envs
   * vscode
   * eclipse
+* support to login to minecraft in dev
+* support to launch with the prod jar
+* add datagen support
+  * forge datagen
+  * fabric datagen
+  * quilt datagen
 
 ## Recommended Setup
 1. take one of the versions from [testing](./testing)
