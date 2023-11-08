@@ -37,9 +37,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG3 transformer")
         parent.provider.minecraftRemapper.addResourceRemapper { JsCoreModRemapper(project.logger) }
+        val forgeHardcodedNames = setOf("net/minecraftforge/registries/ObjectHolderRegistry", "net/neoforged/neoforge/registries/ObjectHolderRegistry")
         parent.provider.minecraftRemapper.addExtension { StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
 //            it.matches(Regex("^net/minecraftforge/.*"))
-            it == "net/minecraftforge/registries/ObjectHolderRegistry"
+            forgeHardcodedNames.contains(it)
         } }
         unprotectRuntime = true
     }
