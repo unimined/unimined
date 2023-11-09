@@ -322,7 +322,7 @@ object AccessTransformerMinecraftTransformer {
         if (accessTransformers.isEmpty()) return
         if (output.exists()) output.deleteIfExists()
         output.parent.createDirectories()
-        val temp = output.resolveSibling(output.nameWithoutExtension + "-mergedATs.cfg")
+        val temp = output.resolveSibling(baseMinecraft.nameWithoutExtension + "-mergedATs.cfg")
         temp.parent.createDirectories()
         temp.deleteIfExists()
         // merge at's
