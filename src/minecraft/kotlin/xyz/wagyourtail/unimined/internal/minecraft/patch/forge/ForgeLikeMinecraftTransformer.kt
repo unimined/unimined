@@ -361,6 +361,7 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
             )
             if (!output.path.exists() || project.unimined.forceReload) {
                 AccessTransformerMinecraftTransformer.transform(
+                    project,
                     ats + listOf(accessTransformer!!.toPath()),
                     baseMinecraft.path,
                     output.path
@@ -373,7 +374,7 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
             }
             val output = MinecraftJar(baseMinecraft, awOrAt = "at")
             if (!output.path.exists() || project.unimined.forceReload) {
-                AccessTransformerMinecraftTransformer.transform(ats, baseMinecraft.path, output.path)
+                AccessTransformerMinecraftTransformer.transform(project, ats, baseMinecraft.path, output.path)
             }
             output
         }

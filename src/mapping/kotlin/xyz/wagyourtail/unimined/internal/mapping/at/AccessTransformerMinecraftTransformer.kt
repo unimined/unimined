@@ -5,11 +5,15 @@ import net.fabricmc.accesswidener.AccessWidenerWriter
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
-import net.minecraftforge.accesstransformer.*
-import net.minecraftforge.accesstransformer.AccessTransformer.Modifier
-import net.minecraftforge.accesstransformer.Target
-import net.minecraftforge.accesstransformer.parser.AccessTransformerList
+import net.neoforged.accesstransformer.*
+import net.neoforged.accesstransformer.AccessTransformer.Modifier
+import net.neoforged.accesstransformer.Target
+import net.neoforged.accesstransformer.parser.AccessTransformerList
+import org.apache.commons.io.output.NullOutputStream
+import org.gradle.api.Project
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
+import org.gradle.api.logging.configuration.ShowStacktrace
 import java.io.*
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -303,18 +307,57 @@ object AccessTransformerMinecraftTransformer {
         }
     }
 
-    fun transform(accessTransformers: List<Path>, baseMinecraft: Path, output: Path) {
+
+    fun shouldShowVerboseStdout(project: Project): Boolean {
+        // if running with INFO or DEBUG logging
+        return project.gradle.startParameter.logLevel < LogLevel.LIFECYCLE
+    }
+
+    fun shouldShowVerboseStderr(project: Project): Boolean {
+        // if stdout is shown or stacktraces are visible so that errors printed to stderr show up
+        return shouldShowVerboseStdout(project) || project.gradle.startParameter.showStacktrace != ShowStacktrace.INTERNAL_EXCEPTIONS
+    }
+
+    fun transform(project: Project, accessTransformers: List<Path>, baseMinecraft: Path, output: Path) {
         if (accessTransformers.isEmpty()) return
         if (output.exists()) output.deleteIfExists()
         output.parent.createDirectories()
-        val processJar = TransformerProcessor::class.java.getDeclaredMethod(
-            "processJar",
-            Path::class.java,
-            Path::class.java,
-            List::class.java
-        )
-        processJar.isAccessible = true
-        processJar(null, baseMinecraft, output, accessTransformers)
+        val temp = output.resolveSibling(output.nameWithoutExtension + "-mergedATs.cfg")
+        temp.parent.createDirectories()
+        temp.deleteIfExists()
+        // merge at's
+        temp.bufferedWriter(
+            StandardCharsets.UTF_8,
+            1024,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING
+        ).use {
+            for (at in accessTransformers) {
+                at.bufferedReader().use { reader ->
+                    reader.copyTo(it)
+                    it.write("\n")
+                }
+            }
+        }
+        val result = project.javaexec { spec ->
+            spec.classpath = project.configurations.detachedConfiguration(project.dependencies.create("net.neoforged:accesstransformers:9.0.3"))
+            spec.mainClass.set("net.neoforged.accesstransformer.TransformerProcessor")
+            spec.args = listOf("--inJar", baseMinecraft.absolutePathString(), "--outJar", output.absolutePathString(), "--atFile", temp.absolutePathString())
+            if (shouldShowVerboseStdout(project)) {
+                spec.standardOutput = System.out
+            } else {
+                spec.standardOutput = NullOutputStream.NULL_OUTPUT_STREAM
+            }
+            if (shouldShowVerboseStderr(project)) {
+                spec.errorOutput = System.err
+            } else {
+                spec.errorOutput = NullOutputStream.NULL_OUTPUT_STREAM
+            }
+        }
+        if (result.exitValue != 0) {
+            output.deleteIfExists()
+            throw IllegalStateException("Failed to run AccessTransformerProcessor")
+        }
     }
 
     fun aw2at(aw: Path, output: Path, legacy: Boolean = false): Path {
