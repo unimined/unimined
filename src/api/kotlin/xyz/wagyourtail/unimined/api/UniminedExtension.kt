@@ -54,6 +54,9 @@ abstract class UniminedExtension(val project: Project) {
     @get:ApiStatus.Internal
     abstract val minecrafts: DefaultMap<SourceSet, MinecraftConfig>
 
+    @get:ApiStatus.Internal
+    abstract val minecraftConfiguration: Map<SourceSet, MinecraftConfig.() -> Unit>
+
     /**
      * @since 1.0.0
      */

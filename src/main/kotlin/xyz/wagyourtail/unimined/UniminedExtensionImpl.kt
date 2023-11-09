@@ -25,12 +25,22 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     override val minecrafts = defaultedMapOf<SourceSet, MinecraftConfig> {
         MinecraftProvider(project, it)
     }
-
+    override val minecraftConfiguration = mutableMapOf<SourceSet, MinecraftConfig.() -> Unit>()
     override fun minecraft(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
         if (minecrafts.containsKey(sourceSet) && (minecrafts[sourceSet] as MinecraftProvider).applied) {
             throw IllegalStateException("minecraft config for ${sourceSet.name} already applied, cannot configure further!")
         } else if (!minecrafts.containsKey(sourceSet)) {
             project.logger.info("[Unimined] registering minecraft config for ${sourceSet.name}")
+        }
+        minecraftConfiguration.compute(sourceSet) { _, old ->
+            if (old != null) {
+                {
+                    old()
+                    action()
+                }
+            } else {
+                action
+            }
         }
         minecrafts[sourceSet].action()
         if (!lateApply) (minecrafts[sourceSet] as MinecraftProvider).apply()
