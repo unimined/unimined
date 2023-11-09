@@ -98,14 +98,6 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
      */
     var createJarTask: Boolean by FinalizeOnRead(true)
 
-    /**
-     * the minecraft version to use
-     */
-    fun version(version: String) {
-        project.logger.info("setting minecraft version to $version")
-        this.version = version
-    }
-
     @set:ApiStatus.Internal
     abstract var mcPatcher: MinecraftPatcher
 
@@ -114,6 +106,16 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     abstract val runs: RunsConfig
     abstract val minecraftData: MinecraftData
     abstract val minecraftRemapper: MinecraftRemapConfig
+
+    abstract fun from(sourceSet: SourceSet)
+
+    /**
+     * the minecraft version to use
+     */
+    fun version(version: String) {
+        project.logger.info("setting minecraft version to $version")
+        this.version = version
+    }
 
     abstract fun mappings(action: MappingsConfig.() -> Unit)
 

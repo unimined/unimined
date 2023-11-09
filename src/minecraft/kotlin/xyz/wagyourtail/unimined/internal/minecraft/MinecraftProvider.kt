@@ -16,6 +16,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
@@ -79,6 +80,14 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         sourceSet.compileClasspath += it
         sourceSet.runtimeClasspath += it
         it.setTransitive(false)
+    }
+
+    override fun from(sourceSet: SourceSet) {
+        val delegate = MinecraftProvider::class.getField("mcPatcher")!!.getDelegate(this) as FinalizeOnRead<FinalizeOnWrite<MinecraftPatcher>>
+        if (delegate.finalized || (delegate.value as FinalizeOnWrite<MinecraftPatcher>).finalized) {
+            throw IllegalStateException("mcPatcher is already finalized before from() call... will un-finalize and re-set to current value after!!!")
+        }
+        project.unimined.minecraftConfiguration[sourceSet]!!(this)
     }
 
     override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit) {
