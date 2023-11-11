@@ -22,7 +22,7 @@ class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvide
 
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         forge.dependencies.add(if (dep is String && !dep.contains(":")) {
-            if (dep.startsWith("47")) {
+            if (provider.version == "1.20.1") {
                 project.dependencies.create("net.neoforged:forge:${provider.version}-$dep:universal")
             } else {
                 project.dependencies.create("net.neoforged:neoforge:${provider.version.removePrefix("1.")}.$dep:universal")
