@@ -18,6 +18,9 @@ import kotlin.io.path.createDirectories
 val Project.unimined
     get() = extensions.getByType(UniminedExtension::class.java)
 
+val Project.uniminedMaybe
+    get() = extensions.findByType(UniminedExtension::class.java)
+
 /**
  * the main entrypoint.
  *

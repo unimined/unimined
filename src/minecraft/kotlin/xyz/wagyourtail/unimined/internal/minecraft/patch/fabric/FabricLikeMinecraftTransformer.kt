@@ -14,6 +14,7 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
@@ -392,23 +393,27 @@ abstract class FabricLikeMinecraftTransformer(
         ).toFile()
     }
 
-    fun getGroup(): String {
-        // todo: detect other fabric mods and do :: properly
-        return (detectProjectSourceSets().flatMap {
-            listOf(
-                it.output.resourcesDir
-            ) + it.output.classesDirs
-        }).joinToString(File.pathSeparator)
+    val groups: String by lazy {
+        val groups = sortProjectSourceSets().mapValues { it.value.toMutableSet() }.toMutableMap()
+        // detect non-fabric groups
+        for ((proj, sourceSet) in groups.keys.toSet()) {
+            if (proj.uniminedMaybe?.minecrafts?.map?.get(sourceSet)?.mcPatcher !is FabricLikePatcher) {
+                // merge with current
+                proj.logger.warn("[Unimined/FabricLike] Non-fabric ${(proj to sourceSet).toPath()} found in fabric classpath groups, merging with current (${(project to provider.sourceSet).toPath()}), this should've been manually specified with `combineWith`")
+                groups[this.project to this.provider.sourceSet]!! += groups[proj to sourceSet]!!
+                groups.remove(proj to sourceSet)
+            }
+        }
+        project.logger.info("[Unimined/FabricLike] Classpath groups: ${groups.map { it.key.toPath() + " -> " + it.value.joinToString(", ") { it.toPath() } }.joinToString("\n    ")}")
+        groups.map { entry -> entry.value.flatMap { it.second.output }.joinToString(File.pathSeparator) { it.absolutePath } }.joinToString(File.pathSeparator.repeat(2))
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
         config.mainClass = mainClass?.get("client")?.asString ?: config.mainClass
-        config.jvmArgs += "-Dfabric.classPathGroups=${getGroup()}"
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
         config.mainClass = mainClass?.get("server")?.asString ?: config.mainClass
-        config.jvmArgs += "-Dfabric.classPathGroups=${getGroup()}"
     }
 
     override fun libraryFilter(library: Library): Boolean {

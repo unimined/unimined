@@ -103,7 +103,7 @@ open class JarModAgentMinecraftTransformer(
             config.jvmArgs.add("-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}")
         }
         // priority classpath
-        val priorityClasspath = detectProjectSourceSets().map { it.output.classesDirs.toMutableSet().also {set-> it.output.resourcesDir.let { set.add(it) } } }.flatten()
+        val priorityClasspath = detectProjectSourceSets().map { it.second.output.classesDirs.toMutableSet().also {set-> it.second.output.resourcesDir.let { set.add(it) } } }.flatten()
         if (priorityClasspath.isNotEmpty()) {
             config.jvmArgs.add("-D${JMA_PRIORITY_CLASSPATH}=${priorityClasspath.joinToString(File.pathSeparator) { it.absolutePath }}")
         }

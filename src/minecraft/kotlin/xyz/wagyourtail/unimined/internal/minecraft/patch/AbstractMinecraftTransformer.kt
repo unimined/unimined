@@ -9,10 +9,12 @@ import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixParamAnnotations
@@ -165,6 +167,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
     open fun applyExtraLaunches() {
     }
 
+    fun Pair<Project, SourceSet>.toPath() = first.path + ":" + second.name
+
     @ApiStatus.Internal
     open fun applyClientRunTransform(config: RunConfig) {
         if (unprotectRuntime) {
@@ -234,17 +238,65 @@ abstract class AbstractMinecraftTransformer protected constructor(
         return true
     }
 
-    protected fun detectProjectSourceSets(): Set<SourceSet> {
-        val sourceSets = mutableSetOf<SourceSet>()
+    protected fun detectProjectSourceSets(): Set<Pair<Project, SourceSet>> {
+        val sourceSets = mutableSetOf<Pair<Project, SourceSet>>()
         val projects = project.rootProject.allprojects
         for (project in projects) {
             for (sourceSet in project.extensions.findByType(SourceSetContainer::class.java)?.asMap?.values
                 ?: listOf()) {
                 if (sourceSet.output.files.intersect(provider.sourceSet.runtimeClasspath.files).isNotEmpty()) {
-                    sourceSets.add(sourceSet)
+                    sourceSets.add(project to sourceSet)
                 }
             }
         }
         return sourceSets
+    }
+
+    /**
+     * this function organizes sourceSets based on their combinedWith sourceSets
+     */
+    protected fun sortProjectSourceSets(): Map<Pair<Project, SourceSet>, Set<Pair<Project, SourceSet>>> {
+        val minecraftConfigs = mutableMapOf<Pair<Project, SourceSet>, MinecraftConfig?>()
+        for ((project, sourceSet) in detectProjectSourceSets()) {
+            minecraftConfigs[project to sourceSet] = project.uniminedMaybe?.minecrafts?.map?.get(sourceSet)
+        }
+        // ensure all minecraft ones on same mappings
+        // get current mappings
+        for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
+            if (provider.mappings.devNamespace != minecraftConfig.mappings.devNamespace ||
+                provider.mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace) {
+                throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${provider.sourceSet} on ${provider.mappings.devNamespace}/${provider.mappings.devFallbackNamespace} and ${sourceSet} on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
+            }
+            if (provider.version != minecraftConfig.version) {
+                throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${provider.sourceSet} on ${provider.version} and ${sourceSet} on ${minecraftConfig.version}")
+            }
+        }
+        val map = mutableMapOf<Pair<Project, SourceSet>, Set<Pair<Project, SourceSet>>>()
+        val resolveQueue = minecraftConfigs.keys.toMutableSet()
+        while (resolveQueue.isNotEmpty()) {
+            val first = resolveQueue.first()
+            resolveProjectDependents(minecraftConfigs, first, resolveQueue, map)
+        }
+        return map
+    }
+
+    private fun resolveProjectDependents(minecraftConfigs: Map<Pair<Project, SourceSet>, MinecraftConfig?>, sourceSet: Pair<Project, SourceSet>, resolveQueue: MutableSet<Pair<Project, SourceSet>>, output: MutableMap<Pair<Project, SourceSet>, Set<Pair<Project, SourceSet>>>) {
+        resolveQueue.remove(sourceSet)
+        val config = minecraftConfigs[sourceSet]
+        val out = if (config == null) {
+            mutableSetOf()
+        } else {
+            val out = config.combinedWithList.intersect(minecraftConfigs.keys).toMutableSet()
+            for (dependent in out.toSet()) {
+                if (dependent in resolveQueue) {
+                    resolveProjectDependents(minecraftConfigs, dependent, resolveQueue, output)
+                }
+                out.addAll(output[dependent] ?: listOf())
+                output.remove(dependent)
+            }
+            out
+        }
+        out.add(sourceSet)
+        output[sourceSet] = out
     }
 }

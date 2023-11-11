@@ -237,13 +237,13 @@ interface PatchProviders {
 
     /**
      * enables the NeoForged patcher.
-     * @since 1.0.0
+     * @since 1.1.0
      */
     fun neoForged(action: NeoForgedPatcher<*>.() -> Unit)
 
     /**
      * enables the NeoForged patcher.
-     * @since 1.0.0
+     * @since 1.1.0
      */
 
     fun neoForged(
@@ -261,7 +261,7 @@ interface PatchProviders {
 
     /**
      * enables the NeoForged patcher.
-     * @since 1.0.0
+     * @since 1.1.0
      */
     fun neoForged() {
         neoForged {}

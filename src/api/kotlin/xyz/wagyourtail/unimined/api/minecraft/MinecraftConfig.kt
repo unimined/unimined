@@ -22,6 +22,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.MustSet
+import xyz.wagyourtail.unimined.util.sourceSets
 import java.io.File
 import java.nio.file.Path
 
@@ -107,7 +108,64 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     abstract val minecraftData: MinecraftData
     abstract val minecraftRemapper: MinecraftRemapConfig
 
-    abstract fun from(sourceSet: SourceSet)
+
+
+    /**
+     * @since 1.1.0
+     * copy the config closure from the config for another sourceSet
+     */
+    fun from(sourceSet: SourceSet) {
+        from(project, sourceSet)
+    }
+
+    /**
+     * @since 1.1.0
+     * copy the config closure from the config for another sourceSet
+     */
+    abstract fun from(project: Project, sourceSet: SourceSet)
+
+    /**
+     * @since 1.1.0
+     * copy the config closure from the config for another sourceSet
+     */
+    fun from(path: String) {
+        if (!path.contains(":")) {
+            from(project.sourceSets.getByName(path))
+            return
+        }
+        val project = path.substringBeforeLast(":")
+        val name = path.substringAfterLast(":")
+        from(this.project.project(path).sourceSets.getByName(name))
+    }
+
+    /**
+     * @since 1.1.0
+     */
+    fun combineWith(sourceSet: SourceSet) {
+        combineWith(project, sourceSet)
+    }
+
+    /**
+     * @since 1.1.0
+     * calls `from(project, sourceSet)` and then also adds the target to the compileClasspath and runtimeClasspath, as well as adding it to the `from` in the jar task
+     * this also fixes some other things, like resources being split between the two sourceSets
+     *
+     * if the target isn't a unimined sourceSet, this will skip the `from` call
+     */
+    abstract fun combineWith(project: Project, sourceSet: SourceSet)
+
+    /**
+     * @since 1.1.0
+     */
+    fun combineWith(path: String) {
+        if (!path.contains(":")) {
+            combineWith(project, project.sourceSets.getByName(path))
+            return
+        }
+        val project = path.substringBeforeLast(":")
+        val name = path.substringAfterLast(":")
+        combineWith(this.project.project(path), this.project.project(path).sourceSets.getByName(name))
+    };
 
     /**
      * the minecraft version to use
@@ -238,4 +296,6 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     @get:ApiStatus.Internal
     val localCache by lazy { project.unimined.getLocalCache(sourceSet) }
 
+    @get:ApiStatus.Internal
+    abstract val combinedWithList: MutableList<Pair<Project, SourceSet>>
 }
