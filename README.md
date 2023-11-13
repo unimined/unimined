@@ -43,3 +43,6 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 ### Arch-Loom Style
 * direct porting of arch-loom projects without changing the directory structure is possible.
 * instructions pending...
+### third party template(s)
+* arch style: https://github.com/firstdarkdev/fdd-xplat
+* //todo: add more
