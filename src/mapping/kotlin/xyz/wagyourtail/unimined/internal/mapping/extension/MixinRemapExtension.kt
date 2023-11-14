@@ -23,6 +23,7 @@ import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.HardTarget
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.BaseMixinRefmap
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.RefmapBuilderClassVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixinextra.MixinExtra
+import xyz.wagyourtail.unimined.util.DefaultMap
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import java.nio.file.FileSystem
@@ -113,7 +114,7 @@ class MixinRemapExtension(
 
     open class MixinTarget(override val inputTag: InputTag, val extension: MixinRemapExtension) : InputTagExtension {
         protected val metadata: MergedMetadata = MergedMetadata(extension)
-        protected val tasks: MutableMap<Int, Deque<(CommonData) -> Unit>> = defaultedMapOf { ConcurrentLinkedDeque() }
+        protected val tasks: DefaultMap<Int, Deque<(CommonData) -> Unit>> = defaultedMapOf { ConcurrentLinkedDeque() }
 
         fun addMetadata(metadata: MixinMetadata) {
             this.metadata.addMetadata(metadata)
@@ -144,7 +145,7 @@ class MixinRemapExtension(
                     )
                     extension.modifyHardRemapper(visitor)
                     synchronized(tasks) {
-                        tasks[mrjVersion]!!.add(visitor::runRemap)
+                        tasks[mrjVersion].add(visitor::runRemap)
                     }
                     visitor
                 } else {
@@ -159,7 +160,7 @@ class MixinRemapExtension(
             extension.logger.info("[HardTarget] processing state for ${environment.mrjVersion}")
             val data = CommonData(environment, extension.logger)
             try {
-                for (task in tasks[environment.mrjVersion]!!) {
+                for (task in tasks[environment.mrjVersion]) {
                     task(data)
                 }
             } catch (e: Exception) {
