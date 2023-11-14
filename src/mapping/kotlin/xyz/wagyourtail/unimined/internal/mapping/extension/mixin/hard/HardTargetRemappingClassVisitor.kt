@@ -8,6 +8,8 @@ import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
+import java.util.Deque
+import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.atomic.AtomicBoolean
 
 typealias ClassAnnotationPredicate = (
@@ -76,7 +78,7 @@ class HardTargetRemappingClassVisitor(
 
     lateinit var mxClass: MxClass
 
-    val tasks: MutableList<(CommonData) -> Unit> = mutableListOf()
+    val tasks: Deque<(CommonData) -> Unit> = ConcurrentLinkedDeque()
     val targetClasses = mutableSetOf<String>()
     val remap = AtomicBoolean(true)
     val extraData: MutableMap<String, Any> = mutableMapOf()
@@ -94,14 +96,14 @@ class HardTargetRemappingClassVisitor(
     }
 
     fun addRemapTask(task: CommonData.() -> Unit) {
-        tasks.add(task)
+        tasks.addLast(task)
     }
 
     /**
      * should only really be used by tasks that mutate {@link #targetClasses}
      */
     fun addRemapTaskFirst(task: CommonData.() -> Unit) {
-        tasks.add(0, task)
+        tasks.addFirst(task)
     }
 
     override fun visit(
