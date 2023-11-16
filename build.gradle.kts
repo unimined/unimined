@@ -174,7 +174,7 @@ dependencies {
         exclude(group = "org.ow2.asm")
     }
 
-    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
+    compileOnly("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false
     }
 }
