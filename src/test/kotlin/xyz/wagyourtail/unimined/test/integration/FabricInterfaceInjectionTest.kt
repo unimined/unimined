@@ -16,9 +16,15 @@ class FabricInterfaceInjectionTest {
     fun test_fabric_interface_injection() {
         val projectName = "Fabric-Interface-Injection"
         val result = runTestProject(projectName)
-        result.task(":build")?.outcome?.let {
-            if (it != TaskOutcome.SUCCESS) throw Exception("build failed")
-        } ?: throw Exception("build failed")
+
+        try {
+            result.task(":build")?.outcome?.let {
+                if (it != TaskOutcome.SUCCESS) throw Exception("build failed")
+            } ?: throw Exception("build failed")
+        } catch (e: Exception) {
+            println(result.output)
+            throw Exception(e)
+        }
 
         val fs = openZipFileSystem(projectName, ".gradle/unimined/local/fabric/fabric/minecraft-1.14.4-fabric-merged+fixed-mojmap+intermediary-ii+-1221611203.jar")
 

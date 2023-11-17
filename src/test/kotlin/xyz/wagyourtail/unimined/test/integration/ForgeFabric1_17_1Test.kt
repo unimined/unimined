@@ -8,8 +8,14 @@ class ForgeFabric1_17_1Test {
     @Test
     fun test_forge_fabric_1_17_1() {
         val result = runTestProject("1.17.1-Forge-Fabric")
-        result.task(":build")?.outcome?.let {
-            if (it != TaskOutcome.SUCCESS) throw Exception("build failed")
-        } ?: throw Exception("build failed")
+
+        try {
+            result.task(":build")?.outcome?.let {
+                if (it != TaskOutcome.SUCCESS) throw Exception("build failed")
+            } ?: throw Exception("build failed")
+        } catch (e: Exception) {
+            println(result.output)
+            throw Exception(e)
+        }
     }
 }

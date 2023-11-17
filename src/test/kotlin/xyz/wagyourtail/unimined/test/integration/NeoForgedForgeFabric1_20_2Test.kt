@@ -8,8 +8,14 @@ class NeoForgedForgeFabric1_20_2Test {
     @Test
     fun test_neoforged_fabric_1_20_2() {
         val result = runTestProject("1.20.2-NeoForged-Forge-Fabric")
-        result.task(":build")?.outcome?.let {
-            if (it != TaskOutcome.SUCCESS) throw Exception("build failed")
-        } ?: throw Exception("build failed")
+
+        try {
+            result.task(":build")?.outcome?.let {
+                if (it != TaskOutcome.SUCCESS) throw Exception("build failed")
+            } ?: throw Exception("build failed")
+        } catch (e: Exception) {
+            println(result.output)
+            throw Exception(e)
+        }
     }
 }
