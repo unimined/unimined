@@ -256,6 +256,22 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
     }
 
+    override fun feather(build: Int, key: String, action: MappingDepConfig.() -> Unit) {
+        project.unimined.ornitheMaven()
+        val environment = when (side) {
+            EnvType.CLIENT -> "-client"
+            EnvType.SERVER -> "-server"
+            else -> ""
+        }
+        mapping("net.ornithemc:feather:${minecraft.version}${environment}+build.${build}:v2", key) {
+            outputs("yarn", true) { listOf("intermediary") }
+            mapNamespace("named", "yarn")
+            sourceNamespace("intermediary")
+            renest()
+            action()
+        }
+    }
+
     override fun legacyYarn(build: Int, revision: Int, key: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.legacyFabricMaven()
         if (legacyFabricMappingsVersionFinalize.value != revision) {
