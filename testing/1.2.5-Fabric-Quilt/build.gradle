@@ -18,6 +18,10 @@ sourceSets {
         compileClasspath += sourceSets.main.output
         runtimeClasspath += sourceSets.main.output
     }
+    quilt {
+        compileClasspath += sourceSets.main.output + sourceSets.fabric.output
+        runtimeClasspath += sourceSets.main.output + sourceSets.fabric.output
+    }
 }
 
 repositories {
@@ -59,6 +63,26 @@ unimined.minecraft(sourceSets.fabric) {
 
     fabric {
         loader '0.14.24'
+    }
+
+    defaultRemapJar = false
+}
+
+unimined.minecraft(sourceSets.quilt) {
+    version "1.2.5"
+    side "client"
+
+    mappings {
+        calamus()
+        feather(20)
+    }
+
+    minecraftRemapper.config {
+        ignoreConflicts(true)
+    }
+
+    quilt {
+        loader '0.21.2'
     }
 
     defaultRemapJar = false

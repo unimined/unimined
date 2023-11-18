@@ -27,4 +27,4 @@ pluginManagement {
 // so we can use the unimined directly provided by the super project
 includeBuild('../../')
 
-rootProject.name = '1.2.5-Fabric'
+rootProject.name = '1.2.5-Fabric-Quilt'
