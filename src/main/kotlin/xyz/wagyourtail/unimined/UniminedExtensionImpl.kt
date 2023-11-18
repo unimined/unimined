@@ -185,6 +185,16 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Fabric maven: $fabricMaven")
     }
 
+    val ornitheMaven by lazy {
+        project.repositories.maven {
+            it.name = "ornithe"
+            it.url = URI.create("https://maven.ornithemc.net/releases")
+        }
+    }
+    override fun ornitheMaven() {
+        project.logger.info("[Unimined] adding Ornithe maven: $ornitheMaven")
+    }
+
     val legacyFabricMaven by lazy {
         project.repositories.maven {
             it.name = "legacyFabric"

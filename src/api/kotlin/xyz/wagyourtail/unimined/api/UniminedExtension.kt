@@ -141,6 +141,7 @@ abstract class UniminedExtension(val project: Project) {
     abstract fun minecraftForgeMaven()
     abstract fun fabricMaven()
     abstract fun legacyFabricMaven()
+    abstract fun ornitheMaven()
     abstract fun wagYourMaven(name: String)
     abstract fun mcphackersIvy()
     abstract fun quiltMaven()
