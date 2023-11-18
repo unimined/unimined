@@ -90,7 +90,7 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
-      - run: ./gradlew test --tests ${{ matrix.test }} --stacktrace --warning-mode fail
+      - run: ./gradlew test --tests ${{ matrix.test }} --stacktrace --info --warning-mode fail
         env:
           TEST_WARNING_MODE: fail
         id: test
