@@ -77,10 +77,12 @@ abstract class FabricMinecraftTransformer(
         this.collectInterfaceInjections(baseMinecraft, injections)
 
         return if (injections.isNotEmpty()) {
+            val oldSuffix = if (baseMinecraft.awOrAt != null) baseMinecraft.awOrAt + "+" else ""
+
             val output = MinecraftJar(
                 baseMinecraft,
                 parentPath = provider.localCache.resolve("fabric").createDirectories(),
-                awOrAt = "ii+${injections.hashCode()}"
+                awOrAt = "${oldSuffix}ii+${injections.hashCode()}"
             );
 
             if (!output.path.exists() || project.unimined.forceReload) {
