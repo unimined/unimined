@@ -23,6 +23,7 @@ class MinecraftForgeMinecraftTransformer(project: Project, provider: MinecraftPr
 
     override fun addMavens() {
         project.unimined.minecraftForgeMaven()
+        project.unimined.neoForgedMaven()
     }
 
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
