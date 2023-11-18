@@ -65,6 +65,19 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
     }
 
+    override fun calamus(key: String, action: MappingDepConfig.() -> Unit) {
+        project.unimined.ornitheMaven()
+        val environment = when (side) {
+            EnvType.CLIENT -> "-client"
+            EnvType.SERVER -> "-server"
+            else -> ""
+        }
+        mapping("net.ornithemc:calamus-intermediary:${minecraft.version}${environment}:v2", key) {
+            outputs("intermediary", false) { listOf("official") }
+            action()
+        }
+    }
+
     override fun legacyIntermediary(revision: Int, key: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.legacyFabricMaven()
         if (legacyFabricMappingsVersionFinalize.value != revision) {

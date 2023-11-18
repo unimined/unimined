@@ -62,6 +62,22 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
+    abstract fun calamus(key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun calamus(
+        key: String = "intermediary",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        calamus(key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    @JvmOverloads
     abstract fun legacyIntermediary(revision: Int = 1, key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
 
     @JvmOverloads
