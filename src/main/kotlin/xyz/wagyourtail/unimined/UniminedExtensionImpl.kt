@@ -156,7 +156,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun minecraftForgeMaven() {
-        project.logger.info("[Unimined] adding forge maven: $minecraftForgeMaven")
+        project.logger.info("[Unimined] adding Minecraft Forge maven: $minecraftForgeMaven")
     }
 
     val neoForgedMaven by lazy {
@@ -171,7 +171,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun neoForgedMaven() {
-        project.logger.info("[Unimined] adding neoForged maven: $neoForgedMaven")
+        project.logger.info("[Unimined] adding Neo-Forged maven: $neoForgedMaven")
     }
 
     val fabricMaven by lazy {
@@ -182,7 +182,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun fabricMaven() {
-        project.logger.info("[Unimined] adding fabric maven: $fabricMaven")
+        project.logger.info("[Unimined] adding Fabric maven: $fabricMaven")
     }
 
     val legacyFabricMaven by lazy {
@@ -192,7 +192,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
     override fun legacyFabricMaven() {
-        project.logger.info("[Unimined] adding legacy fabric maven: $legacyFabricMaven")
+        project.logger.info("[Unimined] adding Legacy Fabric maven: $legacyFabricMaven")
     }
 
     val quiltMaven by lazy {
@@ -203,7 +203,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun quiltMaven() {
-        project.logger.info("[Unimined] adding quilt maven: $quiltMaven")
+        project.logger.info("[Unimined] adding Quilt maven: $quiltMaven")
     }
 
     val babricMaven by lazy {
@@ -214,7 +214,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun babricMaven() {
-        project.logger.info("[Unimined] adding babric maven: $babricMaven")
+        project.logger.info("[Unimined] adding Babric maven: $babricMaven")
     }
 
     val wagYourMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
@@ -225,7 +225,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun wagYourMaven(name: String) {
-        project.logger.info("[Unimined] adding wagyourtail maven: ${wagYourMaven[name]}")
+        project.logger.info("[Unimined] adding WagYourTail maven: ${wagYourMaven[name]}")
     }
 
     val mcphackersIvy by lazy {
