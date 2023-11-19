@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'com.example'
-archivesBaseName 'UniminedExampleMod'
+//archivesBaseName 'UniminedExampleMod'
 version '1.0-SNAPSHOT'
 
 // this is just here so we can test the outputs easier and clean between tests
@@ -95,6 +95,7 @@ unimined.minecraft(sourceSets.modloader) {
 }
 
 repositories {
+    unimined.wagYourMaven('releases')
 }
 
 dependencies {
