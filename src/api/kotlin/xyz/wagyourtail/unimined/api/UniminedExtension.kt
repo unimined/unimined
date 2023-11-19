@@ -145,7 +145,9 @@ abstract class UniminedExtension(val project: Project) {
     abstract fun wagYourMaven(name: String)
     abstract fun mcphackersIvy()
     abstract fun quiltMaven()
+    @Deprecated("Use glassLauncherMaven(\"babric\") instead", ReplaceWith("glassLauncherMaven(\"babric\")"))
     abstract fun babricMaven()
+    abstract fun glassLauncherMaven(name: String)
     abstract fun parchmentMaven()
 
     abstract fun neoForgedMaven()

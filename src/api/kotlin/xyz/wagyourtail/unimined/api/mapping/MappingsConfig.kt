@@ -389,6 +389,23 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         barn(build.toInt(), key, action)
     }
 
+    @JvmOverloads
+    abstract fun biny(commitName: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun biny(
+        commitName: String,
+        key: String = "yarn",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        biny(commitName, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
 
     @JvmOverloads
     abstract fun quilt(build: Int, classifier: String = "intermediary-v2", key: String = "quilt", action: MappingDepConfig.() -> Unit = {})

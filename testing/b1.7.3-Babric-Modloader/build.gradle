@@ -24,18 +24,6 @@ sourceSets {
     }
 }
 
-tasks.register("babricJar", Jar) {
-    from sourceSets.babric.output, sourceSets.main.output
-
-    archiveClassifier = "babric"
-}
-
-tasks.register("modloaderJar", Jar) {
-    from sourceSets.modloader.output, sourceSets.main.output
-
-    archiveClassifier = "modloader"
-}
-
 repositories {
     mavenLocal()
     maven {
@@ -50,7 +38,7 @@ unimined.minecraft() {
 
     mappings {
         babricIntermediary()
-        barn(9)
+        biny("a00e3b0")
     }
 
     minecraftRemapper.config {
@@ -64,11 +52,11 @@ unimined.minecraft(sourceSets.babric) {
     version "b1.7.3"
 
     mappings {
-        barn(9)
+        biny("a00e3b0")
     }
 
     babric {
-        loader "0.14.19-babric.1"
+        loader "0.14.24-babric.1"
     }
 
     minecraftRemapper.config {
@@ -105,15 +93,10 @@ jar {
     enabled = false
 }
 
-
-processResources {
+processBabricResources {
     inputs.property "version", project.version
 
-    filesMatching("META-INF/mods.toml") {
-        expand "version": project.version
-    }
-
-    filesMatching("mcmod.info") {
+    filesMatching("fabric.mod.json") {
         expand "version": project.version
     }
 }

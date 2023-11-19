@@ -216,15 +216,20 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Quilt maven: $quiltMaven")
     }
 
-    val babricMaven by lazy {
+    @Deprecated("Use glassLauncherMaven(\"babric\") instead", ReplaceWith("glassLauncherMaven(\"babric\")"))
+    override fun babricMaven() {
+        glassLauncherMaven("babric")
+    }
+
+    val glassLauncherMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
         project.repositories.maven {
-            it.name = "babric"
-            it.url = URI.create("https://maven.glass-launcher.net/babric/")
+            it.name = "Glass (${name.capitalized()})"
+            it.url = URI.create("https://maven.glass-launcher.net/$name/")
         }
     }
 
-    override fun babricMaven() {
-        project.logger.info("[Unimined] adding Babric maven: $babricMaven")
+    override fun glassLauncherMaven(name: String) {
+        project.logger.info("[Unimined] adding Glass Launcher maven: ${glassLauncherMaven[name]}")
     }
 
     val wagYourMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
