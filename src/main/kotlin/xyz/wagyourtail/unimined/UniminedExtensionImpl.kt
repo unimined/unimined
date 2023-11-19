@@ -25,12 +25,22 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     override val minecrafts = defaultedMapOf<SourceSet, MinecraftConfig> {
         MinecraftProvider(project, it)
     }
-
+    override val minecraftConfiguration = mutableMapOf<SourceSet, MinecraftConfig.() -> Unit>()
     override fun minecraft(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
         if (minecrafts.containsKey(sourceSet) && (minecrafts[sourceSet] as MinecraftProvider).applied) {
             throw IllegalStateException("minecraft config for ${sourceSet.name} already applied, cannot configure further!")
         } else if (!minecrafts.containsKey(sourceSet)) {
             project.logger.info("[Unimined] registering minecraft config for ${sourceSet.name}")
+        }
+        minecraftConfiguration.compute(sourceSet) { _, old ->
+            if (old != null) {
+                {
+                    old()
+                    action()
+                }
+            } else {
+                action
+            }
         }
         minecrafts[sourceSet].action()
         if (!lateApply) (minecrafts[sourceSet] as MinecraftProvider).apply()
@@ -146,7 +156,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun minecraftForgeMaven() {
-        project.logger.info("[Unimined] adding forge maven: $minecraftForgeMaven")
+        project.logger.info("[Unimined] adding Minecraft Forge maven: $minecraftForgeMaven")
     }
 
     val neoForgedMaven by lazy {
@@ -161,7 +171,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun neoForgedMaven() {
-        project.logger.info("[Unimined] adding neoForged maven: $neoForgedMaven")
+        project.logger.info("[Unimined] adding Neo-Forged maven: $neoForgedMaven")
     }
 
     val fabricMaven by lazy {
@@ -172,7 +182,17 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun fabricMaven() {
-        project.logger.info("[Unimined] adding fabric maven: $fabricMaven")
+        project.logger.info("[Unimined] adding Fabric maven: $fabricMaven")
+    }
+
+    val ornitheMaven by lazy {
+        project.repositories.maven {
+            it.name = "ornithe"
+            it.url = URI.create("https://maven.ornithemc.net/releases")
+        }
+    }
+    override fun ornitheMaven() {
+        project.logger.info("[Unimined] adding Ornithe maven: $ornitheMaven")
     }
 
     val legacyFabricMaven by lazy {
@@ -182,7 +202,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
     override fun legacyFabricMaven() {
-        project.logger.info("[Unimined] adding legacy fabric maven: $legacyFabricMaven")
+        project.logger.info("[Unimined] adding Legacy Fabric maven: $legacyFabricMaven")
     }
 
     val quiltMaven by lazy {
@@ -193,7 +213,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun quiltMaven() {
-        project.logger.info("[Unimined] adding quilt maven: $quiltMaven")
+        project.logger.info("[Unimined] adding Quilt maven: $quiltMaven")
     }
 
     @Deprecated("Use glassLauncherMaven(\"babric\") instead", ReplaceWith("glassLauncherMaven(\"babric\")"))
@@ -209,7 +229,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun glassLauncherMaven(name: String) {
-        project.logger.info("[Unimined] adding glass launcher maven: ${glassLauncherMaven[name]}")
+        project.logger.info("[Unimined] adding Glass Launcher maven: ${glassLauncherMaven[name]}")
     }
 
     val wagYourMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
@@ -220,7 +240,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     override fun wagYourMaven(name: String) {
-        project.logger.info("[Unimined] adding wagyourtail maven: ${wagYourMaven[name]}")
+        project.logger.info("[Unimined] adding WagYourTail maven: ${wagYourMaven[name]}")
     }
 
     val mcphackersIvy by lazy {

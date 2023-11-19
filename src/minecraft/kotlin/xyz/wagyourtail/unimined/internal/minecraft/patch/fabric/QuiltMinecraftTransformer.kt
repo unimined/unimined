@@ -64,7 +64,8 @@ class QuiltMinecraftTransformer(
         super.applyClientRunTransform(config)
         config.jvmArgs += listOf(
             "-Dloader.development=true",
-            "-Dloader.remapClasspathFile=${intermediaryClasspath}"
+            "-Dloader.remapClasspathFile=${intermediaryClasspath}",
+            "-Dloader.classPathGroups=${groups}"
         )
     }
 
@@ -72,7 +73,8 @@ class QuiltMinecraftTransformer(
         super.applyServerRunTransform(config)
         config.jvmArgs += listOf(
             "-Dloader.development=true",
-            "-Dloader.remapClasspathFile=${intermediaryClasspath}"
+            "-Dloader.remapClasspathFile=${intermediaryClasspath}",
+            "-Dloader.classPathGroups=${groups}"
         )
     }
 

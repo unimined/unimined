@@ -79,7 +79,7 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         }
         val files = remapOutputs.flatMap { it.resolve() }
         for (file in nonRemap) {
-            project.logger.info("[Unimined/ModRemapper]  unremapped: $file")
+            project.logger.info("[Unimined/ModRemapper]    unremapped: $file")
         }
         for (file in files) {
             project.logger.info("[Unimined/ModRemapper]    remapped: $file")

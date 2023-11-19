@@ -11,11 +11,13 @@ import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
@@ -361,6 +363,7 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
             )
             if (!output.path.exists() || project.unimined.forceReload) {
                 AccessTransformerMinecraftTransformer.transform(
+                    project,
                     ats + listOf(accessTransformer!!.toPath()),
                     baseMinecraft.path,
                     output.path
@@ -373,10 +376,25 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
             }
             val output = MinecraftJar(baseMinecraft, awOrAt = "at")
             if (!output.path.exists() || project.unimined.forceReload) {
-                AccessTransformerMinecraftTransformer.transform(ats, baseMinecraft.path, output.path)
+                AccessTransformerMinecraftTransformer.transform(project, ats, baseMinecraft.path, output.path)
             }
             output
         }
+    }
+
+    val groups: String by lazy {
+        val groups = sortProjectSourceSets().mapValues { it.value.toMutableSet() }.toMutableMap()
+        // detect non-fabric groups
+        for ((proj, sourceSet) in groups.keys.toSet()) {
+            if (proj.uniminedMaybe?.minecrafts?.map?.get(sourceSet)?.mcPatcher !is ForgeLikePatcher<*>) {
+                // merge with current
+                proj.logger.warn("[Unimined/ForgeLike] Non-forge ${(proj to sourceSet).toPath()} found in fabric classpath groups, merging with current (${(project to provider.sourceSet).toPath()}), this should've been manually specified with `combineWith`")
+                groups[this.project to this.provider.sourceSet]!! += groups[proj to sourceSet]!!
+                groups.remove(proj to sourceSet)
+            }
+        }
+        project.logger.info("[Unimined/FabricLike] Classpath groups: ${groups.map { it.key.toPath() + " -> " + it.value.joinToString(", ") { it.toPath() } }.joinToString("\n    ")}")
+        groups.map { entry -> entry.value.flatMap { listOf(it.second.output.resourcesDir) + it.second.output.classesDirs }.joinToString(File.pathSeparator) { "${entry.key.toPath().replace(":", "_")}%%${it!!.absolutePath}" } }.joinToString(File.pathSeparator)
     }
 
     override fun applyClientRunTransform(config: RunConfig) {

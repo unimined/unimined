@@ -26,6 +26,16 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 * Support for launch configs in other dev envs
   * vscode
   * eclipse
+* support to login to minecraft in dev
+* support to launch with the prod jar
+* add datagen support
+  * forge datagen
+  * fabric datagen
+  * quilt datagen
+* fix yarn on neoforge (these will probably be agents, possibly in separate projects and pulled like JarModAgent)
+  * inject remapper into ASMAPI
+  * reflection remapper (also for forge potentially, or in general).
+
 
 ## Recommended Setup
 1. take one of the versions from [testing](./testing)
@@ -37,3 +47,6 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 ### Arch-Loom Style
 * direct porting of arch-loom projects without changing the directory structure is possible.
 * instructions pending...
+### third party template(s)
+* arch style: https://github.com/firstdarkdev/fdd-xplat
+* //todo: add more

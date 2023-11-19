@@ -16,6 +16,8 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
@@ -67,6 +69,8 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     private val patcherActions = ArrayDeque<() -> Unit>()
     private var lateActionsRunning by FinalizeOnWrite(false)
 
+    override val combinedWithList = mutableListOf<Pair<Project, SourceSet>>()
+
     var applied: Boolean by FinalizeOnWrite(false)
         private set
 
@@ -79,6 +83,26 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         sourceSet.compileClasspath += it
         sourceSet.runtimeClasspath += it
         it.setTransitive(false)
+    }
+
+    override fun from(project: Project, sourceSet: SourceSet) {
+        val delegate = MinecraftProvider::class.getField("mcPatcher")!!.getDelegate(this) as FinalizeOnRead<FinalizeOnWrite<MinecraftPatcher>>
+        if (delegate.finalized || (delegate.value as FinalizeOnWrite<MinecraftPatcher>).finalized) {
+            throw IllegalStateException("mcPatcher is already finalized before from() call, from should really be called at the top...")
+        }
+        if (project != this.project) {
+            this.project.evaluationDependsOn(project.path)
+        }
+        project.unimined.minecraftConfiguration[sourceSet]!!(this)
+    }
+
+    override fun combineWith(project: Project, sourceSet: SourceSet) {
+        combinedWithList.add(project to sourceSet)
+        if (project.uniminedMaybe != null) {
+            from(project, sourceSet)
+        }
+        this.sourceSet.compileClasspath += sourceSet.output
+        this.sourceSet.runtimeClasspath += sourceSet.output
     }
 
     override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit) {
@@ -328,8 +352,11 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                 project.logger.info("[Unimined/Minecraft] Creating default jar task for $sourceSet")
                 task = project.tasks.create("jar".withSourceSet(sourceSet), Jar::class.java) {
                     it.group = "build"
-                    it.from(sourceSet.output, project.sourceSets.getByName("main").output)
+                    it.from(sourceSet.output)
                     it.archiveClassifier.set(sourceSet.name)
+                    for ((_, sourceSet) in combinedWithList) {
+                        it.from(sourceSet.output)
+                    }
                 }
             }
             if (task != null && task is Jar) {

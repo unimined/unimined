@@ -37,9 +37,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG3 transformer")
         parent.provider.minecraftRemapper.addResourceRemapper { JsCoreModRemapper(project.logger) }
+        val forgeHardcodedNames = setOf("net/minecraftforge/registries/ObjectHolderRegistry", "net/neoforged/neoforge/registries/ObjectHolderRegistry")
         parent.provider.minecraftRemapper.addExtension { StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
 //            it.matches(Regex("^net/minecraftforge/.*"))
-            it == "net/minecraftforge/registries/ObjectHolderRegistry"
+            forgeHardcodedNames.contains(it)
         } }
         unprotectRuntime = true
     }
@@ -389,17 +390,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                 }
 
                 "{asset_index}" -> provider.minecraftData.metadata.assetIndex?.id ?: ""
-                "{source_roots}" -> {
-                    // TODO: detect other forge mods, and change mod name properly
-                    (detectProjectSourceSets().flatMap {
-                        listOf(
-                            it.output.resourcesDir
-                        ) + it.output.classesDirs
-                    }).joinToString(
-                        File.pathSeparator
-                    ) { "mod%%$it" }
-                }
-
+                "{source_roots}" -> parent.groups
                 "{mcp_mappings}" -> "unimined.stub"
                 "{natives}" -> {
                     val nativesDir = config.workingDir.resolve("natives").toPath()

@@ -49,7 +49,8 @@ abstract class FabricMinecraftTransformer(
         super.applyClientRunTransform(config)
         config.jvmArgs += listOf(
             "-Dfabric.development=true",
-            "-Dfabric.remapClasspathFile=${intermediaryClasspath}"
+            "-Dfabric.remapClasspathFile=${intermediaryClasspath}",
+            "-Dfabric.classPathGroups=${groups}"
         )
     }
 
@@ -57,7 +58,8 @@ abstract class FabricMinecraftTransformer(
         super.applyServerRunTransform(config)
         config.jvmArgs += listOf(
             "-Dfabric.development=true",
-            "-Dfabric.remapClasspathFile=${intermediaryClasspath}"
+            "-Dfabric.remapClasspathFile=${intermediaryClasspath}",
+            "-Dfabric.classPathGroups=${groups}"
         )
     }
 }

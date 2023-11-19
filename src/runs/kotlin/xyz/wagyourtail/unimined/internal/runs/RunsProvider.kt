@@ -86,7 +86,7 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
         val genIntellijRuns = project.tasks.register("genIntellijRuns".withSourceSet(minecraft.sourceSet)) {
             if (minecraft.sourceSet == project.sourceSets.getByName("main")) {
                 it.group = "unimined_runs"
-                it.dependsOn(*project.unimined.minecrafts.keys.map { "genIntellijRuns".withSourceSet(minecraft.sourceSet) }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
+                it.dependsOn(*project.unimined.minecrafts.keys.filter { it != minecraft.sourceSet }.map { "genIntellijRuns".withSourceSet(minecraft.sourceSet) }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
             } else {
                 it.group = "unimined_internal"
             }

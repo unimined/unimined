@@ -18,6 +18,9 @@ import kotlin.io.path.createDirectories
 val Project.unimined
     get() = extensions.getByType(UniminedExtension::class.java)
 
+val Project.uniminedMaybe
+    get() = extensions.findByType(UniminedExtension::class.java)
+
 /**
  * the main entrypoint.
  *
@@ -53,6 +56,9 @@ abstract class UniminedExtension(val project: Project) {
 
     @get:ApiStatus.Internal
     abstract val minecrafts: DefaultMap<SourceSet, MinecraftConfig>
+
+    @get:ApiStatus.Internal
+    abstract val minecraftConfiguration: Map<SourceSet, MinecraftConfig.() -> Unit>
 
     /**
      * @since 1.0.0
@@ -135,6 +141,7 @@ abstract class UniminedExtension(val project: Project) {
     abstract fun minecraftForgeMaven()
     abstract fun fabricMaven()
     abstract fun legacyFabricMaven()
+    abstract fun ornitheMaven()
     abstract fun wagYourMaven(name: String)
     abstract fun mcphackersIvy()
     abstract fun quiltMaven()

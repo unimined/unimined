@@ -20,7 +20,7 @@ import kotlin.io.path.relativeTo
  */
 data class RunConfig(
     val project: Project,
-    val javaVersion: JavaVersion,
+    var javaVersion: JavaVersion,
     val name: String,
     val taskName: String,
     var description: String,
