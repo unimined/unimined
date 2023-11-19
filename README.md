@@ -20,6 +20,7 @@ unified minecraft modding environment with support for legacy environments.
 yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecraft/PrcraftExampleMod) and it's buildsrc dir.
 
 ## TODO
+* stop using artifactural
 * rework mcpconfig runner to be more kotlin and less old version of arch-loom code
 * Fabric injected interfaces
 * Forge JarJar
