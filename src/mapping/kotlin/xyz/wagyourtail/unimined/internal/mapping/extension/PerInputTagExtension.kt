@@ -46,9 +46,9 @@ abstract class PerInputTagExtension<T : PerInputTagExtension.InputTagExtension> 
         return inputTagExtensions[tag]!!.readInput(remapper, *input)
     }
 
-    fun readClassPath(remapper: TinyRemapper, vararg classpath: Path): CompletableFuture<Void> {
-        remapper.readClassPath(*classpath)
-        return CompletableFuture.completedFuture(null)
+    fun readClassPath(remapper: TinyRemapper, vararg classpath: Path): CompletableFuture<*> {
+        return remapper.readClassPathAsync(*classpath)
+//        return CompletableFuture.completedFuture(null)
     }
 
     fun <T, U> Iterable<T>.reduce(identity: U, reducer: T.(U) -> U): U {

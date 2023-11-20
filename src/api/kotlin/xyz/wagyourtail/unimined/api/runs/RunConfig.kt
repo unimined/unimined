@@ -34,24 +34,6 @@ data class RunConfig(
     var disabled : Boolean = false,
 ) {
 
-    fun copy(): RunConfig {
-        return RunConfig(
-            project,
-            javaVersion,
-            name,
-            taskName,
-            description,
-            launchClasspath,
-            mainClass,
-            args.toMutableList(),
-            jvmArgs.toMutableList(),
-            workingDir,
-            env.toMutableMap(),
-            runFirst.toMutableList(),
-            disabled
-        )
-    }
-
     fun createIdeaRunConfig() {
         val file = project.rootDir.resolve(".idea")
             .resolve("runConfigurations")

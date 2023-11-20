@@ -2,6 +2,7 @@
 
 package xyz.wagyourtail.unimined.util
 
+import org.apache.commons.compress.archivers.zip.ZipFile
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -296,23 +297,18 @@ fun Path.forEachInZip(action: (String, InputStream) -> Unit) {
 }
 
 fun <T> Path.readZipInputStreamFor(path: String, throwIfMissing: Boolean = true, action: (InputStream) -> T): T {
-    ZipInputStream(inputStream()).use { stream ->
-        var entry = stream.nextEntry
-        while (entry != null) {
-            if (entry.isDirectory) {
-                entry = stream.nextEntry
-                continue
+    Files.newByteChannel(this).use {
+        ZipFile(it).use { zip ->
+            val entry = zip.getEntry(path)
+            if (entry != null) {
+                return zip.getInputStream(entry).use(action)
+            } else {
+                if (throwIfMissing) {
+                    throw IllegalArgumentException("Missing file $path in $this")
+                }
             }
-            if (entry.name == path) {
-                return action(stream)
-            }
-            entry = stream.nextEntry
         }
     }
-    if (throwIfMissing) {
-        throw IllegalArgumentException("Missing file $path in $this")
-    }
-    @Suppress("UNCHECKED_CAST")
     return null as T
 }
 
