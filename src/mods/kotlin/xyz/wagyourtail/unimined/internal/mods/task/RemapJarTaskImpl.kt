@@ -63,19 +63,21 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         val inputFile = provider.mcPatcher.beforeRemapJarTask(this, inputFile.get().asFile.toPath())
 
         if (path.isEmpty()) {
+            project.logger.lifecycle("[Unimined/RemapJar ${this.path}] detected empty remap path, jumping to after remap tasks")
+            provider.mcPatcher.afterRemapJarTask(this, inputFile)
             afterRemap(inputFile, inputFile)
             return
         }
 
         val last = path.last()
         project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.name} from $devNs/$devFNs to $prodNs")
-        project.logger.info("[Unimined/RemapJar]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
+        project.logger.info("[Unimined/RemapJar ${this.path}]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
         var prevTarget = inputFile
         var prevNamespace = devNs
         var prevPrevNamespace = devFNs
         for (i in path.indices) {
             val step = path[i]
-            project.logger.info("[Unimined/RemapJar]    $step")
+            project.logger.info("[Unimined/RemapJar ${this.path}]    $step")
             val nextTarget = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("${inputFile.nameWithoutExtension}-temp-${step.name}.jar")
             nextTarget.deleteIfExists()
             val mcNamespace = prevNamespace
@@ -90,13 +92,13 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             prevPrevNamespace = prevNamespace
             prevNamespace = step
         }
+        project.logger.info("[Unimined/RemapJar ${path}] after remap tasks started ${System.currentTimeMillis()}")
         provider.mcPatcher.afterRemapJarTask(this, prevTarget)
-
         afterRemap(inputFile, prevTarget)
-        copy()
+        project.logger.info("[Unimined/RemapJar ${path}] after remap tasks finished ${System.currentTimeMillis()}")
     }
 
-    protected fun afterRemap(inputFile: Path, afterRemapJar: Path) {
+    private fun afterRemap(inputFile: Path, afterRemapJar: Path) {
         // merge in manifest from input jar
         inputFile.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
             // write to temp file
@@ -121,6 +123,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         toNs: MappingNamespaceTree.Namespace,
         mc: Path
     ) {
+        project.logger.info("[Unimined/RemapJar ${path}] remapping $fromNs -> $toNs (start time: ${System.currentTimeMillis()})")
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(
                 provider.mappings.getTRMappings(
@@ -145,21 +148,23 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         provider.minecraftRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         val tag = remapper.createInputTag()
-        project.logger.debug("[Unimined/RemapJar] classpath: ")
+        project.logger.debug("[Unimined/RemapJar ${path}] classpath: ")
         (provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
             .filter { !provider.isMinecraftJar(it) }
             .filter { it.exists() } + listOf(mc))
-            .joinToString { "\n[Unimined/RemapJar]  -  $it" }
+            .joinToString { "\n[Unimined/RemapJar ${path}]  -  $it" }
             .let { project.logger.debug(it) }
-        project.logger.debug("[Unimined/RemapJar] input: $from")
+        project.logger.debug("[Unimined/RemapJar ${path}] input: $from")
         betterMixinExtension.readClassPath(remapper,
             *(provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
                 .filter { !provider.isMinecraftJar(it) }
                 .filter { it.exists() } + listOf(mc))
                 .toTypedArray()
         ).thenCompose {
+            project.logger.info("[Unimined/RemapJar ${path}] reading input: $from (time: ${System.currentTimeMillis()})")
             betterMixinExtension.readInput(remapper, tag, from)
         }.thenRun {
+            project.logger.info("[Unimined/RemapJar ${path}] writing output: $target (time: ${System.currentTimeMillis()})")
             target.parent.createDirectories()
             try {
                 OutputConsumerPath.Builder(target).build().use {
@@ -187,6 +192,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             target.openZipFileSystem(mapOf("mutable" to true)).use {
                 betterMixinExtension.insertExtra(tag, it)
             }
+            project.logger.info("[Unimined/RemapJar ${path}] remapped $fromNs -> $toNs (end time: ${System.currentTimeMillis()})")
         }.join()
     }
 
