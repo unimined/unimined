@@ -5,6 +5,7 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
@@ -74,7 +75,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     var applied: Boolean by FinalizeOnWrite(false)
         private set
 
-    val minecraft: Configuration = project.configurations.maybeCreate("minecraft".withSourceSet(sourceSet)).also {
+    override val minecraft: Configuration = project.configurations.maybeCreate("minecraft".withSourceSet(sourceSet)).also {
         sourceSet.compileClasspath += it
         sourceSet.runtimeClasspath += it
     }
@@ -94,15 +95,21 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             this.project.evaluationDependsOn(project.path)
         }
         project.unimined.minecraftConfiguration[sourceSet]!!(this)
+        if (delegate.finalized) {
+            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] un-finalizing mcPatcher set in from() call")
+        }
+        delegate.finalized = false
+        (delegate.value as FinalizeOnWrite<MinecraftPatcher>).finalized = false
     }
 
     override fun combineWith(project: Project, sourceSet: SourceSet) {
         combinedWithList.add(project to sourceSet)
-        if (project.uniminedMaybe != null) {
+        if (project.uniminedMaybe != null && project.unimined.minecrafts.contains(sourceSet)) {
             from(project, sourceSet)
         }
         this.sourceSet.compileClasspath += sourceSet.output
         this.sourceSet.runtimeClasspath += sourceSet.output
+        // remove unimined deps
     }
 
     override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit) {
@@ -128,7 +135,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     private val minecraftFiles: Map<Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>, Path> = defaultedMapOf {
-        project.logger.info("[Unimined/Minecraft] Providing minecraft files for $it")
+        project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Providing minecraft files for $it")
         val mc = if (side == EnvType.COMBINED) {
             val client = minecraftData.minecraftClient
             val server = minecraftData.minecraftServer
@@ -248,9 +255,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     fun addLibraries(libraries: List<Library>) {
         for (library in libraries) {
             if (library.rules.all { it.testRule() }) {
-                project.logger.info("[Unimined/Minecraft] Added dependency ${library.name}")
+                project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Added dependency ${library.name}")
                 if (!(mcPatcher as AbstractMinecraftTransformer).libraryFilter(library)) {
-                    project.logger.info("[Unimined/Minecraft] Excluding dependency ${library.name} as it is filtered by the patcher")
+                    project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Excluding dependency ${library.name} as it is filtered by the patcher")
                     continue
                 }
                 val native = library.natives[OSUtils.oSId]
@@ -260,7 +267,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                     library.extract?.let { extractDependencies[dep] = it }
                 }
                 if (native != null) {
-                    project.logger.info("[Unimined/Minecraft] Added native dependency ${library.name}:$native")
+                    project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Added native dependency ${library.name}:$native")
                     val nativeDep = project.dependencies.create("${library.name}:$native")
                     minecraftLibraries.dependencies.add(nativeDep)
                     library.extract?.let { extractDependencies[nativeDep] = it }
@@ -270,19 +277,19 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     private fun clientRun() {
-        project.logger.info("[Unimined/Minecraft] client config")
+        project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] client config")
         runs.addTarget(provideVanillaRunClientTask("client", project.file("run/client")))
         runs.configFirst("client", (mcPatcher as AbstractMinecraftTransformer)::applyClientRunTransform)
     }
 
     private fun serverRun() {
-        project.logger.info("[Unimined/Minecraft] server config")
+        project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] server config")
         runs.addTarget(provideVanillaRunServerTask("server", project.file("run/server")))
         runs.configFirst("server", (mcPatcher as AbstractMinecraftTransformer)::applyServerRunTransform)
     }
 
     fun applyRunConfigs() {
-        project.logger.lifecycle("[Unimined/Minecraft] Applying run configs")
+        project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Applying run configs")
         when (side) {
             EnvType.CLIENT -> {
                 clientRun()
@@ -302,7 +309,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     fun apply() {
         if (applied) return
         applied = true
-        project.logger.lifecycle("[Unimined/Minecraft] Applying minecraft config for $sourceSet")
+        project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Applying minecraft config for $sourceSet")
 
         lateActionsRunning = true
 
@@ -310,21 +317,21 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             patcherActions.removeFirst().invoke()
         }
 
-        project.logger.info("[Unimined/MappingProvider] before mappings $sourceSet")
+        project.logger.info("[Unimined/MappingProvider ${project.path}:${sourceSet.name}] before mappings $sourceSet")
         (mcPatcher as AbstractMinecraftTransformer).beforeMappingsResolve()
 
         // finalize mapping deps
-        project.logger.info("[Unimined/MappingProvider] $sourceSet mappings: ${mappings.getNamespaces()}")
+        project.logger.info("[Unimined/MappingProvider ${project.path}:${sourceSet.name}] $sourceSet mappings: ${mappings.getNamespaces()}")
 
         // late actions done
 
         // ensure minecraft deps are clear
         if (minecraft.dependencies.isNotEmpty()) {
-            project.logger.warn("[Unimined/Minecraft] $minecraft dependencies are not empty! clearing...")
+            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] $minecraft dependencies are not empty! clearing...")
             minecraft.dependencies.clear()
         }
         if (minecraftLibraries.dependencies.isNotEmpty()) {
-            project.logger.warn("[Unimined/Minecraft] $minecraftLibraries dependencies are not empty! clearing...")
+            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] $minecraftLibraries dependencies are not empty! clearing...")
             minecraftLibraries.dependencies.clear()
         }
 
@@ -349,7 +356,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         if (defaultRemapJar) {
             var task = project.tasks.findByName("jar".withSourceSet(sourceSet))
             if (task == null && createJarTask) {
-                project.logger.info("[Unimined/Minecraft] Creating default jar task for $sourceSet")
+                project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Creating default jar task for $sourceSet")
                 task = project.tasks.create("jar".withSourceSet(sourceSet), Jar::class.java) {
                     it.group = "build"
                     it.from(sourceSet.output)
@@ -376,18 +383,18 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                 project.tasks.getByName("build").dependsOn("remap" + "jar".withSourceSet(sourceSet).capitalized())
             } else {
                 project.logger.warn(
-                    "[Unimined/Minecraft] Could not find default jar task for $sourceSet. named: ${
+                    "[Unimined/Minecraft ${project.path}:${sourceSet.name}] Could not find default jar task for $sourceSet. named: ${
                         "jar".withSourceSet(
                             sourceSet
                         )
                     }."
                 )
-                project.logger.warn("[Unimined/Minecraft] add manually with `remap(task)` in the minecraft block for $sourceSet")
+                project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] add manually with `remap(task)` in the minecraft block for $sourceSet")
             }
         }
 
         // apply minecraft patcher changes
-        project.logger.lifecycle("[Unimined/Minecraft] Applying ${mcPatcher.name()}")
+        project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Applying ${mcPatcher.name()}")
         (mcPatcher as AbstractMinecraftTransformer).apply()
 
         // create run configs
@@ -413,7 +420,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     fun afterEvaluate() {
         if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
 
-        project.logger.info("[Unimined/MinecraftProvider] minecraft file: $minecraftFileDev")
+        project.logger.info("[Unimined/MinecraftProvider ${project.path}:${sourceSet.name}] minecraft file: $minecraftFileDev")
 
         // remap mods
         mods.afterEvaluate()
@@ -423,9 +430,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     override val minecraftFileDev: File by lazy {
-        project.logger.info("[Unimined/Minecraft] Providing minecraft dev file to $sourceSet")
+        project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Providing minecraft dev file to $sourceSet")
         getMinecraft(mappings.devNamespace, mappings.devFallbackNamespace).toFile().also {
-            project.logger.info("[Unimined/Minecraft] Provided minecraft dev file $it")
+            project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Provided minecraft dev file $it")
         }
     }
 

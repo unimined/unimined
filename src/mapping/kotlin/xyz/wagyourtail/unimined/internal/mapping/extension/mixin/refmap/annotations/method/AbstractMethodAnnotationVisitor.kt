@@ -81,7 +81,7 @@ abstract class AbstractMethodAnnotationVisitor(
                         ).orElseOptional {
                             existingMappings[targetMethod]?.let { existing ->
                                 logger.info("Remapping using existing mapping for $targetMethod: $existing")
-                                if (wildcard) {
+                                if (existing.endsWith("*")) {
                                     val mname = existing.substringAfter(";").let { it.substring(0, it.length - 1 ) }
                                     resolver.resolveMethod(
                                         targetClass,
@@ -108,7 +108,7 @@ abstract class AbstractMethodAnnotationVisitor(
                                 .map { mapper.mapName(it) }
                                 .orElse(targetClass)
                             val mappedName = mapper.mapName(targetVal)
-                            val mappedDesc = /* if (implicitWildcard) "" else */ if (wildcard && mappedName != "<clinit>") "*" else mapper.mapDesc(targetVal)
+                            val mappedDesc = /* if (implicitWildcard) "" else */  if (wildcard && mappedName != "<clinit>") "*" else mapper.mapDesc(targetVal)
                             if (targetClasses.size > 1) {
                                 refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
                             } else {

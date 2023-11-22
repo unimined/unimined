@@ -285,6 +285,9 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     abstract val mergedOfficialMinecraftFile: File?
 
     @get:ApiStatus.Internal
+    abstract val minecraft: Configuration
+
+    @get:ApiStatus.Internal
     abstract val minecraftLibraries: Configuration
 
     @ApiStatus.Internal

@@ -36,7 +36,7 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 * fix yarn on neoforge (these will probably be agents, possibly in separate projects and pulled like JarModAgent)
   * inject remapper into ASMAPI
   * reflection remapper (also for forge potentially, or in general).
-
+* genSources should apply forge source patches (at least on fg3+)
 
 ## Recommended Setup
 1. take one of the versions from [testing](./testing)
