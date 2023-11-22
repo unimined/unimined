@@ -69,37 +69,7 @@ abstract class FabricMinecraftTransformer(
         )
     }
 
-    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        val baseMinecraft = super.afterRemap(baseMinecraft)
-
-        val injections = hashMapOf<String, List<String>>()
-
-        this.collectInterfaceInjections(baseMinecraft, injections)
-
-        return if (injections.isNotEmpty()) {
-            val oldSuffix = if (baseMinecraft.awOrAt != null) baseMinecraft.awOrAt + "+" else ""
-
-            val output = MinecraftJar(
-                baseMinecraft,
-                parentPath = provider.localCache.resolve("fabric").createDirectories(),
-                awOrAt = "${oldSuffix}ii+${injections.hashCode()}"
-            );
-
-            if (!output.path.exists() || project.unimined.forceReload) {
-                if (InterfaceInjectionMinecraftTransformer.transform(
-                        injections,
-                        baseMinecraft.path,
-                        output.path,
-                        project.logger
-                    )
-                ) {
-                    output
-                } else baseMinecraft
-            } else output
-        } else baseMinecraft
-    }
-
-    private fun collectInterfaceInjections(baseMinecraft: MinecraftJar, injections: HashMap<String, List<String>>) {
+    override fun collectInterfaceInjections(baseMinecraft: MinecraftJar, injections: HashMap<String, List<String>>) {
         val modJsonPath = this.getModJsonPath()
 
         if (modJsonPath != null && modJsonPath.exists()) {
@@ -111,39 +81,7 @@ abstract class FabricMinecraftTransformer(
                 val interfaces = custom.getAsJsonObject("loom:injected_interfaces")
 
                 if (interfaces != null) {
-                    injections.putAll(interfaces.entrySet()
-                        .filterNotNull()
-                        .filter { it.key != null && it.value != null && it.value.isJsonArray }
-                        .map {
-                            val element = it.value!!
-
-                            Pair(it.key!!, if (element.isJsonArray) {
-                                element.asJsonArray.mapNotNull { name -> name.asString }
-                            } else arrayListOf())
-                        }
-                        .map {
-                            var target = it.first
-
-                            val clazz = provider.mappings.mappingTree.getClass(
-                                target,
-                                provider.mappings.mappingTree.getNamespaceId(prodNamespace.name)
-                            )
-
-                            if (clazz != null) {
-                                var newTarget = clazz.getName(provider.mappings.mappingTree.getNamespaceId(baseMinecraft.mappingNamespace.name))
-
-                                if (newTarget == null) {
-                                    newTarget = clazz.getName(provider.mappings.mappingTree.getNamespaceId(baseMinecraft.fallbackNamespace.name))
-                                }
-
-                                if (newTarget != null) {
-                                    target = newTarget
-                                }
-                            }
-
-                            Pair(target, it.second)
-                        }
-                    )
+                    collectInterfaceInjections(baseMinecraft, injections, interfaces)
                 }
             }
         }

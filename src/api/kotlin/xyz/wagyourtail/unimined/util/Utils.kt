@@ -18,6 +18,7 @@ import java.security.MessageDigest
 import java.util.*
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import kotlin.collections.HashMap
 import kotlin.io.path.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -117,6 +118,16 @@ fun File.getSha1() = toPath().getSha1()
 fun Path.getShortSha1(): String = getSha1().substring(0, 7)
 
 fun File.getShortSha1() = toPath().getShortSha1()
+
+fun <K, V> HashMap<K, V>.getSha1(): String {
+    val digestSha1 = MessageDigest.getInstance("SHA-1")
+    digestSha1.update(toString().toByteArray())
+    val hashBytes = digestSha1.digest()
+    return hashBytes.joinToString("") { String.format("%02x", it)}
+}
+
+fun <K, V> HashMap<K, V>.getShortSha1(): String = getSha1().substring(0, 7)
+
 
 
 //fun runJarInSubprocess(
