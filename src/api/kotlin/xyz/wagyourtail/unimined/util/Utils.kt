@@ -299,7 +299,7 @@ fun Path.forEachInZip(action: (String, InputStream) -> Unit) {
 fun <T> Path.readZipInputStreamFor(path: String, throwIfMissing: Boolean = true, action: (InputStream) -> T): T {
     Files.newByteChannel(this).use {
         ZipFile(it).use { zip ->
-            val entry = zip.getEntry(path)
+            val entry = zip.getEntry(path.replace("\\", "/"))
             if (entry != null) {
                 return zip.getInputStream(entry).use(action)
             } else {
