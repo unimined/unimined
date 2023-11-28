@@ -7,6 +7,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.mod.ModRemapConfig
 import xyz.wagyourtail.unimined.api.mod.ModsConfig
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
@@ -25,6 +26,8 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         remap(it)
     }
 
+    private var default by FinalizeOnRead<ModRemapProvider.() -> Unit> {}
+
     private val remapConfigsResolved = mutableMapOf<Configuration, ModRemapProvider>()
 
     fun modTransformFolder(): Path {
@@ -39,11 +42,27 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         remapConfigs[config.toSet()] = action
     }
 
+    fun default(action: ModRemapConfig.() -> Unit) {
+        val old = default
+        default = {
+            old()
+            action()
+        }
+        for ((config, action) in remapConfigs) {
+            remapConfigs[config] = {
+                old()
+                action()
+            }
+        }
+    }
+
     override fun modImplementation(action: ModRemapConfig.() -> Unit) {
         val old = remapConfigs[setOf(modImplementation)]
         remapConfigs[setOf(modImplementation)] = {
             if (old != null) {
                 old()
+            } else {
+                default()
             }
             action()
         }

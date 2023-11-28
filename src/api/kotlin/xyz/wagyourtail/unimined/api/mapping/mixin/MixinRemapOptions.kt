@@ -24,4 +24,6 @@ interface MixinRemapOptions {
 
     @ApiStatus.Experimental
     fun resetRefmapBuilder()
+    fun off()
+    fun disableRefmap()
 }

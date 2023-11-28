@@ -14,7 +14,6 @@ import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
-import xyz.wagyourtail.unimined.internal.mapping.extension.mixinextra.MixinExtra
 import xyz.wagyourtail.unimined.util.*
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption

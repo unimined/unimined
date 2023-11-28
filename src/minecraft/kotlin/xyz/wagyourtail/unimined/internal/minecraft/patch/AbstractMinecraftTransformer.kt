@@ -299,4 +299,6 @@ abstract class AbstractMinecraftTransformer protected constructor(
         out.add(sourceSet)
         output[sourceSet] = out
     }
+
+    override fun configureRemapJar(task: RemapJarTask) {}
 }

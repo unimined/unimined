@@ -120,6 +120,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             }
             it.action()
             it.dependsOn(task)
+            mcPatcher.configureRemapJar(it)
         }
     }
 

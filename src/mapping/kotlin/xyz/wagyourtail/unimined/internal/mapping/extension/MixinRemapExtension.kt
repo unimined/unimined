@@ -59,6 +59,9 @@ class MixinRemapExtension(
         )
     )
 
+    var off by FinalizeOnRead(false)
+    var noRefmap by FinalizeOnRead(false)
+
     @ApiStatus.Internal
     fun modifyMetadataReader(modifier: (MixinRemapExtension) -> MixinMetadata) {
         metadataReader.add(modifier)
@@ -74,6 +77,16 @@ class MixinRemapExtension(
     fun modifyRefmapBuilder(modifier: (RefmapBuilderClassVisitor) -> Unit) {
         val old = modifyRefmapBuilder
         modifyRefmapBuilder = { old(it); modifier(it) }
+    }
+
+    override fun off() {
+        reset()
+        off = true
+    }
+
+    override fun disableRefmap() {
+        noRefmap = true
+        TODO("todo. duplicate behavior of tinyremapper hard target/soft target remapping")
     }
 
     override fun enableMixinExtra() {
@@ -92,7 +105,6 @@ class MixinRemapExtension(
         modifyRefmapBuilder(JMARefmap::refmapBuilder)
     }
 
-
     override fun resetMetadataReader() {
         metadataReader = mutableListOf()
     }
@@ -105,7 +117,10 @@ class MixinRemapExtension(
         modifyRefmapBuilder = {}
     }
 
+
     override fun reset() {
+        off = false
+        noRefmap = false
         resetMetadataReader()
         resetHardRemapper()
         resetRefmapBuilder()
@@ -204,13 +219,17 @@ class MixinRemapExtension(
                     extension.modifyRefmapBuilder(visitor)
                     visitor
                 } else {
-                    object : ClassVisitor(Constant.ASM_VERSION, next) {
-                        override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor? {
-                            if (descriptor == Annotation.MIXIN) {
-                                extension.logger.warn("[RefmapBuilder] found mixin class ${cls.name} without entry!")
+                    if (!extension.off) {
+                        object : ClassVisitor(Constant.ASM_VERSION, next) {
+                            override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor? {
+                                if (descriptor == Annotation.MIXIN) {
+                                    extension.logger.warn("[RefmapBuilder] found mixin class ${cls.name} without entry!")
+                                }
+                                return super.visitAnnotation(descriptor, visible)
                             }
-                            return super.visitAnnotation(descriptor, visible)
                         }
+                    } else {
+                        next
                     }
                 }
             } catch (e: Exception) {

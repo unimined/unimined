@@ -4,28 +4,19 @@ plugins {
 }
 
 group 'com.example'
-archivesBaseName 'UniminedExampleMod'
 version '1.0-SNAPSHOT'
+
+base {
+    archivesName = "UniminedExampleMod"
+}
 
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
-
 sourceSets {
-    fabric {
-        compileClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.main.output
-    }
-    forge {
-        compileClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.main.output
-    }
-    lexforge {
-        compileClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.main.output
-    }
+    fabric
+    neoforge
+    lexforge
 }
 
 repositories {
@@ -51,36 +42,26 @@ unimined.minecraft {
 }
 
 unimined.minecraft(sourceSets.fabric) {
-    version project.minecraft_version
-
-    mappings {
-        mojmap()
-        parchment("1.19.3", "2023.03.12-nightly-SNAPSHOT")
-    }
+    combineWith(sourceSets.main)
 
     fabric {
         loader project.fabric_version
     }
 }
 
-unimined.minecraft(sourceSets.forge) {
-    version project.minecraft_version
-
-    mappings {
-        intermediary()
-        mojmap()
-        parchment("1.19.3", "2023.03.12-nightly-SNAPSHOT")
-
-        devFallbackNamespace "intermediary"
-    }
+unimined.minecraft(sourceSets.neoforge) {
+    combineWith(sourceSets.main)
 
     neoForged {
-        loader project.forge_version
+        loader project.neoforge_version
         mixinConfig "modid.mixins.json"
-        forgeTransformer.binpatchFile = project.projectDir.toPath().resolve("output.lzma")
     }
 
     minecraftRemapper.config {
+        // neoforge adds 1 conflict, where 2 interfaces have a method with the same name on yarn/mojmap,
+        // but the method has different names in the intermediary mappings.
+        // this is a conflict because they have a class that extends both interfaces.
+        // this shouldn't be a problem as long as named mappings don't make the name of those 2 methods different.
         ignoreConflicts(true)
     }
 }
@@ -108,22 +89,12 @@ unimined.minecraft(sourceSets.lexforge) {
 
 configurations {
     mainImplementation
-    implementation {
-        extendsFrom forgeImplementation
-        extendsFrom fabricImplementation
-    }
 }
 
-sourceSets {
-    main {
-        compileClasspath += configurations.mainImplementation
-        runtimeClasspath += configurations.mainImplementation
-    }
-}
 
 dependencies {
     // we need this in main where it isn't by default
-    mainImplementation "org.spongepowered:mixin:0.8.5-SNAPSHOT"
+    implementation "org.spongepowered:mixin:0.8.5-SNAPSHOT"
 }
 
 jar {
@@ -138,7 +109,7 @@ processFabricResources {
     }
 }
 
-processForgeResources {
+processNeoforgeResources {
     inputs.property "version", project.version
 
     filesMatching("META-INF/mods.toml") {

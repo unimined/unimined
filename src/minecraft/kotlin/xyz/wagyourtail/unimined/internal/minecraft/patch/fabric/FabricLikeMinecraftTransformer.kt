@@ -135,10 +135,7 @@ abstract class FabricLikeMinecraftTransformer(
         }
     }
 
-    override fun apply() {
-        val client = provider.side == EnvType.CLIENT || provider.side == EnvType.COMBINED
-        val server = provider.side == EnvType.SERVER || provider.side == EnvType.COMBINED
-
+    val fabricDep by lazy {
         val dependencies = fabric.dependencies
 
         if (dependencies.isEmpty()) {
@@ -149,14 +146,20 @@ abstract class FabricLikeMinecraftTransformer(
             throw IllegalStateException("Multiple dependencies found for fabric provider")
         }
 
-        val dependency = dependencies.first()
+        dependencies.first()
+    }
+
+    override fun apply() {
+        val client = provider.side == EnvType.CLIENT || provider.side == EnvType.COMBINED
+        val server = provider.side == EnvType.SERVER || provider.side == EnvType.COMBINED
+
         var artifactString = ""
-        if (dependency.group != null) {
-            artifactString += dependency.group + ":"
+        if (fabricDep.group != null) {
+            artifactString += fabricDep.group + ":"
         }
-        artifactString += dependency.name
-        if (dependency.version != null) {
-            artifactString += ":" + dependency.version
+        artifactString += fabricDep.name
+        if (fabricDep.version != null) {
+            artifactString += ":" + fabricDep.version
         }
         artifactString += "@json"
 
@@ -199,6 +202,13 @@ abstract class FabricLikeMinecraftTransformer(
             provider.minecraftLibraries.dependencies.add(
                 project.dependencies.create(project.files(devMappings))
             )
+        }
+
+        // mixins get remapped at runtime, so we don't need to on fabric
+        provider.mods.default {
+            mixinRemap {
+                off()
+            }
         }
 
         super.apply()
