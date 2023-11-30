@@ -36,7 +36,7 @@ abstract class CAbstractMethodAnnotationVisitor(
     protected val mixinName = refmapBuilder.mixinName
     protected val targetClasses = refmapBuilder.targetClasses
     protected val allowImplicitWildcards = refmapBuilder.allowImplicitWildcards
-    protected val noRefmap = refmapBuilder.mixinRemapExtension.noRefmap.contains("BaseMixin")
+    protected val noRefmap = refmapBuilder.mixinRemapExtension.noRefmap.contains("JarModAgent")
 
     override fun visit(name: String?, value: Any) {
         super.visit(name, value)
