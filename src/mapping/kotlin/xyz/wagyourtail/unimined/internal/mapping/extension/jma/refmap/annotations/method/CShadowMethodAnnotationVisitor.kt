@@ -48,8 +48,10 @@ class CShadowMethodAnnotationVisitor(
     override fun visit(name: String?, value: Any) {
         if (name == AnnotationElement.VALUE) {
             targetNames.add(value as String)
+            if (!noRefmap) super.visit(name, value)
+        } else {
+            super.visit(name, value)
         }
-        super.visit(name, value)
     }
 
     override fun getTargetNameAndDescs(targetMethod: String, wildcard: Boolean): Pair<String, Set<String?>> {
@@ -58,6 +60,15 @@ class CShadowMethodAnnotationVisitor(
         } else {
             targetMethod to setOf(methodDescriptor)
         }
+    }
+
+    override fun visitEnd() {
+        remapTargetNames {
+            if (noRefmap) {
+                super.visit(AnnotationElement.VALUE, it)
+            }
+        }
+        super.visitEnd()
     }
 
 }

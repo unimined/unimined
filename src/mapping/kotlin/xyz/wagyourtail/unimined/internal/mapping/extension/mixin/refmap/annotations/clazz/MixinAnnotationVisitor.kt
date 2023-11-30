@@ -33,6 +33,7 @@ class MixinAnnotationVisitor(
     private val refmap = refmapBuilder.refmap
     private val mixinName = refmapBuilder.mixinName
     private val targetClasses = refmapBuilder.targetClasses
+    private val noRefmap = refmapBuilder.mixinRemapExtension.noRefmap.contains("BaseMixin")
 
     private val classTargets = mutableListOf<String>()
     private val classValues = mutableListOf<String>()
@@ -48,13 +49,13 @@ class MixinAnnotationVisitor(
     override fun visitArray(name: String?): AnnotationVisitor {
         return when (name) {
             AnnotationElement.TARGETS -> {
-                return object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                return object : AnnotationVisitor(Constant.ASM_VERSION, if (noRefmap) null else super.visitArray(name)) {
                     override fun visit(name: String?, value: Any) {
                         classTargets.add(value as String)
                         super.visit(name, value)
                     }
                 }
-            }
+        }
 
             AnnotationElement.VALUE, null -> {
                 return object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
@@ -72,7 +73,11 @@ class MixinAnnotationVisitor(
     }
 
     override fun visitEnd() {
-        super.visitEnd()
+        val targets = if (noRefmap && classTargets.isNotEmpty()) {
+            super.visitArray(AnnotationElement.TARGETS)
+        } else {
+            null
+        }
         if (remap.get()) {
             logger.info("existing mappings: $existingMappings")
             for (target in classTargets.toSet()) {
@@ -87,12 +92,20 @@ class MixinAnnotationVisitor(
                     }
                 clz.ifPresent {
                     refmap.addProperty(target, mapper.mapName(it))
+                    targets?.visit(null, mapper.mapName(it))
                 }
                 if (!clz.isPresent) {
+                    targets?.visit(null, target)
                     logger.warn("Failed to resolve class $target in mixin ${mixinName.replace('/', '.')}")
                 }
             }
+        } else {
+            for (target in classTargets) {
+                targets?.visit(null, target)
+            }
         }
+        targets?.visitEnd()
         targetClasses.addAll((classValues + classTargets.map { it.replace('.', '/') }).toSet())
+        super.visitEnd()
     }
 }

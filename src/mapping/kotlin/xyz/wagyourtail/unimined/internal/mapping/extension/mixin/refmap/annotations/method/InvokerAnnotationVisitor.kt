@@ -58,11 +58,22 @@ class InvokerAnnotationVisitor(
     }
 
     override fun visit(name: String?, value: Any) {
-        super.visit(name, value)
+        if (!noRefmap) {
+            super.visit(name, value)
+        }
         if (name == AnnotationElement.VALUE || name == null) targetNames.add(value as String)
     }
 
-    override fun remapTargetNames() {
+    override fun visitEnd() {
+        remapTargetNames {
+            if (noRefmap) {
+                super.visit(AnnotationElement.VALUE, it)
+            }
+        }
+        super.visitEnd()
+    }
+
+    override fun remapTargetNames(noRefmapAcceptor: (String) -> Unit) {
         if (remap.get()) {
             val targetNames = if (targetNames.isEmpty()) {
                 val prefix = validPrefixes.firstOrNull { methodName.startsWith(it) }
@@ -114,6 +125,7 @@ class InvokerAnnotationVisitor(
 //                                    refmap.addProperty(targetName, mappedName)
 //                                } else {
                         refmap.addProperty(targetName, "$mappedName$mappedDesc")
+                        noRefmapAcceptor("$mappedName$mappedDesc")
 //                                }
                     }
                     if (target.isPresent) return
@@ -127,6 +139,11 @@ class InvokerAnnotationVisitor(
                     )
                 }"
             )
+            noRefmapAcceptor(targetNames.first())
+        } else {
+            if (targetNames.isNotEmpty()) {
+                noRefmapAcceptor(targetNames.first())
+            }
         }
     }
 }

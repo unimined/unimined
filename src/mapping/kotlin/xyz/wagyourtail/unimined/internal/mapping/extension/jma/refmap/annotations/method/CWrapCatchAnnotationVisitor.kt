@@ -57,6 +57,9 @@ open class CWrapCatchAnnotationVisitor(
     override fun visit(name: String?, value: Any) {
         if (name == AnnotationElement.TARGET) {
             targetName = value as String
+            if (!noRefmap) super.visit(name, value)
+        } else {
+            super.visit(name, value)
         }
     }
 
@@ -76,7 +79,7 @@ open class CWrapCatchAnnotationVisitor(
     override fun visitArray(name: String): AnnotationVisitor {
         return when (name) {
             AnnotationElement.VALUE -> {
-                object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                object: AnnotationVisitor(Constant.ASM_VERSION, if (noRefmap) null else super.visitArray(name)) {
                     override fun visit(name: String?, value: Any) {
                         super.visit(name, value)
                         targetNames.add(value as String)
@@ -103,7 +106,15 @@ open class CWrapCatchAnnotationVisitor(
     }
 
     override fun visitEnd() {
-        super.visitEnd()
+        val method = if (noRefmap) {
+            super.visitArray(AnnotationElement.VALUE)
+        } else {
+            null
+        }
+        remapTargetNames {
+            method?.visit(null, it)
+        }
+        method?.visitEnd()
         if (remap.get() && targetName != null) {
             val matchMd = targetMethod.matchEntire(targetName!!)
             if (matchMd != null) {
@@ -140,6 +151,9 @@ open class CWrapCatchAnnotationVisitor(
                         val mappedName = mapper.mapName(it)
                         val mappedDesc = mapper.mapDesc(it)
                         refmap.addProperty(this.targetName, "L$mappedOwner;$mappedName$mappedDesc")
+                        if (noRefmap) {
+                            super.visit(AnnotationElement.TARGET, "L$mappedOwner;$mappedName$mappedDesc")
+                        }
                     }
                 }
                 if (!target.isPresent || !targetClass.isPresent) {
@@ -151,12 +165,24 @@ open class CWrapCatchAnnotationVisitor(
                             )
                         }"
                     )
+                    if (noRefmap) {
+                        super.visit(AnnotationElement.TARGET, targetName)
+                    }
                 }
+                super.visitEnd()
                 return
             } else {
                 logger.warn("Failed to parse CWrapCatch target $targetName in mixin ${mixinName.replace('/', '.')}")
+                if (noRefmap && targetName != null) {
+                    super.visit(AnnotationElement.TARGET, targetName!!)
+                }
+            }
+        } else {
+            if (noRefmap && targetName != null) {
+                super.visit(AnnotationElement.TARGET, targetName!!)
             }
         }
+        super.visitEnd()
     }
 
 }

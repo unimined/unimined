@@ -58,14 +58,25 @@ class AccessorAnnotationVisitor(
     override val annotationName: String = "@Accessor"
 
     override fun visit(name: String?, value: Any) {
-        super.visit(name, value)
+        if (!noRefmap) {
+            super.visit(name, value)
+        }
         if (name == AnnotationElement.VALUE || name == null) targetNames.add(value as String)
     }
 
-    override fun remapTargetNames() {
+    override fun visitEnd() {
+        remapTargetNames { mappedName ->
+            if (noRefmap) {
+                super.visit(AnnotationElement.VALUE, mappedName)
+            }
+        }
+        super.visitEnd()
+    }
+
+    override fun remapTargetNames(noRefmapAcceptor: (String) -> Unit) {
         if (remap.get()) {
+            val prefix = validPrefixes.firstOrNull { methodName.startsWith(it) }
             val targetNames = if (targetNames.isEmpty()) {
-                val prefix = validPrefixes.firstOrNull { methodName.startsWith(it) }
                 if (prefix == null) {
                     logger.warn(
                         "Failed to resolve accessor $methodName in mixin ${
@@ -121,12 +132,14 @@ class AccessorAnnotationVisitor(
                                 refmap.addProperty(targetName.capitalized(), mappedName)
                             }
                             refmap.addProperty(targetName, mappedName)
+                            noRefmapAcceptor(mappedName)
                         } else {
                             // BUGFIX: it appears 1 length don't lowercase when checking the refmap
                             if (targetName.length == 1) {
                                 refmap.addProperty(targetName.capitalized(), "$mappedName:$mappedDesc")
                             }
                             refmap.addProperty(targetName, "$mappedName:$mappedDesc")
+                            noRefmapAcceptor("$mappedName:$mappedDesc")
                         }
                     }
                     if (target.isPresent) return
@@ -140,6 +153,9 @@ class AccessorAnnotationVisitor(
                     )
                 }"
             )
+            if (targetNames.isNotEmpty()) {
+                noRefmapAcceptor(targetNames.first())
+            }
         }
     }
 

@@ -36,15 +36,11 @@ abstract class CAbstractMethodAnnotationVisitor(
     protected val mixinName = refmapBuilder.mixinName
     protected val targetClasses = refmapBuilder.targetClasses
     protected val allowImplicitWildcards = refmapBuilder.allowImplicitWildcards
+    protected val noRefmap = refmapBuilder.mixinRemapExtension.noRefmap.contains("BaseMixin")
 
     override fun visit(name: String?, value: Any) {
         super.visit(name, value)
         if (name == AnnotationElement.REMAP) remap.set(value as Boolean)
-    }
-
-    override fun visitEnd() {
-        super.visitEnd()
-        remapTargetNames()
     }
 
     open fun getTargetNameAndDescs(targetMethod: String, wildcard: Boolean): Pair<String, Set<String?>> {
@@ -61,12 +57,13 @@ abstract class CAbstractMethodAnnotationVisitor(
         return targetName to targetDescs
     }
 
-    open fun remapTargetNames() {
+    open fun remapTargetNames(noRefmapAcceptor: (String) -> Unit) {
         if (remap.get()) {
             outer@for (targetMethod in targetNames) {
                 if (targetMethod == "<init>" || targetMethod == "<clinit>" ||
                     targetMethod == "<init>*"
                 ) {
+                    noRefmapAcceptor(targetMethod)
                     continue
                 }
                 val wildcard = targetMethod.endsWith("*")
@@ -122,8 +119,10 @@ abstract class CAbstractMethodAnnotationVisitor(
                             val mappedDesc = /* if (implicitWildcard) "" else */ if (wildcard && mappedName != "<clinit>") "*" else mapper.mapDesc(targetVal)
                             if (targetClasses.size > 1) {
                                 refmap.addProperty(targetMethod, "$mappedName$mappedDesc")
+                                noRefmapAcceptor("$mappedName$mappedDesc")
                             } else {
                                 refmap.addProperty(targetMethod, "L$mappedClass;$mappedName$mappedDesc")
+                                noRefmapAcceptor("L$mappedClass;$mappedName$mappedDesc")
                             }
                         }
 
@@ -135,6 +134,7 @@ abstract class CAbstractMethodAnnotationVisitor(
                 logger.warn(
                     "Failed to resolve $annotationName $targetMethod ($targetDescs) on ($methodName$methodDescriptor) $methodSignature in $mixinName"
                 )
+                noRefmapAcceptor(targetMethod)
             }
         }
     }

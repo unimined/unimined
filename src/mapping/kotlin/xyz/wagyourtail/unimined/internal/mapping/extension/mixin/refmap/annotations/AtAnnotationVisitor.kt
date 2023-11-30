@@ -20,11 +20,20 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
     private val mapper = refmapBuilder.mapper
     private val refmap = refmapBuilder.refmap
     private val mixinName = refmapBuilder.mixinName
+    private val noRefmap = refmapBuilder.mixinRemapExtension.noRefmap.contains("BaseMixin")
 
-    override fun visit(name: String, value: Any) {
-        super.visit(name, value)
-        if (name == AnnotationElement.REMAP) remapAt.set(value as Boolean)
-        if (name == AnnotationElement.TARGET) targetName = (value as String).replace(" ", "")
+    override fun visit(name: String?, value: Any) {
+        when (name) {
+            AnnotationElement.REMAP -> {
+                super.visit(name, value)
+                remapAt.set(value as Boolean)
+            }
+            AnnotationElement.TARGET -> {
+                if (!noRefmap) super.visit(name, value)
+                targetName = (value as String).replace(" ", "")
+            }
+            else -> super.visit(name, value)
+        }
     }
 
     override fun visitAnnotation(name: String, descriptor: String): AnnotationVisitor {
@@ -51,10 +60,10 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
     }
 
     override fun visitEnd() {
-        super.visitEnd()
         if (remapAt.get() && targetName != null) {
             val matchFd = targetField.matchEntire(targetName!!)
             if (matchFd != null) {
+                logger.info("Found field target: $targetName")
                 var (targetOwner, targetName, targetDesc) = matchToParts(matchFd)
                 val target = resolver.resolveField(
                     targetOwner,
@@ -88,6 +97,9 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
                         val mappedName = mapper.mapName(it)
                         val mappedDesc = mapper.mapDesc(it)
                         refmap.addProperty(this.targetName, "L$mappedOwner;$mappedName:$mappedDesc")
+                        if (noRefmap) {
+                            super.visit(AnnotationElement.TARGET, "L$mappedOwner;$mappedName:$mappedDesc")
+                        }
                     }
                 }
                 if (!target.isPresent || !targetClass.isPresent) {
@@ -99,11 +111,16 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
                             )
                         }"
                     )
+                    if (noRefmap) {
+                        super.visit(AnnotationElement.TARGET, this.targetName!!)
+                    }
                 }
+                super.visitEnd()
                 return
             }
             val matchMd = targetMethod.matchEntire(targetName!!)
             if (matchMd != null) {
+                logger.info("Found method target: $targetName")
                 var (targetOwner, targetName, targetDesc) = matchToParts(matchMd)
                 val target = resolver.resolveMethod(
                     targetOwner,
@@ -137,6 +154,9 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
                         val mappedName = mapper.mapName(it)
                         val mappedDesc = mapper.mapDesc(it)
                         refmap.addProperty(this.targetName, "L$mappedOwner;$mappedName$mappedDesc")
+                        if (noRefmap) {
+                            super.visit(AnnotationElement.TARGET, "L$mappedOwner;$mappedName$mappedDesc")
+                        }
                     }
                 }
                 if (!target.isPresent || !targetClass.isPresent) {
@@ -148,26 +168,45 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
                             )
                         }"
                     )
+                    if (noRefmap) {
+                        super.visit(AnnotationElement.TARGET, this.targetName!!)
+                    }
                 }
+                super.visitEnd()
                 return
             }
             if (targetName!!.startsWith("(")) {
+                logger.info("Found descriptor target: $targetName")
                 val existing = existingMappings[this.targetName]
                 if (existing != null) {
                     logger.info("remapping $existing from existing refmap")
                     val mapped = mapper.asTrRemapper().mapDesc(existing)
                     if (mapped == existing) {
                         logger.warn("Failed to remap $existing")
+                        if (noRefmap) {
+                            super.visit(AnnotationElement.TARGET, this.targetName!!)
+                        }
+                        super.visitEnd()
                         return
                     }
+                    refmap.addProperty(this.targetName, mapped)
+                    super.visitEnd()
                     return
                 } else {
                     val mapped = mapper.asTrRemapper().mapDesc(targetName)
                     if (mapped == targetName) {
                         logger.warn("Failed to remap $targetName")
+                        if (noRefmap) {
+                            super.visit(AnnotationElement.TARGET, this.targetName!!)
+                        }
+                        super.visitEnd()
                         return
                     } else {
                         refmap.addProperty(this.targetName, mapped)
+                        if (noRefmap) {
+                            super.visit(AnnotationElement.TARGET, mapped)
+                        }
+                        super.visitEnd()
                         return
                     }
                 }
@@ -197,8 +236,12 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
                 target.ifPresent {
                     val mapped = mapper.mapName(it)
                     refmap.addProperty(this.targetName, "L$mapped;")
+                    if (noRefmap) {
+                        super.visit(AnnotationElement.TARGET, "L$mapped;")
+                    }
                 }
                 if (target.isPresent) {
+                    super.visitEnd()
                     return
                 }
             }
@@ -211,6 +254,14 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
                     )
                 }"
             )
+            if (noRefmap) {
+                super.visit(AnnotationElement.TARGET, this.targetName!!)
+            }
+        } else if (targetName != null) {
+            if (noRefmap) {
+                super.visit(AnnotationElement.TARGET, this.targetName!!)
+            }
         }
+        super.visitEnd()
     }
 }

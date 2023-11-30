@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.minecraft.patch.NeoForgedPatcher
+import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
@@ -11,6 +12,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.util.FinalizeOnWrite
 import xyz.wagyourtail.unimined.util.MustSet
+import xyz.wagyourtail.unimined.util.SemVerUtils
 
 class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "NeoForged"), NeoForgedPatcher<JarModMinecraftTransformer> {
 
@@ -55,6 +57,15 @@ class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvide
         val args = json.get("minecraftArguments").asString
         provider.addLibraries(libraries.filter { !it.name.startsWith("net.neoforged:forge:") || !it.name.startsWith("net.neoforged:neoforge:") })
         tweakClassClient = args.split("--tweakClass")[1].trim()
+    }
+
+    override fun configureRemapJar(task: RemapJarTask) {
+        if (provider.version != "1.20.1") {
+            project.logger.info("setting `disableRefmap()` in mixinRemap")
+            task.mixinRemap {
+                disableRefmap()
+            }
+        }
     }
 
 }

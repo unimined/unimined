@@ -74,7 +74,11 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
                             classesToRefmap["$pkg.$mixinName"] = refmap
                             parent.logger.info("[PreRead] Added $pkg.$mixinName to $refmap")
                         }
-                        json.addProperty("refmap", refmap)
+                        if (parent.noRefmap.contains("BaseMixin")) {
+                            json.remove("refmap")
+                        } else {
+                            json.addProperty("refmap", refmap)
+                        }
                         mixinJsons[file] = json
                     } catch (e: Exception) {
                         parent.logger.error("[PreRead] Failed to parse mixin config $file: ${e.message}")
@@ -97,9 +101,16 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
     }
 
     override fun writeExtra(fs: FileSystem) {
-        for ((name, json) in refmaps) {
-            parent.logger.info("[Unimined/MixinMetaData] Writing refmap $name")
-            fs.getPath(name).writeText(GSON.toJson(json), Charsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        if (!parent.noRefmap.contains("BaseMixin")) {
+            for ((name, json) in refmaps) {
+                parent.logger.info("[Unimined/MixinMetaData] Writing refmap $name")
+                fs.getPath(name).writeText(
+                    GSON.toJson(json),
+                    Charsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING
+                )
+            }
         }
         for ((name, json) in mixinJsons) {
             parent.logger.info("[Unimined/MixinMetaData] Writing mixin config $name")

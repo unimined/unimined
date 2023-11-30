@@ -16,7 +16,7 @@ import org.objectweb.asm.ClassVisitor
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.hard.JMAHard
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.JMARefmap
-import xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.JarModAgentMetaData
+import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgentMetaData
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.OfficialMixinMetaData
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.BaseMixinHard
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.hard.HardTargetRemappingClassVisitor
@@ -30,7 +30,6 @@ import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 
 class MixinRemapExtension(
@@ -60,7 +59,7 @@ class MixinRemapExtension(
     )
 
     var off by FinalizeOnRead(false)
-    var noRefmap by FinalizeOnRead(false)
+    var noRefmap: Set<String> by FinalizeOnRead(setOf())
 
     @ApiStatus.Internal
     fun modifyMetadataReader(modifier: (MixinRemapExtension) -> MixinMetadata) {
@@ -85,8 +84,11 @@ class MixinRemapExtension(
     }
 
     override fun disableRefmap() {
-        noRefmap = true
-        TODO("todo. duplicate behavior of tinyremapper hard target/soft target remapping")
+        disableRefmap(listOf("BaseMixin", "JarModAgent"))
+    }
+
+    override fun disableRefmap(keys: List<String>) {
+        noRefmap = keys.toSet()
     }
 
     override fun enableMixinExtra() {
@@ -120,7 +122,7 @@ class MixinRemapExtension(
 
     override fun reset() {
         off = false
-        noRefmap = false
+        noRefmap = setOf()
         resetMetadataReader()
         resetHardRemapper()
         resetRefmapBuilder()
@@ -203,6 +205,7 @@ class MixinRemapExtension(
                         target,
                         next,
                         mappings,
+                        extension,
                         onEnd = {
                             if (target.size() > 0) {
                                 extension.logger.info("[RefmapBuilder] adding ${target.size()} mappings for ${cls.name}")

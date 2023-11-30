@@ -50,17 +50,16 @@ class CInjectAnnotationVisitor(
     }
 
     override fun visitArray(name: String): AnnotationVisitor {
-        val delegate = super.visitArray(name)
         return when (name) {
             AnnotationElement.TARGET -> {
-                ArrayVisitorWrapper(Constant.ASM_VERSION, delegate) { CTargetAnnotationVisitor(it, remap, refmapBuilder) }
+                ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { CTargetAnnotationVisitor(it, remap, refmapBuilder) }
             }
 
             AnnotationElement.SLICE -> {
-                ArrayVisitorWrapper(Constant.ASM_VERSION, delegate) { CSliceAnnotationVisitor(it, remap, refmapBuilder) }
+                ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { CSliceAnnotationVisitor(it, remap, refmapBuilder) }
             }
             AnnotationElement.METHOD -> {
-                object: AnnotationVisitor(Constant.ASM_VERSION, delegate) {
+                object: AnnotationVisitor(Constant.ASM_VERSION, if (noRefmap) null else super.visitArray(name)) {
                     override fun visit(name: String?, value: Any) {
                         super.visit(name, value)
                         targetNames.add(value as String)
@@ -69,9 +68,22 @@ class CInjectAnnotationVisitor(
             }
 
             else -> {
-                delegate
+                super.visitArray(name)
             }
         }
+    }
+
+    override fun visitEnd() {
+        val method = if (noRefmap) {
+            super.visitArray(AnnotationElement.METHOD)
+        } else {
+            null
+        }
+        remapTargetNames {
+            method?.visit(null, it)
+        }
+        method?.visitEnd()
+        super.visitEnd()
     }
 
     private val callbackInfo = "Lnet/lenni0451/classtransform/InjectionCallback"

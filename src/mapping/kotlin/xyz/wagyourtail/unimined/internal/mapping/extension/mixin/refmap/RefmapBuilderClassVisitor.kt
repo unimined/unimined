@@ -7,6 +7,7 @@ import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
+import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.annotations.clazz.MixinAnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.annotations.method.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -74,6 +75,7 @@ class RefmapBuilderClassVisitor(
     val refmap: JsonObject,
     delegate: ClassVisitor,
     val existingMappings: Map<String, String>,
+    val mixinRemapExtension: MixinRemapExtension,
     private val onEnd: () -> Unit = {},
     val allowImplicitWildcards: Boolean = false
 ) : ClassVisitor(Constant.ASM_VERSION, delegate) {

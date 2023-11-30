@@ -37,15 +37,11 @@ abstract class CAbstractFieldAnnotationVisitor(
     protected val mixinName = refmapBuilder.mixinName
     protected val targetClasses = refmapBuilder.targetClasses
     protected val allowImplicitWildcards = refmapBuilder.allowImplicitWildcards
+    protected val noRefmap = refmapBuilder.mixinRemapExtension.noRefmap.contains("JarModAgent")
 
     override fun visit(name: String?, value: Any) {
         super.visit(name, value)
         if (name == AnnotationElement.REMAP) remap.set(value as Boolean)
-    }
-
-    override fun visitEnd() {
-        super.visitEnd()
-        remapTargetNames()
     }
 
     open fun getTargetNameAndDescs(targetField: String): Pair<String, Set<String?>> {
@@ -58,7 +54,7 @@ abstract class CAbstractFieldAnnotationVisitor(
         return targetName to targetDescs
     }
 
-    open fun remapTargetNames() {
+    open fun remapTargetNames(noRefmapAcceptor: (String) -> Unit) {
         if (remap.get()) {
             outer@for (targetField in targetNames) {
                 val (targetName, targetDescs) = getTargetNameAndDescs(targetField)
@@ -94,8 +90,10 @@ abstract class CAbstractFieldAnnotationVisitor(
                             val mappedDesc = mapper.mapDesc(targetVal)
                             if (targetClasses.size > 1) {
                                 refmap.addProperty(targetField, "$mappedName$mappedDesc")
+                                noRefmapAcceptor("$mappedName$mappedDesc")
                             } else {
                                 refmap.addProperty(targetField, "L$mappedClass;$mappedName:$mappedDesc")
+                                noRefmapAcceptor("L$mappedClass;$mappedName:$mappedDesc")
                             }
                         }
 
@@ -107,6 +105,11 @@ abstract class CAbstractFieldAnnotationVisitor(
                 logger.warn(
                     "Failed to resolve $annotationName $targetField ($targetDescs) on ($fieldName:$fieldDescriptor) $fieldSignature in $mixinName"
                 )
+                noRefmapAcceptor(targetField)
+            }
+        } else {
+            for (targetField in targetNames) {
+                noRefmapAcceptor(targetField)
             }
         }
     }

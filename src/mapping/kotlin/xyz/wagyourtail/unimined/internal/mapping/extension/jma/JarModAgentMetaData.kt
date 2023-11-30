@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap
+package xyz.wagyourtail.unimined.internal.mapping.extension.jma
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
@@ -94,7 +94,11 @@ class JarModAgentMetaData(parent: MixinRemapExtension) : MixinRemapExtension.Mix
         if (refmaps.isNotEmpty()) {
             val manifest = Manifest(fs.getPath("META-INF/MANIFEST.MF").inputStream())
 
-            manifest.mainAttributes.putValue("JarModAgent-Refmaps", refmaps.keys.joinToString(" "))
+            if (!parent.noRefmap.contains("JarModAgent")) {
+                manifest.mainAttributes.putValue("JarModAgent-Refmaps", refmaps.keys.joinToString(" "))
+            } else {
+                manifest.mainAttributes.remove("JarModAgent-Refmaps")
+            }
 
             fs.getPath("META-INF/MANIFEST.MF")
                 .outputStream(StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE).use {

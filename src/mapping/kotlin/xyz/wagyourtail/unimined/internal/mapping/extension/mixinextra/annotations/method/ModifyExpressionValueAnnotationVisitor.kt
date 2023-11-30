@@ -51,17 +51,16 @@ open class ModifyExpressionValueAnnotationVisitor(
     }
 
     override fun visitArray(name: String): AnnotationVisitor {
-        val delegate = super.visitArray(name)
         return when (name) {
             AnnotationElement.AT -> {
-                ArrayVisitorWrapper(Constant.ASM_VERSION, delegate) { AtAnnotationVisitor(it, remap, refmapBuilder) }
+                ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { AtAnnotationVisitor(it, remap, refmapBuilder) }
             }
 
             AnnotationElement.SLICE -> {
-                ArrayVisitorWrapper(Constant.ASM_VERSION, delegate) { SliceAnnotationVisitor(it, remap, refmapBuilder) }
+                ArrayVisitorWrapper(Constant.ASM_VERSION, super.visitArray(name)) { SliceAnnotationVisitor(it, remap, refmapBuilder) }
             }
             AnnotationElement.METHOD -> {
-                object: AnnotationVisitor(Constant.ASM_VERSION, delegate) {
+                object: AnnotationVisitor(Constant.ASM_VERSION, if (noRefmap) null else super.visitArray(name)) {
                     override fun visit(name: String?, value: Any) {
                         super.visit(name, value)
                         targetNames.add(value as String)
@@ -69,9 +68,22 @@ open class ModifyExpressionValueAnnotationVisitor(
                 }
             }
             else -> {
-                delegate
+                super.visitArray(name)
             }
         }
+    }
+
+    override fun visitEnd() {
+        val method = if (noRefmap) {
+            super.visitArray(AnnotationElement.METHOD)
+        } else {
+            null
+        }
+        remapTargetNames { mappedName ->
+            method?.visit(null, mappedName)
+        }
+        method?.visitEnd()
+        super.visitEnd()
     }
 
 

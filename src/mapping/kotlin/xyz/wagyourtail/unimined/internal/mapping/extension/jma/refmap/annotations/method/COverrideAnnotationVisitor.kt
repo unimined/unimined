@@ -50,10 +50,9 @@ class COverrideAnnotationVisitor(
     }
 
     override fun visitArray(name: String): AnnotationVisitor {
-        val delegate = super.visitArray(name)
         return when (name) {
             AnnotationElement.VALUE -> {
-                object: AnnotationVisitor(Constant.ASM_VERSION, delegate) {
+                object: AnnotationVisitor(Constant.ASM_VERSION, if (noRefmap) null else super.visitArray(name)) {
                     override fun visit(name: String?, value: Any) {
                         super.visit(name, value)
                         targetNames.add(value as String)
@@ -62,9 +61,22 @@ class COverrideAnnotationVisitor(
             }
 
             else -> {
-                delegate
+                super.visitArray(name)
             }
         }
+    }
+
+    override fun visitEnd() {
+        val method = if (noRefmap) {
+            super.visitArray(AnnotationElement.VALUE)
+        } else {
+            null
+        }
+        remapTargetNames {
+            method?.visit(null, it)
+        }
+        method?.visitEnd()
+        super.visitEnd()
     }
 
     override fun getTargetNameAndDescs(targetMethod: String, wildcard: Boolean): Pair<String, Set<String?>> {

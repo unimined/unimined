@@ -25,5 +25,7 @@ interface MixinRemapOptions {
     @ApiStatus.Experimental
     fun resetRefmapBuilder()
     fun off()
+
     fun disableRefmap()
+    fun disableRefmap(keys: List<String> = listOf("BaseMixin", "JarModAgent"))
 }

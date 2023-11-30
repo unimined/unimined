@@ -47,10 +47,22 @@ class CShadowFieldAnnotationVisitor(
     override fun visit(name: String?, value: Any) {
         if (name == AnnotationElement.VALUE) {
             targetNames.add(value as String)
+            if (!noRefmap) {
+                super.visit(name, value)
+            }
+        } else {
+            super.visit(name, value)
         }
-        super.visit(name, value)
     }
 
+    override fun visitEnd() {
+        remapTargetNames {
+            if (noRefmap) {
+                super.visit(AnnotationElement.VALUE, it)
+            }
+        }
+        super.visitEnd()
+    }
 
     override fun getTargetNameAndDescs(targetField: String): Pair<String, Set<String?>> {
         return if (targetField.contains(":")) {

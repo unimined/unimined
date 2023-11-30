@@ -76,7 +76,7 @@ open class ModifyArgAnnotationVisitor(
             }
 
             AnnotationElement.METHOD -> {
-                object: AnnotationVisitor(Constant.ASM_VERSION, super.visitArray(name)) {
+                object: AnnotationVisitor(Constant.ASM_VERSION, if (noRefmap) null else super.visitArray(name)) {
                     override fun visit(name: String?, value: Any) {
                         super.visit(name, value)
                         targetNames.add(value as String)
@@ -88,6 +88,19 @@ open class ModifyArgAnnotationVisitor(
                 super.visitArray(name)
             }
         }
+    }
+
+    override fun visitEnd() {
+        val method = if (noRefmap) {
+            super.visitArray(AnnotationElement.METHOD)
+        } else {
+            null
+        }
+        remapTargetNames { mappedName ->
+            method?.visit(null, mappedName)
+        }
+        method?.visitEnd()
+        super.visitEnd()
     }
 
 }
