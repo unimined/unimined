@@ -501,6 +501,11 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     fun getModJsonPath(): File? {
-        return provider.sourceSet.resources.first { it.name.equals(modJsonName) }
+        val json = provider.sourceSet.resources.firstOrNull { it.name.equals(modJsonName) }
+        if (json == null) {
+            project.logger.warn("[Unimined/FabricLike] $modJsonName not found in sourceSet ${provider.project.path} ${provider.sourceSet.name}")
+            return null
+        }
+        return json
     }
 }
