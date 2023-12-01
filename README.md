@@ -15,6 +15,7 @@ unified minecraft modding environment with support for legacy environments.
 * Bukkit Derrivitives (at least paper)
 * LiteLoader
 * Sponge
+* NilLoader
 
 ## Custom Loaders
 yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecraft/PrcraftExampleMod) and it's buildsrc dir.

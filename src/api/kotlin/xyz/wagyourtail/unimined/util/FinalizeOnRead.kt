@@ -24,14 +24,12 @@ class FinalizeOnRead<T>(value: T) : ReadWriteProperty<Any?, T> {
         if (finalized) {
             throw IllegalStateException("Cannot set finalized property")
         }
-        setValueIntl(value)
-    }
-
-    fun setValueIntl(value: T) {
-        if (finalized) {
-            throw IllegalStateException("Cannot set finalized property")
+        finalized = true
+        if (value is ReadWriteProperty<*, *>) {
+            (value as ReadWriteProperty<Any?, T>).setValue(thisRef, property, value)
+        } else {
+            this.value = value
         }
-        this.value = value
     }
 
     fun setValueIntl(value: ReadWriteProperty<Any?, T>) {

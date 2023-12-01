@@ -304,6 +304,7 @@ abstract class FabricLikeMinecraftTransformer(
                             innerjson.addProperty("name", dep.name)
                             val custom = JsonObject()
                             custom.addProperty("fabric-loom:generated", true)
+                            custom.addProperty("unimined:generated", true)
                             innerjson.add("custom", custom)
                             Files.write(
                                 innermod,
