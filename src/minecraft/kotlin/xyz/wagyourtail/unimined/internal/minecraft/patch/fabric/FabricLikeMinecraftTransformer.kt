@@ -195,6 +195,9 @@ abstract class FabricLikeMinecraftTransformer(
                     createFabricLoaderDependency(it)
                 }
             }
+            libraries.get("development")?.asJsonArray?.forEach {
+                createFabricLoaderDependency(it)
+            }
         }
 
         mainClass = json.get("mainClass")?.asJsonObject
