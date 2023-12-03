@@ -4,8 +4,11 @@ plugins {
 }
 
 group 'com.example'
-archivesBaseName 'UniminedExampleMod'
 version '1.0-SNAPSHOT'
+
+base {
+    archivesName 'UniminedExampleMod'
+}
 
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
