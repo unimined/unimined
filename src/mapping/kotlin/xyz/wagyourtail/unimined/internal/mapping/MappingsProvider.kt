@@ -65,6 +65,19 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
     }
 
+    override fun calamus(key: String, action: MappingDepConfig.() -> Unit) {
+        project.unimined.ornitheMaven()
+        val environment = when (side) {
+            EnvType.CLIENT -> "-client"
+            EnvType.SERVER -> "-server"
+            else -> ""
+        }
+        mapping("net.ornithemc:calamus-intermediary:${minecraft.version}${environment}:v2", key) {
+            outputs("intermediary", false) { listOf("official") }
+            action()
+        }
+    }
+
     override fun legacyIntermediary(revision: Int, key: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.legacyFabricMaven()
         if (legacyFabricMappingsVersionFinalize.value != revision) {
@@ -87,7 +100,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun babricIntermediary(key: String, action: MappingDepConfig.() -> Unit) {
-        project.unimined.babricMaven()
+        project.unimined.glassLauncherMaven("babric")
         if (side != EnvType.COMBINED) {
             mapping("babric:intermediary:${minecraft.version}:v2", key) {
                 mapNamespace(side.classifier!!, "official")
@@ -243,6 +256,22 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
     }
 
+    override fun feather(build: Int, key: String, action: MappingDepConfig.() -> Unit) {
+        project.unimined.ornitheMaven()
+        val environment = when (side) {
+            EnvType.CLIENT -> "-client"
+            EnvType.SERVER -> "-server"
+            else -> ""
+        }
+        mapping("net.ornithemc:feather:${minecraft.version}${environment}+build.${build}:v2", key) {
+            outputs("yarn", true) { listOf("intermediary") }
+            mapNamespace("named", "yarn")
+            sourceNamespace("intermediary")
+            renest()
+            action()
+        }
+    }
+
     override fun legacyYarn(build: Int, revision: Int, key: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.legacyFabricMaven()
         if (legacyFabricMappingsVersionFinalize.value != revision) {
@@ -267,10 +296,20 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun barn(build: Int, key: String, action: MappingDepConfig.() -> Unit) {
-        project.unimined.babricMaven()
+        project.unimined.glassLauncherMaven("babric")
         mapping("babric:barn:${minecraft.version}+build.${build}:v2", "yarn") {
             outputs("barn", true) { listOf("intermediary") }
             mapNamespace("named", "barn")
+            sourceNamespace("intermediary")
+            action()
+        }
+    }
+
+    override fun biny(commitName: String, key: String, action: MappingDepConfig.() -> Unit) {
+        project.unimined.glassLauncherMaven("releases")
+        mapping("net.glasslauncher:biny:${minecraft.version}+${commitName}:v2", "yarn") {
+            outputs("biny", true) { listOf("intermediary") }
+            mapNamespace("named", "biny")
             sourceNamespace("intermediary")
             action()
         }

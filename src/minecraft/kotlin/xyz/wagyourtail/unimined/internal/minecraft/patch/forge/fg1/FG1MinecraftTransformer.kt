@@ -203,6 +203,10 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         val out = fixForge(baseMinecraft)
         return out.path.openZipFileSystem().use { fs ->
             val ats = listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) }
+            // make sure remap at's to modern
+            for (at in ats) {
+                AccessTransformerMinecraftTransformer.toModern(at)
+            }
             // apply at's
             parent.applyATs(
                 out,

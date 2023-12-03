@@ -4,8 +4,11 @@ plugins {
 }
 
 group 'com.example'
-archivesBaseName 'UniminedExampleMod'
 version '1.0-SNAPSHOT'
+
+base {
+    archivesName = 'UniminedExampleMod'
+}
 
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
@@ -29,19 +32,6 @@ repositories {
     mavenCentral()
 }
 
-tasks.register("modloaderJar", Jar) {
-    from sourceSets.modloader.output, sourceSets.main.output
-
-    archiveClassifier = "modloader"
-}
-
-tasks.register("forgeJar", Jar) {
-    from sourceSets.forge.output, sourceSets.main.output
-
-    archiveClassifier = "forge"
-
-}
-
 unimined.minecraft() {
     version "1.2.5"
     side "client"
@@ -55,6 +45,7 @@ unimined.minecraft() {
     }
 
     defaultRemapJar = false
+
 }
 
 unimined.minecraft(sourceSets.forge) {
@@ -107,6 +98,7 @@ unimined.minecraft(sourceSets.modloader) {
 }
 
 repositories {
+    unimined.wagYourMaven('releases')
 }
 
 dependencies {

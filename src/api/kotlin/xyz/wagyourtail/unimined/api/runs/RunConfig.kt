@@ -20,7 +20,7 @@ import kotlin.io.path.relativeTo
  */
 data class RunConfig(
     val project: Project,
-    val javaVersion: JavaVersion,
+    var javaVersion: JavaVersion?, // set to null to use whatever gradle/idea is using
     val name: String,
     val taskName: String,
     var description: String,
@@ -34,77 +34,63 @@ data class RunConfig(
     var disabled : Boolean = false,
 ) {
 
-    fun copy(): RunConfig {
-        return RunConfig(
-            project,
-            javaVersion,
-            name,
-            taskName,
-            description,
-            launchClasspath,
-            mainClass,
-            args.toMutableList(),
-            jvmArgs.toMutableList(),
-            workingDir,
-            env.toMutableMap(),
-            runFirst.toMutableList(),
-            disabled
-        )
-    }
-
     fun createIdeaRunConfig() {
         val file = project.rootDir.resolve(".idea")
             .resolve("runConfigurations")
             .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+${taskName.withSourceSet(launchClasspath)}.xml")
 
-
-        val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
-        val launcher = toolchain.launcherFor { spec ->
-            spec.languageVersion.set(JavaLanguageVersion.of(javaVersion.majorVersion))
-        }
-
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
             .addStringOption("name", "${project.path}+${launchClasspath.name} $description")
             .addStringOption("type", "Application")
             .addStringOption("factoryName", "Application")
-            .append(
+
+        javaVersion?.let { jv ->
+            val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+            val launcher = toolchain.launcherFor { spec ->
+                spec.languageVersion.set(JavaLanguageVersion.of(jv.majorVersion))
+            }
+            configuration.append(
                 XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH")
                     .addStringOption("value", launcher.get().metadata.installationPath.asFile.absolutePath),
                 XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH_ENABLED")
-                    .addStringOption("value", "true"),
-                XMLBuilder("envs").append(
-                    *env.map { (key, value) ->
-                        XMLBuilder("env").addStringOption("name", key).addStringOption("value", value)
-                    }.toTypedArray()
-                ),
-                XMLBuilder("option").addStringOption("name", "MAIN_CLASS_NAME")
-                    .addStringOption("value", mainClass),
-                XMLBuilder("module").addStringOption(
-                    "name",
-                    "${
-                        if (project != project.rootProject) "${project.rootProject.name}${
-                            project.path.replace(
-                                ":",
-                                "."
-                            )
-                        }" else project.name
-                    }.${launchClasspath.name}"
-                ),
-                XMLBuilder("option").addStringOption("name", "PROGRAM_PARAMETERS")
-                    .addStringOption("value", args.joinToString(" ")),
-                XMLBuilder("option").addStringOption("name", "VM_PARAMETERS")
-                    .addStringOption(
-                        "value",
-                        jvmArgs.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it }),
-                XMLBuilder("option").addStringOption("name", "WORKING_DIRECTORY")
-                    .addStringOption(
-                        "value",
-                        "\$PROJECT_DIR\$/${
-                            workingDir.toPath()
-                                .relativeTo(project.rootProject.projectDir.toPath())
-                        }"
-                    ),
+                    .addStringOption("value", "true")
             )
+        }
+
+        configuration.append(
+            XMLBuilder("envs").append(
+                *env.map { (key, value) ->
+                    XMLBuilder("env").addStringOption("name", key).addStringOption("value", value)
+                }.toTypedArray()
+            ),
+            XMLBuilder("option").addStringOption("name", "MAIN_CLASS_NAME")
+                .addStringOption("value", mainClass),
+            XMLBuilder("module").addStringOption(
+                "name",
+                "${
+                    if (project != project.rootProject) "${project.rootProject.name}${
+                        project.path.replace(
+                            ":",
+                            "."
+                        )
+                    }" else project.name
+                }.${launchClasspath.name}"
+            ),
+            XMLBuilder("option").addStringOption("name", "PROGRAM_PARAMETERS")
+                .addStringOption("value", args.joinToString(" ")),
+            XMLBuilder("option").addStringOption("name", "VM_PARAMETERS")
+                .addStringOption(
+                    "value",
+                    jvmArgs.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it }),
+            XMLBuilder("option").addStringOption("name", "WORKING_DIRECTORY")
+                .addStringOption(
+                    "value",
+                    "\$PROJECT_DIR\$/${
+                        workingDir.toPath()
+                            .relativeTo(project.rootProject.projectDir.toPath())
+                    }"
+                ),
+        )
 
         val mv2 = XMLBuilder("method")
             .addStringOption("v", "2")
@@ -146,11 +132,13 @@ data class RunConfig(
     fun createGradleTask(tasks: TaskContainer, group: String): Task {
         return tasks.create(taskName.withSourceSet(launchClasspath), JavaExec::class.java) {
 
-            val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
-            val launcher = toolchain.launcherFor { spec ->
-                spec.languageVersion.set(JavaLanguageVersion.of(javaVersion.majorVersion))
+            javaVersion?.let { jv ->
+                val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+                val launcher = toolchain.launcherFor { spec ->
+                    spec.languageVersion.set(JavaLanguageVersion.of(jv.majorVersion))
+                }
+                it.javaLauncher.set(launcher)
             }
-            it.javaLauncher.set(launcher)
 
             it.environment.putAll(env)
 
@@ -172,36 +160,4 @@ data class RunConfig(
             }
         }
     }
-
-//    fun copy(
-//        project: Project = this.project,
-//        name: String = this.name,
-//        taskName: String = this.taskName,
-//        description: String = this.description,
-//        commonClasspath: SourceSet = this.commonClasspath,
-//        launchClasspath: SourceSet = this.launchClasspath,
-//        mainClass: String = this.mainClass,
-//        args: MutableList<String> = this.args.toMutableList(),
-//        jvmArgs: MutableList<String> = this.jvmArgs.toMutableList(),
-//        workingDir: File = this.workingDir,
-//        env: MutableMap<String, String> = this.env.toMutableMap(),
-//        assetsDir: Path = this.assetsDir,
-//        runFirst: MutableList<Task> = this.runFirst.toMutableList(),
-//    ): LaunchConfig {
-//        return LaunchConfig(
-//            project,
-//            name,
-//            taskName,
-//            description,
-//            commonClasspath,
-//            launchClasspath,
-//            mainClass,
-//            args,
-//            jvmArgs,
-//            workingDir,
-//            env,
-//            assetsDir,
-//            runFirst,
-//        )
-//    }
 }

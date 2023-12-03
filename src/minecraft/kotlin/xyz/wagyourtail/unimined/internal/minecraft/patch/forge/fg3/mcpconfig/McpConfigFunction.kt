@@ -19,7 +19,7 @@ data class McpConfigFunction(
             val version = json[VERSION_KEY].asString
             val args = if (json.has(ARGS_KEY)) configValuesFromJson(json.getAsJsonArray(ARGS_KEY)) else listOf()
             val jvmArgs = if (json.has(JVM_ARGS_KEY)) configValuesFromJson(json.getAsJsonArray(JVM_ARGS_KEY)) else listOf()
-            val repo = json[REPO_KEY].asString
+            val repo = if (json[REPO_KEY].isJsonNull) "https://maven.neoforged.net/releases/" else json[REPO_KEY].asString
             return McpConfigFunction(version, args, jvmArgs, repo)
         }
 

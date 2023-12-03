@@ -62,6 +62,22 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
+    abstract fun calamus(key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun calamus(
+        key: String = "intermediary",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        calamus(key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    @JvmOverloads
     abstract fun legacyIntermediary(revision: Int = 1, key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
 
     @JvmOverloads
@@ -244,6 +260,38 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
+    abstract fun feather(build: Int, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun feather(build: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+        feather(build.toInt(), key, action)
+    }
+
+    @JvmOverloads
+    fun feather(
+        build: Int,
+        key: String = "yarn",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        feather(build, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    @JvmOverloads
+    fun feather(
+        build: String,
+        key: String = "yarn",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        feather(build.toInt(), key, action)
+    }
+
+    @JvmOverloads
     abstract fun legacyYarn(build: Int, revision: Int = 1, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
 
     @JvmOverloads
@@ -339,6 +387,23 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         action: Closure<*>
     ) {
         barn(build.toInt(), key, action)
+    }
+
+    @JvmOverloads
+    abstract fun biny(commitName: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun biny(
+        commitName: String,
+        key: String = "yarn",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        biny(commitName, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
     }
 
 

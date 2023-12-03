@@ -169,12 +169,12 @@ dependencies {
     implementation("net.fabricmc:access-widener:2.1.0")
 
     // at
-    implementation("net.minecraftforge:accesstransformers:8.0.7") {
+    implementation("net.neoforged:accesstransformers:9.0.3") {
         exclude(group = "org.apache.logging.log4j")
         exclude(group = "org.ow2.asm")
     }
 
-    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
+    compileOnly("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false
     }
 }

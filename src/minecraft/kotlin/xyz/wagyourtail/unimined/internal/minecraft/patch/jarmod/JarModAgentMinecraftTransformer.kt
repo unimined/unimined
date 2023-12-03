@@ -32,6 +32,14 @@ open class JarModAgentMinecraftTransformer(
         private const val JMA_DEBUG = "jma.debug"
     }
 
+    init {
+        provider.mods.modImplementation {
+            mixinRemap {
+                enableJarModAgent()
+            }
+        }
+    }
+
     @Deprecated("may violate mojang's EULA... use at your own risk. this is not recommended and is only here for legacy reasons and testing.")
     override var compiletimeTransforms: Boolean = false
 
@@ -53,12 +61,24 @@ open class JarModAgentMinecraftTransformer(
         this.transforms.addAll(transforms)
     }
 
+    override fun agentVersion(vers: String) {
+        project.unimined.wagYourMaven("releases")
+        project.unimined.wagYourMaven("snapshots")
+        jarModAgent.dependencies.add(
+            project.dependencies.create(
+                "xyz.wagyourtail.unimined:jarmod-agent:$vers:all"
+            ).also {
+                (it as ExternalDependency).isTransitive = false
+            }
+        )
+    }
+
     override fun apply() {
         if (jarModAgent.dependencies.isEmpty()) {
             project.unimined.wagYourMaven("snapshots")
             jarModAgent.dependencies.add(
                 project.dependencies.create(
-                    "xyz.wagyourtail.unimined:jarmod-agent:0.1.3-SNAPSHOT:all"
+                    "xyz.wagyourtail.unimined:jarmod-agent:0.1.4-SNAPSHOT:all"
                 ).also {
                     (it as ExternalDependency).isTransitive = false
                 }
@@ -83,7 +103,7 @@ open class JarModAgentMinecraftTransformer(
             config.jvmArgs.add("-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}")
         }
         // priority classpath
-        val priorityClasspath = detectProjectSourceSets().map { it.output.classesDirs.toMutableSet().also {set-> it.output.resourcesDir.let { set.add(it) } } }.flatten()
+        val priorityClasspath = detectProjectSourceSets().map { it.second.output.classesDirs.toMutableSet().also {set-> it.second.output.resourcesDir.let { set.add(it) } } }.flatten()
         if (priorityClasspath.isNotEmpty()) {
             config.jvmArgs.add("-D${JMA_PRIORITY_CLASSPATH}=${priorityClasspath.joinToString(File.pathSeparator) { it.absolutePath }}")
         }
@@ -92,6 +112,9 @@ open class JarModAgentMinecraftTransformer(
     }
 
     override fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path {
+        remapJarTask.mixinRemap {
+            enableJarModAgent()
+        }
         @Suppress("DEPRECATION")
         return if (compiletimeTransforms && transforms.isNotEmpty()) {
             project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${remapJarTask.name}...")

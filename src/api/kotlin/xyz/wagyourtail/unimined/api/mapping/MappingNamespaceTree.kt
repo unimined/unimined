@@ -24,6 +24,14 @@ open class MappingNamespaceTree {
                 return _targets
             }
 
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Namespace) return false
+
+            if (name != other.name || named != other.named) return false
+            return true
+        }
+
         override fun toString(): String {
             return name.lowercase()
         }

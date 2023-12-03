@@ -2,7 +2,9 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.util.SemVerUtils
 
 class OfficialFabricMinecraftTransformer(
     project: Project,
@@ -21,5 +23,14 @@ class OfficialFabricMinecraftTransformer(
                 project.dependencies.create("net.fabricmc:fabric-loader:$dep")
             } else project.dependencies.create(dep)).apply(action)
         )
+    }
+
+    override fun configureRemapJar(task: RemapJarTask) {
+        if (fabricDep.version?.let { SemVerUtils.matches(it, ">=0.15.0") } == true) {
+            project.logger.info("enabling mixin extra")
+            task.mixinRemap {
+                enableMixinExtra()
+            }
+        }
     }
 }

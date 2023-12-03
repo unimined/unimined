@@ -2,6 +2,7 @@
 
 package xyz.wagyourtail.unimined.util
 
+import org.apache.commons.compress.archivers.zip.ZipFile
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -18,6 +19,7 @@ import java.security.MessageDigest
 import java.util.*
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import kotlin.collections.HashMap
 import kotlin.io.path.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -117,6 +119,16 @@ fun File.getSha1() = toPath().getSha1()
 fun Path.getShortSha1(): String = getSha1().substring(0, 7)
 
 fun File.getShortSha1() = toPath().getShortSha1()
+
+fun <K, V> HashMap<K, V>.getSha1(): String {
+    val digestSha1 = MessageDigest.getInstance("SHA-1")
+    digestSha1.update(toString().toByteArray())
+    val hashBytes = digestSha1.digest()
+    return hashBytes.joinToString("") { String.format("%02x", it)}
+}
+
+fun <K, V> HashMap<K, V>.getShortSha1(): String = getSha1().substring(0, 7)
+
 
 
 //fun runJarInSubprocess(
@@ -228,7 +240,7 @@ fun Path.forEachFile(action: (Path) -> Unit) {
 
 fun ByteArray.toHex() = joinToString(separator = "") { byte -> "%02x".format(byte) }
 
-fun <T> Optional<T>.orElse(invoke: () -> Optional<T>): Optional<T> {
+fun <T> Optional<T>.orElseOptional(invoke: () -> Optional<T>): Optional<T> {
     return if (isPresent) {
         this
     } else {
@@ -250,6 +262,8 @@ fun String.withSourceSet(sourceSet: SourceSet) =
     if (sourceSet.name == "main") this else "${sourceSet.name}${this.capitalized()}"
 
 fun String.decapitalized(): String = if (this.isEmpty()) this else this[0].lowercase() + this.substring(1)
+
+fun String.capitalized(): String = if (this.isEmpty()) this else this[0].uppercase() + this.substring(1)
 
 @Suppress("UNCHECKED_CAST")
 fun <K, V> Map<K, V?>.nonNullValues(): Map<K, V> = filterValues { it != null } as Map<K, V>
@@ -294,23 +308,18 @@ fun Path.forEachInZip(action: (String, InputStream) -> Unit) {
 }
 
 fun <T> Path.readZipInputStreamFor(path: String, throwIfMissing: Boolean = true, action: (InputStream) -> T): T {
-    ZipInputStream(inputStream()).use { stream ->
-        var entry = stream.nextEntry
-        while (entry != null) {
-            if (entry.isDirectory) {
-                entry = stream.nextEntry
-                continue
+    Files.newByteChannel(this).use {
+        ZipFile(it).use { zip ->
+            val entry = zip.getEntry(path.replace("\\", "/"))
+            if (entry != null) {
+                return zip.getInputStream(entry).use(action)
+            } else {
+                if (throwIfMissing) {
+                    throw IllegalArgumentException("Missing file $path in $this")
+                }
             }
-            if (entry.name == path) {
-                return action(stream)
-            }
-            entry = stream.nextEntry
         }
     }
-    if (throwIfMissing) {
-        throw IllegalArgumentException("Missing file $path in $this")
-    }
-    @Suppress("UNCHECKED_CAST")
     return null as T
 }
 

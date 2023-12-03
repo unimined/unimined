@@ -11,7 +11,11 @@ import java.nio.file.Path
  * The class responsible for patching minecraft for forge.
  * @since 0.2.3
  */
-interface ForgeLikePatcher: JarModPatcher, AccessTransformablePatcher {
+interface ForgeLikePatcher<T: JarModPatcher>: JarModPatcher, AccessTransformablePatcher {
+
+
+    @get:ApiStatus.Internal
+    var forgeTransformer: T
 
     /**
      * location of access transformer file to apply to the minecraft jar.

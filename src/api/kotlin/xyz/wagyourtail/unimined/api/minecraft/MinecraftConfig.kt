@@ -22,6 +22,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.MustSet
+import xyz.wagyourtail.unimined.util.sourceSets
 import java.io.File
 import java.nio.file.Path
 
@@ -92,12 +93,11 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     var defaultRemapJar: Boolean by FinalizeOnRead(true)
 
     /**
-     * the minecraft version to use
+     * if the jar task for defaultRemapJar doesn't exist, should unimined create it?
+     * if so, it will be created with `from(this.sourceSet.output, sourceSets.main.output)`
+     * and it's archiveClassifier will be this.sourceSet.name
      */
-    fun version(version: String) {
-        project.logger.info("setting minecraft version to $version")
-        this.version = version
-    }
+    var createJarTask: Boolean by FinalizeOnRead(true)
 
     @set:ApiStatus.Internal
     abstract var mcPatcher: MinecraftPatcher
@@ -107,6 +107,73 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     abstract val runs: RunsConfig
     abstract val minecraftData: MinecraftData
     abstract val minecraftRemapper: MinecraftRemapConfig
+
+
+
+    /**
+     * @since 1.1.0
+     * copy the config closure from the config for another sourceSet
+     */
+    fun from(sourceSet: SourceSet) {
+        from(project, sourceSet)
+    }
+
+    /**
+     * @since 1.1.0
+     * copy the config closure from the config for another sourceSet
+     */
+    abstract fun from(project: Project, sourceSet: SourceSet)
+
+    /**
+     * @since 1.1.0
+     * copy the config closure from the config for another sourceSet
+     */
+    fun from(path: String) {
+        if (!path.contains(":")) {
+            from(project.sourceSets.getByName(path))
+            return
+        }
+        val project = path.substringBeforeLast(":")
+        val name = path.substringAfterLast(":")
+        from(this.project.project(path).sourceSets.getByName(name))
+    }
+
+    /**
+     * @since 1.1.0
+     */
+    fun combineWith(sourceSet: SourceSet) {
+        combineWith(project, sourceSet)
+    }
+
+    /**
+     * @since 1.1.0
+     * calls `from(project, sourceSet)` and then also adds the target to the compileClasspath and runtimeClasspath, as well as adding it to the `from` in the jar task
+     * this also fixes some other things, like resources being split between the two sourceSets
+     *
+     * if the target isn't a unimined sourceSet, this will skip the `from` call
+     */
+    abstract fun combineWith(project: Project, sourceSet: SourceSet)
+
+    /**
+     * @since 1.1.0
+     */
+    fun combineWith(path: String) {
+        if (!path.contains(":")) {
+            combineWith(project, project.sourceSets.getByName(path))
+            return
+        }
+        val project = path.substringBeforeLast(":")
+        val name = path.substringAfterLast(":")
+        combineWith(this.project.project(path), this.project.project(path).sourceSets.getByName(name))
+    };
+
+    /**
+     * the minecraft version to use
+     */
+    fun version(version: String) {
+        project.logger.info("setting minecraft version to $version")
+        this.version = version
+    }
 
     abstract fun mappings(action: MappingsConfig.() -> Unit)
 
@@ -218,14 +285,20 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     abstract val mergedOfficialMinecraftFile: File?
 
     @get:ApiStatus.Internal
+    abstract val minecraft: Configuration
+
+    @get:ApiStatus.Internal
     abstract val minecraftLibraries: Configuration
 
     @ApiStatus.Internal
     abstract fun isMinecraftJar(path: Path): Boolean
 
+    @get:ApiStatus.Internal
     abstract val minecraftDependency: ModuleDependency
 
     @get:ApiStatus.Internal
     val localCache by lazy { project.unimined.getLocalCache(sourceSet) }
 
+    @get:ApiStatus.Internal
+    abstract val combinedWithList: MutableList<Pair<Project, SourceSet>>
 }

@@ -60,7 +60,7 @@ class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     override fun addMavens() {
         super.addMavens()
-        project.unimined.babricMaven()
+        project.unimined.glassLauncherMaven("babric")
     }
 
     override val includeGlobs: List<String>

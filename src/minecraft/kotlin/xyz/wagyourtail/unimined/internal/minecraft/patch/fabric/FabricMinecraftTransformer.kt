@@ -2,12 +2,20 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.internal.mapping.ii.InterfaceInjectionMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.util.getShortSha1
+import java.io.InputStreamReader
+import java.nio.file.Files
+import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
 
 abstract class FabricMinecraftTransformer(
     project: Project,
@@ -49,7 +57,8 @@ abstract class FabricMinecraftTransformer(
         super.applyClientRunTransform(config)
         config.jvmArgs += listOf(
             "-Dfabric.development=true",
-            "-Dfabric.remapClasspathFile=${intermediaryClasspath}"
+            "-Dfabric.remapClasspathFile=${intermediaryClasspath}",
+            "-Dfabric.classPathGroups=${groups}"
         )
     }
 
@@ -57,7 +66,26 @@ abstract class FabricMinecraftTransformer(
         super.applyServerRunTransform(config)
         config.jvmArgs += listOf(
             "-Dfabric.development=true",
-            "-Dfabric.remapClasspathFile=${intermediaryClasspath}"
+            "-Dfabric.remapClasspathFile=${intermediaryClasspath}",
+            "-Dfabric.classPathGroups=${groups}"
         )
+    }
+
+    override fun collectInterfaceInjections(baseMinecraft: MinecraftJar, injections: HashMap<String, List<String>>) {
+        val modJsonPath = this.getModJsonPath()
+
+        if (modJsonPath != null && modJsonPath.exists()) {
+            val json = JsonParser.parseReader(InputStreamReader(Files.newInputStream(modJsonPath.toPath()))).asJsonObject
+
+            val custom = json.getAsJsonObject("custom")
+
+            if (custom != null) {
+                val interfaces = custom.getAsJsonObject("loom:injected_interfaces")
+
+                if (interfaces != null) {
+                    collectInterfaceInjections(baseMinecraft, injections, interfaces)
+                }
+            }
+        }
     }
 }

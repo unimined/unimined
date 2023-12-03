@@ -3,13 +3,26 @@ package xyz.wagyourtail.unimined.util
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import java.io.File
+import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.exists
 import kotlin.io.path.writeText
 
 fun runTestProject(name: String): BuildResult {
-    return runGradle(Paths.get(".").resolve("testing").resolve(name));
+    return runGradle(getTestProjectPath(name));
+}
+
+fun getTestProjectPath(name: String): Path {
+    return Paths.get(".").resolve("testing").resolve(name)
+}
+
+fun openZipFileSystem(project: String, path: String): FileSystem? {
+    val fullPath = getTestProjectPath(project).resolve(path)
+
+    if (!fullPath.exists()) return null
+
+    return fullPath.openZipFileSystem(mapOf("mutable" to false))
 }
 
 fun runGradle(dir: Path): BuildResult {

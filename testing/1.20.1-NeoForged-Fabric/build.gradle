@@ -4,36 +4,18 @@ plugins {
 }
 
 group 'com.example'
-archivesBaseName 'UniminedExampleMod'
 version '1.0-SNAPSHOT'
+
+base {
+    archivesName = "UniminedExampleMod"
+}
 
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
-
 sourceSets {
-    fabric {
-        compileClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.main.output
-    }
-    forge {
-        compileClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.main.output
-    }
-}
-
-tasks.register("fabricJar", Jar) {
-    from sourceSets.fabric.output, sourceSets.main.output
-
-    archiveClassifier = "fabric"
-}
-
-tasks.register("forgeJar", Jar) {
-    from sourceSets.forge.output, sourceSets.main.output
-
-    archiveClassifier = "forge"
+    fabric
+    forge
 }
 
 repositories {
@@ -59,53 +41,29 @@ unimined.minecraft {
 }
 
 unimined.minecraft(sourceSets.fabric) {
-    version project.minecraft_version
-
-    mappings {
-        mojmap()
-        parchment("1.19.3", "2023.03.12-nightly-SNAPSHOT")
-    }
+    combineWith(sourceSets.main)
 
     fabric {
         loader project.fabric_version
     }
+
+    defaultRemapJar = true
 }
 
 unimined.minecraft(sourceSets.forge) {
-    version project.minecraft_version
-
-    mappings {
-        intermediary()
-        mojmap()
-        parchment("1.19.3", "2023.03.12-nightly-SNAPSHOT")
-
-        devFallbackNamespace "intermediary"
-    }
+    combineWith(sourceSets.main)
 
     neoForged {
         loader project.forge_version
         mixinConfig "modid.mixins.json"
     }
-}
 
-configurations {
-    mainImplementation
-    implementation {
-        extendsFrom forgeImplementation
-        extendsFrom fabricImplementation
-    }
-}
-
-sourceSets {
-    main {
-        compileClasspath += configurations.mainImplementation
-        runtimeClasspath += configurations.mainImplementation
-    }
+    defaultRemapJar = true
 }
 
 dependencies {
     // we need this in main where it isn't by default
-    mainImplementation "org.spongepowered:mixin:0.8.5-SNAPSHOT"
+    implementation "org.spongepowered:mixin:0.8.5-SNAPSHOT"
     fabricModImplementation "net.fabricmc.fabric-api:fabric-api:0.83.0+1.20"
 }
 

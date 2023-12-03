@@ -4,8 +4,11 @@ plugins {
 }
 
 group 'com.example'
-archivesBaseName 'UniminedExampleMod'
 version '1.0-SNAPSHOT'
+
+base {
+    archivesName = 'UniminedExampleMod'
+}
 
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
@@ -22,18 +25,6 @@ sourceSets {
         compileClasspath += sourceSets.main.output
         runtimeClasspath += sourceSets.main.output
     }
-}
-
-tasks.register("fabricJar", Jar) {
-    from sourceSets.fabric.output, sourceSets.main.output
-
-    archiveClassifier = "fabric"
-}
-
-tasks.register("forgeJar", Jar) {
-    from sourceSets.forge.output, sourceSets.main.output
-
-    archiveClassifier = "forge"
 }
 
 repositories {
@@ -58,31 +49,24 @@ unimined.minecraft {
 }
 
 unimined.minecraft(sourceSets.fabric) {
-    version project.minecraft_version
-
-    mappings {
-        yarn(project.mapping_version)
-    }
+    combineWith(sourceSets.main)
 
     fabric {
         loader project.fabric_version
     }
+
+    defaultRemapJar = true
 }
 
 unimined.minecraft(sourceSets.forge) {
-    version project.minecraft_version
-
-    mappings {
-        intermediary()
-        yarn(project.mapping_version)
-
-        devFallbackNamespace "intermediary"
-    }
+    combineWith(sourceSets.main)
 
     minecraftForge {
         loader project.forge_version
         mixinConfig "modid.mixins.json"
     }
+
+    defaultRemapJar = true
 }
 
 configurations {

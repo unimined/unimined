@@ -7,12 +7,13 @@ import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.mapping.mixin.refmap.BetterMixinExtension
+import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
 import xyz.wagyourtail.unimined.util.*
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -20,6 +21,8 @@ import javax.inject.Inject
 import kotlin.io.path.*
 
 abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
+
+    private var mixinRemapOptions: MixinRemapOptions.() -> Unit by FinalizeOnRead {}
 
     override fun devNamespace(namespace: String) {
         val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
@@ -34,6 +37,10 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     override fun prodNamespace(namespace: String) {
         val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
+    }
+
+    override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
+        mixinRemapOptions = action
     }
 
     override var allowImplicitWildcards by FinalizeOnRead(false)
@@ -52,35 +59,24 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             prodNs
         )
 
-        // merge in manifest from input jar
-        inputFile.get().asFile.toPath().readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
-            // write to temp file
-            val inpTmp = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("input-manifest.MF")
-            inpTmp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
-                inp.copyTo(out)
-            }
-            this.manifest {
-                it.from(inpTmp)
-            }
-        }
         val inputFile = provider.mcPatcher.beforeRemapJarTask(this, inputFile.get().asFile.toPath())
 
         if (path.isEmpty()) {
-            // copy into output
-            from(project.zipTree(inputFile))
-            copy()
+            project.logger.lifecycle("[Unimined/RemapJar ${this.path}] detected empty remap path, jumping to after remap tasks")
+            provider.mcPatcher.afterRemapJarTask(this, inputFile)
+            afterRemap(inputFile, inputFile)
             return
         }
 
         val last = path.last()
         project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.name} from $devNs/$devFNs to $prodNs")
-        project.logger.info("[Unimined/RemapJar]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
+        project.logger.info("[Unimined/RemapJar ${this.path}]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
         var prevTarget = inputFile
         var prevNamespace = devNs
         var prevPrevNamespace = devFNs
         for (i in path.indices) {
             val step = path[i]
-            project.logger.info("[Unimined/RemapJar]    $step")
+            project.logger.info("[Unimined/RemapJar ${this.path}]    $step")
             val nextTarget = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("${inputFile.nameWithoutExtension}-temp-${step.name}.jar")
             nextTarget.deleteIfExists()
             val mcNamespace = prevNamespace
@@ -95,8 +91,26 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             prevPrevNamespace = prevNamespace
             prevNamespace = step
         }
+        project.logger.info("[Unimined/RemapJar ${path}] after remap tasks started ${System.currentTimeMillis()}")
         provider.mcPatcher.afterRemapJarTask(this, prevTarget)
-        from(project.zipTree(prevTarget))
+        afterRemap(inputFile, prevTarget)
+        project.logger.info("[Unimined/RemapJar ${path}] after remap tasks finished ${System.currentTimeMillis()}")
+    }
+
+    private fun afterRemap(inputFile: Path, afterRemapJar: Path) {
+        // merge in manifest from input jar
+        inputFile.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
+            // write to temp file
+            val inpTmp = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("input-manifest.MF")
+            inpTmp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
+                inp.copyTo(out)
+            }
+            this.manifest {
+                it.from(inpTmp)
+            }
+        }
+        // copy into output
+        from(project.zipTree(afterRemapJar))
         copy()
     }
 
@@ -108,6 +122,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         toNs: MappingNamespaceTree.Namespace,
         mc: Path
     ) {
+        project.logger.info("[Unimined/RemapJar ${path}] remapping $fromNs -> $toNs (start time: ${System.currentTimeMillis()})")
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(
                 provider.mappings.getTRMappings(
@@ -122,45 +137,62 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         if (classpath != null) {
             remapperB.extension(KotlinRemapperClassloader.create(classpath).tinyRemapperExtension)
         }
-        val betterMixinExtension = BetterMixinExtension(project.gradle.startParameter.logLevel, allowImplicitWildcards = allowImplicitWildcards)
+        val betterMixinExtension = MixinRemapExtension(
+            project.gradle.startParameter.logLevel,
+            allowImplicitWildcards
+        )
+        betterMixinExtension.enableBaseMixin()
+        mixinRemapOptions(betterMixinExtension)
         remapperB.extension(betterMixinExtension)
         provider.minecraftRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
-        remapper.readClassPathAsync(
-            *provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
+        val tag = remapper.createInputTag()
+        project.logger.debug("[Unimined/RemapJar ${path}] classpath: ")
+        (provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
+            .filter { !provider.isMinecraftJar(it) }
+            .filter { it.exists() } + listOf(mc))
+            .joinToString { "\n[Unimined/RemapJar ${path}]  -  $it" }
+            .let { project.logger.debug(it) }
+        project.logger.debug("[Unimined/RemapJar ${path}] input: $from")
+        betterMixinExtension.readClassPath(remapper,
+            *(provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
                 .filter { !provider.isMinecraftJar(it) }
-                .filter { it.exists() }
+                .filter { it.exists() } + listOf(mc))
                 .toTypedArray()
-        )
-        remapper.readClassPathAsync(mc)
-        betterMixinExtension.preRead(from, "${project.rootProject.name}.refmap.json")
-        remapper.readInputsAsync(from)
-        target.parent.createDirectories()
-        try {
-            OutputConsumerPath.Builder(target).build().use {
-                it.addNonClassFiles(
-                    from,
-                    remapper,
-                    listOf(
-                        AccessWidenerMinecraftTransformer.AwRemapper(
-                            if (fromNs.named) "named" else fromNs.name,
-                            if (toNs.named) "named" else toNs.name
-                        ),
-                        AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher)?.remapAtToLegacy == true)!!),
-                        betterMixinExtension.resourceRemapper()
+        ).thenCompose {
+            project.logger.info("[Unimined/RemapJar ${path}] reading input: $from (time: ${System.currentTimeMillis()})")
+            betterMixinExtension.readInput(remapper, tag, from)
+        }.thenRun {
+            project.logger.info("[Unimined/RemapJar ${path}] writing output: $target (time: ${System.currentTimeMillis()})")
+            target.parent.createDirectories()
+            try {
+                OutputConsumerPath.Builder(target).build().use {
+                    it.addNonClassFiles(
+                        from,
+                        remapper,
+                        listOf(
+                            AccessWidenerMinecraftTransformer.AwRemapper(
+                                if (fromNs.named) "named" else fromNs.name,
+                                if (toNs.named) "named" else toNs.name
+                            ),
+                            AccessTransformerMinecraftTransformer.AtRemapper(
+                                project.logger,
+                                remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher<*>)?.remapAtToLegacy == true)!!
+                            ),
+                        )
                     )
-                )
-                remapper.apply(it)
+                    remapper.apply(it, tag)
+                }
+            } catch (e: Exception) {
+                target.deleteIfExists()
+                throw e
             }
-        } catch (e: Exception) {
-            target.deleteIfExists()
-            throw e
-        }
-        remapper.finish()
-
-        target.openZipFileSystem(mapOf("mutable" to true)).use {
-            betterMixinExtension.write(it)
-        }
+            remapper.finish()
+            target.openZipFileSystem(mapOf("mutable" to true)).use {
+                betterMixinExtension.insertExtra(tag, it)
+            }
+            project.logger.info("[Unimined/RemapJar ${path}] remapped $fromNs -> $toNs (end time: ${System.currentTimeMillis()})")
+        }.join()
     }
 
 }

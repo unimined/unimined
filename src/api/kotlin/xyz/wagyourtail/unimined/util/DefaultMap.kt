@@ -17,3 +17,5 @@ class DefaultMap<T, U>(val initializer: (T) -> U, val map: MutableMap<T, U> = mu
 }
 
 fun <T, U> defaultedMapOf(initializer: (T) -> U): DefaultMap<T, U> = DefaultMap(initializer)
+
+fun <T, U> defaultedMapOf(map: MutableMap<T, U>, initializer: (T) -> U): DefaultMap<T, U> = DefaultMap(initializer, map)

@@ -2,12 +2,15 @@ package xyz.wagyourtail.unimined.internal.mods
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.mod.ModRemapConfig
 import xyz.wagyourtail.unimined.api.mod.ModsConfig
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.defaultedMapOf
+import xyz.wagyourtail.unimined.util.getField
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.nio.file.Path
@@ -25,6 +28,8 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         remap(it)
     }
 
+    private var default by FinalizeOnRead<ModRemapProvider.() -> Unit> {}
+
     private val remapConfigsResolved = mutableMapOf<Configuration, ModRemapProvider>()
 
     fun modTransformFolder(): Path {
@@ -39,11 +44,23 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         remapConfigs[config.toSet()] = action
     }
 
+    @ApiStatus.Internal
+    fun default(action: ModRemapConfig.() -> Unit) {
+        val prev: FinalizeOnRead<ModRemapProvider.() -> Unit> = ModsProvider::class.getField("default")!!.getDelegate(this) as FinalizeOnRead<ModRemapProvider.() -> Unit>
+        val old: ModRemapProvider.() -> Unit = prev.value as ModRemapProvider.() -> Unit
+        default = {
+            old(this)
+            action()
+        }
+    }
+
     override fun modImplementation(action: ModRemapConfig.() -> Unit) {
         val old = remapConfigs[setOf(modImplementation)]
         remapConfigs[setOf(modImplementation)] = {
             if (old != null) {
                 old()
+            } else {
+                default()
             }
             action()
         }
@@ -79,7 +96,7 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         }
         val files = remapOutputs.flatMap { it.resolve() }
         for (file in nonRemap) {
-            project.logger.info("[Unimined/ModRemapper]  unremapped: $file")
+            project.logger.info("[Unimined/ModRemapper]    unremapped: $file")
         }
         for (file in files) {
             project.logger.info("[Unimined/ModRemapper]    remapped: $file")

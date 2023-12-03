@@ -32,7 +32,11 @@ open class JarModMinecraftTransformer(
 
     override var deleteMetaInf: Boolean = false
 
-    val jarModConfiguration = project.configurations.maybeCreate(jarModProvider.withSourceSet(provider.sourceSet))
+    val jarModConfiguration = project.configurations.maybeCreate(jarModProvider.withSourceSet(provider.sourceSet)).apply {
+        if (isTransitive) {
+            isTransitive = false
+        }
+    }
 
     override val transform = (listOf<(FileSystem) -> Unit>(
         ModLoaderPatches::fixURIisNotHierarchicalException,
@@ -98,19 +102,5 @@ open class JarModMinecraftTransformer(
             }
             target
         })
-    }
-
-    protected fun detectProjectSourceSets(): Set<SourceSet> {
-        val sourceSets = mutableSetOf<SourceSet>()
-        val projects = project.rootProject.allprojects
-        for (project in projects) {
-            for (sourceSet in project.extensions.findByType(SourceSetContainer::class.java)?.asMap?.values
-                ?: listOf()) {
-                if (sourceSet.output.files.intersect(provider.sourceSet.runtimeClasspath.files).isNotEmpty()) {
-                    sourceSets.add(sourceSet)
-                }
-            }
-        }
-        return sourceSets
     }
 }

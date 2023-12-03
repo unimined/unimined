@@ -1,4 +1,4 @@
 package xyz.wagyourtail.unimined.api.minecraft.patch
 
-interface NeoForgedPatcher : ForgeLikePatcher {
+interface NeoForgedPatcher<T: JarModPatcher> : ForgeLikePatcher<T> {
 }
