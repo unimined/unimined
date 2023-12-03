@@ -60,9 +60,13 @@ class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvide
     }
 
     override fun configureRemapJar(task: RemapJarTask) {
+        val forgeDep = forge.dependencies.first()
         if (provider.version != "1.20.1") {
             project.logger.info("setting `disableRefmap()` in mixinRemap")
             task.mixinRemap {
+                if (SemVerUtils.matches(forgeDep.version!!.substringBefore("-"), ">=20.2.84")) {
+                    enableMixinExtra()
+                }
                 disableRefmap()
             }
         }
