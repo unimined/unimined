@@ -7,7 +7,7 @@ group 'com.example'
 version '1.0-SNAPSHOT'
 
 base {
-    archivesName 'UniminedExampleMod'
+    archivesName = 'UniminedExampleMod'
 }
 
 // this is just here so we can test the outputs easier and clean between tests
