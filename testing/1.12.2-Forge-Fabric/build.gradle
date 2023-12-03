@@ -48,29 +48,24 @@ unimined.minecraft {
 }
 
 unimined.minecraft(sourceSets.fabric) {
-    version project.minecraft_version
-
-    mappings {
-        searge()
-        mcp("stable", "39-1.12")
-    }
+    combineWith(sourceSets.main)
 
     legacyFabric {
         loader project.fabric_version
     }
+
+    defaultRemapJar = true
 }
 
 unimined.minecraft(sourceSets.forge) {
-    version project.minecraft_version
-
-    mappings {
-        mcp("stable", "39-1.12")
-    }
+    combineWith(sourceSets.main)
 
     minecraftForge {
         loader project.forge_version
         mixinConfig "modid.mixins.json"
     }
+
+    defaultRemapJar = true
 }
 
 configurations {

@@ -46,15 +46,13 @@ unimined.minecraft {
 }
 
 unimined.minecraft(sourceSets.fabric) {
-    version project.minecraft_version
-
-    mappings {
-        mojmap()
-    }
+    combineWith(sourceSets.main)
 
     fabric {
         loader project.fabric_version
     }
+
+    defaultRemapJar = true
 }
 
 unimined.minecraft(sourceSets.forge) {

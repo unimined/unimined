@@ -47,6 +47,8 @@ unimined.minecraft(sourceSets.fabric) {
     fabric {
         loader project.fabric_version
     }
+
+    defaultRemapJar = true
 }
 
 unimined.minecraft(sourceSets.neoforge) {
@@ -64,6 +66,8 @@ unimined.minecraft(sourceSets.neoforge) {
         // this shouldn't be a problem as long as named mappings don't make the name of those 2 methods different.
         ignoreConflicts(true)
     }
+
+    defaultRemapJar = true
 }
 
 unimined.minecraft(sourceSets.lexforge) {

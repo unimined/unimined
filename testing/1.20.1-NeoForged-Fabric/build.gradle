@@ -46,6 +46,8 @@ unimined.minecraft(sourceSets.fabric) {
     fabric {
         loader project.fabric_version
     }
+
+    defaultRemapJar = true
 }
 
 unimined.minecraft(sourceSets.forge) {
@@ -55,6 +57,8 @@ unimined.minecraft(sourceSets.forge) {
         loader project.forge_version
         mixinConfig "modid.mixins.json"
     }
+
+    defaultRemapJar = true
 }
 
 dependencies {

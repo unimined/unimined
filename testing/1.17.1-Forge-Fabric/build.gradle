@@ -40,31 +40,24 @@ unimined.minecraft {
 }
 
 unimined.minecraft(sourceSets.fabric) {
-    version project.minecraft_version
-
-    mappings {
-        yarn(project.mapping_version)
-    }
+    combineWith(sourceSets.main)
 
     fabric {
         loader project.fabric_version
     }
+
+    defaultRemapJar = true
 }
 
 unimined.minecraft(sourceSets.forge) {
-    version project.minecraft_version
-
-    mappings {
-        intermediary()
-        yarn(project.mapping_version)
-
-        devFallbackNamespace "intermediary"
-    }
+    combineWith(sourceSets.main)
 
     minecraftForge {
         loader project.forge_version
         mixinConfig "modid.mixins.json"
     }
+
+    defaultRemapJar = true
 }
 
 configurations {
