@@ -125,8 +125,7 @@ class MemoryMapping {
         mappings: List<String>,
         @DelegatesTo(value = MemoryMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
     ) {
-        srcNamespace = src
-        withMappings(*mappings.toTypedArray()) {
+        withMappings(src, mappings) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -148,6 +147,7 @@ class MemoryMapping {
             val namespaces = getNamespaces().mapIndexed { i: Int, s: String -> s to i }
             if (visitor.visitHeader()) {
                 visitor.visitNamespaces(srcNamespace, namespaces.map { it.first })
+//                println("namespaces: $srcNamespace ${namespaces.map { it.first }}")
             }
 
             if (visitor.visitContent()) {
@@ -374,8 +374,10 @@ class ClassMapping(srcName: String, vararg targets: Pair<String, String>): Mappi
     @ApiStatus.Internal
     override fun visit(visitor: MappingVisitor, namespaces: Map<String, Int>) {
         if (visitor.visitClass(srcName)) {
+//            println("class: $srcName")
             for (target in targets) {
                 visitor.visitDstName(MappedElementKind.CLASS, namespaces[target.key]!!, target.value)
+//                println("class dst: ${namespaces[target.key]!!} ${target.value}")
             }
             if (visitor.visitElementContent(MappedElementKind.CLASS)) {
                 fields.forEach { field ->
