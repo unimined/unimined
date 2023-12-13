@@ -265,6 +265,8 @@ fun String.decapitalized(): String = if (this.isEmpty()) this else this[0].lower
 
 fun String.capitalized(): String = if (this.isEmpty()) this else this[0].uppercase() + this.substring(1)
 
+fun <K, V> Iterable<Pair<K, V>>.associated() = associate { it }
+
 @Suppress("UNCHECKED_CAST")
 fun <K, V> Map<K, V?>.nonNullValues(): Map<K, V> = filterValues { it != null } as Map<K, V>
 

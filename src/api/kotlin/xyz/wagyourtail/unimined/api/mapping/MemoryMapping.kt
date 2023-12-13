@@ -8,6 +8,8 @@ import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.format.Tiny2Writer
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.util.associated
+import xyz.wagyourtail.unimined.util.nonNullValues
 import xyz.wagyourtail.unimined.util.toHex
 import java.io.StringWriter
 import java.security.MessageDigest
@@ -125,8 +127,7 @@ class MemoryMapping {
         mappings: List<String>,
         @DelegatesTo(value = MemoryMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>
     ) {
-        srcNamespace = src
-        withMappings(*mappings.toTypedArray()) {
+        withMappings(src, mappings) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -148,6 +149,7 @@ class MemoryMapping {
             val namespaces = getNamespaces().mapIndexed { i: Int, s: String -> s to i }
             if (visitor.visitHeader()) {
                 visitor.visitNamespaces(srcNamespace, namespaces.map { it.first })
+//                println("namespaces: $srcNamespace ${namespaces.map { it.first }}")
             }
 
             if (visitor.visitContent()) {
@@ -183,8 +185,8 @@ class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, val mappings: 
      * @param targets target names (in the order of the mappings passed to [MemoryMappingWithMappings])
      * @since 0.1.0
      */
-    fun c(srcName: String, vararg targets: String) {
-        memoryMapping.c(srcName, *(mappings zip targets).toTypedArray())
+    fun c(srcName: String, vararg targets: String?) {
+        memoryMapping.c(srcName, (mappings zip targets).associated().nonNullValues())
     }
 
     /**
@@ -194,8 +196,8 @@ class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, val mappings: 
      * @param action A closure to add mappings to the class.
      * @since 0.1.0
      */
-    fun c(srcName: String, targets: List<String>, action: ClassMappingWithMappings.() -> Unit) {
-        memoryMapping.c(srcName, *(mappings zip targets).toTypedArray()) {
+    fun c(srcName: String, targets: List<String?>, action: ClassMappingWithMappings.() -> Unit) {
+        memoryMapping.c(srcName, (mappings zip targets).associated().nonNullValues()) {
             action(ClassMappingWithMappings(this, mappings))
         }
     }
@@ -203,14 +205,14 @@ class MemoryMappingWithMappings(val memoryMapping: MemoryMapping, val mappings: 
     /**
      * @since 0.5.0
      */
-     fun c(srcName: String, targets: List<String>) {
-        memoryMapping.c(srcName, *(mappings zip targets).toTypedArray())
+     fun c(srcName: String, targets: List<String?>) {
+        memoryMapping.c(srcName, (mappings zip targets).associated().nonNullValues())
      }
 
     /**
      * @since 0.5.0
      */
-    fun c(srcName: String, targets: List<String>, @DelegatesTo(value = ClassMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+    fun c(srcName: String, targets: List<String?>, @DelegatesTo(value = ClassMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
         c(srcName, targets) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
@@ -374,8 +376,10 @@ class ClassMapping(srcName: String, vararg targets: Pair<String, String>): Mappi
     @ApiStatus.Internal
     override fun visit(visitor: MappingVisitor, namespaces: Map<String, Int>) {
         if (visitor.visitClass(srcName)) {
+//            println("class: $srcName")
             for (target in targets) {
                 visitor.visitDstName(MappedElementKind.CLASS, namespaces[target.key]!!, target.value)
+//                println("class dst: ${namespaces[target.key]!!} ${target.value}")
             }
             if (visitor.visitElementContent(MappedElementKind.CLASS)) {
                 fields.forEach { field ->
@@ -402,14 +406,14 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, val mappings: Lis
      * @param targets target names (in the order of the mappings passed to [ClassMappingWithMappings])
      * @since 0.1.0
      */
-    fun f(srcName: String, srcDesc: String, vararg targets: String) {
-        classMapping.f(srcName, srcDesc, *(mappings zip targets).toTypedArray())
+    fun f(srcName: String, srcDesc: String, vararg targets: String?) {
+        classMapping.f(srcName, srcDesc, (mappings zip targets).associated().nonNullValues())
     }
 
     /**
      * @since 0.5.0
      */
-    fun f(srcName: String, srcDesc: String, targets: List<String>) {
+    fun f(srcName: String, srcDesc: String, targets: List<String?>) {
         f(srcName, srcDesc, *targets.toTypedArray())
     }
 
@@ -420,14 +424,14 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, val mappings: Lis
      * @param targets target names (in the order of the mappings passed to [ClassMappingWithMappings])
      * @since 0.1.0
      */
-    fun m(srcName: String, srcDesc: String, vararg targets: String) {
-        classMapping.m(srcName, srcDesc, *(mappings zip targets).toTypedArray())
+    fun m(srcName: String, srcDesc: String, vararg targets: String?) {
+        classMapping.m(srcName, srcDesc, (mappings zip targets).associated().nonNullValues())
     }
 
     /**
      * @since 0.5.0
      */
-    fun m(srcName: String, srcDesc: String, targets: List<String>) {
+    fun m(srcName: String, srcDesc: String, targets: List<String?>) {
         m(srcName, srcDesc, *targets.toTypedArray())
     }
 
@@ -439,8 +443,8 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, val mappings: Lis
      * @param action A closure to add mappings to the method.
      * @since 0.1.0
      */
-    fun m(srcName: String, srcDesc: String, vararg targets: String, action: MethodMappingWithMappings.() -> Unit) {
-        classMapping.m(srcName, srcDesc, *(mappings zip targets).toTypedArray()) {
+    fun m(srcName: String, srcDesc: String, vararg targets: String?, action: MethodMappingWithMappings.() -> Unit) {
+        classMapping.m(srcName, srcDesc, (mappings zip targets).associated().nonNullValues()) {
             action(MethodMappingWithMappings(this, mappings))
         }
     }
@@ -448,7 +452,7 @@ class ClassMappingWithMappings(val classMapping: ClassMapping, val mappings: Lis
     /**
      * @since 0.5.0
      */
-    fun m(srcName: String, srcDesc: String, targets: List<String>, @DelegatesTo(value = MethodMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
+    fun m(srcName: String, srcDesc: String, targets: List<String?>, @DelegatesTo(value = MethodMappingWithMappings::class, strategy = Closure.DELEGATE_FIRST) action: Closure<*>) {
         m(srcName, srcDesc, *targets.toTypedArray()) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
@@ -568,8 +572,6 @@ class MethodMapping(srcName: String, val srcDesc: String, vararg targets: Pair<S
             }
         }
     }
-
-
 }
 
 /**
@@ -585,14 +587,14 @@ class MethodMappingWithMappings(val methodMapping: MethodMapping, val mappings: 
      * @param targets target names (in the order of the mappings passed to [MethodMappingWithMappings])
      * @since 0.1.0
      */
-    fun p(index: Int, vararg targets: String) {
-        methodMapping.p(index, *(mappings zip targets).toTypedArray())
+    fun p(index: Int, vararg targets: String?) {
+        methodMapping.p(index, (mappings zip targets).associated().nonNullValues())
     }
 
     /**
      * @since 0.5.0
      */
-    fun p(index: Int, targets: List<String>) {
+    fun p(index: Int, targets: List<String?>) {
         p(index, *targets.toTypedArray())
     }
 }
