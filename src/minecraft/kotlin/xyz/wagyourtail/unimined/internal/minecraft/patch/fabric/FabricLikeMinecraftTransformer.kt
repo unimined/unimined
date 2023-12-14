@@ -5,23 +5,22 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
-import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
-import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.ii.InterfaceInjectionMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
@@ -40,12 +39,14 @@ abstract class FabricLikeMinecraftTransformer(
     provider: MinecraftProvider,
     providerName: String,
     val modJsonName: String,
-    val accessWidenerJsonKey: String
+    val accessWidenerJsonKey: String,
+    private val accessWidenerTransformer: AccessWidenerMinecraftTransformer = AccessWidenerMinecraftTransformer(project, provider, providerName),
 ): AbstractMinecraftTransformer(
     project,
     provider,
     providerName
-), FabricLikePatcher {
+), FabricLikePatcher, AccessWidenerPatcher by accessWidenerTransformer {
+
     companion object {
         val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
     }
@@ -57,8 +58,6 @@ abstract class FabricLikeMinecraftTransformer(
     private val fabricJson: Configuration = project.configurations.detachedConfiguration()
 
     private val include: Configuration = project.configurations.maybeCreate("include".withSourceSet(provider.sourceSet))
-
-    override var accessWidener: File? by FinalizeOnRead(null)
 
     override var customIntermediaries: Boolean by FinalizeOnRead(false)
 
@@ -226,33 +225,7 @@ abstract class FabricLikeMinecraftTransformer(
         provider.minecraftLibraries.dependencies.add(dep)
     }
 
-    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar = applyInterfaceInjection(applyAccessWideners(baseMinecraft))
-
-    private fun applyAccessWideners(baseMinecraft: MinecraftJar): MinecraftJar =
-        if (accessWidener != null) {
-            val output = MinecraftJar(
-                baseMinecraft,
-                parentPath = provider.localCache.resolve("fabric").createDirectories(),
-                awOrAt = "aw+${accessWidener!!.toPath().getShortSha1()}"
-            )
-            if (!output.path.exists() || project.unimined.forceReload) {
-                if (AccessWidenerMinecraftTransformer.transform(
-                        accessWidener!!.toPath(),
-                        if (baseMinecraft.mappingNamespace.named) "named" else baseMinecraft.mappingNamespace.name,
-                        baseMinecraft.path,
-                        output.path,
-                        false,
-                        project.logger
-                    )
-                ) {
-                    output
-                } else {
-                    baseMinecraft
-                }
-            } else {
-                output
-            }
-        } else baseMinecraft
+    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar = applyInterfaceInjection(accessWidenerTransformer.afterRemap(baseMinecraft))
 
     private fun applyInterfaceInjection(baseMinecraft: MinecraftJar): MinecraftJar {
         val injections = hashMapOf<String, List<String>>()
@@ -418,61 +391,6 @@ abstract class FabricLikeMinecraftTransformer(
                 Files.write(mod, GSON.toJson(json).toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
             }
         }
-    }
-
-
-    override fun at2aw(input: String, output: String, namespace: MappingNamespaceTree.Namespace) =
-        at2aw(File(input), File(output), namespace)
-
-    override fun at2aw(input: String, namespace: MappingNamespaceTree.Namespace) = at2aw(File(input), namespace)
-    override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
-    override fun at2aw(input: String) = at2aw(File(input))
-    override fun at2aw(input: File) = at2aw(input, provider.mappings.devNamespace)
-    override fun at2aw(input: File, namespace: MappingNamespaceTree.Namespace) = at2aw(
-        input,
-        project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
-            .resolve("${project.name}.accesswidener"),
-        namespace
-    )
-
-    override fun at2aw(input: File, output: File) = at2aw(input, output, provider.mappings.devNamespace)
-    override fun at2aw(input: File, output: File, namespace: MappingNamespaceTree.Namespace): File {
-        return AccessTransformerMinecraftTransformer.at2aw(
-            input.toPath(),
-            output.toPath(),
-            namespace.name,
-            provider.mappings.mappingTree,
-            project.logger
-        ).toFile()
-    }
-
-    override fun mergeAws(inputs: List<File>): File {
-        return mergeAws(
-            provider.mappings.devNamespace,
-            inputs
-        )
-    }
-
-    override fun mergeAws(namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File {
-        return mergeAws(
-            project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
-                .resolve("${project.name}.accesswidener"),
-            namespace, inputs
-        )
-    }
-
-    override fun mergeAws(output: File, inputs: List<File>): File {
-        return mergeAws(output, provider.mappings.devNamespace, inputs)
-    }
-
-    override fun mergeAws(output: File, namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File {
-        return AccessWidenerMinecraftTransformer.mergeAws(
-            inputs.map { it.toPath() },
-            output.toPath(),
-            namespace,
-            provider.mappings,
-            provider
-        ).toFile()
     }
 
     val groups: String by lazy {

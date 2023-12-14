@@ -1,9 +1,7 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod
 
 import org.gradle.api.Project
-import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetContainer
-import xyz.wagyourtail.unimined.api.minecraft.patch.JarModPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModPatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer

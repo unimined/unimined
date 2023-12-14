@@ -22,7 +22,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
-object AccessWidenerMinecraftTransformer {
+object AccessWidenerApplier {
 
     class AwRemapper(val source: String, val target: String, val catchNsError: Boolean, val logger: Logger?): OutputConsumerPath.ResourceRemapper {
 

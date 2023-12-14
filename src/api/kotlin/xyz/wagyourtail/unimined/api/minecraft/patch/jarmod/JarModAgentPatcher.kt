@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.minecraft.patch
+package xyz.wagyourtail.unimined.api.minecraft.patch.jarmod
 
 import org.gradle.api.artifacts.Configuration
 import org.jetbrains.annotations.ApiStatus

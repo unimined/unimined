@@ -21,7 +21,7 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
-object AccessTransformerMinecraftTransformer {
+object AccessTransformerApplier {
 
     class AtRemapper(val logger: Logger, val remapToLegacy: Boolean = false, val atPaths: List<String> = emptyList()): OutputConsumerPath.ResourceRemapper {
 
@@ -64,11 +64,15 @@ object AccessTransformerMinecraftTransformer {
     fun toModern(path: Path) {
         val writer = StringWriter()
         path.bufferedReader().use {
-            AccessTransformerMinecraftTransformer.TransformFromLegacyTransformer(it).use { fromLegacy ->
+            TransformFromLegacyTransformer(it).use { fromLegacy ->
                 fromLegacy.copyTo(writer)
             }
         }
         path.writeText(writer.toString(), StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING)
+    }
+
+    fun toModern(reader: Reader): Reader {
+        return TransformFromLegacyTransformer(reader.buffered())
     }
 
     private val legacyMethod = Regex(
@@ -116,7 +120,7 @@ object AccessTransformerMinecraftTransformer {
             if (line == null) {
                 return -1
             }
-            line = TransformFromLegacyTransformer(line!!) + "\n"
+            line = transformFromLegacyTransformer(line!!) + "\n"
             return read(cbuf, off, len)
         }
 
@@ -133,7 +137,7 @@ object AccessTransformerMinecraftTransformer {
         }
     }
 
-    private fun TransformFromLegacyTransformer(line: String): String {
+    private fun transformFromLegacyTransformer(line: String): String {
         val methodMatch = legacyMethod.matchEntire(line)
         if (methodMatch != null) {
             val (access, owner, name, desc, comment) = methodMatch.destructured
@@ -316,48 +320,6 @@ object AccessTransformerMinecraftTransformer {
     fun shouldShowVerboseStderr(project: Project): Boolean {
         // if stdout is shown or stacktraces are visible so that errors printed to stderr show up
         return shouldShowVerboseStdout(project) || project.gradle.startParameter.showStacktrace != ShowStacktrace.INTERNAL_EXCEPTIONS
-    }
-
-    fun transform(project: Project, accessTransformers: List<Path>, baseMinecraft: Path, output: Path) {
-        if (accessTransformers.isEmpty()) return
-        if (output.exists()) output.deleteIfExists()
-        output.parent.createDirectories()
-        val temp = output.resolveSibling(baseMinecraft.nameWithoutExtension + "-mergedATs.cfg")
-        temp.parent.createDirectories()
-        temp.deleteIfExists()
-        // merge at's
-        temp.bufferedWriter(
-            StandardCharsets.UTF_8,
-            1024,
-            StandardOpenOption.CREATE,
-            StandardOpenOption.TRUNCATE_EXISTING
-        ).use {
-            for (at in accessTransformers) {
-                at.bufferedReader().use { reader ->
-                    reader.copyTo(it)
-                    it.write("\n")
-                }
-            }
-        }
-        val result = project.javaexec { spec ->
-            spec.classpath = project.configurations.detachedConfiguration(project.dependencies.create("net.neoforged:accesstransformers:9.0.3"))
-            spec.mainClass.set("net.neoforged.accesstransformer.TransformerProcessor")
-            spec.args = listOf("--inJar", baseMinecraft.absolutePathString(), "--outJar", output.absolutePathString(), "--atFile", temp.absolutePathString())
-            if (shouldShowVerboseStdout(project)) {
-                spec.standardOutput = System.out
-            } else {
-                spec.standardOutput = NullOutputStream.NULL_OUTPUT_STREAM
-            }
-            if (shouldShowVerboseStderr(project)) {
-                spec.errorOutput = System.err
-            } else {
-                spec.errorOutput = NullOutputStream.NULL_OUTPUT_STREAM
-            }
-        }
-        if (result.exitValue != 0) {
-            output.deleteIfExists()
-            throw IllegalStateException("Failed to run AccessTransformerProcessor")
-        }
     }
 
     fun aw2at(aw: Path, output: Path, legacy: Boolean = false): Path {

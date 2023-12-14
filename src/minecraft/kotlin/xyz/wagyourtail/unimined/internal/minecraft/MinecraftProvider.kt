@@ -5,7 +5,6 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
-import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
@@ -15,6 +14,13 @@ import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
@@ -23,6 +29,8 @@ import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
@@ -228,6 +236,22 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun jarMod(action: JarModAgentPatcher.() -> Unit) {
         mcPatcher = JarModAgentMinecraftTransformer(project, this).also {
+            patcherActions.addFirst {
+                action(it)
+            }
+        }
+    }
+
+    override fun accessWidener(action: AccessWidenerPatcher.() -> Unit) {
+        mcPatcher = AccessWidenerMinecraftTransformer(project, this).also {
+            patcherActions.addFirst {
+                action(it)
+            }
+        }
+    }
+
+    override fun accessTransformer(action: AccessTransformerPatcher.() -> Unit) {
+        mcPatcher = AccessTransformerMinecraftTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)
             }

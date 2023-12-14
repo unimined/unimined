@@ -9,10 +9,10 @@ import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.minecraft.patch.ForgeLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
-import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
+import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerApplier
 import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
 import xyz.wagyourtail.unimined.util.*
 import java.nio.file.Path
@@ -171,11 +171,11 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                         from,
                         remapper,
                         listOf(
-                            AccessWidenerMinecraftTransformer.AwRemapper(
+                            AccessWidenerApplier.AwRemapper(
                                 if (fromNs.named) "named" else fromNs.name,
                                 if (toNs.named) "named" else toNs.name
                             ),
-                            AccessTransformerMinecraftTransformer.AtRemapper(
+                            AccessTransformerApplier.AtRemapper(
                                 project.logger,
                                 remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher<*>)?.remapAtToLegacy == true)!!
                             ),

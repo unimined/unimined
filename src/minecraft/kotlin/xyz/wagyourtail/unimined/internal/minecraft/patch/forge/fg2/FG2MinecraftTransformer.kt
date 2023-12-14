@@ -28,6 +28,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 ) {
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG2 transformer")
+        parent.accessTransformerTransformer.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
     }
 
     override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }
@@ -176,12 +177,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        val out = fixForge(baseMinecraft)
-        return out.path.openZipFileSystem().use { fs ->
-            parent.applyATs(
-                out,
-                listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
-        }
+        return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {

@@ -4,6 +4,13 @@ import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 
 /**
  * usage:
@@ -299,6 +306,80 @@ interface PatchProviders {
      */
     fun jarMod() {
         jarMod {}
+    }
+
+    /**
+     * enables **just** access widener patching
+     * you have to create your own way to bootstrap it out of dev.
+     * (and probably apply launchtweaker or something for dev launches).
+     * @since 1.2.0
+     */
+    fun accessWidener(action: AccessWidenerPatcher.() -> Unit)
+
+
+    /**
+     * enables **just** access widener patching
+     * you have to create your own way to bootstrap it out of dev.
+     * (and probably apply launchtweaker or something for dev launches).
+     * @since 1.2.0
+     */
+    fun accessWidener(
+        @DelegatesTo(
+            value = AccessWidenerPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        accessWidener {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables **just** access widener patching
+     * you have to create your own way to bootstrap it out of dev.
+     * (and probably apply launchtweaker or something for dev launches).
+     * @since 1.2.0
+     */
+    fun accessWidener() {
+        accessWidener {}
+    }
+
+    /**
+     * enables **just** access transformer patching
+     * you have to create your own way to bootstrap it out of dev.
+     * (and probably apply launchtweaker or something for dev launches).
+     * @since 1.2.0
+     */
+    fun accessTransformer(action: AccessTransformerPatcher.() -> Unit)
+
+    /**
+     * enables **just** access transformer patching
+     * you have to create your own way to bootstrap it out of dev.
+     * (and probably apply launchtweaker or something for dev launches).
+     * @since 1.2.0
+     */
+    fun accessTransformer(
+        @DelegatesTo(
+            value = AccessTransformerPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>) {
+        accessTransformer {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables **just** access transformer patching
+     * you have to create your own way to bootstrap it out of dev
+     * (and probably apply launchtweaker or something for dev launches).
+     * @since 1.2.0
+     */
+    fun accessTransformer() {
+        accessTransformer {}
     }
 
     @ApiStatus.Experimental

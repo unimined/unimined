@@ -1,11 +1,12 @@
-package xyz.wagyourtail.unimined.api.minecraft.patch
+package xyz.wagyourtail.unimined.api.minecraft.patch.fabric
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.artifacts.Dependency
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
-import java.io.File
+import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import java.nio.file.Path
 
 /**
@@ -17,10 +18,6 @@ import java.nio.file.Path
  *     loader "0.14.20"
  *     accessWidener "src/main/resources/myAccessWidener.cfg"
  *
- *     /* remaining are optional and auto set */
- *     devNamespace "yarn"
- *     devFallbackNamespace "intermediary"
- *
  *     /* use these if intermediary mappings aren't a thing for your version */
  *     prodNamespace "official"
  *     devMappings = null
@@ -28,7 +25,7 @@ import java.nio.file.Path
  * ```
  * @since 0.2.3
  */
-interface FabricLikePatcher: MinecraftPatcher, AccessTransformablePatcher {
+interface FabricLikePatcher: MinecraftPatcher, AccessWidenerPatcher {
 
     /**
      * 0.4.10 - make var for beta's and other official mapped versions
@@ -88,34 +85,4 @@ interface FabricLikePatcher: MinecraftPatcher, AccessTransformablePatcher {
      * @since 1.0.0
      */
     fun prodNamespace(namespace: String)
-
-    /**
-     * location of access widener file to apply to the minecraft jar.
-     */
-    var accessWidener: File?
-
-    /**
-     * set the access widener file to apply to the minecraft jar.
-     */
-    @Deprecated(message = "", replaceWith = ReplaceWith("accessWidener(file)"))
-    fun setAccessWidener(file: String) {
-        accessWidener = File(file)
-    }
-
-    fun accessWidener(file: String) {
-        accessWidener = File(file)
-    }
-
-    fun accessWidener(file: Path) {
-        accessWidener = file.toFile()
-    }
-
-    fun accessWidener(file: File) {
-        accessWidener = file
-    }
-
-    fun mergeAws(inputs: List<File>): File
-    fun mergeAws(namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File
-    fun mergeAws(output: File, inputs: List<File>): File
-    fun mergeAws(output: File, namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File
 }

@@ -4,37 +4,45 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
+import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.patch.FabricLikePatcher
-import xyz.wagyourtail.unimined.api.minecraft.patch.ForgeLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
-import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.InputStreamReader
+import java.nio.file.FileSystem
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
 
-abstract class ForgeLikeMinecraftTransformer(project: Project, provider: MinecraftProvider, providerName: String,):
-        AbstractMinecraftTransformer(project, provider, providerName), ForgeLikePatcher<JarModMinecraftTransformer> {
+abstract class ForgeLikeMinecraftTransformer(
+    project: Project,
+    provider: MinecraftProvider,
+    providerName: String,
+    val accessTransformerTransformer: AccessTransformerMinecraftTransformer = AccessTransformerMinecraftTransformer(
+        project,
+        provider
+    )
+): AbstractMinecraftTransformer(project, provider, providerName), ForgeLikePatcher<JarModMinecraftTransformer>, AccessTransformerPatcher by accessTransformerTransformer {
 
     val forge: Configuration = project.configurations.maybeCreate("forge".withSourceSet(provider.sourceSet)).apply {
         isTransitive = false
@@ -44,23 +52,42 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
 
     override var customSearge: Boolean by FinalizeOnRead(false)
 
+
+    override var canCombine: Boolean
+        get() = super.canCombine
+        set(value) {
+            super.canCombine = value
+        }
+
+    override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit
+        get() = forgeTransformer.onMergeFail
+        set(value) {
+            forgeTransformer.onMergeFail = value
+        }
+
+    override var unprotectRuntime: Boolean
+        get() = forgeTransformer.unprotectRuntime
+        set(value) {
+            forgeTransformer.unprotectRuntime = value
+        }
+
     protected abstract fun addMavens()
 
     init {
         addMavens()
-        provider.minecraftRemapper.addResourceRemapper { AccessTransformerMinecraftTransformer.AtRemapper(project.logger) }
+        provider.minecraftRemapper.addResourceRemapper { AccessTransformerApplier.AtRemapper(project.logger) }
     }
 
     fun transforms(transform: String) {
         if (forgeTransformer !is JarModAgentMinecraftTransformer) {
-            throw IllegalStateException("JarModAgentPatcher is not enabled")
+            throw IllegalStateException("JarModAgentPatcher is not available")
         }
         (forgeTransformer as JarModAgentMinecraftTransformer).transforms(transform)
     }
 
     fun transforms(transforms: List<String>) {
         if (forgeTransformer !is JarModAgentMinecraftTransformer) {
-            throw IllegalStateException("JarModAgentPatcher is not enabled")
+            throw IllegalStateException("JarModAgentPatcher is not available")
         }
         (forgeTransformer as JarModAgentMinecraftTransformer).transforms(transforms)
     }
@@ -167,59 +194,6 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
 
     @ApiStatus.Internal
     internal var mainClass: String? = null
-
-    override fun aw2at(input: String): File = aw2at(File(input))
-
-    override fun aw2at(input: String, output: String) = aw2at(File(input), File(output))
-
-    override fun aw2at(input: File) = aw2at(
-        input,
-        project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
-            .resolve("META-INF/accesstransformer.cfg")
-    )
-
-    override fun aw2at(input: File, output: File): File {
-        return AccessTransformerMinecraftTransformer.aw2at(input.toPath(), output.toPath()).toFile()
-    }
-
-    override fun aw2atLegacy(input: String): File = aw2atLegacy(File(input))
-
-    override fun aw2atLegacy(input: String, output: String) = aw2atLegacy(File(input), File(output))
-
-    override fun aw2atLegacy(input: File) = aw2atLegacy(
-        input,
-        project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
-            .resolve("META-INF/accesstransformer.cfg")
-    )
-
-    override fun aw2atLegacy(input: File, output: File): File {
-        return AccessTransformerMinecraftTransformer.aw2at(input.toPath(), output.toPath(), true).toFile()
-    }
-
-    override fun at2aw(input: String, output: String, namespace: MappingNamespaceTree.Namespace) =
-        at2aw(File(input), File(output), namespace)
-
-    override fun at2aw(input: String, namespace: MappingNamespaceTree.Namespace) = at2aw(File(input), namespace)
-    override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
-    override fun at2aw(input: String) = at2aw(File(input))
-    override fun at2aw(input: File) = at2aw(input, provider.mappings.devNamespace)
-    override fun at2aw(input: File, namespace: MappingNamespaceTree.Namespace) = at2aw(
-        input,
-        project.extensions.getByType(SourceSetContainer::class.java).getByName("main").resources.srcDirs.first()
-            .resolve("${project.name}.accesswidener"),
-        namespace
-    )
-
-    override fun at2aw(input: File, output: File) = at2aw(input, output, provider.mappings.devNamespace)
-    override fun at2aw(input: File, output: File, namespace: MappingNamespaceTree.Namespace): File {
-        return AccessTransformerMinecraftTransformer.at2aw(
-            input.toPath(),
-            output.toPath(),
-            namespace.name,
-            provider.mappings.mappingTree,
-            project.logger
-        ).toFile()
-    }
 
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
@@ -352,39 +326,9 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
         return forgeTransformer.afterRemap(baseMinecraft)
     }
 
-    fun applyATs(baseMinecraft: MinecraftJar, ats: List<Path>): MinecraftJar {
-        project.logger.lifecycle("[Unimined/ForgeTransformer] Applying ATs $ats")
-        return if (accessTransformer != null) {
-            project.logger.lifecycle("[Unimined/ForgeTransformer] Using user access transformer $accessTransformer")
-            val output = MinecraftJar(
-                baseMinecraft,
-                parentPath = provider.localCache.resolve("forge"),
-                awOrAt = "at+${accessTransformer!!.toPath().getShortSha1()}"
-            )
-            if (!output.path.exists() || project.unimined.forceReload) {
-                AccessTransformerMinecraftTransformer.transform(
-                    project,
-                    ats + listOf(accessTransformer!!.toPath()),
-                    baseMinecraft.path,
-                    output.path
-                )
-            }
-            output
-        } else {
-            if (ats.isEmpty()) {
-                return baseMinecraft
-            }
-            val output = MinecraftJar(baseMinecraft, awOrAt = "at")
-            if (!output.path.exists() || project.unimined.forceReload) {
-                AccessTransformerMinecraftTransformer.transform(project, ats, baseMinecraft.path, output.path)
-            }
-            output
-        }
-    }
-
     val groups: String by lazy {
         val groups = sortProjectSourceSets().mapValues { it.value.toMutableSet() }.toMutableMap()
-        // detect non-fabric groups
+        // detect non-forge groups
         for ((proj, sourceSet) in groups.keys.toSet()) {
             if (proj.uniminedMaybe?.minecrafts?.map?.get(sourceSet)?.mcPatcher !is ForgeLikePatcher<*>) {
                 // merge with current
@@ -431,6 +375,14 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
 
     override fun name(): String {
         return forgeTransformer.name()
+    }
+
+    override fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path {
+        return forgeTransformer.beforeRemapJarTask(remapJarTask, input)
+    }
+
+    override fun configureRemapJar(task: RemapJarTask) {
+        forgeTransformer.configureRemapJar(task)
     }
 
 }

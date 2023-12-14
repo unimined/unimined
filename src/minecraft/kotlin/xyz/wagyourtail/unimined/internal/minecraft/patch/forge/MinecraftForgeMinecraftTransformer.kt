@@ -4,7 +4,7 @@ import com.google.gson.JsonObject
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftTransformer
@@ -17,9 +17,15 @@ import xyz.wagyourtail.unimined.util.MustSet
 import xyz.wagyourtail.unimined.util.forEachInZip
 import java.io.File
 
-class MinecraftForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "MinecraftForge"), MinecraftForgePatcher<JarModMinecraftTransformer> {
+class MinecraftForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "MinecraftForge"),
+    MinecraftForgePatcher<JarModMinecraftTransformer> {
 
     override var forgeTransformer: JarModMinecraftTransformer by FinalizeOnWrite(MustSet())
+
+    init {
+        accessTransformerTransformer.dependency = project.dependencies.create("net.minecraftforge:accesstransformers:8.1.3")
+        accessTransformerTransformer.atMainClass = "net.minecraftforge.accesstransformer.TransformerProcessor"
+    }
 
     override fun addMavens() {
         project.unimined.minecraftForgeMaven()

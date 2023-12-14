@@ -71,15 +71,7 @@ unimined.minecraft(sourceSets.neoforge) {
 }
 
 unimined.minecraft(sourceSets.lexforge) {
-    version project.minecraft_version
-
-    mappings {
-        intermediary()
-        mojmap()
-        parchment("1.19.3", "2023.03.12-nightly-SNAPSHOT")
-
-        devFallbackNamespace "intermediary"
-    }
+    combineWith(sourceSets.main)
 
     minecraftForge {
         loader project.lexforge_version

@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalDependency
-import xyz.wagyourtail.unimined.api.minecraft.patch.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined

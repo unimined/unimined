@@ -43,6 +43,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             forgeHardcodedNames.contains(it)
         } }
         unprotectRuntime = true
+        parent.accessTransformerTransformer.accessTransformerPaths = listOf("fml_at.cfg", "forge_at.cfg", "META-INF/accesstransformer.cfg")
     }
 
     override val prodNamespace by lazy {
@@ -494,12 +495,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        val out = fixForge(baseMinecraft)
-        out.path.openZipFileSystem().use { fs ->
-            return parent.applyATs(out, listOf(
-                fs.getPath("fml_at.cfg"), fs.getPath("forge_at.cfg"), fs.getPath("META-INF/accesstransformer.cfg")
-            ).filter { Files.exists(it) })
-        }
+        return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {

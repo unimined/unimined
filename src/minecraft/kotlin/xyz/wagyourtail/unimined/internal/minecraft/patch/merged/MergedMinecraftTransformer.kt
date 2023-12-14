@@ -4,10 +4,20 @@ import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
+import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
@@ -19,6 +29,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.MustSet
 import java.nio.file.FileSystem
+import java.nio.file.Path
 
 class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider): AbstractMinecraftTransformer(project, provider, "merged"), MergedPatcher {
 
@@ -50,9 +61,33 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
     }
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
-        return patchers.scan(minecraft) {
+        return patchers.fold(minecraft) {
             acc, patcher -> patcher.transform(acc)
-        }.last()
+        }
+    }
+
+    override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
+        return patchers.fold(baseMinecraft) {
+            acc, patcher -> patcher.afterRemap(acc)
+        }
+    }
+
+    override fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path {
+        return patchers.fold(input) {
+            acc, patcher -> patcher.beforeRemapJarTask(remapJarTask, acc)
+        }
+    }
+
+    override fun beforeMappingsResolve() {
+        patchers.forEach { it.beforeMappingsResolve() }
+    }
+
+    override fun afterEvaluate() {
+        patchers.forEach { it.afterEvaluate() }
+    }
+
+    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
+        patchers.forEach { it.afterRemapJarTask(remapJarTask, output) }
     }
 
     override fun applyExtraLaunches() {
@@ -125,6 +160,18 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         val jarMod = JarModAgentMinecraftTransformer(project, provider)
         jarMod.action()
         patchers.add(jarMod)
+    }
+
+    override fun accessWidener(action: AccessWidenerPatcher.() -> Unit) {
+        val aw = AccessWidenerMinecraftTransformer(project, provider)
+        aw.action()
+        patchers.add(aw)
+    }
+
+    override fun accessTransformer(action: AccessTransformerPatcher.() -> Unit) {
+        val at = AccessTransformerMinecraftTransformer(project, provider)
+        at.action()
+        patchers.add(at)
     }
 
     @ApiStatus.Experimental
