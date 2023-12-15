@@ -40,7 +40,11 @@ data class RunConfig(
             .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+${taskName.withSourceSet(launchClasspath)}.xml")
 
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
-            .addStringOption("name", "${project.path}+${launchClasspath.name} $description")
+            .addStringOption("name", buildString {
+                if (project != project.rootProject) append("${project.path}+")
+                if (launchClasspath.name != "main") append("${launchClasspath.name} ")
+                append(description)
+            })
             .addStringOption("type", "Application")
             .addStringOption("factoryName", "Application")
 

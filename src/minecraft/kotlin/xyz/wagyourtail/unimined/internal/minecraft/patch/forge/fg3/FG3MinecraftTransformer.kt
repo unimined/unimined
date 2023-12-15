@@ -282,7 +282,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                 minecraft,
                 parentPath = provider.minecraftData.mcVersionFolder
                     .resolve(providerName),
-                mappingNamespace = if (obfNamespace == "mojmap") provider.mappings.OFFICIAL else provider.mappings.getNamespace("searge"),
+                mappingNamespace = provider.mappings.getNamespace(obfNamespace),
                 fallbackNamespace = provider.mappings.OFFICIAL,
                 patches = minecraft.patches + "mcp_config"
             )
