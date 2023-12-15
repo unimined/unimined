@@ -30,6 +30,7 @@ import java.nio.file.StandardOpenOption
 import java.util.concurrent.CompletableFuture
 import java.util.jar.JarFile
 import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
 import kotlin.io.path.name
 
@@ -306,6 +307,9 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
             try {
                 remapModInternal(remapper, artifact, tag, remap)
             } catch (e: Exception) {
+                // delete output
+                tag.second.second.deleteIfExists()
+
                 throw IllegalStateException("Failed to remap ${artifact.stringify()} to ${remap.first}/${remap.second}", e)
             }
             output[artifact] = tag.second.second.toFile()
