@@ -46,6 +46,48 @@ open class FabricLikeApiExtension {
 
     }
 
+    open class StAPILocation(private val branch: String) : APILocations() {
+        override fun getUrl(version: String): String {
+            return "https://maven.glass-launcher.net/$branch/net/modificationstation/StationAPI/$version/StationAPI-$version.pom"
+        }
+
+        override fun getArtifactName(moduleName: String, version: String?): String {
+            TODO("Not yet implemented")
+        }
+
+        fun getArtifactName(moduleName: String, mainVersion: String, version: String?): String {
+            return "net.modificationstation.StationAPI.$mainVersion:$moduleName:$version"
+        }
+
+        override fun module(moduleName: String, version: String): String? {
+            val elements = xmlDoc[version].getElementsByTagName("dependency")
+
+            for (i in 0 until elements.length) {
+                val element = elements.item(i)
+                var correct = false
+                var vers: String? = null
+
+                for (j in 0 until element.childNodes.length) {
+                    val child = element.childNodes.item(j)
+
+                    if (child.nodeName == "artifactId" && child.textContent == moduleName) {
+                        correct = true
+                    }
+
+                    if (child.nodeName == "version") {
+                        vers = child.textContent
+                    }
+                }
+
+                if (correct) {
+                    return getArtifactName(moduleName, version, vers)
+                }
+            }
+
+            return null
+        }
+    }
+
     val locations = mapOf<String, APILocations>(
         "fabric" to object : APILocations() {
             override fun getUrl(version: String): String {
@@ -83,47 +125,8 @@ open class FabricLikeApiExtension {
                 return "org.quiltmc.qsl:$moduleName:$version"
             } 
         },
-        "station" to object : APILocations() {
-            override fun getUrl(version: String): String {
-                return "https://maven.glass-launcher.net/snapshots/net/modificationstation/StationAPI/$version/StationAPI-$version.pom"
-            }
-
-            override fun getArtifactName(moduleName: String, version: String?): String {
-                TODO("Not yet implemented")
-            }
-
-            fun getArtifactName(moduleName: String, mainVersion: String, version: String?): String {
-                return "net.modificationstation.StationAPI.$mainVersion:$moduleName:$version"
-            }
-
-            override fun module(moduleName: String, version: String): String? {
-                val elements = xmlDoc[version].getElementsByTagName("dependency")
-
-                for (i in 0 until elements.length) {
-                    val element = elements.item(i)
-                    var correct = false
-                    var vers: String? = null
-
-                    for (j in 0 until element.childNodes.length) {
-                        val child = element.childNodes.item(j)
-
-                        if (child.nodeName == "artifactId" && child.textContent == moduleName) {
-                            correct = true
-                        }
-
-                        if (child.nodeName == "version") {
-                            vers = child.textContent
-                        }
-                    }
-
-                    if (correct) {
-                        return getArtifactName(moduleName, version, vers)
-                    }
-                }
-
-                return null
-            }
-        }
+        "station_snapshots" to object : StAPILocation("snapshots") {},
+        "station_releases" to object : StAPILocation("releases") {}
     )
 
     @Deprecated(message = "use fabricModule or legacyFabricModule instead", replaceWith = ReplaceWith("fabricModule"))
@@ -167,8 +170,9 @@ open class FabricLikeApiExtension {
     /**
      * @since 1.0.0
      */
-    fun stationModule(moduleName: String, version: String): String {
-        return locations["station"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
+    @JvmOverloads
+    fun stationModule(branch: String = "snapshots", moduleName: String, version: String): String {
+        return locations["station_$branch"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
     }
 
 }
