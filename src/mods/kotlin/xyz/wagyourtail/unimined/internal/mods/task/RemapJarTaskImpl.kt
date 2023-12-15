@@ -68,7 +68,6 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             return
         }
 
-        val last = path.last()
         project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.name} from $devNs/$devFNs to $prodNs")
         project.logger.info("[Unimined/RemapJar ${this.path}]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
         var prevTarget = inputFile

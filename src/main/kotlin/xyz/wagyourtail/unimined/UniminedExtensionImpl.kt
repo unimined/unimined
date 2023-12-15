@@ -14,9 +14,12 @@ import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.UniminedExtension
+import xyz.wagyourtail.unimined.api.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.internal.mapping.task.MigrateMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.util.defaultedMapOf
+import xyz.wagyourtail.unimined.util.withSourceSet
 import java.net.URI
 import java.nio.file.Path
 
@@ -44,6 +47,11 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
         minecrafts[sourceSet].action()
         if (!lateApply) (minecrafts[sourceSet] as MinecraftProvider).apply()
+    }
+
+    override fun migrateMappings(sourceSet: SourceSet, action: MigrateMappingsTask.() -> Unit) {
+//        MigrateMappingsTaskImpl(project, sourceSet).apply(action)
+        project.tasks.create("migrateMappings".withSourceSet(sourceSet), MigrateMappingsTaskImpl::class.java, sourceSet).apply(action)
     }
 
     private fun getMinecraftDepNames(): Set<String> = minecrafts.values.map { (it as MinecraftProvider).minecraftDepName }.toSet()
@@ -283,6 +291,17 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     override fun sonatypeStaging() {
         project.logger.info("[Unimined] adding sonatype staging maven: $sonatypeStaging")
+    }
+
+    val jitpack by lazy {
+        project.repositories.maven {
+            it.name = "jitpack"
+            it.url = URI.create("https://jitpack.io")
+        }
+    }
+
+    override fun jitpack() {
+        project.logger.info("[Unimined] adding jitpack maven: $jitpack")
     }
 
     init {
