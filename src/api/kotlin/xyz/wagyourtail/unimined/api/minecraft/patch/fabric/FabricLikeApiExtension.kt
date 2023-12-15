@@ -170,6 +170,7 @@ open class FabricLikeApiExtension {
     /**
      * @since 1.0.0
      */
+    @JvmOverloads
     fun stationModule(branch: String = "snapshots", moduleName: String, version: String): String {
         return locations["station_$branch"]!!.module(moduleName, version) ?: throw IllegalStateException("Could not find module $moduleName:$version")
     }
