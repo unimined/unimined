@@ -294,4 +294,16 @@ class ContainedMappingImpl() : ContainedMapping {
         checkFinalized()
         outputs.clear()
     }
+
+    override fun exclude() {
+        inputActions.add {
+            exclude()
+        }
+    }
+
+    override fun clearExclude() {
+        inputActions.add {
+            clearExclude()
+        }
+    }
 }

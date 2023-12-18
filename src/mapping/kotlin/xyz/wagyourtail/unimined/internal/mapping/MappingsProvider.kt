@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
+import com.google.gson.JsonParser
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
 import net.fabricmc.mappingio.format.MappingTreeBuilder
@@ -21,6 +22,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.util.*
 import java.io.IOException
 import java.io.StringWriter
+import java.net.URI
 import java.nio.file.Path
 import java.security.MessageDigest
 import kotlin.io.path.*
@@ -375,6 +377,30 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             allowDuplicateOutputs()
             action()
         }
+    }
+
+    override fun spigot(mcVersion: String, key: String, action: MappingDepConfig.() -> Unit) {
+        val spigotDir = project.unimined.getGlobalCache().resolve("spigot")
+        spigotDir.createDirectories()
+        val buildDataFile = spigotDir.resolve("BuildData-${mcVersion}.zip")
+
+        if (!buildDataFile.exists() || project.unimined.forceReload) {
+            val spigotVersionJson = URI.create("https://hub.spigotmc.org/versions/${mcVersion}.json").stream()
+                .use { JsonParser.parseReader(it.reader()) }.asJsonObject
+            val buildData = spigotVersionJson["refs"].asJsonObject["BuildData"].asString
+            URI.create("https://hub.spigotmc.org/stash/rest/api/latest/projects/SPIGOT/repos/builddata/archive?at=$buildData&format=zip")
+                .stream().use { input ->
+                buildDataFile.outputStream().use {
+                    input.copyTo(it)
+                }
+            }
+        }
+
+        mapping(project.files(buildDataFile), key) {
+            outputs("spigot", true) { listOf("official") }
+            action()
+        }
+
     }
 
     override fun postProcess(key: String, mappings: MappingsConfig.() -> Unit, merger: MappingDepConfig.() -> Unit) {

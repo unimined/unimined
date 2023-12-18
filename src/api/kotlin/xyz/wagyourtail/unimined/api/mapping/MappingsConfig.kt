@@ -483,6 +483,27 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    @JvmOverloads
+    abstract fun spigot(
+        mcVersion: String = minecraft.version,
+        key: String = "spigot",
+        action: MappingDepConfig.() -> Unit = {}
+    )
+
+    @JvmOverloads
+    fun spigot(
+        mcVersion: String = minecraft.version,
+        key: String = "spigot",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        spigot(mcVersion, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     @ApiStatus.Experimental
     abstract fun postProcess(key: String, mappings: MappingsConfig.() -> Unit, merger: MappingDepConfig.() -> Unit)
 

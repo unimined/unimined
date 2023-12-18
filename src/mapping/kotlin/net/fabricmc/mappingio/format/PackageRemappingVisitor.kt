@@ -26,7 +26,7 @@ class PackageRemappingVisitor(next: MappingVisitor?, val namespaces: Set<String>
         namespaceIds = ns
     }
 
-    fun remapClassName(name: String): String {
+    private fun remapClassName(name: String): String {
         val remappedPackage = matcherRegexToPackage.firstOrNull { it.first.matches(name) }?.second
         if (remappedPackage != null) {
             val cName = name.substringAfterLast('/')

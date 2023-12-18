@@ -140,11 +140,7 @@ class MappingTreeBuilder {
                             name.endsWith(".json")
                         ).any { it }
                     ) {
-                        val header = if (name == "parchment.json") {
-                            BetterMappingFormat.PARCHMENT
-                        } else {
-                            detectHeader(reader)
-                        }
+                        val header = detectHeader(reader, name)
                         if (header != null) {
                             found.add(header to name)
                         }
@@ -155,7 +151,7 @@ class MappingTreeBuilder {
             }
             found.sortedWith { a, b ->
                 if (a.first == b.first) {
-                    a.second.compareTo(b.second)
+                    b.second.compareTo(a.second)
                 } else {
                     a.first.ordinal.compareTo(b.first.ordinal)
                 }
@@ -208,51 +204,73 @@ class MappingTreeBuilder {
         mappingReaderIntl(name, stream.bufferedReader(), input)
     }
 
-    private fun detectHeader(reader: BufferedReader): BetterMappingFormat? {
-        reader.mark(4096)
-        val str = CharArray(4096).let {
-            val read = reader.read(it)
-            if (read == -1) return null // empty file
-            String(it, 0, read)
-        }
-        val type = when (str.substring(0..2)) {
-            "v1\t" -> BetterMappingFormat.TINY
-            "tin" -> BetterMappingFormat.TINY_2
-            "PK:", "CL:", "FD:", "MD:" -> BetterMappingFormat.SRG
-            ".cl", ".pa", ".me", ".fi", ".op" -> BetterMappingFormat.RETROGUARD
+    private fun detectHeader(reader: BufferedReader, fName: String): BetterMappingFormat? {
+        val result = when (fName) {
+            "parchment.json" -> BetterMappingFormat.PARCHMENT
+            "mappings/package.srg" -> BetterMappingFormat.CSRG
             else -> {
-                if (str.startsWith("tsrg2")) {
-                    BetterMappingFormat.TSRG_2
-                } else if (str.startsWith("searge,name") || str.startsWith("param,name") || str.startsWith("class,package")) {
-                    BetterMappingFormat.MCP
-                } else if (str.split("\n")[0].contains("\"name\",\"notch\"")) {
-                    BetterMappingFormat.OLD_MCP
-                } else if (str.contains("Name,Notes")) {
-                    BetterMappingFormat.OLDER_MCP
-                } else if (str.contains("\n\t")) {
-                    BetterMappingFormat.TSRG
-                } else if (str.contains(" -> ")) {
-                    BetterMappingFormat.PROGUARD
+                if (fName.endsWith(".json")) return null
+//                println("detecting $fName")
+                if (fName.endsWith(".csrg")) {
+                    if (fName.endsWith("-cl.csrg")) {
+                        BetterMappingFormat.CSRG
+                    } else if (fName.endsWith("-members.csrg")) {
+                        BetterMappingFormat.CSRG
+                    } else {
+                        null
+                    }
                 } else {
-                    null
+                    reader.mark(4096)
+                    val str = CharArray(4096).let {
+                        val read = reader.read(it)
+                        if (read == -1) return null // empty file
+                        String(it, 0, read)
+                    }
+                    val type = when (str.substring(0..2)) {
+                        "v1\t" -> BetterMappingFormat.TINY
+                        "tin" -> BetterMappingFormat.TINY_2
+                        "PK:", "CL:", "FD:", "MD:" -> BetterMappingFormat.SRG
+                        ".cl", ".pa", ".me", ".fi", ".op" -> BetterMappingFormat.RETROGUARD
+                        else -> {
+                            if (str.startsWith("tsrg2")) {
+                                BetterMappingFormat.TSRG_2
+                            } else if (str.startsWith("searge,name") || str.startsWith("param,name") || str.startsWith("class,package")) {
+                                BetterMappingFormat.MCP
+                            } else if (str.split("\n")[0].contains("\"name\",\"notch\"")) {
+                                BetterMappingFormat.OLD_MCP
+                            } else if (str.contains("Name,Notes")) {
+                                BetterMappingFormat.OLDER_MCP
+                            } else if (str.contains("\n\t")) {
+                                BetterMappingFormat.TSRG
+                            } else if (str.contains(" -> ")) {
+                                BetterMappingFormat.PROGUARD
+                            } else {
+                                null
+                            }
+                        }
+                    }
+                    reader.reset()
+                    type
                 }
             }
         }
-        reader.reset()
-        return type
+//        println("detected $result")
+        return result
     }
 
     private fun mappingReaderIntl(
         fname: String,
         reader: BufferedReader,
         inputs: MappingInputBuilder,
-        type: BetterMappingFormat = detectHeader(reader)
+        type: BetterMappingFormat = detectHeader(reader, fname)
             ?: throw IllegalArgumentException("cannot detect mapping format")
     ) {
         val input = inputs.build(fname, type)
+        if (input.exclude) return
         @Suppress("NAME_SHADOWING")
         input.wrapInput(fname, reader) { reader ->
             reader!!
+//            println("processing $fname")
             val visitor = MappingNsRenamer(
                 MappingSourceNsSwitch(
                     globalFMV(input.fmv(
@@ -345,6 +363,22 @@ class MappingTreeBuilder {
                 BetterMappingFormat.RETROGUARD -> RGSReader.read(reader, "official", "searge", visitor)
                 BetterMappingFormat.PROGUARD -> ProGuardReader.read(reader, "mojmap", "official", visitor)
                 BetterMappingFormat.PARCHMENT -> ParchmentReader.read(reader, "mojmap", visitor)
+                BetterMappingFormat.CSRG -> {
+                    when (fname.split("/", "\\", "-").last()) {
+                        "cl.csrg" -> {
+                            CSrgReader.readClasses(reader, "official", "spigot", visitor)
+                        }
+                        "members.csrg" -> {
+                            CSrgReader.readMembers(reader, "official", "spigot", visitor, tree)
+                        }
+                        "package.srg" -> {
+                            reprocessWithAddedGlobalFMV(CSrgReader.readPackages(
+                                reader, setOf(input.nsMap["spigot"] ?: "spigot")
+                            ))
+                        }
+                        else -> throw IllegalArgumentException("cannot process mapping format $type for $fname")
+                    }
+                }
                 else -> {
                     throw IllegalArgumentException("cannot process mapping format $type")
                 }
@@ -373,6 +407,7 @@ class MappingTreeBuilder {
             var afterRemap: (MappingTree) -> Unit = { }
             val dependsOn: MutableSet<String> = mutableSetOf()
             var allowDuplicate: Boolean = false
+            var exclude: Boolean = false
 
             fun mapNs(from: String, to: String) {
                 nsMap[from] = to
@@ -417,6 +452,14 @@ class MappingTreeBuilder {
             fun addDepends(ns: String) {
                 dependsOn.add(ns)
             }
+
+            fun exclude() {
+                exclude = true
+            }
+
+            fun clearExclude() {
+                exclude = false
+            }
         }
 
         private var frozen by FinalizeOnWrite(false)
@@ -449,7 +492,14 @@ class MappingTreeBuilder {
     }
 
     enum class BetterMappingFormat {
-        TINY, TINY_2, ENIGMA, SRG, CSRG, //TODO: implement
-        TSRG, TSRG_2, RETROGUARD, MCP, OLD_MCP, OLDER_MCP, PROGUARD, PARCHMENT, OBF_JAR;
+        TINY, TINY_2,
+        ENIGMA,
+        SRG,
+        CSRG,
+        TSRG, TSRG_2,
+        RETROGUARD,
+        MCP, OLD_MCP, OLDER_MCP,
+        PROGUARD, PARCHMENT,
+        OBF_JAR;
     }
 }

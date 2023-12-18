@@ -13,6 +13,7 @@ class GlobToRegexTest {
         assertEquals("^(?:.*\\/)?\\.gitignore$", GlobToRegex.apply("**/.gitignore"))
         assertEquals("^\\/?[^/]*\\.js\\{on,\\}$", GlobToRegex.apply("*.js{on,}"))
         assertEquals("^\\/?[^/]*\\.js\\*$", GlobToRegex.apply("*.js\\*"))
+        assertEquals("^\\/?[^/]*$", GlobToRegex.apply("./*"))
     }
 
 }

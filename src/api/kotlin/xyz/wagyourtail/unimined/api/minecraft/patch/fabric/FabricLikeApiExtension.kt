@@ -8,6 +8,8 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 open class FabricLikeApiExtension {
 
+    // TODO: cache so that offline mode works
+
     abstract class APILocations {
 
         internal val xmlDoc = defaultedMapOf<String, Document> { version ->
