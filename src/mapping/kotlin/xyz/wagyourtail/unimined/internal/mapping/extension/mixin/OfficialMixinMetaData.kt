@@ -19,7 +19,7 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
     private val mixinJsons = mutableMapOf<String, JsonObject>()
 
     private fun mixinCheck(relativePath: String): Boolean =
-        relativePath.contains("mixins") && relativePath.endsWith(".json")
+        relativePath.contains("mixin") && relativePath.endsWith(".json")
 
     private fun refmapCheck(relativePath: String): Boolean =
         relativePath.contains("refmap") && relativePath.endsWith(".json")
