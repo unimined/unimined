@@ -380,23 +380,39 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun spigot(mcVersion: String, key: String, action: MappingDepConfig.() -> Unit) {
-        val spigotDir = project.unimined.getGlobalCache().resolve("spigot")
-        spigotDir.createDirectories()
-        val buildDataFile = spigotDir.resolve("BuildData-${mcVersion}.zip")
 
-        if (!buildDataFile.exists() || project.unimined.forceReload) {
-            val spigotVersionJson = URI.create("https://hub.spigotmc.org/versions/${mcVersion}.json").stream()
-                .use { JsonParser.parseReader(it.reader()) }.asJsonObject
-            val buildData = spigotVersionJson["refs"].asJsonObject["BuildData"].asString
-            URI.create("https://hub.spigotmc.org/stash/rest/api/latest/projects/SPIGOT/repos/builddata/archive?at=$buildData&format=zip")
-                .stream().use { input ->
-                buildDataFile.outputStream().use {
-                    input.copyTo(it)
-                }
+        // TODO: have a common sourceSet where it would make sense to put this
+        val cache = project.unimined.getLocalCache(minecraft.sourceSet).resolve("spigot").resolve(mcVersion)
+        cache.createDirectories()
+        val buildInfo = run {
+            val buildInfoFile = cache.resolve("BuildInfo-${mcVersion}.json")
+            if (!buildInfoFile.exists() || project.unimined.forceReload) {
+                URI.create("https://hub.spigotmc.org/versions/${mcVersion}.json").stream()
+                    .use { input ->
+                        buildInfoFile.outputStream().use {
+                            input.copyTo(it)
+                        }
+                    }
             }
+            val buildInfoJson = JsonParser.parseString(buildInfoFile.readText())
+            buildInfoJson.asJsonObject
         }
 
-        mapping(project.files(buildDataFile), key) {
+        val buildDataZip = run {
+            val buildDataFile = cache.resolve("BuildData-${mcVersion}-${buildInfo["name"].asString}.zip")
+            if (!buildDataFile.exists() || project.unimined.forceReload) {
+                val version = buildInfo["refs"].asJsonObject["BuildData"].asString
+                URI.create("https://hub.spigotmc.org/stash/rest/api/latest/projects/SPIGOT/repos/builddata/archive?at=$version&format=zip").stream()
+                    .use { input ->
+                        buildDataFile.outputStream().use {
+                            input.copyTo(it)
+                        }
+                    }
+            }
+            buildDataFile
+        }
+
+        mapping(project.files(buildDataZip), key) {
             outputs("spigot", true) { listOf("official") }
             action()
         }
