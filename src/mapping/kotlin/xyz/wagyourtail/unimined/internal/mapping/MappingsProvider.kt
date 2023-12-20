@@ -3,10 +3,7 @@ package xyz.wagyourtail.unimined.internal.mapping
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
-import net.fabricmc.mappingio.format.MappingTreeBuilder
-import net.fabricmc.mappingio.format.ProGuardReader
-import net.fabricmc.mappingio.format.Tiny2Reader2
-import net.fabricmc.mappingio.format.Tiny2Writer2
+import net.fabricmc.mappingio.format.*
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import net.fabricmc.tinyremapper.IMappingProvider
@@ -428,6 +425,16 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
             buildDataFile
         }
 
+        val (layerMojmap, hasMembers) = buildDataZip.readZipInputStreamFor("info.json") {
+            val info = it.reader().use { JsonParser.parseReader(it).asJsonObject }
+
+            listOf(info.has("mappingsUrl"), info.has("memberMappings"))
+        }
+
+        officialMappingsFromJar {
+            action()
+        }
+
         mapping(project.files(buildDataZip), key) {
             contains({ n, _  ->
                 n.endsWith("-members.csrg")
@@ -436,6 +443,13 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
             }
             // so it can be valid to remap directly from dev...
             memberNameReplacer("spigot", "official", setOf("method", "field", "method_arg", "method_var"))
+            // forcibly flatten packages (<=1.16.5)
+            if (!layerMojmap) {
+                // TODO: figure out how package stuff like V1_16_R3 is generated, this is necessary for this to be correct
+                forwardVisitor { mappingVisitor, mappingTreeView, s ->
+                    PackageRemappingVisitor(mappingVisitor, setOf("spigot"), listOf("**" to "net/minecraft/server"))
+                }
+            }
             outputs("spigot", false) {
                 if ("spigot_dev" in getNamespaces()) {
                     listOf("official", "spigot_dev")
@@ -486,6 +500,10 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
             val info = it.reader().use { JsonParser.parseReader(it).asJsonObject }
 
             listOf(info.has("mappingsUrl"), info.has("memberMappings"))
+        }
+
+        officialMappingsFromJar {
+            action()
         }
 
         if (layerMojmap) {
