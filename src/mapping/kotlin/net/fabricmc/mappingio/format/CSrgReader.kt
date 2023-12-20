@@ -41,7 +41,6 @@ object CSrgReader {
 
             if (visitor.visitContent()) {
                 var lastClass: String? = null
-                var visitLastClass: Boolean
 
                 do {
                     val srcName = reader.nextCol()
@@ -52,9 +51,10 @@ object CSrgReader {
                     }
                     if (!srcName.equals(lastClass)) {
                         lastClass = srcName
-                        visitLastClass = visitor.visitClass(srcName)
-                        if (visitLastClass) {
+                        if (visitor.visitClass(srcName)) {
                             visitor.visitDstName(MappedElementKind.CLASS, 0, dstName)
+
+                            visitor.visitElementContent(MappedElementKind.CLASS)
                         }
                     }
                 } while (reader.nextLine(0))

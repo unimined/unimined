@@ -270,7 +270,7 @@ class MappingTreeBuilder {
         @Suppress("NAME_SHADOWING")
         input.wrapInput(fname, reader) { reader ->
             reader!!
-//            println("processing $fname")
+            println("processing $fname")
             val visitor = MappingNsRenamer(
                 MappingSourceNsSwitch(
                     globalFMV(input.fmv(

@@ -152,12 +152,30 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         officialMappingsFromJar {
             action()
         }
-        mapping(mappings, key) {
-            mapNamespace("obf", "official")
-            onlyExistingSrc()
-            srgToSearge()
-            outputs("searge", false) { listOf("official") }
-            action()
+        // if we need to replace class names with mojmap
+        if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.16.5") > 0) {
+            postProcess(key, {
+                mojmap()
+                mapping(mappings, key) {
+                    mapNamespace("obf", "official")
+                    dependsOn("mojmap")
+                    classNameReplacer("srg", "mojmap")
+                    onlyExistingSrc()
+                    dependsOn("mojmap")
+                    outputs("srg", false) { listOf("official") }
+                }
+            }) {
+                mapNamespace("srg", "searge")
+                outputs("searge", false) { listOf("official") }
+                action()
+            }
+        } else {
+            mapping(mappings, key) {
+                mapNamespace("obf", "official")
+                outputs("searge", false) { listOf("official") }
+                onlyExistingSrc()
+                action()
+            }
         }
     }
 
@@ -207,7 +225,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     t == "MCP" || t == "OLDER_MCP"
                 }) {
                     onlyExistingSrc()
-                    srgToSearge()
                     outputs("mcp", true) { listOf("searge") }
                     sourceNamespace("searge")
                 }
@@ -226,7 +243,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 }
             } else {
                 onlyExistingSrc()
-                srgToSearge()
                 outputs("mcp", true) { listOf("searge") }
                 sourceNamespace("searge")
             }
@@ -412,11 +428,34 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             buildDataFile
         }
 
-        mapping(project.files(buildDataZip), key) {
-            outputs("spigot", true) { listOf("official") }
-            action()
+        // check if we need to layer mojmap method/field names on top of spigot
+        val (layerMojmap, hasMembers) = buildDataZip.readZipInputStreamFor("info.json") {
+            val info = it.reader().use { JsonParser.parseReader(it).asJsonObject }
+
+            listOf(info.has("mappingsUrl"), info.has("memberMappings"))
         }
 
+        if (layerMojmap) {
+            project.logger.lifecycle("[Unimined/MappingsProvider] Layering mojmap on top of spigot")
+            postProcess("spigot", {
+                mojmap()
+                mapping(project.files(buildDataZip), key) {
+                    outputs("spigot", true) { listOf("official", "mojmap") }
+                    dependsOn("mojmap")
+                    memberNameReplacer("spigot", "mojmap", if (hasMembers) setOf("field") else setOf("method", "field", "method_args", "method_vars"))
+                    renest()
+                }
+            }) {
+                outputs("spigot", true) { listOf("official") }
+                action()
+            }
+        } else {
+            mapping(project.files(buildDataZip), key) {
+                outputs("spigot", true) { listOf("official") }
+                renest()
+                action()
+            }
+        }
     }
 
     override fun postProcess(key: String, mappings: MappingsConfig.() -> Unit, merger: MappingDepConfig.() -> Unit) {

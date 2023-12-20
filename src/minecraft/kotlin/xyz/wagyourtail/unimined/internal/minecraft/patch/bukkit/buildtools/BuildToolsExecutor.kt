@@ -155,11 +155,4 @@ class BuildToolsExecutor(
         JsonParser.parseString(buildDataInfoFile.readText()).asJsonObject
     }
 
-    enum class Steps {
-        EXTRACT,
-        DECOMPILE,
-
-
-    }
-
 }

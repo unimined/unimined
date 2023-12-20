@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
+import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
 import net.fabricmc.mappingio.format.*
@@ -7,6 +8,7 @@ import net.fabricmc.mappingio.tree.MappingTree
 import net.fabricmc.mappingio.tree.MappingTree.ClassMapping
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.artifacts.Dependency
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.ContainedMapping
 import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
@@ -101,16 +103,40 @@ class ContainedMappingImpl() : ContainedMapping {
         inputActions.add { setSource(namespace) }
     }
 
-    override fun srgToSearge() {
+    override fun classNameReplacer(targetNs: String, classNs: String) {
         checkFinalized()
         inputActions.add {
-            forwardVisitor { v, _ ->
-                SrgToSeargeMapper(
+            forwardVisitor { v, tree ->
+                ClassNameReplacer(
                     v,
-                    "srg",
-                    "searge",
-                    "mojmap",
-                    (mappingsConfig as MappingsProvider)::getMojmapMappings
+                    targetNs,
+                    classNs,
+                    tree
+                )
+            }
+        }
+    }
+
+    override fun memberNameReplacer(targetNs: String, classNs: String, types: Set<String>) {
+        memberNameReplacer(
+            targetNs,
+            classNs,
+            types.map { MappedElementKind.valueOf(it.uppercase()) }.toSet()
+        )
+    }
+
+    @JvmName("memberNameReplacerIntl")
+    @ApiStatus.Internal
+    fun memberNameReplacer(targetNs: String, classNs: String, types: Set<MappedElementKind>) {
+        checkFinalized()
+        inputActions.add {
+            forwardVisitor { v, tree ->
+                MemberNameReplacer(
+                    v,
+                    targetNs,
+                    classNs,
+                    tree,
+                    types
                 )
             }
         }

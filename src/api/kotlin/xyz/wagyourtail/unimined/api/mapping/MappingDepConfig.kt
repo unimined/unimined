@@ -69,9 +69,14 @@ interface ContainedMapping {
     fun sourceNamespace(namespace: String)
 
     /**
+     * insert forward visitor that converts class names to the ClassNs
+     */
+    fun classNameReplacer(targetNs: String, classNs: String)
+
+    /**
      * insert forward visitor that converts srg to searge names.
      */
-    fun srgToSearge()
+    fun memberNameReplacer(targetNs: String, classNs: String,  types: Set<String>)
 
     /**
      * insert forward visitor that only allows existing src names.

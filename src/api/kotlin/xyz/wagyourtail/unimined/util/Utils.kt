@@ -325,6 +325,18 @@ fun <T> Path.readZipInputStreamFor(path: String, throwIfMissing: Boolean = true,
     return null as T
 }
 
+fun Path.zipContains(path: String): Boolean {
+    Files.newByteChannel(this).use {
+        ZipFile(it).use { zip ->
+            val entry = zip.getEntry(path.replace("\\", "/"))
+            if (entry != null) {
+                return true
+            }
+        }
+    }
+    return false
+}
+
 fun Path.openZipFileSystem(args: Map<String, *> = mapOf<String, Any>()): FileSystem {
     if (!exists() && args["create"] == true) {
         ZipOutputStream(outputStream()).use { stream ->
