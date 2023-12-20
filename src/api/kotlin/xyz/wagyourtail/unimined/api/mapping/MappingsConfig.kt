@@ -504,6 +504,25 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    abstract fun spigotDev(
+        mcVersion: String = minecraft.version,
+        key: String = "spigot-dev",
+        action: MappingDepConfig.() -> Unit = {}
+    )
+
+    fun spigotDev(
+        mcVersion: String = minecraft.version,
+        key: String = "spigot-dev",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        spigotDev(mcVersion, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     @ApiStatus.Experimental
     abstract fun postProcess(key: String, mappings: MappingsConfig.() -> Unit, merger: MappingDepConfig.() -> Unit)
 

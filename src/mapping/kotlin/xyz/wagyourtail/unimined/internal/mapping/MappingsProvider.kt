@@ -428,7 +428,52 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             buildDataFile
         }
 
-        // check if we need to layer mojmap method/field names on top of spigot
+        mapping(project.files(buildDataZip), key) {
+            outputs("spigot", false) { listOf("official") }
+            contains({ n, _  ->
+                n.endsWith("-members.csrg")
+            }) {
+                exclude()
+            }
+            renest()
+            action()
+        }
+    }
+
+    override fun spigotDev(mcVersion: String, key: String, action: MappingDepConfig.() -> Unit) {
+
+        // TODO: have a common sourceSet where it would make sense to put this
+        val cache = project.unimined.getLocalCache(minecraft.sourceSet).resolve("spigot").resolve(mcVersion)
+        cache.createDirectories()
+        val buildInfo = run {
+            val buildInfoFile = cache.resolve("BuildInfo-${mcVersion}.json")
+            if (!buildInfoFile.exists() || project.unimined.forceReload) {
+                URI.create("https://hub.spigotmc.org/versions/${mcVersion}.json").stream()
+                    .use { input ->
+                        buildInfoFile.outputStream().use {
+                            input.copyTo(it)
+                        }
+                    }
+            }
+            val buildInfoJson = JsonParser.parseString(buildInfoFile.readText())
+            buildInfoJson.asJsonObject
+        }
+
+        val buildDataZip = run {
+            val buildDataFile = cache.resolve("BuildData-${mcVersion}-${buildInfo["name"].asString}.zip")
+            if (!buildDataFile.exists() || project.unimined.forceReload) {
+                val version = buildInfo["refs"].asJsonObject["BuildData"].asString
+                URI.create("https://hub.spigotmc.org/stash/rest/api/latest/projects/SPIGOT/repos/builddata/archive?at=$version&format=zip")
+                    .stream()
+                    .use { input ->
+                        buildDataFile.outputStream().use {
+                            input.copyTo(it)
+                        }
+                    }
+            }
+            buildDataFile
+        }
+
         val (layerMojmap, hasMembers) = buildDataZip.readZipInputStreamFor("info.json") {
             val info = it.reader().use { JsonParser.parseReader(it).asJsonObject }
 
@@ -440,18 +485,20 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
             postProcess("spigot", {
                 mojmap()
                 mapping(project.files(buildDataZip), key) {
-                    outputs("spigot", true) { listOf("official", "mojmap") }
+                    mapNamespace("spigot", "spigot-dev")
+                    outputs("spigot-dev", true) { listOf("official", "mojmap") }
                     dependsOn("mojmap")
-                    memberNameReplacer("spigot", "mojmap", if (hasMembers) setOf("field") else setOf("method", "field", "method_arg", "method_var"))
+                    memberNameReplacer("spigot-dev", "mojmap", if (hasMembers) setOf("field") else setOf("method", "field", "method_arg", "method_var"))
                     renest()
                 }
             }) {
-                outputs("spigot", true) { listOf("official") }
+                outputs("spigot-dev", true) { listOf("official") }
                 action()
             }
         } else {
             mapping(project.files(buildDataZip), key) {
-                outputs("spigot", true) { listOf("official") }
+                mapNamespace("spigot", "spigot-dev")
+                outputs("spigot-dev", true) { listOf("official") }
                 renest()
                 action()
             }
