@@ -507,14 +507,14 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     @JvmOverloads
     abstract fun spigotDev(
         mcVersion: String = minecraft.version,
-        key: String = "spigot-dev",
+        key: String = "spigot_dev",
         action: MappingDepConfig.() -> Unit = {}
     )
 
     @JvmOverloads
     fun spigotDev(
         mcVersion: String = minecraft.version,
-        key: String = "spigot-dev",
+        key: String = "spigot_dev",
         @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {

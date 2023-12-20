@@ -27,7 +27,7 @@ import java.nio.file.Path
 import java.security.MessageDigest
 import kotlin.io.path.*
 
-class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsConfig(project, minecraft) {
+class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mappingKey: String = "mappings"): MappingsConfig(project, minecraft) {
 
     override var side: EnvType by FinalizeOnRead(LazyMutable { minecraft.side })
 
@@ -429,11 +429,19 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
 
         mapping(project.files(buildDataZip), key) {
-            outputs("spigot", false) { listOf("official") }
             contains({ n, _  ->
                 n.endsWith("-members.csrg")
             }) {
                 exclude()
+            }
+            // so it can be valid to remap directly from dev...
+            memberNameReplacer("spigot", "official", setOf("method", "field", "method_arg", "method_var"))
+            outputs("spigot", false) {
+                if ("spigot_dev" in getNamespaces()) {
+                    listOf("official", "spigot_dev")
+                } else {
+                    listOf("official")
+                }
             }
             renest()
             action()
@@ -482,23 +490,23 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
         if (layerMojmap) {
             project.logger.lifecycle("[Unimined/MappingsProvider] Layering mojmap on top of spigot")
-            postProcess("spigot", {
+            postProcess(key, {
                 mojmap()
                 mapping(project.files(buildDataZip), key) {
-                    mapNamespace("spigot", "spigot-dev")
-                    outputs("spigot-dev", true) { listOf("official", "mojmap") }
+                    mapNamespace("spigot", "spigot_dev")
+                    outputs("spigot_dev", true) { listOf("official", "mojmap") }
                     dependsOn("mojmap")
-                    memberNameReplacer("spigot-dev", "mojmap", if (hasMembers) setOf("field") else setOf("method", "field", "method_arg", "method_var"))
+                    memberNameReplacer("spigot_dev", "mojmap", if (hasMembers) setOf("field") else setOf("method", "field", "method_arg", "method_var"))
                     renest()
                 }
             }) {
-                outputs("spigot-dev", true) { listOf("official") }
+                outputs("spigot_dev", true) { listOf("official") }
                 action()
             }
         } else {
             mapping(project.files(buildDataZip), key) {
-                mapNamespace("spigot", "spigot-dev")
-                outputs("spigot-dev", true) { listOf("official") }
+                mapNamespace("spigot", "spigot_dev")
+                outputs("spigot_dev", true) { listOf("official") }
                 renest()
                 action()
             }
@@ -506,7 +514,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
     }
 
     override fun postProcess(key: String, mappings: MappingsConfig.() -> Unit, merger: MappingDepConfig.() -> Unit) {
-        val mappingsConfig = MappingsProvider(project, minecraft)
+        val mappingsConfig = MappingsProvider(project, minecraft, "postProcess-$key")
         mappingsConfig.mappings()
         mappingsConfig.resolveMappingTree()
         mapping(project.dependencies.create(
@@ -639,7 +647,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
 
     private fun mappingCacheFile(): Path =
         (if (hasStubs) minecraft.localCache else project.unimined.getGlobalCache())
-            .resolve("mappings").resolve("mappings-${side}-${combinedNames}.tiny")
+            .resolve("mappings").resolve("${mappingKey}-${side}-${combinedNames}.tiny")
 
 
     override val combinedNames: String by lazy {

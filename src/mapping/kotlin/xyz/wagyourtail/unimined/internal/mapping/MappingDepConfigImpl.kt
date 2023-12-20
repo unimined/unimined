@@ -105,39 +105,86 @@ class ContainedMappingImpl() : ContainedMapping {
 
     override fun classNameReplacer(targetNs: String, classNs: String) {
         checkFinalized()
-        inputActions.add {
-            forwardVisitor { v, tree ->
-                ClassNameReplacer(
-                    v,
-                    targetNs,
-                    classNs,
-                    tree
-                )
-            }
-        }
+        memberNameReplacer(targetNs, classNs, setOf(MappedElementKind.CLASS))
     }
 
-    override fun memberNameReplacer(targetNs: String, classNs: String, types: Set<String>) {
+    override fun memberNameReplacer(targetNs: String, memberNs: String, types: Set<String>) {
         memberNameReplacer(
             targetNs,
-            classNs,
+            memberNs,
             types.map { MappedElementKind.valueOf(it.uppercase()) }.toSet()
         )
     }
 
     @JvmName("memberNameReplacerIntl")
     @ApiStatus.Internal
-    fun memberNameReplacer(targetNs: String, classNs: String, types: Set<MappedElementKind>) {
+    fun memberNameReplacer(targetNs: String, memberNs: String, types: Set<MappedElementKind>) {
         checkFinalized()
         inputActions.add {
-            forwardVisitor { v, tree ->
-                MemberNameReplacer(
-                    v,
-                    targetNs,
-                    classNs,
-                    tree,
-                    types
-                )
+            afterRemap {
+                val targetKey = it.getNamespaceId(targetNs)
+
+                if (targetKey == MappingTreeView.NULL_NAMESPACE_ID) {
+                    throw IllegalStateException("Target namespace $targetNs does not exist")
+                }
+
+                val memberKey = it.getNamespaceId(memberNs)
+
+                if (memberKey == MappingTreeView.NULL_NAMESPACE_ID) {
+                    throw IllegalStateException("Member namespace $memberNs does not exist")
+                }
+
+                for (classMapping in it.classes) {
+                    if (types.contains(MappedElementKind.CLASS)) {
+                        val className = classMapping.getName(memberKey)
+                        if (className != null) {
+                            classMapping.setDstName(className, targetKey)
+                        }
+                    }
+                    if (types.contains(MappedElementKind.METHOD) || types.contains(MappedElementKind.METHOD_ARG) || types.contains(MappedElementKind.METHOD_VAR)) {
+                        for (method in classMapping.methods) {
+                            if (types.contains(MappedElementKind.METHOD)) {
+                                val mojmapName = method.getName(memberKey)
+                                if (mojmapName != null) {
+                                    if (method.getName(targetKey) == null) {
+                                        method.setDstName(mojmapName, targetKey)
+                                    }
+                                }
+                            }
+                            if (types.contains(MappedElementKind.METHOD_ARG)) {
+                                for (arg in method.args) {
+                                    val mojmapName = arg.getName(memberKey)
+                                    if (mojmapName != null) {
+                                        if (arg.getName(targetKey) == null) {
+                                            arg.setDstName(mojmapName, targetKey)
+                                        }
+                                    }
+                                }
+                            }
+                            if (types.contains(MappedElementKind.METHOD_VAR)) {
+                                for (local in method.vars) {
+                                    val mojmapName = local.getName(memberKey)
+                                    if (mojmapName != null) {
+                                        if (local.getName(targetKey) == null) {
+                                            local.setDstName(mojmapName, targetKey)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (types.contains(MappedElementKind.FIELD)) {
+                        for (field in classMapping.fields) {
+                            val mojmapName = field.getName(memberKey)
+                            if (mojmapName != null) {
+                                if (field.getName(targetKey) == null) {
+                                    field.setDstName(mojmapName, targetKey)
+                                }
+                            }
+                        }
+                    }
+                }
+
             }
         }
     }
