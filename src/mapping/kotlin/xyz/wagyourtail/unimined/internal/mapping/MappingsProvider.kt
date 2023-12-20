@@ -392,76 +392,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
         }
     }
 
-    override fun spigot(mcVersion: String, key: String, action: MappingDepConfig.() -> Unit) {
-
-        // TODO: have a common sourceSet where it would make sense to put this
-        val cache = project.unimined.getLocalCache(minecraft.sourceSet).resolve("spigot").resolve(mcVersion)
-        cache.createDirectories()
-        val buildInfo = run {
-            val buildInfoFile = cache.resolve("BuildInfo-${mcVersion}.json")
-            if (!buildInfoFile.exists() || project.unimined.forceReload) {
-                URI.create("https://hub.spigotmc.org/versions/${mcVersion}.json").stream()
-                    .use { input ->
-                        buildInfoFile.outputStream().use {
-                            input.copyTo(it)
-                        }
-                    }
-            }
-            val buildInfoJson = JsonParser.parseString(buildInfoFile.readText())
-            buildInfoJson.asJsonObject
-        }
-
-        val buildDataZip = run {
-            val buildDataFile = cache.resolve("BuildData-${mcVersion}-${buildInfo["name"].asString}.zip")
-            if (!buildDataFile.exists() || project.unimined.forceReload) {
-                val version = buildInfo["refs"].asJsonObject["BuildData"].asString
-                URI.create("https://hub.spigotmc.org/stash/rest/api/latest/projects/SPIGOT/repos/builddata/archive?at=$version&format=zip").stream()
-                    .use { input ->
-                        buildDataFile.outputStream().use {
-                            input.copyTo(it)
-                        }
-                    }
-            }
-            buildDataFile
-        }
-
-        val (layerMojmap, hasMembers) = buildDataZip.readZipInputStreamFor("info.json") {
-            val info = it.reader().use { JsonParser.parseReader(it).asJsonObject }
-
-            listOf(info.has("mappingsUrl"), info.has("memberMappings"))
-        }
-
-        officialMappingsFromJar {
-            action()
-        }
-
-        mapping(project.files(buildDataZip), key) {
-            contains({ n, _  ->
-                n.endsWith("-members.csrg")
-            }) {
-                exclude()
-            }
-            // so it can be valid to remap directly from dev...
-            memberNameReplacer("spigot", "official", setOf("method", "field", "method_arg", "method_var"))
-            // forcibly flatten packages (<=1.16.5)
-            if (!layerMojmap) {
-                // TODO: figure out how package stuff like V1_16_R3 is generated, this is necessary for this to be correct
-                forwardVisitor { mappingVisitor, mappingTreeView, s ->
-                    PackageRemappingVisitor(mappingVisitor, setOf("spigot"), listOf("**" to "net/minecraft/server"))
-                }
-            }
-            outputs("spigot", false) {
-                if ("spigot_dev" in getNamespaces()) {
-                    listOf("official", "spigot_dev")
-                } else {
-                    listOf("official")
-                }
-            }
-            renest()
-            action()
-        }
-    }
-
     override fun spigotDev(mcVersion: String, key: String, action: MappingDepConfig.() -> Unit) {
 
         // TODO: have a common sourceSet where it would make sense to put this
@@ -500,10 +430,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
             val info = it.reader().use { JsonParser.parseReader(it).asJsonObject }
 
             listOf(info.has("mappingsUrl"), info.has("memberMappings"))
-        }
-
-        officialMappingsFromJar {
-            action()
         }
 
         if (layerMojmap) {
