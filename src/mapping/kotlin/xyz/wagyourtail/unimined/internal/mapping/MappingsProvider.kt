@@ -442,7 +442,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 mapping(project.files(buildDataZip), key) {
                     outputs("spigot", true) { listOf("official", "mojmap") }
                     dependsOn("mojmap")
-                    memberNameReplacer("spigot", "mojmap", if (hasMembers) setOf("field") else setOf("method", "field", "method_args", "method_vars"))
+                    memberNameReplacer("spigot", "mojmap", if (hasMembers) setOf("field") else setOf("method", "field", "method_arg", "method_var"))
                     renest()
                 }
             }) {
