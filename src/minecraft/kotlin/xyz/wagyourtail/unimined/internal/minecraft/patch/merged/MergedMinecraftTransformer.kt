@@ -6,6 +6,8 @@ import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.SpigotPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
@@ -18,6 +20,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransf
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.CraftbukkitMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.SpigotMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
@@ -172,6 +176,18 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         val at = AccessTransformerMinecraftTransformer(project, provider)
         at.action()
         patchers.add(at)
+    }
+
+    override fun craftBukkit(action: CraftbukkitPatcher.() -> Unit) {
+        val cb = CraftbukkitMinecraftTransformer(project, provider)
+        cb.action()
+        patchers.add(cb)
+    }
+
+    override fun spigot(action: SpigotPatcher.() -> Unit) {
+        val spigot = SpigotMinecraftTransformer(project, provider)
+        spigot.action()
+        patchers.add(spigot)
     }
 
     @ApiStatus.Experimental

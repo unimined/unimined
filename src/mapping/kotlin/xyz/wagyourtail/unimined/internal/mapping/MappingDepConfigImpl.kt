@@ -103,6 +103,10 @@ class ContainedMappingImpl() : ContainedMapping {
         inputActions.add { setSource(namespace) }
     }
 
+    @Deprecated(
+        "use memberNameReplacer",
+        replaceWith = ReplaceWith("memberNameReplacer(targetNs, classNs, setOf(\"class\"))")
+    )
     override fun classNameReplacer(targetNs: String, classNs: String) {
         checkFinalized()
         memberNameReplacer(targetNs, classNs, setOf(MappedElementKind.CLASS))
@@ -122,6 +126,8 @@ class ContainedMappingImpl() : ContainedMapping {
         checkFinalized()
         inputActions.add {
             afterRemap {
+                println("memberNameReplacer")
+                println("types: $types")
                 val targetKey = it.getNamespaceId(targetNs)
 
                 if (targetKey == MappingTreeView.NULL_NAMESPACE_ID) {
@@ -134,40 +140,43 @@ class ContainedMappingImpl() : ContainedMapping {
                     throw IllegalStateException("Member namespace $memberNs does not exist")
                 }
 
+                println("target: $targetKey")
+                println("member: $memberKey")
+
+                println("namespaces: ${it.srcNamespace} -> ${it.dstNamespaces}")
+
                 for (classMapping in it.classes) {
                     if (types.contains(MappedElementKind.CLASS)) {
+                        println("classMapping: $classMapping")
                         val className = classMapping.getName(memberKey)
                         if (className != null) {
+                            println("className: $className")
                             classMapping.setDstName(className, targetKey)
                         }
                     }
                     if (types.contains(MappedElementKind.METHOD) || types.contains(MappedElementKind.METHOD_ARG) || types.contains(MappedElementKind.METHOD_VAR)) {
                         for (method in classMapping.methods) {
                             if (types.contains(MappedElementKind.METHOD)) {
-                                val mojmapName = method.getName(memberKey)
-                                if (mojmapName != null) {
-                                    if (method.getName(targetKey) == null) {
-                                        method.setDstName(mojmapName, targetKey)
-                                    }
+                                println("method: $method")
+                                val memberName = method.getName(memberKey)
+                                if (memberName != null) {
+                                    println("memberName: $memberName")
+                                    method.setDstName(memberName, targetKey)
                                 }
                             }
                             if (types.contains(MappedElementKind.METHOD_ARG)) {
                                 for (arg in method.args) {
-                                    val mojmapName = arg.getName(memberKey)
-                                    if (mojmapName != null) {
-                                        if (arg.getName(targetKey) == null) {
-                                            arg.setDstName(mojmapName, targetKey)
-                                        }
+                                    val argName = arg.getName(memberKey)
+                                    if (argName != null) {
+                                        arg.setDstName(argName, targetKey)
                                     }
                                 }
                             }
                             if (types.contains(MappedElementKind.METHOD_VAR)) {
                                 for (local in method.vars) {
-                                    val mojmapName = local.getName(memberKey)
-                                    if (mojmapName != null) {
-                                        if (local.getName(targetKey) == null) {
-                                            local.setDstName(mojmapName, targetKey)
-                                        }
+                                    val localName = local.getName(memberKey)
+                                    if (localName != null) {
+                                        local.setDstName(localName, targetKey)
                                     }
                                 }
                             }
@@ -175,11 +184,10 @@ class ContainedMappingImpl() : ContainedMapping {
                     }
                     if (types.contains(MappedElementKind.FIELD)) {
                         for (field in classMapping.fields) {
-                            val mojmapName = field.getName(memberKey)
-                            if (mojmapName != null) {
-                                if (field.getName(targetKey) == null) {
-                                    field.setDstName(mojmapName, targetKey)
-                                }
+                            println("field: $field")
+                            val fieldName = field.getName(memberKey)
+                            if (fieldName != null) {
+                                field.setDstName(fieldName, targetKey)
                             }
                         }
                     }

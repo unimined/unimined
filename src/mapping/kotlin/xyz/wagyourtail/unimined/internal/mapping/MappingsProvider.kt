@@ -455,6 +455,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
                 action()
             }
         }
+
     }
 
     override fun postProcess(key: String, mappings: MappingsConfig.() -> Unit, merger: MappingDepConfig.() -> Unit) {
@@ -513,7 +514,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
         return tree
     }
 
-    private fun resolveMappingTree(): MappingTreeView {
+    fun resolveMappingTree(): MappingTreeView {
         project.logger.lifecycle("[Unimined/MappingsProvider] Resolving mappings for ${minecraft.sourceSet}")
         lateinit var mappings: MappingTreeView
         if (!freeze) freeze = true
@@ -589,7 +590,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
         resolveMappingTree()
     }
 
-    private fun mappingCacheFile(): Path =
+    public fun mappingCacheFile(): Path =
         (if (hasStubs) minecraft.localCache else project.unimined.getGlobalCache())
             .resolve("mappings").resolve("${mappingKey}-${side}-${combinedNames}.tiny")
 

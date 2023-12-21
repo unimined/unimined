@@ -71,7 +71,7 @@ interface ContainedMapping {
     /**
      * insert forward visitor that converts class names to the ClassNs
      */
-    @Deprecated(message = "use memberNameReplacer", replaceWith = ReplaceWith("memberNameReplacer(targetNs, classNs, setOf(MappedElementKind.CLASS))"))
+    @Deprecated(message = "use memberNameReplacer", replaceWith = ReplaceWith("memberNameReplacer(targetNs, classNs, setOf(\"class\"))"))
     fun classNameReplacer(targetNs: String, classNs: String)
 
     /**

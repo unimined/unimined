@@ -16,6 +16,8 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.SpigotPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
@@ -31,6 +33,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransf
 import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.CraftbukkitMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.SpigotMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
@@ -252,6 +256,22 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun accessTransformer(action: AccessTransformerPatcher.() -> Unit) {
         mcPatcher = AccessTransformerMinecraftTransformer(project, this).also {
+            patcherActions.addFirst {
+                action(it)
+            }
+        }
+    }
+
+    override fun craftBukkit(action: CraftbukkitPatcher.() -> Unit) {
+        mcPatcher = CraftbukkitMinecraftTransformer(project, this).also {
+            patcherActions.addFirst {
+                action(it)
+            }
+        }
+    }
+
+    override fun spigot(action: SpigotPatcher.() -> Unit) {
+        mcPatcher = SpigotMinecraftTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)
             }

@@ -6,6 +6,8 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.SpigotPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
@@ -366,6 +368,50 @@ interface PatchProviders {
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>) {
         accessTransformer {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * requires `side "server"`
+     * @since 1.2.0
+     */
+    fun craftBukkit(action: CraftbukkitPatcher.() -> Unit)
+
+    /**
+     * requires `side "server"`
+     * @since 1.2.0
+     */
+    fun craftBukkit(
+        @DelegatesTo(
+            value = CraftbukkitPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>) {
+        craftBukkit {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * requires `side "server"`
+     * @since 1.2.0
+     */
+    fun spigot(action: SpigotPatcher.() -> Unit)
+
+    /**
+     * requires `side "server"`
+     * @since 1.2.0
+     */
+    fun spigot(
+        @DelegatesTo(
+            value = SpigotPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>) {
+        spigot {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
