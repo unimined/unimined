@@ -14,10 +14,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.buildtools.BuildToolsExecutor
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.MustSet
-import xyz.wagyourtail.unimined.util.withSourceSet
+import xyz.wagyourtail.unimined.util.*
 import kotlin.io.path.copyTo
 
 open class CraftbukkitMinecraftTransformer(
@@ -47,6 +44,10 @@ open class CraftbukkitMinecraftTransformer(
         )
     }
 
+    init {
+        unprotectRuntime = true
+    }
+
     override fun beforeMappingsResolve() {
         super.beforeMappingsResolve()
         provider.mappings {
@@ -55,7 +56,13 @@ open class CraftbukkitMinecraftTransformer(
     }
 
     override fun apply() {
-
+        project.configurations.getByName("runtimeOnly".withSourceSet(provider.sourceSet)).dependencies.addAll(
+            listOf(
+                project.dependencies.create("org.ow2.asm:asm:9.5"),
+                project.dependencies.create("org.ow2.asm:asm-commons:9.5"),
+                project.dependencies.create("org.ow2.asm:asm-tree:9.5")
+            )
+        )
     }
 
     var target: BuildToolsExecutor.BuildTarget by FinalizeOnRead(BuildToolsExecutor.BuildTarget.CRAFTBUKKIT)

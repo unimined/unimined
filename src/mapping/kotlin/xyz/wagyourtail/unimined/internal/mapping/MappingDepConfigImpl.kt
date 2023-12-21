@@ -126,8 +126,8 @@ class ContainedMappingImpl() : ContainedMapping {
         checkFinalized()
         inputActions.add {
             afterRemap {
-                println("memberNameReplacer")
-                println("types: $types")
+//                println("memberNameReplacer")
+//                println("types: $types")
                 val targetKey = it.getNamespaceId(targetNs)
 
                 if (targetKey == MappingTreeView.NULL_NAMESPACE_ID) {
@@ -140,27 +140,27 @@ class ContainedMappingImpl() : ContainedMapping {
                     throw IllegalStateException("Member namespace $memberNs does not exist")
                 }
 
-                println("target: $targetKey")
-                println("member: $memberKey")
-
-                println("namespaces: ${it.srcNamespace} -> ${it.dstNamespaces}")
+//                println("target: $targetKey")
+//                println("member: $memberKey")
+//
+//                println("namespaces: ${it.srcNamespace} -> ${it.dstNamespaces}")
 
                 for (classMapping in it.classes) {
                     if (types.contains(MappedElementKind.CLASS)) {
-                        println("classMapping: $classMapping")
+//                        println("classMapping: $classMapping")
                         val className = classMapping.getName(memberKey)
                         if (className != null) {
-                            println("className: $className")
+//                            println("className: $className")
                             classMapping.setDstName(className, targetKey)
                         }
                     }
                     if (types.contains(MappedElementKind.METHOD) || types.contains(MappedElementKind.METHOD_ARG) || types.contains(MappedElementKind.METHOD_VAR)) {
                         for (method in classMapping.methods) {
                             if (types.contains(MappedElementKind.METHOD)) {
-                                println("method: $method")
+//                                println("method: $method")
                                 val memberName = method.getName(memberKey)
                                 if (memberName != null) {
-                                    println("memberName: $memberName")
+//                                    println("memberName: $memberName")
                                     method.setDstName(memberName, targetKey)
                                 }
                             }
@@ -184,7 +184,7 @@ class ContainedMappingImpl() : ContainedMapping {
                     }
                     if (types.contains(MappedElementKind.FIELD)) {
                         for (field in classMapping.fields) {
-                            println("field: $field")
+//                            println("field: $field")
                             val fieldName = field.getName(memberKey)
                             if (fieldName != null) {
                                 field.setDstName(fieldName, targetKey)

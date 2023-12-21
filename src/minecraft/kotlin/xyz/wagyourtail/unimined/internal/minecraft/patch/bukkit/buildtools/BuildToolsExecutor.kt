@@ -123,7 +123,7 @@ class BuildToolsExecutor(
         dbF.isIgnoringComments = true
         dbF.isIgnoringElementContentWhitespace = true
         val db = dbF.newDocumentBuilder()
-        db.parse(spigot.resolve("pom.xml").toFile())
+        db.parse(spigot.resolve("Spigot-Server").resolve("pom.xml").toFile())
     }
 
     val targetPom by lazy {
