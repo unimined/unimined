@@ -198,6 +198,7 @@ abstract class UniminedExtension(val project: Project) {
 
     abstract fun neoForgedMaven()
     abstract fun sonatypeStaging()
+    abstract fun spongeMaven();
 
     abstract fun jitpack()
 

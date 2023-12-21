@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
 
 /**
  * usage:
@@ -426,6 +427,40 @@ interface PatchProviders {
      */
     fun accessTransformer() {
         accessTransformer {}
+    }
+
+    /**
+     * enables the rift patcher.
+     * @param action the action to configure the patcher.
+     * @see RiftPatcher
+     * @since 1.2.0
+     */
+    fun rift(action: RiftPatcher.() -> Unit)
+
+    /**
+     * enables the rift patcher.
+     * @param action the action to perform on the patcher.
+     * @since 1.2.0
+     */
+    fun rift(
+        @DelegatesTo(
+            value = RiftPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        rift {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the rift patcher.
+     * @since 1.2.0
+     */
+    fun rift() {
+        rift {}
     }
 
     @ApiStatus.Experimental
