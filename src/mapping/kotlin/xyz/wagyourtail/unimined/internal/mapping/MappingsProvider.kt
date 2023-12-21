@@ -652,6 +652,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
         remap: Pair<Namespace, Namespace>,
         remapLocals: Boolean,
     ) : (IMappingProvider.MappingAcceptor) -> Unit {
+        this.freeze()
         return { acceptor ->
             val srcName = remap.first
             val dstName = remap.second

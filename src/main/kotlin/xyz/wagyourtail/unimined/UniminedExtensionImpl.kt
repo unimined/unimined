@@ -304,6 +304,17 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding jitpack maven: $jitpack")
     }
 
+    val spigot by lazy {
+        project.repositories.maven {
+            it.name = "spigot"
+            it.url = URI.create("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
+        }
+    }
+
+    override fun spigot() {
+        project.logger.info("[Unimined] adding spigot maven: $spigot")
+    }
+
     init {
         project.repositories.maven {
             it.name = "minecraft"

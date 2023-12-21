@@ -117,6 +117,8 @@ class BuildToolsExecutor(
     }
 
     val spigotPom by lazy {
+        val repo = Git.open(spigot.toFile())
+        repo.submoduleInit().call()
         val dbF = DocumentBuilderFactory.newInstance()
         dbF.isValidating = false
         dbF.isNamespaceAware = false

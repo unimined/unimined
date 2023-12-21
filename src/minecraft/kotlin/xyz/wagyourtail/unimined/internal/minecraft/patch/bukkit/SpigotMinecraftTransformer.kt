@@ -17,4 +17,8 @@ class SpigotMinecraftTransformer(project: Project,
         target = BuildToolsExecutor.BuildTarget.SPIGOT
     }
 
+//    override val exclude: Set<String> = super.exclude + setOf(
+//        "bukkit"
+//    )
+
 }

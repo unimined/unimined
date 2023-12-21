@@ -75,14 +75,7 @@ open class JarModAgentMinecraftTransformer(
 
     override fun apply() {
         if (jarModAgent.dependencies.isEmpty()) {
-            project.unimined.wagYourMaven("snapshots")
-            jarModAgent.dependencies.add(
-                project.dependencies.create(
-                    "xyz.wagyourtail.unimined:jarmod-agent:0.1.4-SNAPSHOT:all"
-                ).also {
-                    (it as ExternalDependency).isTransitive = false
-                }
-            )
+            agentVersion("0.1.4-SNAPSHOT")
         }
 
         super.apply()

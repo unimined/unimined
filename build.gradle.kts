@@ -174,7 +174,7 @@ dependencies {
         exclude(group = "org.ow2.asm")
     }
 
-    implementation("org.eclipse.jgit:org.eclipse.jgit:6.8.0.202311291450-r")
+    implementation("org.eclipse.jgit:org.eclipse.jgit:5.13.2.202306221912-r")
 
     compileOnly("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false

@@ -200,4 +200,6 @@ abstract class UniminedExtension(val project: Project) {
     abstract fun sonatypeStaging()
 
     abstract fun jitpack()
+
+    abstract fun spigot()
 }
