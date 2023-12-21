@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
@@ -29,6 +30,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.QuiltMinecraftTr
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.rift.RiftMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.MustSet
@@ -188,6 +190,12 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         val spigot = SpigotMinecraftTransformer(project, provider)
         spigot.action()
         patchers.add(spigot)
+    }
+
+    override fun rift(action: RiftPatcher.() -> Unit) {
+        val rift = RiftMinecraftTransformer(project, provider)
+        rift.action()
+        patchers.add(rift)
     }
 
     @ApiStatus.Experimental
