@@ -129,10 +129,11 @@ class BuildToolsExecutor(
     }
 
     val targetPom by lazy {
-        when (target) {
-            BuildTarget.SPIGOT -> spigotPom
-            BuildTarget.CRAFTBUKKIT -> cBpom
-        }
+        cBpom
+//        when (target) {
+//            BuildTarget.SPIGOT -> spigotPom
+//            BuildTarget.CRAFTBUKKIT -> cBpom
+//        }
     }
 
     val version by lazy {
