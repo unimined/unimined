@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.util
 
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.util.GradleVersion
 import java.io.File
 import java.nio.file.FileSystem
 import java.nio.file.Path
@@ -9,8 +10,10 @@ import java.nio.file.Paths
 import kotlin.io.path.exists
 import kotlin.io.path.writeText
 
-fun runTestProject(name: String): BuildResult {
-    return runGradle(getTestProjectPath(name));
+val GRADLE_CURRENT: String = GradleVersion.current().version;
+
+fun runTestProject(name: String, gradle: String = GRADLE_CURRENT): BuildResult {
+    return runGradle(getTestProjectPath(name), gradle)
 }
 
 fun getTestProjectPath(name: String): Path {
@@ -24,8 +27,21 @@ fun openZipFileSystem(project: String, path: String): FileSystem? {
 
     return fullPath.openZipFileSystem(mapOf("mutable" to false))
 }
+class IntegrationTestUtils {
+    companion object {
+        val GRADLE_VERSION = arrayOf(
+            "7.6.3",
+            "8.1.1",
+            GRADLE_CURRENT,
+            "8.5"
+        )
 
-fun runGradle(dir: Path): BuildResult {
+        @JvmStatic
+        fun versions() = GRADLE_VERSION;
+    }
+}
+
+fun runGradle(dir: Path, version: String = GRADLE_CURRENT): BuildResult {
     println("Running gradle in $dir")
     val buildDir = dir.resolve("build")
     if (buildDir.exists()) buildDir.deleteRecursively()
@@ -45,8 +61,9 @@ fun runGradle(dir: Path): BuildResult {
 
     val classpath = System.getProperty("java.class.path").split(File.pathSeparatorChar).map { File(it) }
     val result = GradleRunner.create()
+        .withGradleVersion(version)
         .withProjectDir(dir.toFile())
-        .withArguments("clean", "build", "--stacktrace", "--info")
+        .withArguments("clean", "build", "--stacktrace", "--info", "--refresh-dependencies")
         .withPluginClasspath(classpath)
         .build()
     if (settings.exists()) {

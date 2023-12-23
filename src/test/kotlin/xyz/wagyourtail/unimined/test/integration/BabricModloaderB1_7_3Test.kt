@@ -2,14 +2,16 @@ package xyz.wagyourtail.unimined.test.integration
 
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testkit.runner.UnexpectedBuildFailure
-import org.junit.jupiter.api.Test
-import xyz.wagyourtail.unimined.util.runTestProject
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
+import xyz.wagyourtail.unimined.util.*
 
 class BabricModloaderB1_7_3Test {
-    @Test
-    fun test_babric_modloader_b1_7_3() {
+    @ParameterizedTest
+    @MethodSource("xyz.wagyourtail.unimined.util.IntegrationTestUtils#versions")
+    fun test_babric_modloader_b1_7_3(gradleVersion: String) {
         try {
-            val result = runTestProject("b1.7.3-Babric-Modloader")
+            val result = runTestProject("b1.7.3-Babric-Modloader", gradleVersion)
 
             try {
                 result.task(":build")?.outcome?.let {
