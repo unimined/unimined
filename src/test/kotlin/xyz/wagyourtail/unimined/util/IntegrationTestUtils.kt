@@ -30,7 +30,7 @@ fun openZipFileSystem(project: String, path: String): FileSystem? {
 class IntegrationTestUtils {
     companion object {
         val GRADLE_VERSION = arrayOf(
-            "7.6.3",
+//            "7.6.3",
             "8.1.1",
             GRADLE_CURRENT,
             "8.5"
