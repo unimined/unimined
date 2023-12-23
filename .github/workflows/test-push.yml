@@ -11,19 +11,21 @@ jobs:
       fail-fast: false
       matrix:
         gradle: [
-          7.6.3, # minimal supported version
-          8.1, # middle ground
+          8.1,
           8.4, # version used by buildscript
           8 # latest
         ]
         java: [
           8, # Old LTS
           11, # Should we even test this one?
-          17 # LTS
+          17, # LTS
+          21 # Latest LTS only supported by gradle 8.5+
         ]
-        include:
-          - gradle: 8
-            java: 21 # Latest LTS only supported by gradle 8.5+
+        exclude:
+          - gradle: 8.1
+            java: 21
+          - gradle: 8.4
+            java: 21
     runs-on: ubuntu-22.04
     container:
       image: gradle:${{ matrix.gradle }}-jdk${{ matrix.java }}
@@ -63,14 +65,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Update when https://github.com/gradle/gradle/issues/25609 is fixed
-        gradle: [8.4.0]
         java: [17]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: ubuntu-22.04
     container:
-      image: gradle:${{ matrix.gradle }}-jdk${{ matrix.java }}
+      image: gradle:8.4-jdk${{ matrix.java }}
       options: --user root
 
     steps:
