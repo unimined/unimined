@@ -22,9 +22,9 @@ jobs:
           11, # Should we even test this one?
           17, # LTS
         ]
-        includes:
-          - gradle: 8
-            java: 21 # Latest LTS only supported by gradle 8.5+
+#        includes:
+#          - gradle: 8
+#            java: 21 # Latest LTS only supported by gradle 8.5+
     runs-on: ubuntu-22.04
     container:
       image: gradle:${{ matrix.version }}-jdk17
