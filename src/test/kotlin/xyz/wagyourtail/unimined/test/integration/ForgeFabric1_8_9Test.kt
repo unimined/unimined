@@ -3,13 +3,16 @@ package xyz.wagyourtail.unimined.test.integration
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testkit.runner.UnexpectedBuildFailure
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import xyz.wagyourtail.unimined.util.runTestProject
 
 class ForgeFabric1_8_9Test {
-    @Test
-    fun test_forge_fabric_1_8_9() {
+    @ParameterizedTest
+    @MethodSource("xyz.wagyourtail.unimined.util.IntegrationTestUtils#versions")
+    fun test_forge_fabric_1_8_9(gradleVersion: String) {
         try {
-            val result = runTestProject("1.8.9-Forge-Fabric")
+            val result = runTestProject("1.8.9-Forge-Fabric", gradleVersion)
 
             try {
                 result.task(":build")?.outcome?.let {

@@ -4,14 +4,17 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testkit.runner.UnexpectedBuildFailure
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import xyz.wagyourtail.unimined.util.runTestProject
 
 class ForgeFabric1_20Test {
-    @Test
+    @ParameterizedTest
+    @MethodSource("xyz.wagyourtail.unimined.util.IntegrationTestUtils#versions")
     @Disabled
-    fun test_forge_fabric_1_20() {
+    fun test_forge_fabric_1_20(gradleVersion: String) {
         try {
-            val result = runTestProject("1.20-Forge-Fabric")
+            val result = runTestProject("1.20-Forge-Fabric", gradleVersion)
 
             try {
                 result.task(":build")?.outcome?.let {
