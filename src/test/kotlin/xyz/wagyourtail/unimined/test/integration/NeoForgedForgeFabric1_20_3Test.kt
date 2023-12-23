@@ -3,18 +3,16 @@ package xyz.wagyourtail.unimined.test.integration
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testkit.runner.UnexpectedBuildFailure
 import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import xyz.wagyourtail.unimined.util.runTestProject
 
-class ForgeFabric1_20Test {
+class NeoForgedForgeFabric1_20_3Test {
     @ParameterizedTest
     @MethodSource("xyz.wagyourtail.unimined.util.IntegrationTestUtils#versions")
-    @Disabled
-    fun test_forge_fabric_1_20(gradleVersion: String) {
+    fun test_neoforged_forge_fabric_1_20_3(gradleVersion: String) {
         try {
-            val result = runTestProject("1.20-Forge-Fabric", gradleVersion)
+            val result = runTestProject("1.20.3-NeoForged-Forge-Fabric", gradleVersion)
 
             try {
                 result.task(":build")?.outcome?.let {
