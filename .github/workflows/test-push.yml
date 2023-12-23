@@ -10,10 +10,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [8.1.0-jdk17]
+        # Update when https://github.com/gradle/gradle/issues/25609 is fixed
+        version: [8.1.0]
     runs-on: ubuntu-22.04
     container:
-      image: gradle:${{ matrix.version }}
+      image: gradle:${{ matrix.version }}-jdk17
       options: --user root
     steps:
       - uses: actions/checkout@v3
@@ -27,12 +28,12 @@ jobs:
 
     runs-on: ubuntu-22.04
     container:
-      image: gradle:8.1.0-jdk17
+      image: gradle:8.4.0-jdk17
       options: --user root
 
     steps:
       - uses: actions/checkout@v3
-      - run: gradle writeActionsTestMatrix --stacktrace --warning-mode fail
+      - run: gradle writeActionsTestMatrix --stacktrace
       -
         id: set-matrix
         run: echo "matrix=$(cat build/test_matrix.json)" >> $GITHUB_OUTPUT
@@ -46,17 +47,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [8.1.0-jdk17]
+        # Update when https://github.com/gradle/gradle/issues/25609 is fixed
+        gradle: [8.1.0]
+        java: [17]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: ubuntu-22.04
     container:
-      image: gradle:${{ matrix.version }}
+      image: gradle:${{ matrix.gradle }}-jdk${{ matrix.java }}
       options: --user root
 
     steps:
       - uses: actions/checkout@v3
-      - run: gradle test --tests ${{ matrix.test }} --stacktrace --warning-mode fail
+      - run: gradle test --tests ${{ matrix.test }}
         env:
           TEST_WARNING_MODE: fail
         id: test
@@ -90,7 +93,7 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
-      - run: ./gradlew test --tests ${{ matrix.test }} --stacktrace --warning-mode fail
+      - run: ./gradlew test --tests ${{ matrix.test }}
         env:
           TEST_WARNING_MODE: fail
         id: test
