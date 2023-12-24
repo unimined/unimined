@@ -4,7 +4,7 @@ import groovy.lang.Closure
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
-import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import java.nio.file.FileSystem
 import java.nio.file.Path
 

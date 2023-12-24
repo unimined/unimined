@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.task
+package xyz.wagyourtail.unimined.api.minecraft.task
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo

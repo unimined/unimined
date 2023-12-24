@@ -1,13 +1,12 @@
 package xyz.wagyourtail.unimined.internal.mapping.task
 
-import org.gradle.api.Project
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
-import xyz.wagyourtail.unimined.api.task.MigrateMappingsTask
+import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
+import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.util.deleteRecursively

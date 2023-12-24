@@ -192,7 +192,6 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-
     abstract fun mcp(channel: String, version: String, key: String = "mcp", action: MappingDepConfig.() -> Unit = {})
 
     @JvmOverloads

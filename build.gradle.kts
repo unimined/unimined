@@ -66,11 +66,19 @@ sourceSets {
             sourceSets["api"]
         )
     }
+    create("source") {
+        inputOf(main.get())
+        outputOf(
+            sourceSets["mapping"],
+            sourceSets["api"]
+        )
+    }
     create("mods") {
         inputOf(main.get())
         outputOf(
             sourceSets["api"],
-            sourceSets["mapping"]
+            sourceSets["mapping"],
+            sourceSets["source"]
         )
     }
     create("runs") {
@@ -85,14 +93,18 @@ sourceSets {
             sourceSets["api"],
             sourceSets["mapping"],
             sourceSets["mods"],
-            sourceSets["runs"]
+            sourceSets["runs"],
+            sourceSets["source"]
         )
     }
     main {
         outputOf(
             sourceSets["api"],
             sourceSets["mapping"],
-            sourceSets["minecraft"]
+            sourceSets["source"],
+            sourceSets["mods"],
+            sourceSets["runs"],
+            sourceSets["minecraft"],
         )
     }
     test {
@@ -101,10 +113,11 @@ sourceSets {
         )
         outputOf(
             sourceSets["api"],
-            sourceSets["minecraft"],
             sourceSets["mapping"],
+            sourceSets["source"],
             sourceSets["mods"],
             sourceSets["runs"],
+            sourceSets["minecraft"],
             main.get()
         )
     }
@@ -184,10 +197,11 @@ dependencies {
 tasks.jar {
     from(
         sourceSets["api"].output,
-        sourceSets["minecraft"].output,
         sourceSets["mapping"].output,
+        sourceSets["source"].output,
         sourceSets["mods"].output,
         sourceSets["runs"].output,
+        sourceSets["minecraft"].output,
         sourceSets["main"].output
     )
 

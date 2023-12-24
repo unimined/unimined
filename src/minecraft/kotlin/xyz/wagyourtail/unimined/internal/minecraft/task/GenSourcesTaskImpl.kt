@@ -2,7 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.task
 
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
-import xyz.wagyourtail.unimined.api.task.GenSourcesTask
+import xyz.wagyourtail.unimined.api.minecraft.task.GenSourcesTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
 import xyz.wagyourtail.unimined.util.withSourceSet

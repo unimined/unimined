@@ -10,7 +10,7 @@ import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
-import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerApplier
 import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension

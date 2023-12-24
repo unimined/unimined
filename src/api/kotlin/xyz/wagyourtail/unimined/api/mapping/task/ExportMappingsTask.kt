@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.task
+package xyz.wagyourtail.unimined.api.mapping.task
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo

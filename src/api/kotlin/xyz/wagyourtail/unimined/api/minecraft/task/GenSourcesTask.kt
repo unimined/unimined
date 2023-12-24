@@ -1,4 +1,4 @@
-package xyz.wagyourtail.unimined.api.task
+package xyz.wagyourtail.unimined.api.minecraft.task
 
 import org.gradle.api.JavaVersion
 import org.gradle.api.internal.ConventionTask

@@ -6,7 +6,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.tasks.SourceSet
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.task.MigrateMappingsTask
+import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikeApiExtension
 import xyz.wagyourtail.unimined.util.DefaultMap
