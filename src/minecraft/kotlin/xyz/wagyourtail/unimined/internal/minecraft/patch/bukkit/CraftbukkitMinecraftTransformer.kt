@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalDependency
 import org.w3c.dom.Element
 import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
+import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
@@ -54,6 +55,10 @@ open class CraftbukkitMinecraftTransformer(
             cache,
             target
         )
+    }
+
+    override val prodNamespace: MappingNamespaceTree.Namespace by lazy {
+        provider.mappings.getNamespace("spigot_prod")
     }
 
     val CPL_GROUPS = "cpl.pluginGroups"
