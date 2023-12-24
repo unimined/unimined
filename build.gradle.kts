@@ -146,16 +146,6 @@ dependencies {
     implementation("org.ow2.asm:asm-analysis:9.5")
     implementation("org.ow2.asm:asm-util:9.5")
 
-    // artifact transformer
-    implementation("net.neoforged:artifactural:3.0.17") {
-        exclude(group = "dev.gradleplugins", module = "gradle-api")
-        exclude(group = "net.minecraftforge", module = "unsafe")
-    }
-    implementation("net.minecraftforge:unsafe:0.2.0") {
-        exclude(group = "org.apache.logging.log4j")
-    }
-    implementation("org.apache.logging.log4j:log4j-core:2.20.0")
-
     // remapper
     implementation("net.fabricmc:tiny-remapper:0.8.7") {
         exclude(group = "org.ow2.asm")

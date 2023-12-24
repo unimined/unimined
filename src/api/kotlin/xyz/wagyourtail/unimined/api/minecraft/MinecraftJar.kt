@@ -1,7 +1,8 @@
-package xyz.wagyourtail.unimined.internal.minecraft.patch
+package xyz.wagyourtail.unimined.api.minecraft
 
+import org.gradle.api.Project
+import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.util.plusAssign
 import java.nio.file.Path
 
@@ -66,5 +67,5 @@ data class MinecraftJar(
 }
 
 enum class JarNameParts {
-    MINECRAFT, ENV, VERSION, PATCHES, MAPPING, AW_AT, EXTENSION
+    MINECRAFT, ENV, VERSION, PATCHES, MAPPING, AW_AT, CLASSIFIER, EXTENSION
 }

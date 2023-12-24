@@ -25,13 +25,12 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
-import xyz.wagyourtail.unimined.api.source.SourceConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
@@ -65,9 +64,7 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
 import kotlin.collections.ArrayDeque
-import kotlin.io.path.exists
-import kotlin.io.path.inputStream
-import kotlin.io.path.writeBytes
+import kotlin.io.path.*
 
 class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
     override val minecraftData = MinecraftDownloader(project, this)
@@ -297,7 +294,15 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     override val minecraftDependency: ModuleDependency by lazy {
-        project.dependencies.create("net.minecraft:$minecraftDepName:$version" + if (side != EnvType.COMBINED) ":${side.classifier}" else "") as ModuleDependency
+        project.dependencies.create(buildString {
+            append("net.minecraft:$minecraftDepName:$version")
+            if (minecraftFileDev.endsWith("-linemapped.jar")) {
+                append(":linemapped")
+            }
+            if (minecraftFileDev.extension != "jar") {
+                append("@${minecraftFileDev.extension}")
+            }
+        }) as ModuleDependency
     }
 
     private val extractDependencies: MutableMap<Dependency, Extract> = mutableMapOf()
@@ -393,30 +398,31 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             minecraftLibraries.dependencies.add(project.dependencies.create("com.google.code.findbugs:jsr305:3.0.2"))
         }
 
-        // add minecraft dep
-        minecraft.dependencies.add(minecraftDependency)
-
         // if refresh dependencies, remove sources jars
         if (project.gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) {
             project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Refreshing minecraft dependencies")
             // remove linemapped file / sources file
             val mc = getMcDevFile()
-            val linemapped = mc.parentFile.resolve("${mc.nameWithoutExtension}-linemapped.jar")
-            if (linemapped.exists()) {
-                linemapped.delete()
-            }
-            val sources = mc.parentFile.resolve("${mc.nameWithoutExtension}-sources.jar")
-            if (sources.exists()) {
-                sources.delete()
-            }
+            val linemapped = mc.parent.resolve("${mc.nameWithoutExtension}-linemapped.jar")
+            linemapped.deleteIfExists()
+            val sources = mc.parent.resolve("${mc.nameWithoutExtension}-sources.jar")
+            sources.deleteIfExists()
         }
 
+        // add minecraft dep
+        minecraft.dependencies.add(minecraftDependency)
+
         // create ivy repo for mc dev file / mc dev source file
-        project.repositories.ivy {
-            it.patternLayout {
-                it.artifact("[artifact]-[revision]")
+        project.repositories.ivy { ivy ->
+            ivy.name = "Minecraft Provider ${project.path}:${sourceSet.name}"
+            ivy.artifactPattern(minecraftFileDev.parentFile.toURI().toString() + "/" + getMcDevFile().nameWithoutExtension + "(-[classifier])(.[ext])")
+            ivy.url = minecraftFileDev.parentFile.toURI()
+            ivy.metadataSources { sources ->
+                sources.artifact()
             }
-            it.url = minecraftFileDev.parentFile.toURI()
+            ivy.content {
+                it.includeVersion("net.minecraft", minecraftDepName, version)
+            }
         }
 
         //DEBUG: add minecraft dev dep as file
@@ -502,9 +508,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         (mcPatcher as AbstractMinecraftTransformer).afterEvaluate()
     }
 
-    private fun getMcDevFile(): File {
+    private fun getMcDevFile(): Path {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Providing minecraft dev file to $sourceSet")
-        return getMinecraft(mappings.devNamespace, mappings.devFallbackNamespace).toFile().also {
+        return getMinecraft(mappings.devNamespace, mappings.devFallbackNamespace).also {
             project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Provided minecraft dev file $it")
         }
     }
@@ -512,12 +518,12 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     override val minecraftFileDev: File by lazy {
         val mc = getMcDevFile()
         // check if there is a -linemapped file
-        val linemapped = mc.parentFile.resolve("${mc.nameWithoutExtension}-linemapped.jar")
+        val linemapped = mc.parent.resolve("${mc.nameWithoutExtension}-linemapped.jar")
         if (linemapped.exists()) {
             linemapped
         } else {
             mc
-        }
+        }.toFile()
     }
 
     override val minecraftSourceFileDev: File? by lazy {
@@ -531,7 +537,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     override fun isMinecraftJar(path: Path) =
-        minecraftFiles.values.any { it == path } ||
+        minecraftFiles.values.any { it.path == path } ||
             when (side) {
                 EnvType.COMBINED -> {
                     path == minecraftData.minecraftClientFile.toPath() ||

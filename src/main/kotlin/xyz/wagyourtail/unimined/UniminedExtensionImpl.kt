@@ -1,14 +1,5 @@
 package xyz.wagyourtail.unimined
 
-import net.minecraftforge.artifactural.api.artifact.Artifact
-import net.minecraftforge.artifactural.api.artifact.ArtifactIdentifier
-import net.minecraftforge.artifactural.api.artifact.ArtifactType
-import net.minecraftforge.artifactural.api.repository.ArtifactProvider
-import net.minecraftforge.artifactural.api.repository.Repository
-import net.minecraftforge.artifactural.base.artifact.StreamableArtifact
-import net.minecraftforge.artifactural.base.repository.ArtifactProviderBuilder
-import net.minecraftforge.artifactural.base.repository.SimpleRepository
-import net.minecraftforge.artifactural.gradle.GradleRepositoryAdapter
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.tasks.SourceSet
@@ -61,88 +52,88 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         return minecrafts.keys.find { it.name == sourceSetName } ?: throw IllegalArgumentException("no source set found for $sourceSetName")
     }
 
-    private val repo: Repository = SimpleRepository.of(
-        ArtifactProviderBuilder.begin(ArtifactIdentifier::class.java)
-            .filter(
-                ArtifactIdentifier.groupEquals("net.minecraft").and(
-                    ArtifactIdentifier.extensionEquals("pom").negate()
-                ),
-            )
-            .provide(object : ArtifactProvider<ArtifactIdentifier> {
-
-                override fun getArtifact(info: ArtifactIdentifier): Artifact {
-
-                    try {
-                        if (info.group != "net.minecraft") {
-                            return Artifact.none()
-                        }
-
-                        when (info.name) {
-                            "client_mappings", "client-mappings", "mappings" -> {
-                                if (info.extension == "pom") {
-                                    return Artifact.none()
-                                }
-                                val mc = minecrafts.values.first { it.version == info.version }
-                                project.logger.info("[Unimined/ArtifactProvider] providing client mappings")
-                                return StreamableArtifact.ofFile(
-                                    info,
-                                    ArtifactType.BINARY,
-                                    mc.minecraftData.officialClientMappingsFile
-                                )
-                            }
-
-                            "server_mappings", "server-mappings" -> {
-                                if (info.extension == "pom") {
-                                    return Artifact.none()
-                                }
-                                val mc = minecrafts.values.first { it.version == info.version }
-                                project.logger.info("[Unimined/ArtifactProvider] providing server mappings")
-                                return StreamableArtifact.ofFile(
-                                    info,
-                                    ArtifactType.BINARY,
-                                    mc.minecraftData.officialServerMappingsFile
-                                )
-                            }
-
-                            else -> {
-                                val sourceSet = depNameToSourceSet(info.name)
-                                if (!getMinecraftDepNames().contains(info.name)) {
-                                    project.logger.warn("[Unimined/ArtifactProvider] unknown minecraft dep ${info.name}")
-                                    return Artifact.none()
-                                }
-                                when (info.classifier) {
-                                    "client", "server", null -> {
-                                        if (info.extension == "pom") {
-                                            return Artifact.none()
-                                        }
-                                        project.logger.info("[Unimined/ArtifactProvider] providing ${info.classifier ?: "combined"} jar: ${info}")
-                                        return StreamableArtifact.ofFile(
-                                            info,
-                                            ArtifactType.BINARY,
-                                            minecrafts[sourceSet]!!.minecraftFileDev
-                                        )
-                                    }
-
-                                    "sources" -> {
-                                        //TODO: reconsider
-                                        // this is because we only want to generate sources sometimes currently,
-                                        // maybe have a flag for sources tho... but this flag needs to be changeable by CI's
-                                        return Artifact.none()
-                                    }
-
-                                    else -> {
-                                        throw IllegalArgumentException("unknown classifier ${info.classifier}")
-                                    }
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        project.logger.error("[Unimined/ArtifactProvider] error providing artifact $info", e)
-                        throw e
-                    }
-                }
-            })
-    )
+//    private val repo: Repository = SimpleRepository.of(
+//        ArtifactProviderBuilder.begin(ArtifactIdentifier::class.java)
+//            .filter(
+//                ArtifactIdentifier.groupEquals("net.minecraft").and(
+//                    ArtifactIdentifier.extensionEquals("pom").negate()
+//                ),
+//            )
+//            .provide(object : ArtifactProvider<ArtifactIdentifier> {
+//
+//                override fun getArtifact(info: ArtifactIdentifier): Artifact {
+//
+//                    try {
+//                        if (info.group != "net.minecraft") {
+//                            return Artifact.none()
+//                        }
+//
+//                        when (info.name) {
+//                            "client_mappings", "client-mappings", "mappings" -> {
+//                                if (info.extension == "pom") {
+//                                    return Artifact.none()
+//                                }
+//                                val mc = minecrafts.values.first { it.version == info.version }
+//                                project.logger.info("[Unimined/ArtifactProvider] providing client mappings")
+//                                return StreamableArtifact.ofFile(
+//                                    info,
+//                                    ArtifactType.BINARY,
+//                                    mc.minecraftData.officialClientMappingsFile
+//                                )
+//                            }
+//
+//                            "server_mappings", "server-mappings" -> {
+//                                if (info.extension == "pom") {
+//                                    return Artifact.none()
+//                                }
+//                                val mc = minecrafts.values.first { it.version == info.version }
+//                                project.logger.info("[Unimined/ArtifactProvider] providing server mappings")
+//                                return StreamableArtifact.ofFile(
+//                                    info,
+//                                    ArtifactType.BINARY,
+//                                    mc.minecraftData.officialServerMappingsFile
+//                                )
+//                            }
+//
+//                            else -> {
+//                                val sourceSet = depNameToSourceSet(info.name)
+//                                if (!getMinecraftDepNames().contains(info.name)) {
+//                                    project.logger.warn("[Unimined/ArtifactProvider] unknown minecraft dep ${info.name}")
+//                                    return Artifact.none()
+//                                }
+//                                when (info.classifier) {
+//                                    "client", "server", null -> {
+//                                        if (info.extension == "pom") {
+//                                            return Artifact.none()
+//                                        }
+//                                        project.logger.info("[Unimined/ArtifactProvider] providing ${info.classifier ?: "combined"} jar: ${info}")
+//                                        return StreamableArtifact.ofFile(
+//                                            info,
+//                                            ArtifactType.BINARY,
+//                                            minecrafts[sourceSet]!!.minecraftFileDev
+//                                        )
+//                                    }
+//
+//                                    "sources" -> {
+//                                        //TODO: reconsider
+//                                        // this is because we only want to generate sources sometimes currently,
+//                                        // maybe have a flag for sources tho... but this flag needs to be changeable by CI's
+//                                        return Artifact.none()
+//                                    }
+//
+//                                    else -> {
+//                                        throw IllegalArgumentException("unknown classifier ${info.classifier}")
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    } catch (e: Exception) {
+//                        project.logger.error("[Unimined/ArtifactProvider] error providing artifact $info", e)
+//                        throw e
+//                    }
+//                }
+//            })
+//    )
 
     override val modsRemapRepo = project.repositories.flatDir {
         it.name = "modsRemap"
@@ -320,12 +311,12 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
             it.name = "minecraft"
             it.url = URI.create("https://libraries.minecraft.net/")
         }
-        GradleRepositoryAdapter.add(
-            project.repositories,
-            "minecraft-transformer",
-            getLocalCache().resolve("synthetic-resource-provider").toFile(),
-            repo
-        )
+//        GradleRepositoryAdapter.add(
+//            project.repositories,
+//            "minecraft-transformer",
+//            getLocalCache().resolve("synthetic-resource-provider").toFile(),
+//            repo
+//        )
         project.repositories.all { repo ->
             if (repo != modsRemapRepo) {
                 repo.content {
