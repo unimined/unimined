@@ -202,4 +202,6 @@ abstract class UniminedExtension(val project: Project) {
     abstract fun jitpack()
 
     abstract fun spigot()
+
+    abstract fun flintMaven(name: String)
 }
