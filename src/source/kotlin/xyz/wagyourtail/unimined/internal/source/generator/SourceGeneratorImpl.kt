@@ -15,6 +15,8 @@ import xyz.wagyourtail.unimined.internal.source.SourceProvider
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.*
 
@@ -50,7 +52,6 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
 
         outputPath.deleteIfExists()
         project.javaexec { spec ->
-
             val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
             spec.executable = toolchain.launcherFor {
                 it.languageVersion.set(JavaLanguageVersion.of(11))
@@ -72,9 +73,8 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
                 "--file",
                 outputPath.absolutePathString()
             )
-
             spec.args = args
-        }
+        }.rethrowFailure().assertNormalExitValue()
 
         if (linemappedPath != null) {
             linemappedPath.deleteIfExists()
@@ -85,6 +85,7 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
     private fun readLineMappings(extra: ByteArray?): Map<Int, Int>? {
         if (extra == null || extra.size < (Short.SIZE_BYTES * 2)) return null
         val buffer = ByteBuffer.wrap(extra)
+        buffer.order(ByteOrder.LITTLE_ENDIAN)
 
         // find (short) 0x4646 in buffer
         while (buffer.short != 0x4646.toShort()) {
@@ -99,13 +100,17 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
         if (length < 1) return null
         val version = buffer.get()
         if (version != 1.toByte()) {
-            project.logger.warn("[SourceGenerator] unknown linemap version $version")
+            project.logger.warn("[SourceGenerator/LineMapping] unknown linemap version $version")
             return null
         }
 
         // calculate map size based on length
         val mapSize = (length - 1) / (Short.SIZE_BYTES * 2)
         for (i in 0 until mapSize) {
+            if (!buffer.hasRemaining()) {
+                project.logger.warn("[SourceGenerator/LineMapping] linemap ended early, expected $mapSize entries, got $i")
+                return null
+            }
             val key = buffer.short.toInt()
             val value = buffer.short.toInt()
             map[key] = value
@@ -117,9 +122,13 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
     }
 
     private fun lineMapJar(binaryJar: Path, sourcesJar: Path, linemappedJar: Path) {
-        val sourceJar = ZipFile(sourcesJar.toFile())
+        val extras = mutableMapOf<String, ByteArray>()
+        sourcesJar.forEntryInZip { entry, _ ->
+            if (entry.extra != null) extras[entry.name] = entry.extra
+            else extras[entry.name] = ByteArray(0)
+        }
 
-        linemappedJar.openZipFileSystem("create" to true).use { fs ->
+        linemappedJar.openZipFileSystem("create" to true, "mutable" to true).use { fs ->
             binaryJar.forEachInZip { s, inputStream ->
                 val entry = fs.getPath(s)
                 entry.parent?.createDirectories()
@@ -137,14 +146,14 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
                     (classNode.name.substringBeforeLast("$").substringAfterLast("/") + ".java")
                 val sourceEntry = entry.resolveSibling(sourceFile)
 
-                val source = sourceJar.getEntry(sourceEntry.toString())
+                val source = extras[sourceEntry.toString()]
                 if (source != null) {
-                    val lineMappings = readLineMappings(source.extra)
+                    val lineMappings = readLineMappings(source)
                     if (lineMappings != null) {
                         remapLines(classNode, lineMappings)
                     }
                 } else {
-                    project.logger.warn("[SourceGenerator] could not find source for $entry")
+                    project.logger.warn("[SourceGenerator/LineMapping] could not find source for $entry tried $sourceEntry")
                 }
 
                 val classWriter = ClassWriter(classReader, 0)
@@ -155,6 +164,7 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
 
             }
         }
+
     }
 
     private fun remapLines(classNode: ClassNode, lineMappings: Map<Int, Int>) {

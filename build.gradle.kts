@@ -218,6 +218,7 @@ tasks.create("sourcesJar", Jar::class) {
         sourceSets["api"].allSource,
         sourceSets["minecraft"].allSource,
         sourceSets["mapping"].allSource,
+        sourceSets["source"].allSource,
         sourceSets["mods"].allSource,
         sourceSets["runs"].allSource,
         sourceSets["main"].allSource
