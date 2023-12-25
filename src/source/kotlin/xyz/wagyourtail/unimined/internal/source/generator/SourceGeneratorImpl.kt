@@ -48,6 +48,7 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
             generator("1.9.3")
         }
 
+        outputPath.deleteIfExists()
         project.javaexec { spec ->
 
             val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
@@ -76,7 +77,8 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
         }
 
         if (linemappedPath != null) {
-            lineMapJar(outputPath, inputPath, linemappedPath)
+            linemappedPath.deleteIfExists()
+            lineMapJar(inputPath, outputPath, linemappedPath)
         }
     }
 
