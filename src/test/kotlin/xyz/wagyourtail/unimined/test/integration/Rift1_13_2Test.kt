@@ -2,14 +2,16 @@ package xyz.wagyourtail.unimined.test.integration
 
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testkit.runner.UnexpectedBuildFailure
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import xyz.wagyourtail.unimined.util.runTestProject
 
 class Rift1_13_2Test {
-    @Test
-    fun test_rift_1_13_2() {
+    @ParameterizedTest
+    @MethodSource("xyz.wagyourtail.unimined.util.IntegrationTestUtils#versions")
+    fun test_rift_1_13_2(gradleVersion: String) {
         try {
-            val result = runTestProject("1.13.2-Rift")
+            val result = runTestProject("1.13.2-Rift", gradleVersion)
 
             try {
                 result.task(":build")?.outcome?.let {

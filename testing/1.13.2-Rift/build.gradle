@@ -13,11 +13,12 @@ base {
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
 
 repositories {
-    mavenLocal()
     mavenCentral()
 }
 
@@ -44,17 +45,4 @@ repositories {
 }
 
 dependencies {
-}
-
-
-processResources {
-    inputs.property "version", project.version
-
-    filesMatching("META-INF/mods.toml") {
-        expand "version": project.version
-    }
-
-    filesMatching("mcmod.info") {
-        expand "version": project.version
-    }
 }
