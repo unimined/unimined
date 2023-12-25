@@ -9,6 +9,7 @@ unified minecraft modding environment with support for legacy environments.
 * Neoforge
 * Modloader
 * [JarModAgent](https://github.com/unimined/JarModAgent)
+* [Flint Loader](https://flintloader.net)
 * just plain jarmodding
 
 ## Planned Loaders
