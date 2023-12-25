@@ -33,6 +33,10 @@ class FlintMinecraftTransformer(
     override val ENV_TYPE: String
         get() = throw UnsupportedOperationException("EnvType is not supported by flint")
 
+    init {
+        provider.side = EnvType.CLIENT
+    }
+
     override fun addIntermediaryMappings() {
         provider.mappings {
             intermediary()
