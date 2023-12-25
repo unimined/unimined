@@ -182,6 +182,9 @@ dependencies {
     compileOnly("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false
     }
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.6.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.jar {
