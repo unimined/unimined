@@ -120,8 +120,11 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
         linemappedJar.openZipFileSystem("create" to true).use { fs ->
             binaryJar.forEachInZip { s, inputStream ->
                 val entry = fs.getPath(s)
+                entry.parent?.createDirectories()
+
                 if (entry.extension != "class") {
                     entry.outputStream().use(inputStream::copyTo)
+                    return@forEachInZip
                 }
 
                 val classReader = inputStream.use(::ClassReader)
@@ -138,6 +141,8 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
                     if (lineMappings != null) {
                         remapLines(classNode, lineMappings)
                     }
+                } else {
+                    project.logger.warn("[SourceGenerator] could not find source for $entry")
                 }
 
                 val classWriter = ClassWriter(classReader, 0)
