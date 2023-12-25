@@ -28,10 +28,10 @@ class FlintMinecraftTransformer(
     "accessWidener"
 ) {
     override val ENVIRONMENT: String
-        get() = TODO("Not yet implemented")
+        get() = throw UnsupportedOperationException("Environment is not supported by flint")
 
     override val ENV_TYPE: String
-        get() = TODO("Not yet implemented")
+        get() = throw UnsupportedOperationException("EnvType is not supported by flint")
 
     override fun addIntermediaryMappings() {
         provider.mappings {
@@ -72,7 +72,7 @@ class FlintMinecraftTransformer(
 
     override fun applyExtraLaunches() {
         if (provider.side != EnvType.CLIENT) {
-            throw RuntimeException("Flint only supports client. Current side is ${provider.side}")
+            throw UnsupportedOperationException("Flint only supports client. Current side is ${provider.side}")
         }
         super.applyExtraLaunches()
     }
@@ -87,7 +87,7 @@ class FlintMinecraftTransformer(
     }
 
     override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
-        throw RuntimeException("Merging is not supported on flint")
+        throw UnsupportedOperationException("Merging is not supported on flint")
     }
 
     override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
@@ -95,7 +95,7 @@ class FlintMinecraftTransformer(
     }
 
     override fun addIncludeToModJson(json: JsonObject, dep: Dependency, path: String) {
-        TODO("Not yet implemented")
+        throw UnsupportedOperationException("Flint does not support nested modules yet")
     }
 
     private fun insertAccessWidener(output: Path) {
