@@ -129,7 +129,7 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
                     return@forEachInZip
                 }
 
-                val classReader = inputStream.use(::ClassReader)
+                val classReader = ClassReader(inputStream)
                 val classNode = ClassNode()
                 classReader.accept(classNode, 0)
 
