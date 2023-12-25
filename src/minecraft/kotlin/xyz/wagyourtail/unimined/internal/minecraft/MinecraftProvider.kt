@@ -296,13 +296,15 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     override val minecraftDependency: ModuleDependency by lazy {
         project.dependencies.create(buildString {
             append("net.minecraft:$minecraftDepName:$version")
-            if (minecraftFileDev.endsWith("-linemapped.jar")) {
+            if (minecraftFileDev.name.endsWith("-linemapped.jar")) {
                 append(":linemapped")
             }
             if (minecraftFileDev.extension != "jar") {
                 append("@${minecraftFileDev.extension}")
             }
-        }) as ModuleDependency
+        }).also {
+            project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] $minecraftDepName dependency: $it")
+        } as ModuleDependency
     }
 
     private val extractDependencies: MutableMap<Dependency, Extract> = mutableMapOf()
@@ -409,25 +411,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             sources.deleteIfExists()
         }
 
-        // add minecraft dep
-        minecraft.dependencies.add(minecraftDependency)
-
-        // create ivy repo for mc dev file / mc dev source file
-        project.repositories.ivy { ivy ->
-            ivy.name = "Minecraft Provider ${project.path}:${sourceSet.name}"
-            ivy.artifactPattern(getMcDevFile().parent.toUri().toString() + "/" + getMcDevFile().nameWithoutExtension + "(-[classifier])(.[ext])")
-            ivy.url = minecraftFileDev.parentFile.toURI()
-            ivy.metadataSources { sources ->
-                sources.artifact()
-            }
-            ivy.content {
-                it.includeVersion("net.minecraft", minecraftDepName, version)
-            }
-        }
-
-        //DEBUG: add minecraft dev dep as file
-//        minecraft.dependencies.add(project.dependencies.create(project.files(minecraftFileDev)))
-
         // add minecraft libraries
         addLibraries(minecraftData.metadata.libraries)
 
@@ -494,6 +477,24 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             group = "unimined"
             description = "Exports mappings for $sourceSet's minecraft jar"
         }
+
+        // add minecraft dep
+        minecraft.dependencies.add(minecraftDependency)
+
+        // create ivy repo for mc dev file / mc dev source file
+        project.repositories.ivy { ivy ->
+            ivy.name = "Minecraft Provider ${project.path}:${sourceSet.name}"
+            ivy.patternLayout {
+                it.artifact(getMcDevFile().nameWithoutExtension + "(-[classifier])(.[ext])")
+            }
+            ivy.url = minecraftFileDev.parentFile.toURI()
+            ivy.metadataSources { sources ->
+                sources.artifact()
+            }
+            ivy.content {
+                it.includeVersion("net.minecraft", minecraftDepName, version)
+            }
+        }
     }
 
     fun afterEvaluate() {
@@ -518,7 +519,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     override val minecraftFileDev: File by lazy {
         val mc = getMcDevFile()
         // check if there is a -linemapped file
-        val linemapped = mc.parent.resolve("${mc.nameWithoutExtension}-linemapped.jar")
+        val linemapped = mc.resolveSibling("${mc.nameWithoutExtension}-linemapped.jar")
         if (linemapped.exists()) {
             linemapped
         } else {
