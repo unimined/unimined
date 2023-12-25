@@ -19,11 +19,6 @@ interface SourceGenerator {
     var args: List<String>
 
     /**
-     * whether to generate linemaps based on data in zip's extra data
-     */
-    var linemaps: Boolean
-
-    /**
      * set the decompiler to use (defaults to vineflower)
      * @since 1.2.0
      */
@@ -50,5 +45,5 @@ interface SourceGenerator {
     }
 
     @ApiStatus.Internal
-    fun generate(classpath: FileCollection, inputPath: Path)
+    fun generate(classpath: FileCollection, inputPath: Path, outputPath: Path, linemappedPath: Path?)
 }

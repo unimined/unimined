@@ -4,66 +4,19 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.minecraft.task.GenSourcesTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
-import xyz.wagyourtail.unimined.util.withSourceSet
-import java.io.File
-import java.net.URI
-import java.nio.file.Path
 import javax.inject.Inject
+import kotlin.io.path.nameWithoutExtension
 
-abstract class GenSourcesTaskImpl @Inject constructor(@get:Internal val provider: MinecraftProvider): GenSourcesTask() {
+abstract class GenSourcesTaskImpl @Inject constructor(@get:Internal val provider: MinecraftProvider) : GenSourcesTask() {
 
     @TaskAction
-    private fun run() {
-        val decompiler = decompiler.get()
+    fun run() {
+        val mcDevFile = provider.getMcDevFile()
+        val sourcesJar = mcDevFile.resolveSibling("${mcDevFile.nameWithoutExtension}-sources.jar")
+        val linemappedJar = mcDevFile.resolveSibling("${mcDevFile.nameWithoutExtension}-linemapped.jar")
 
-        // add quilt maven
-        project.repositories.maven {
-            it.url = URI.create("https://maven.quiltmc.org/repository/release")
-        }
-
-        val decompilerJar = project.configurations.detachedConfiguration(
-            project.dependencies.create(decompiler)
-        ).resolve().first { it.extension == "jar" }
-
-        val outputJar = provider.minecraftFileDev.parentFile.resolve("${provider.minecraftFileDev.nameWithoutExtension}-sources.jar")
-
-        val args = resolvePlaceholders(args, provider.minecraftFileDev.toPath(), outputJar.toPath())
-
-        val result = SubprocessExecutor.exec(project) { spec ->
-            spec.classpath(decompilerJar)
-            spec.args(args)
-        }
-
-        if (result.exitValue != 0) {
-            throw RuntimeException("Decompilation failed with exit code ${result.exitValue}")
-        }
+        // TODO: add method to get sources from mcProvider (ie run forge 1 step further)
+        provider.sourceProvider.sourceGenerator.generate(provider.sourceSet.compileClasspath, mcDevFile, sourcesJar, linemappedJar)
     }
 
-    //TODO: gen mod sources
-    //TODO: line mapping
-
-    private val placeholderPattern = Regex("\\{([^}]+?)}")
-
-    private fun resolvePlaceholders(args: List<String>, input: Path, output: Path): List<String> {
-        return args.map { arg ->
-            placeholderPattern.replace(arg) {
-                if (it.groupValues[1].startsWith("configurations.")) {
-                    var configName = it.groupValues[1].substringAfter("configurations.")
-                    if (configName.startsWith("<sourceSet>")) {
-                        configName = configName.substringAfter("<sourceSet>").withSourceSet(provider.sourceSet)
-                    }
-                    val config = project.configurations.getByName(configName)
-                    val resolved = config.resolve()
-                    resolved.joinToString(separator = File.pathSeparator) { it.absolutePath }
-                } else {
-                    when (it.groupValues[1]) {
-                        "inputJar" -> input.toAbsolutePath().toString()
-                        "outputJar" -> output.toAbsolutePath().toString()
-                        else -> throw IllegalArgumentException("Unknown placeholder: ${it.groupValues[1]}")
-                    }
-                }
-            }
-        }
-    }
 }

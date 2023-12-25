@@ -9,6 +9,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
+import org.slf4j.helpers.Util
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -17,6 +18,7 @@ import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.*
+import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.collections.HashMap
@@ -309,6 +311,20 @@ fun Path.forEachInZip(action: (String, InputStream) -> Unit) {
     }
 }
 
+fun Path.forEntryInZip(action: (ZipEntry, InputStream) -> Unit) {
+    ZipInputStream(inputStream()).use { stream ->
+        var entry = stream.nextEntry
+        while (entry != null) {
+            if (entry.isDirectory) {
+                entry = stream.nextEntry
+                continue
+            }
+            action(entry, stream)
+            entry = stream.nextEntry
+        }
+    }
+}
+
 fun <T> Path.readZipInputStreamFor(path: String, throwIfMissing: Boolean = true, action: (InputStream) -> T): T {
     Files.newByteChannel(this).use {
         ZipFile(it).use { zip ->
@@ -335,6 +351,10 @@ fun Path.zipContains(path: String): Boolean {
         }
     }
     return false
+}
+
+fun Path.openZipFileSystem(vararg args: Pair<String, Any>): FileSystem {
+    return openZipFileSystem(args.associate { it })
 }
 
 fun Path.openZipFileSystem(args: Map<String, *> = mapOf<String, Any>()): FileSystem {

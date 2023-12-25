@@ -50,7 +50,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.MinecraftDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.task.GenSourcesTaskImpl
 import xyz.wagyourtail.unimined.internal.mods.ModsProvider
-import xyz.wagyourtail.unimined.internal.mods.task.RemapJarTaskImpl
+import xyz.wagyourtail.unimined.internal.minecraft.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.internal.runs.RunsProvider
 import xyz.wagyourtail.unimined.internal.source.SourceProvider
 import xyz.wagyourtail.unimined.util.*
@@ -415,7 +415,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         // create ivy repo for mc dev file / mc dev source file
         project.repositories.ivy { ivy ->
             ivy.name = "Minecraft Provider ${project.path}:${sourceSet.name}"
-            ivy.artifactPattern(minecraftFileDev.parentFile.toURI().toString() + "/" + getMcDevFile().nameWithoutExtension + "(-[classifier])(.[ext])")
+            ivy.artifactPattern(getMcDevFile().parent.toUri().toString() + "/" + getMcDevFile().nameWithoutExtension + "(-[classifier])(.[ext])")
             ivy.url = minecraftFileDev.parentFile.toURI()
             ivy.metadataSources { sources ->
                 sources.artifact()
@@ -508,7 +508,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         (mcPatcher as AbstractMinecraftTransformer).afterEvaluate()
     }
 
-    private fun getMcDevFile(): Path {
+    fun getMcDevFile(): Path {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Providing minecraft dev file to $sourceSet")
         return getMinecraft(mappings.devNamespace, mappings.devFallbackNamespace).also {
             project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Provided minecraft dev file $it")

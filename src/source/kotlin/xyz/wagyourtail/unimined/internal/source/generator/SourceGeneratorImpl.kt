@@ -1,19 +1,22 @@
 package xyz.wagyourtail.unimined.internal.source.generator
 
+import org.apache.commons.compress.archivers.zip.ZipFile
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.FileCollection
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.LineNumberNode
 import xyz.wagyourtail.unimined.api.source.generator.SourceGenerator
 import xyz.wagyourtail.unimined.internal.source.SourceProvider
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.withSourceSet
+import xyz.wagyourtail.unimined.util.*
 import java.io.File
+import java.nio.ByteBuffer
 import java.nio.file.Path
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.extension
-import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.*
 
 class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : SourceGenerator {
 
@@ -21,7 +24,6 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
         "-jrt=1"
     ))
 
-    override var linemaps: Boolean by FinalizeOnRead(false)
 
     val generator = project.configurations.maybeCreate("sourceGenerator".withSourceSet(provider.minecraft.sourceSet))
 
@@ -41,12 +43,10 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
 
     }
 
-    override fun generate(classpath: FileCollection, inputPath: Path) {
+    override fun generate(classpath: FileCollection, inputPath: Path, outputPath: Path, linemappedPath: Path?) {
         if (generator.dependencies.isEmpty()) {
             generator("1.9.3")
         }
-
-        val outputFile = inputPath.resolveSibling(inputPath.nameWithoutExtension + "-sources." + inputPath.extension)
 
         project.javaexec { spec ->
 
@@ -61,7 +61,7 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
 
             spec.classpath(generator)
             val args = args.toMutableList()
-            if (linemaps) {
+            if (linemappedPath != null) {
                 args += "-bsm=1"
                 args += "-dcl=1"
             }
@@ -69,11 +69,94 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
                 "-e=" + classpath.joinToString(File.pathSeparator) { it.absolutePath },
                 inputPath.absolutePathString(),
                 "--file",
-                outputFile.absolutePathString()
+                outputPath.absolutePathString()
             )
 
             spec.args = args
+        }
 
+        if (linemappedPath != null) {
+            lineMapJar(outputPath, inputPath, linemappedPath)
+        }
+    }
+
+    private fun readLineMappings(extra: ByteArray?): Map<Int, Int>? {
+        if (extra == null || extra.size < (Short.SIZE_BYTES * 2)) return null
+        val buffer = ByteBuffer.wrap(extra)
+
+        // find (short) 0x4646 in buffer
+        while (buffer.short != 0x4646.toShort()) {
+            val length = buffer.short
+            // forward by length bytes
+            buffer.position(buffer.position() + length)
+            if (!buffer.hasRemaining()) return null
+        }
+
+        val map = mutableMapOf<Int, Int>()
+        val length = buffer.short
+        if (length < 1) return null
+        val version = buffer.get()
+        if (version != 1.toByte()) {
+            project.logger.warn("[SourceGenerator] unknown linemap version $version")
+            return null
+        }
+
+        // calculate map size based on length
+        val mapSize = (length - 1) / (Short.SIZE_BYTES * 2)
+        for (i in 0 until mapSize) {
+            val key = buffer.short.toInt()
+            val value = buffer.short.toInt()
+            map[key] = value
+        }
+
+        // return null if empty
+        if (map.isEmpty()) return null
+        return map
+    }
+
+    private fun lineMapJar(binaryJar: Path, sourcesJar: Path, linemappedJar: Path) {
+        val sourceJar = ZipFile(sourcesJar.toFile())
+
+        linemappedJar.openZipFileSystem("create" to true).use { fs ->
+            binaryJar.forEachInZip { s, inputStream ->
+                val entry = fs.getPath(s)
+                if (entry.extension != "class") {
+                    entry.outputStream().use(inputStream::copyTo)
+                }
+
+                val classReader = inputStream.use(::ClassReader)
+                val classNode = ClassNode()
+                classReader.accept(classNode, 0)
+
+                val sourceFile = classNode.sourceFile ?:
+                    (classNode.name.substringBeforeLast("$").substringAfterLast("/") + ".java")
+                val sourceEntry = entry.resolveSibling(sourceFile)
+
+                val source = sourceJar.getEntry(sourceEntry.toString())
+                if (source != null) {
+                    val lineMappings = readLineMappings(source.extra)
+                    if (lineMappings != null) {
+                        remapLines(classNode, lineMappings)
+                    }
+                }
+
+                val classWriter = ClassWriter(classReader, 0)
+                classNode.accept(classWriter)
+                entry.outputStream().use { os ->
+                    os.write(classWriter.toByteArray())
+                }
+
+            }
+        }
+    }
+
+    private fun remapLines(classNode: ClassNode, lineMappings: Map<Int, Int>) {
+        for (method in classNode.methods) {
+            for (insn in method.instructions) {
+                if (insn is LineNumberNode && insn.line in lineMappings) {
+                    insn.line = lineMappings[insn.line]!!
+                }
+            }
         }
     }
 

@@ -24,15 +24,8 @@ abstract class MigrateMappingsTask : ConventionTask() {
 
     @get:Input
     abstract val commonNamespace: Property<String>
-
-    @get:Input
-    @get:Optional
-    @get:ApiStatus.Experimental
-    abstract val remapDependency: Property<String>
-
     init {
         project.unimined.wagYourMaven("snapshots")
-        remapDependency.convention("xyz.wagyourtail.unimined:source-remap:1.0.0-SNAPSHOT")
     }
 
     /**

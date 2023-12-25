@@ -10,8 +10,8 @@ import xyz.wagyourtail.unimined.internal.source.remapper.SourceRemapperImpl
 
 class SourceProvider(val project: Project, val minecraft: MinecraftConfig) : SourceConfig {
 
-    val sourceRemapper = SourceRemapperImpl(project, this)
-    val sourceGenerator = SourceGeneratorImpl(project, this)
+    override val sourceRemapper = SourceRemapperImpl(project, this)
+    override val sourceGenerator = SourceGeneratorImpl(project, this)
 
     override fun configRemap(config: SourceRemapper.() -> Unit) {
         sourceRemapper.config()

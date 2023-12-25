@@ -8,6 +8,9 @@ import xyz.wagyourtail.unimined.api.source.remapper.SourceRemapper
  */
 interface SourceConfig {
 
+    val sourceRemapper: SourceRemapper
+    val sourceGenerator: SourceGenerator
+
     /**
      * config for remapping sources
      * @since 1.2.0
