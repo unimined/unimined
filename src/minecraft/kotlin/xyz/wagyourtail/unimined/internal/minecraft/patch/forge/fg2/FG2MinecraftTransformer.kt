@@ -8,7 +8,6 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
-import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2At
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import xyz.wagyourtail.unimined.util.deleteRecursively
@@ -58,7 +57,6 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     }
 
     override val transform = (listOf<(FileSystem) -> Unit>(
-        FixFG2At::fixForgeATs,
         FixFG2Coremods::fixCoremods,
     ) + super.transform).toMutableList()
 
