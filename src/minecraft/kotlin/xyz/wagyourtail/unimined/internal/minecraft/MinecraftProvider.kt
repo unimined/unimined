@@ -374,6 +374,38 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             patcherActions.removeFirst().invoke()
         }
 
+        if (minecraftData.hasMappings) {
+            // add provider for client-mappings
+            project.repositories.ivy { ivy ->
+                ivy.name = "Official Client Mapping Provider"
+                ivy.patternLayout {
+                    it.artifact(minecraftData.officialClientMappingsFile.name)
+                }
+                ivy.url = minecraftData.officialClientMappingsFile.parentFile.toURI()
+                ivy.metadataSources { sources ->
+                    sources.artifact()
+                }
+                ivy.content {
+                    it.includeVersion("net.minecraft", "client-mappings", version)
+                }
+            }
+
+            // add provider for server-mappings
+            project.repositories.ivy { ivy ->
+                ivy.name = "Official Server Mapping Provider"
+                ivy.patternLayout {
+                    it.artifact(minecraftData.officialServerMappingsFile.name)
+                }
+                ivy.url = minecraftData.officialServerMappingsFile.parentFile.toURI()
+                ivy.metadataSources { sources ->
+                    sources.artifact()
+                }
+                ivy.content {
+                    it.includeVersion("net.minecraft", "server-mappings", version)
+                }
+            }
+        }
+
         project.logger.info("[Unimined/MappingProvider ${project.path}:${sourceSet.name}] before mappings $sourceSet")
         (mcPatcher as AbstractMinecraftTransformer).beforeMappingsResolve()
 
@@ -398,17 +430,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         } else {
             // findbugs
             minecraftLibraries.dependencies.add(project.dependencies.create("com.google.code.findbugs:jsr305:3.0.2"))
-        }
-
-        // if refresh dependencies, remove sources jars
-        if (project.gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) {
-            project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Refreshing minecraft dependencies")
-            // remove linemapped file / sources file
-            val mc = getMcDevFile()
-            val linemapped = mc.parent.resolve("${mc.nameWithoutExtension}-linemapped.jar")
-            linemapped.deleteIfExists()
-            val sources = mc.parent.resolve("${mc.nameWithoutExtension}-sources.jar")
-            sources.deleteIfExists()
         }
 
         // add minecraft libraries
@@ -481,6 +502,17 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     fun afterEvaluate() {
         if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
+
+        // if refresh dependencies, remove sources jars
+        if (project.gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) {
+            project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Refreshing minecraft dependencies")
+            // remove linemapped file / sources file
+            val mc = getMcDevFile()
+            val linemapped = mc.parent.resolve("${mc.nameWithoutExtension}-linemapped.jar")
+            linemapped.deleteIfExists()
+            val sources = mc.parent.resolve("${mc.nameWithoutExtension}-sources.jar")
+            sources.deleteIfExists()
+        }
 
         // add minecraft dep
         minecraft.dependencies.add(minecraftDependency)

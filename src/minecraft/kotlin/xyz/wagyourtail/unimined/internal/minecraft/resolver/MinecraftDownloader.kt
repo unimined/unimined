@@ -263,6 +263,10 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         )
     }
 
+    override val hasMappings: Boolean by lazy {
+        metadata.downloads.containsKey("client_mappings") || metadata.downloads.containsKey("server_mappings")
+    }
+
     override val officialClientMappingsFile: File by lazy {
         project.logger.info("[Unimined/MinecraftDownloader] retrieving official client mappings")
         val clientMappingsPath = mcVersionFolder.resolve("client_mappings.txt")
