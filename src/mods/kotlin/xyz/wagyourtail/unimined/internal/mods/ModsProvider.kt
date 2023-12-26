@@ -77,6 +77,10 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         }
     }
 
+    fun getClasspath(): Set<File> {
+        return remapConfigsResolved.keys.flatMap { it.resolve() }.toSet()
+    }
+
     fun getClasspathAs(namespace: MappingNamespaceTree.Namespace, fallbackNamespace: MappingNamespaceTree.Namespace, classpath: Set<File>): Set<File> {
         val remapCp = classpath.associateWith { file ->
             remapConfigsResolved.values.firstNotNullOfOrNull { conf -> conf.getConfigForFile(file)?.let { conf to it } }

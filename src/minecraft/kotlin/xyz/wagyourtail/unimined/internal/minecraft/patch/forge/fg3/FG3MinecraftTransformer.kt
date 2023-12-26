@@ -10,6 +10,7 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
@@ -19,7 +20,6 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.Mcp
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
-import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2At
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -108,10 +108,6 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         // get forge userdev jar
         forgeUd.getFile(forgeUd.dependencies.last())
     }
-
-    override val transform = (listOf<(FileSystem) -> Unit>(
-        FixFG2At::fixForgeATs
-    ) + super.transform).toMutableList()
 
     override fun beforeMappingsResolve() {
         project.logger.info("[Unimined/ForgeTransformer] FG3: beforeMappingsResolve")
@@ -496,6 +492,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
+    }
+
+    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
+        //TODO: JarJar
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {

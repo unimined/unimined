@@ -7,17 +7,15 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2At
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.util.*
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.readZipContents
 import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import java.net.URI
 import java.nio.file.*
-import kotlin.io.path.createDirectories
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.exists
-import kotlin.io.path.writeBytes
+import kotlin.io.path.*
 
 class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModMinecraftTransformer(
     project,
@@ -62,7 +60,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     }
 
     override val transform = (listOf<(FileSystem) -> Unit>(
-        FixFG2At::fixForgeATs
+        FixFG2Coremods::fixCoremods,
     ) + super.transform).toMutableList()
 
     override fun apply() {
