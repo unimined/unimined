@@ -477,12 +477,16 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             group = "unimined"
             description = "Exports mappings for $sourceSet's minecraft jar"
         }
+    }
+
+    fun afterEvaluate() {
+        if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
 
         // add minecraft dep
         minecraft.dependencies.add(minecraftDependency)
 
         // create ivy repo for mc dev file / mc dev source file
-        project.repositories.ivy { ivy ->
+        val repo = project.repositories.ivy { ivy ->
             ivy.name = "Minecraft Provider ${project.path}:${sourceSet.name}"
             ivy.patternLayout {
                 it.artifact(getMcDevFile().nameWithoutExtension + "(-[classifier])(.[ext])")
@@ -495,10 +499,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                 it.includeVersion("net.minecraft", minecraftDepName, version)
             }
         }
-    }
-
-    fun afterEvaluate() {
-        if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
 
         project.logger.info("[Unimined/MinecraftProvider ${project.path}:${sourceSet.name}] minecraft file: $minecraftFileDev")
 
