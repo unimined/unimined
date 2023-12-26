@@ -414,7 +414,11 @@ abstract class ForgeLikeMinecraftTransformer(project: Project, provider: Minecra
     }
 
     override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
-        //TODO: JarJar
+        forgeTransformer.afterRemapJarTask(remapJarTask, output)
+    }
+
+    override fun afterEvaluate() {
+        forgeTransformer.afterEvaluate()
     }
 
     override fun applyExtraLaunches() {

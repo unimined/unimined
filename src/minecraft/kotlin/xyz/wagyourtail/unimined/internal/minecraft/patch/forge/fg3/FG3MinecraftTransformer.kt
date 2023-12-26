@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
 import xyz.wagyourtail.unimined.api.runs.RunConfig
+import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
@@ -500,6 +501,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                 fs.getPath("fml_at.cfg"), fs.getPath("forge_at.cfg"), fs.getPath("META-INF/accesstransformer.cfg")
             ).filter { Files.exists(it) })
         }
+    }
+
+    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
+        //TODO: JarJar
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
