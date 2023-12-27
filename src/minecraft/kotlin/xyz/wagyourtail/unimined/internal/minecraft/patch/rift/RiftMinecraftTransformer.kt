@@ -26,7 +26,7 @@ class RiftMinecraftTransformer(
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         rift.dependencies.add(
             (if (dep is String && !dep.contains(":")) {
-                project.dependencies.create("org.dimdev:Rift:$dep")
+                project.dependencies.create("org.dimdev:rift:$dep")
             } else project.dependencies.create(dep)).apply(action)
         )
     }
@@ -44,7 +44,7 @@ class RiftMinecraftTransformer(
         createRiftDependency("org.ow2.asm:asm-commons:6.2", true)
         createRiftDependency("org.ow2.asm:asm-tree:6.2", true)
 
-        if (rift.dependencies.isEmpty()) rift.dependencies.add(project.dependencies.create("org.dimdev:Rift:${provider.version}"))
+        if (rift.dependencies.isEmpty()) rift.dependencies.add(project.dependencies.create("org.dimdev:rift:${provider.version}"))
 
         super.apply()
     }
