@@ -94,7 +94,7 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
 
     private fun remapIntl(inputOutput: Map<Path, Path>, classpath: FileCollection, minecraft: Path, source: MappingNamespaceTree.Namespace, target: MappingNamespaceTree.Namespace) {
         if (sourceRemapper.dependencies.isEmpty()) {
-            remapper("1.0.1-SNAPSHOT")
+            remapper("1.0.3-SNAPSHOT")
         }
 
         val mappingFile = tempDir.createDirectories().resolve("${provider.minecraft.sourceSet.name}-${source.name}-${target.name}.srg")
@@ -116,18 +116,20 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
         // run remap
         project.javaexec { spec ->
             spec.classpath(sourceRemapper)
-            spec.mainClass.set("com.replaymod.gradle.remap.Transformer")
+            spec.mainClass.set("com.replaymod.gradle.remap.MainKt")
             spec.args = listOf(
-                mappingFile.toFile().absolutePath,
+                "-cp",
                 (classpath.files.map { it.toPath() }
                     .filter { !provider.minecraft.isMinecraftJar(it) }
                     .filter { it.exists() } + listOf(minecraft))
                     .joinToString(File.pathSeparator) { it.absolutePathString() },
-                roots.map { it.first }.joinToString(File.pathSeparator) { it.absolutePathString() },
-                roots.map { it.second }.joinToString(File.pathSeparator) { it.absolutePathString() }
+                *roots.flatMap { listOf("-r", it.first.absolutePathString(), it.second.absolutePathString()) }.toTypedArray(),
+                "-m",
+                mappingFile.toFile().absolutePath
             )
             project.logger.info("[Unimined/SourceRemapper]    ${spec.args!!.joinToString(" ")}")
         }.rethrowFailure().assertNormalExitValue()
+
     }
 
 }
