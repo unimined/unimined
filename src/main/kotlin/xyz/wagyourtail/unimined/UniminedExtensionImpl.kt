@@ -153,6 +153,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
             it.name = "WagYourTail (${name.capitalized()})"
             it.url = project.uri("https://maven.wagyourtail.xyz/$name/")
             it.metadataSources { ms ->
+                ms.mavenPom()
                 ms.artifact()
             }
         }
