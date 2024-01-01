@@ -4,6 +4,8 @@ import com.google.gson.JsonParser
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
 import net.fabricmc.mappingio.format.*
+import net.fabricmc.mappingio.format.proguard.ProGuardFileReader
+import net.fabricmc.mappingio.format.tiny.Tiny2FileWriter
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import net.fabricmc.tinyremapper.IMappingProvider
@@ -506,7 +508,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
             EnvType.COMBINED, EnvType.CLIENT -> minecraft.minecraftData.officialClientMappingsFile
             EnvType.SERVER, EnvType.DATAGEN -> minecraft.minecraftData.officialServerMappingsFile
         }.inputStream().use {
-            ProGuardReader.read(
+            ProGuardFileReader.read(
                 it.reader(), "mojmap", "official",
                 MappingSourceNsSwitch(tree, "official")
             )
@@ -535,7 +537,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
             try {
                 cacheFile.reader().use {
                     MemoryMappingTree().also { map ->
-                        Tiny2Reader2.read(it, map)
+                        Tiny2FileReader2.read(it, map)
                         mappings = map
                     }
                 }
@@ -578,7 +580,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
                 _stub!!.visit(mappings as MappingVisitor)
             }
             cacheFile.bufferedWriter().use {
-                mappings.accept(Tiny2Writer2(it, false))
+                mappings.accept(Tiny2FileWriter(it, false))
             }
         }
 
@@ -604,7 +606,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
     fun MappingTreeView.sha256() {
         val sha = MessageDigest.getInstance("SHA-256")
         val stringWriter = StringWriter()
-        this.accept(Tiny2Writer2(stringWriter, false))
+        this.accept(Tiny2FileWriter2(stringWriter, false))
         sha.update(stringWriter.toString().toByteArray())
         sha.digest().toHex().substring(0..8)
     }

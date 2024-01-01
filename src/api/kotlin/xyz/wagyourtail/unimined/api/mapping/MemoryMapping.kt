@@ -6,7 +6,7 @@ import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
-import net.fabricmc.mappingio.format.Tiny2Writer
+import net.fabricmc.mappingio.format.tiny.Tiny2FileWriter
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.util.associated
 import xyz.wagyourtail.unimined.util.nonNullValues
@@ -166,7 +166,7 @@ class MemoryMapping {
     val hash by lazy {
         val sha = MessageDigest.getInstance("SHA-256")
         val stringWriter = StringWriter()
-        visit(Tiny2Writer(stringWriter, false))
+        visit(Tiny2FileWriter(stringWriter, false))
         sha.update(stringWriter.toString().toByteArray())
         sha.digest().toHex().substring(0..8)
     }

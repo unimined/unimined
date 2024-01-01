@@ -39,7 +39,7 @@ class MCPWriter(writer: OutputStream, private val side: Int): MappingWriter {
         return true
     }
 
-    override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, srcName: String?): Boolean {
+    override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, endOpIdx: Int, srcName: String?): Boolean {
         return true
     }
 

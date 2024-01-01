@@ -83,7 +83,7 @@ class ChildMethodStripper(next: MappingVisitor, val minecraft: Path) : Forwardin
         return mn.access and Opcodes.ACC_PRIVATE != 0
     }
 
-    override fun visitMethod(srcName: String, srcDesc: String): Boolean {
+    override fun visitMethod(srcName: String, srcDesc: String?): Boolean {
         // check if there's a bridge pointing at the current method and then just yeet if so
         getClassWithCode(cName!!)?.methods?.firstOrNull {
             it.access and Opcodes.ACC_BRIDGE != 0 && it.instructions.any {

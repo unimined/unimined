@@ -152,7 +152,7 @@ dependencies {
     }
 
     // mappings
-    implementation("net.fabricmc:mapping-io:0.3.0") {
+    implementation("net.fabricmc:mapping-io:0.5.1") {
         exclude(group = "org.ow2.asm")
     }
 

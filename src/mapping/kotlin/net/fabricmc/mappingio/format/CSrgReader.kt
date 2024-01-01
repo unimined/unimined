@@ -25,7 +25,7 @@ object CSrgReader {
 
         @Suppress("NAME_SHADOWING")
         var visitor = visitor
-        if (flags.contains(MappingFlag.NEEDS_UNIQUENESS)) {
+        if (flags.contains(MappingFlag.NEEDS_ELEMENT_UNIQUENESS)) {
             parentVisitor = visitor
             visitor = MemoryMappingTree()
         } else if (flags.contains(MappingFlag.NEEDS_MULTIPLE_PASSES)) {
@@ -44,12 +44,12 @@ object CSrgReader {
 
                 do {
                     val srcName = reader.nextCol()
-                    if (srcName.contains("#")) continue
+                    if (srcName!!.contains("#")) continue
                     var dstName: String = reader.nextCol() ?: continue
                     if (dstName.contains("#")) {
                         dstName = dstName.substring(0, dstName.indexOf('#'))
                     }
-                    if (!srcName.equals(lastClass)) {
+                    if (srcName != lastClass) {
                         lastClass = srcName
                         if (visitor.visitClass(srcName)) {
                             visitor.visitDstName(MappedElementKind.CLASS, 0, dstName)
@@ -84,7 +84,7 @@ object CSrgReader {
 
         @Suppress("NAME_SHADOWING")
         var visitor = visitor
-        if (flags.contains(MappingFlag.NEEDS_UNIQUENESS)) {
+        if (flags.contains(MappingFlag.NEEDS_ELEMENT_UNIQUENESS)) {
             parentVisitor = visitor
             visitor = MemoryMappingTree()
         } else if (flags.contains(MappingFlag.NEEDS_MULTIPLE_PASSES)) {
@@ -111,7 +111,7 @@ object CSrgReader {
             if (visitor.visitContent()) {
                 do {
                     val className = reader.nextCol()
-                    if (className.contains("#")) continue
+                    if (className!!.contains("#")) continue
                     val srcName: String = reader.nextCol() ?: continue
                     if (srcName.contains("#")) continue
                     val dstNameOrDesc = reader.nextCol() ?: continue

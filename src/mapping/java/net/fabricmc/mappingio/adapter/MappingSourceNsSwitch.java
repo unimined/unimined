@@ -47,7 +47,7 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
     private boolean relayHeaderOrMetadata;
     private String srcName;
     private String srcDesc;
-    private int argIdx, lvIndex, startOpIdx;
+    private int argIdx, lvIndex, startOpIdx, endOpIdx;
     private String[] dstNames;
     private String[] dstDescs;
 
@@ -78,7 +78,7 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
             Set<MappingFlag> ret = EnumSet.noneOf(MappingFlag.class);
             ret.addAll(next.getFlags());
             ret.add(MappingFlag.NEEDS_MULTIPLE_PASSES);
-            ret.add(MappingFlag.NEEDS_UNIQUENESS);
+            ret.add(MappingFlag.NEEDS_ELEMENT_UNIQUENESS);
 
             return ret;
         }
@@ -213,16 +213,17 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
     }
 
     @Override
-    public boolean visitMethodVar(int lvtRowIndex, int lvIndex, int startOpIdx, String srcName) throws IOException {
+    public boolean visitMethodVar(int lvtRowIndex, int lvIndex, int startOpIdx, int endOpIdx, String srcName) throws IOException {
         assert classMapReady;
         if (passThrough) {
-            return next.visitMethodVar(lvtRowIndex, lvIndex, startOpIdx, srcName);
+            return next.visitMethodVar(lvtRowIndex, lvIndex, startOpIdx, endOpIdx, srcName);
         }
 
         this.srcName = srcName;
         this.argIdx = lvtRowIndex;
         this.lvIndex = lvIndex;
         this.startOpIdx = startOpIdx;
+        this.endOpIdx = endOpIdx;
 
         return true;
     }
@@ -308,7 +309,7 @@ public final class MappingSourceNsSwitch extends ForwardingMappingVisitor {
                 relay = next.visitMethodArg(argIdx, lvIndex, dstName);
                 break;
             case METHOD_VAR:
-                relay = next.visitMethodVar(argIdx, lvIndex, startOpIdx, dstName);
+                relay = next.visitMethodVar(argIdx, lvIndex, startOpIdx, endOpIdx, dstName);
                 break;
             default:
                 throw new IllegalStateException();

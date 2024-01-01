@@ -25,7 +25,7 @@ object RGSReader {
 
         @Suppress("NAME_SHADOWING")
         var visitor = visitor
-        if (flags.contains(MappingFlag.NEEDS_UNIQUENESS)) {
+        if (flags.contains(MappingFlag.NEEDS_ELEMENT_UNIQUENESS)) {
             parentVisitor = visitor
             visitor = MemoryMappingTree()
         } else if (flags.contains(MappingFlag.NEEDS_MULTIPLE_PASSES)) {
@@ -46,7 +46,7 @@ object RGSReader {
                 do {
                     if (reader.nextCol(".class")) {
                         val srcName = reader.nextCol()
-                        if (srcName.contains("*")) {
+                        if (srcName!!.contains("*")) {
                             continue
                         }
                         if (!srcName.equals(lastClass)) {
@@ -60,7 +60,7 @@ object RGSReader {
                         }
                     } else if (reader.nextCol(".class_map")) {
                         val srcName = reader.nextCol()
-                        if (srcName.contains("$")) {
+                        if (srcName!!.contains("$")) {
                             continue
                         }
                         if (!srcName.equals(lastClass)) {

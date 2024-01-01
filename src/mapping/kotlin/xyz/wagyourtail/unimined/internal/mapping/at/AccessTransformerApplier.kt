@@ -375,7 +375,7 @@ object AccessTransformerApplier {
                     TargetType.FIELD -> {
                         val fieldName = member.targetName()
 
-                        val fieldDesc = mappings.getClass(member.className, namespaceId).fields.first { fieldView ->
+                        val fieldDesc = mappings.getClass(member.className, namespaceId)!!.fields.first { fieldView ->
                             fieldView.getName(namespaceId) == fieldName
                         }.getDesc(namespaceId)
 
@@ -536,7 +536,7 @@ object AccessTransformerApplier {
                         } else {
                             when (member.targetName()) {
                                 "*METHOD*" -> {
-                                    mappings.getClass(member.className, namespaceId).methods.forEach { methodView ->
+                                    mappings.getClass(member.className, namespaceId)!!.methods.forEach { methodView ->
                                         val methodName = methodView.getName(namespaceId)
                                         val methodDesc = methodView.getDesc(namespaceId)
 
@@ -593,7 +593,7 @@ object AccessTransformerApplier {
                                 }
 
                                 else -> {
-                                    mappings.getClass(member.className, namespaceId).fields.forEach { fieldView ->
+                                    mappings.getClass(member.className, namespaceId)!!.fields.forEach { fieldView ->
                                         val fieldName = fieldView.getName(namespaceId)
                                         val fieldDesc = fieldView.getDesc(namespaceId)
 

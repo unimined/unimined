@@ -27,7 +27,7 @@ class NoNewSrcVisitor(next: MappingVisitor, val existingMappings: MappingTreeVie
         return super.visitClass(srcName)
     }
 
-    override fun visitMethod(srcName: String, srcDesc: String): Boolean {
+    override fun visitMethod(srcName: String, srcDesc: String?): Boolean {
         if (currentClass!!.getMethod(srcName, srcDesc, srcNamespace) == null) {
             return false
         }

@@ -53,9 +53,9 @@ class PackageRemappingVisitor(next: MappingVisitor?, val namespaces: Set<String>
         }
     }
 
-    override fun visitMethod(srcName: String, srcDesc: String): Boolean {
+    override fun visitMethod(srcName: String, srcDesc: String?): Boolean {
         if (namespaceIds.contains(MappingTree.SRC_NAMESPACE_ID)) {
-            return super.visitMethod(srcName, srcDesc.replace(Regex("L(.+?);")) { "L${remapClassName(it.groupValues[1])};" })
+            return super.visitMethod(srcName, srcDesc?.replace(Regex("L(.+?);")) { "L${remapClassName(it.groupValues[1])};" })
         }
         return super.visitMethod(srcName, srcDesc)
     }

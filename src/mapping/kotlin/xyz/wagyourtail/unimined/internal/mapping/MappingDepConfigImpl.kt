@@ -268,6 +268,11 @@ class ContainedMappingImpl() : ContainedMapping {
         }
     }
 
+    // class_1$class2$class3
+    // class_1 -> com/example/Example
+    // class_1$class2 -> Example2 -> com/example/Example$Example2
+    // class_1$class2$class3 -> _ -> com/example/Example$Example2$class_3
+
     private fun fixNest(mappings: MappingTree, target: ClassMapping, srcKey: Int, dstKey: Int): String? {
         val srcName = target.getName(srcKey)
         if (srcName?.contains('$') != true) return target.getName(dstKey)

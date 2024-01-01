@@ -3,6 +3,11 @@ package net.fabricmc.mappingio.format
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
+import net.fabricmc.mappingio.format.proguard.ProGuardFileReader
+import net.fabricmc.mappingio.format.srg.SrgFileReader
+import net.fabricmc.mappingio.format.srg.TsrgFileReader
+import net.fabricmc.mappingio.format.tiny.Tiny1FileReader
+import net.fabricmc.mappingio.format.tiny.Tiny2FileReader
 import net.fabricmc.mappingio.tree.MappingTree
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
@@ -283,8 +288,8 @@ class MappingTreeBuilder {
             )
             val preDstNs = tree.dstNamespaces ?: emptyList()
             when (type) {
-                BetterMappingFormat.TINY -> Tiny1Reader.read(reader, visitor)
-                BetterMappingFormat.TINY_2 -> Tiny2Reader.read(reader, visitor)
+                BetterMappingFormat.TINY -> Tiny1FileReader.read(reader, visitor)
+                BetterMappingFormat.TINY_2 -> Tiny2FileReader.read(reader, visitor)
                 BetterMappingFormat.MCP -> {
                     when (fname.split("/", "\\").last()) {
                         "methods.csv" -> {
@@ -357,11 +362,11 @@ class MappingTreeBuilder {
                     }
                 }
 
-                BetterMappingFormat.SRG -> SrgReader.read(reader, "official", "searge", visitor)
-                BetterMappingFormat.TSRG -> TsrgReader.read(reader, "official", "searge", visitor)
-                BetterMappingFormat.TSRG_2 -> TsrgReader.read(reader, visitor)
+                BetterMappingFormat.SRG -> SrgFileReader.read(reader, "official", "searge", visitor)
+                BetterMappingFormat.TSRG -> TsrgFileReader.read(reader, "official", "searge", visitor)
+                BetterMappingFormat.TSRG_2 -> TsrgFileReader.read(reader, visitor)
                 BetterMappingFormat.RETROGUARD -> RGSReader.read(reader, "official", "searge", visitor)
-                BetterMappingFormat.PROGUARD -> ProGuardReader.read(reader, "mojmap", "official", visitor)
+                BetterMappingFormat.PROGUARD -> ProGuardFileReader.read(reader, "mojmap", "official", visitor)
                 BetterMappingFormat.PARCHMENT -> ParchmentReader.read(reader, "mojmap", visitor)
                 BetterMappingFormat.CSRG -> {
                     when (fname.split("/", "\\", "-").last()) {

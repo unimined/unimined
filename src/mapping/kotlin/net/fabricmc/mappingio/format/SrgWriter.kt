@@ -34,11 +34,11 @@ class SrgWriter(val writer: Writer): MappingWriter {
     }
 
     private lateinit var method: String
-    private lateinit var methodDesc: String
     private var methodName: String? = null
+    private var methodDesc: String? = null
     private var methodDescName: String? = null
 
-    override fun visitMethod(srcName: String, srcDesc: String): Boolean {
+    override fun visitMethod(srcName: String, srcDesc: String?): Boolean {
         method = srcName
         methodDesc = srcDesc
         methodName = null
@@ -51,7 +51,7 @@ class SrgWriter(val writer: Writer): MappingWriter {
         return true
     }
 
-    override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, srcName: String?): Boolean {
+    override fun visitMethodVar(lvtRowIndex: Int, lvIndex: Int, startOpIdx: Int, endOpIdx: Int, srcName: String?): Boolean {
         // noop
         return true
     }

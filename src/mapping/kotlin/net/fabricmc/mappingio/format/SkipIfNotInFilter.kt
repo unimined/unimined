@@ -51,7 +51,7 @@ class SkipIfNotInFilter(next: MappingVisitor, val mappings: MappingTreeView, val
         super.visitDstName(targetKind, namespace, name)
     }
 
-    override fun visitMethod(srcName: String, srcDesc: String): Boolean {
+    override fun visitMethod(srcName: String, srcDesc: String?): Boolean {
         val method = clazz?.getMethod(srcName, srcDesc, namespaceId)
         skip = if (method?.getDstName(filterNsId) == null) {
             MappedElementKind.METHOD
