@@ -238,6 +238,17 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding spigot maven: $spigot")
     }
 
+    val flintMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
+        project.repositories.maven {
+            it.name = "Flint (${name.capitalized()})"
+            it.url = URI.create("https://maven.flintloader.net/$name/")
+        }
+    }
+
+    override fun flintMaven(name: String) {
+        project.logger.info("[Unimined] adding Flint Loader maven: ${flintMaven[name]}")
+    }
+
     init {
         project.repositories.maven {
             it.name = "minecraft"

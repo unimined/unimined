@@ -37,10 +37,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.Acce
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.CraftbukkitMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.SpigotMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.QuiltMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.*
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
@@ -215,6 +212,14 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun quilt(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = QuiltMinecraftTransformer(project, this).also {
+            patcherActions.addFirst {
+                action(it)
+            }
+        }
+    }
+
+    override fun flint(action: FabricLikePatcher.() -> Unit) {
+        mcPatcher = FlintMinecraftTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)
             }

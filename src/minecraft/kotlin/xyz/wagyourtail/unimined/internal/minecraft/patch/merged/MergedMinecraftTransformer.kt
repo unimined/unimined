@@ -23,10 +23,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.Acce
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.CraftbukkitMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.SpigotMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.BabricMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.LegacyFabricMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.OfficialFabricMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.QuiltMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.*
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
@@ -143,6 +140,12 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         val fabric = QuiltMinecraftTransformer(project, provider)
         fabric.action()
         patchers.add(fabric)
+    }
+
+    override fun flint(action: FabricLikePatcher.() -> Unit) {
+        val flint = FlintMinecraftTransformer(project, provider)
+        flint.action()
+        patchers.add(flint)
     }
 
     @Deprecated("Please specify which forge.", replaceWith = ReplaceWith("minecraftForge(action)"))

@@ -420,6 +420,40 @@ interface PatchProviders {
     }
 
     /**
+     * enables the flint patcher.
+     * @param action the action to configure the patcher.
+     * @see FabricLikePatcher
+     * @since 1.2.0
+     */
+    fun flint(action: FabricLikePatcher.() -> Unit)
+
+    /**
+     * enables the flint patcher.
+     * @param action the action to perform on the patcher.
+     * @since 1.2.0
+     */
+    fun flint(
+        @DelegatesTo(
+            value = FabricLikePatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        flint {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the flint patcher.
+     * @since 1.2.0
+     */
+    fun flint() {
+        flint {}
+    }
+
+    /**
      * enables **just** access transformer patching
      * you have to create your own way to bootstrap it out of dev
      * (and probably apply launchtweaker or something for dev launches).
