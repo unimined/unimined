@@ -23,6 +23,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
@@ -44,6 +45,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMin
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.merged.MergedMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.rift.RiftMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Extract
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
@@ -274,6 +276,14 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun spigot(action: SpigotPatcher.() -> Unit) {
         mcPatcher = SpigotMinecraftTransformer(project, this).also {
+            patcherActions.addFirst {
+                action(it)
+            }
+        }
+    }
+
+    override fun rift(action: RiftPatcher.() -> Unit) {
+        mcPatcher = RiftMinecraftTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)
             }

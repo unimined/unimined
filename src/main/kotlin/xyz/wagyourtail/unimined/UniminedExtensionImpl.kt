@@ -152,6 +152,10 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.repositories.maven {
             it.name = "WagYourTail (${name.capitalized()})"
             it.url = project.uri("https://maven.wagyourtail.xyz/$name/")
+            it.metadataSources { ms ->
+                ms.mavenPom()
+                ms.artifact()
+            }
         }
     }
 
@@ -199,6 +203,17 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     override fun sonatypeStaging() {
         project.logger.info("[Unimined] adding sonatype staging maven: $sonatypeStaging")
+    }
+
+    val spongeMaven by lazy {
+        project.repositories.maven {
+            it.name = "Sponge"
+            it.url = URI.create("https://repo.spongepowered.org/maven/")
+        }
+    }
+
+    override fun spongeMaven() {
+        project.logger.info("[Unimined] adding sponge maven: $spongeMaven")
     }
 
     val jitpack by lazy {
