@@ -20,15 +20,11 @@ class RiftMinecraftTransformer(
     private val accessTransformerMinecraftTransformer: AccessTransformerMinecraftTransformer = AccessTransformerMinecraftTransformer(project, provider, "Rift")
 ) : AbstractMinecraftTransformer(project, provider, "Rift"), RiftPatcher, AccessTransformerPatcher by accessTransformerMinecraftTransformer {
 
-    private val rift: Configuration = project.configurations.maybeCreate(providerName.withSourceSet(provider.sourceSet)).also {
-        project.configurations.getByName("modImplementation").extendsFrom(it)
-    }
+    private var rift: Dependency? = null
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
-        rift.dependencies.add(
-            (if (dep is String && !dep.contains(":")) {
+        rift = (if (dep is String && !dep.contains(":")) {
                 project.dependencies.create("org.dimdev:rift:$dep")
             } else project.dependencies.create(dep)).apply(action)
-        )
     }
 
     init {
@@ -44,7 +40,9 @@ class RiftMinecraftTransformer(
         createRiftDependency("org.ow2.asm:asm-commons:6.2", true)
         createRiftDependency("org.ow2.asm:asm-tree:6.2", true)
 
-        if (rift.dependencies.isEmpty()) rift.dependencies.add(project.dependencies.create("org.dimdev:rift:${provider.version}"))
+        if (rift == null) rift = project.dependencies.create("org.dimdev:rift:${provider.version}")
+
+        project.configurations.getByName("modImplementation").dependencies.add(rift)
 
         super.apply()
     }
