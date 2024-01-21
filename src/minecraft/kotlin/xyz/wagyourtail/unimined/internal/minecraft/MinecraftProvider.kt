@@ -168,7 +168,47 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         return minecraftFiles[namespace to fallbackNamespace]?.path ?: error("minecraft file not found for $namespace")
     }
 
+    private val mojmapIvys by lazy {
+        if (minecraftData.hasMappings) {
+            // add provider for client-mappings
+            project.repositories.ivy { ivy ->
+                ivy.name = "Official Client Mapping Provider"
+                ivy.patternLayout {
+                    it.artifact(minecraftData.officialClientMappingsFile.name)
+                }
+                ivy.url = minecraftData.officialClientMappingsFile.parentFile.toURI()
+                ivy.metadataSources { sources ->
+                    sources.artifact()
+                }
+                ivy.content {
+                    it.includeVersion("net.minecraft", "client-mappings", version)
+                }
+            }
+
+            // add provider for server-mappings
+            project.repositories.ivy { ivy ->
+                ivy.name = "Official Server Mapping Provider"
+                ivy.patternLayout {
+                    it.artifact(minecraftData.officialServerMappingsFile.name)
+                }
+                ivy.url = minecraftData.officialServerMappingsFile.parentFile.toURI()
+                ivy.metadataSources { sources ->
+                    sources.artifact()
+                }
+                ivy.content {
+                    it.includeVersion("net.minecraft", "server-mappings", version)
+                }
+            }
+        }
+        "mojmap"
+    }
+
+    private fun createMojmapIvy() {
+        project.logger.info("[Unimined] resolved $mojmapIvys")
+    }
+
     override fun mappings(action: MappingsConfig.() -> Unit) {
+        createMojmapIvy()
         if (lateActionsRunning) {
             mappings.action()
         } else {
@@ -389,37 +429,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             patcherActions.removeFirst().invoke()
         }
 
-        if (minecraftData.hasMappings) {
-            // add provider for client-mappings
-            project.repositories.ivy { ivy ->
-                ivy.name = "Official Client Mapping Provider"
-                ivy.patternLayout {
-                    it.artifact(minecraftData.officialClientMappingsFile.name)
-                }
-                ivy.url = minecraftData.officialClientMappingsFile.parentFile.toURI()
-                ivy.metadataSources { sources ->
-                    sources.artifact()
-                }
-                ivy.content {
-                    it.includeVersion("net.minecraft", "client-mappings", version)
-                }
-            }
-
-            // add provider for server-mappings
-            project.repositories.ivy { ivy ->
-                ivy.name = "Official Server Mapping Provider"
-                ivy.patternLayout {
-                    it.artifact(minecraftData.officialServerMappingsFile.name)
-                }
-                ivy.url = minecraftData.officialServerMappingsFile.parentFile.toURI()
-                ivy.metadataSources { sources ->
-                    sources.artifact()
-                }
-                ivy.content {
-                    it.includeVersion("net.minecraft", "server-mappings", version)
-                }
-            }
-        }
+        createMojmapIvy()
 
         project.logger.info("[Unimined/MappingProvider ${project.path}:${sourceSet.name}] before mappings $sourceSet")
         (mcPatcher as AbstractMinecraftTransformer).beforeMappingsResolve()
