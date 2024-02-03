@@ -20,7 +20,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.Mcp
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
-import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2At
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -110,7 +110,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     }
 
     override val transform = (listOf<(FileSystem) -> Unit>(
-        FixFG2At::fixForgeATs
+        FixFG2Coremods::fixCoremods
     ) + super.transform).toMutableList()
 
     override fun beforeMappingsResolve() {
