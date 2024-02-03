@@ -12,7 +12,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, private val refmapBuilder: RefmapBuilderClassVisitor) : AnnotationVisitor(Constant.ASM_VERSION, parent) {
     private val remapAt by lazy { AtomicBoolean(remap.get()) }
+
     private var targetName: String? = null
+    private var args: String? = null
 
     private val resolver = refmapBuilder.resolver
     private val logger = refmapBuilder.logger
@@ -31,6 +33,9 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
             AnnotationElement.TARGET -> {
                 if (!noRefmap) super.visit(name, value)
                 targetName = (value as String).replace(" ", "")
+            }
+            AnnotationElement.ARGS -> {
+                args = value as String
             }
             else -> super.visit(name, value)
         }
@@ -60,6 +65,41 @@ class AtAnnotationVisitor(parent: AnnotationVisitor?, remap: AtomicBoolean, priv
     }
 
     override fun visitEnd() {
+        if (remapAt.get() && args != null) {
+            if (args!!.startsWith("class=")) {
+                val clsName = args!!.substring(6)
+                val target = resolver.resolveClass(clsName).orElseOptional {
+                    existingMappings[clsName]?.let { existing ->
+                        logger.info("remapping $existing from existing refmap")
+                        resolver.resolveClass(existing)
+                    } ?: Optional.empty()
+                }
+                target.ifPresent {
+                    val mapped = mapper.mapName(it)
+                    refmap.addProperty(clsName, mapped)
+                    if (noRefmap) {
+                        super.visit(AnnotationElement.ARGS, "class=$mapped")
+                    }
+                }
+                if (!target.isPresent) {
+                    logger.warn(
+                        "Failed to resolve At target $args in mixin ${
+                            mixinName.replace(
+                                '/',
+                                '.'
+                            )
+                        }"
+                    )
+                    if (noRefmap) {
+                        super.visit(AnnotationElement.ARGS, args!!)
+                    }
+                }
+            } else {
+                if (noRefmap) {
+                    super.visit(AnnotationElement.ARGS, args!!)
+                }
+            }
+        }
         if (remapAt.get() && targetName != null) {
             val matchFd = targetField.matchEntire(targetName!!)
             if (matchFd != null) {

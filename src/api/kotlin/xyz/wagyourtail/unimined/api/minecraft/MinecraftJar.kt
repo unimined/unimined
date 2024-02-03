@@ -45,7 +45,7 @@ data class MinecraftJar(
         awOrAt: String? = from.awOrAt,
         extension: String = from.extension
     ): this(parentPath, name, envType, version, patches, mappingNamespace, fallbackNamespace, awOrAt, extension) {
-        assert(
+        require(
             from.parentPath != parentPath ||
                     from.name != name ||
                     from.envType != envType ||
@@ -55,8 +55,7 @@ data class MinecraftJar(
                     from.fallbackNamespace != fallbackNamespace ||
                     from.awOrAt != awOrAt ||
                     from.extension != extension
-        )
-        {
+        ) {
             "MinecraftJar constructor called with no changes"
         }
     }

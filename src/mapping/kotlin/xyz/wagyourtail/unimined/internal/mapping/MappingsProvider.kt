@@ -47,12 +47,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
 
 
     override fun devNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = MappingsProvider::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        val delegate: FinalizeOnRead<Namespace> = MappingsProvider::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
         delegate.setValueIntl(LazyMutable { getNamespace(namespace) })
     }
 
     override fun devFallbackNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = MappingsProvider::class.getField("devFallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        val delegate: FinalizeOnRead<Namespace> = MappingsProvider::class.getField("devFallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
         delegate.setValueIntl(LazyMutable { getNamespace(namespace) })
     }
 
