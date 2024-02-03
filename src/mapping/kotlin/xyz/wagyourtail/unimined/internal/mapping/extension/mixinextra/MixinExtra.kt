@@ -11,6 +11,7 @@ object MixinExtra {
         const val MODIFY_RECIEVER = "Lcom/llamalad7/mixinextras/injector/ModifyReciever;"
         const val MODIFY_RETURN_VALUE = "Lcom/llamalad7/mixinextras/injector/ModifyReturnValue;"
         const val WRAP_WITH_CONDITION = "Lcom/llamalad7/mixinextras/injector/WrapWithCondition;"
+        const val WRAP_WITH_CONDITION_V2 = "Lcom/llamalad7/mixinextras/injector/v2/WrapWithCondition;"
         const val WRAP_OPERATION = "Lcom/llamalad7/mixinextras/injector/wrapoperation/WrapOperation;"
 
 

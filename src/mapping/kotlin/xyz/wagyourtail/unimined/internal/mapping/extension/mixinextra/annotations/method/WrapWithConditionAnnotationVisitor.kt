@@ -42,7 +42,7 @@ class WrapWithConditionAnnotationVisitor(
             methodExceptions: Array<out String>?,
             refmapBuilder: RefmapBuilderClassVisitor
         ): Boolean {
-            return descriptor == MixinExtra.Annotation.WRAP_WITH_CONDITION
+            return descriptor == MixinExtra.Annotation.WRAP_WITH_CONDITION || descriptor == MixinExtra.Annotation.WRAP_WITH_CONDITION_V2
         }
 
     }
