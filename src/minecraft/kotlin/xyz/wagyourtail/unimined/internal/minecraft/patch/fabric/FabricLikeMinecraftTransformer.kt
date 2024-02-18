@@ -62,6 +62,8 @@ abstract class FabricLikeMinecraftTransformer(
 
     override var customIntermediaries: Boolean by FinalizeOnRead(false)
 
+    override var skipInsertAw: Boolean by FinalizeOnRead(false)
+
     protected abstract val ENVIRONMENT: String
     protected abstract val ENV_TYPE: String
 
@@ -398,7 +400,7 @@ abstract class FabricLikeMinecraftTransformer(
     protected abstract fun addIncludeToModJson(json: JsonObject, dep: Dependency, path: String)
 
     private fun insertAW(output: Path) {
-        if (accessWidener != null) {
+        if (accessWidener != null && !skipInsertAw) {
             output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
                 val mod = fs.getPath(modJsonName)
                 if (!Files.exists(mod)) {

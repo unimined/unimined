@@ -118,4 +118,5 @@ interface FabricLikePatcher: MinecraftPatcher, AccessTransformablePatcher {
     fun mergeAws(namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File
     fun mergeAws(output: File, inputs: List<File>): File
     fun mergeAws(output: File, namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File
+    var skipInsertAw: Boolean
 }
