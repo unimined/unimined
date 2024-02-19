@@ -85,4 +85,5 @@ interface FabricLikePatcher: MinecraftPatcher, AccessWidenerPatcher {
      * @since 1.0.0
      */
     fun prodNamespace(namespace: String)
+    var skipInsertAw: Boolean
 }
