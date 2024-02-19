@@ -67,12 +67,21 @@ abstract class AbstractMethodAnnotationVisitor(
                 }
                 val wildcard = targetMethod.endsWith("*")
                 val (targetName, targetDescs) = getTargetNameAndDescs(targetMethod, wildcard)
+                val targetClasses = if (targetName.startsWith("L") && targetName.contains(";")) {
+                    val tc = targetName.substring(1, targetName.indexOf(";"))
+                    if (tc !in targetClasses) {
+                        logger.warn("Target class $tc not in target classes for mixin $mixinName, this seems wrong!")
+                    }
+                    setOf(tc)
+                } else {
+                    this.targetClasses
+                }
                 for (targetDesc in targetDescs) {
                     var implicitWildcard = targetDesc == null && allowImplicitWildcards
                     for (targetClass in targetClasses) {
                         val target = resolver.resolveMethod(
                             targetClass,
-                            targetName,
+                            targetName.substringAfter(";"),
                             targetDesc,
                             (if (wildcard || implicitWildcard) ResolveUtility.FLAG_FIRST else ResolveUtility.FLAG_UNIQUE) or ResolveUtility.FLAG_RECURSIVE
                         ).orElseOptional {
