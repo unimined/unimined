@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2.FG2MinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.FinalizeOnWrite
 import xyz.wagyourtail.unimined.util.MustSet
 import xyz.wagyourtail.unimined.util.forEachInZip
@@ -21,6 +22,8 @@ class MinecraftForgeMinecraftTransformer(project: Project, provider: MinecraftPr
     MinecraftForgePatcher<JarModMinecraftTransformer> {
 
     override var forgeTransformer: JarModMinecraftTransformer by FinalizeOnWrite(MustSet())
+
+    override var useUnionRelaunch: Boolean by FinalizeOnRead(provider.minecraftData.mcVersionCompare(provider.version, "1.20.3") >= 0)
 
     init {
         accessTransformerTransformer.dependency = project.dependencies.create("net.minecraftforge:accesstransformers:8.1.3")

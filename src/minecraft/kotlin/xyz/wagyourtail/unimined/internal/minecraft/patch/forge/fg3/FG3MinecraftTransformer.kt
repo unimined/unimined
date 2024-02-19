@@ -14,6 +14,7 @@ import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigData
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
@@ -33,6 +34,16 @@ import kotlin.io.path.*
 class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModMinecraftTransformer(
     project, parent.provider, jarModProvider = "forge", providerName = "${parent.providerName}-FG3"
 ) {
+
+    val useUnionRelauncher by lazy {
+        if (parent is MinecraftForgeMinecraftTransformer) {
+            parent.useUnionRelaunch
+        } else {
+            false
+        }
+    }
+
+    var unionRelauncherVersion: String = "1.0.0"
 
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG3 transformer")
@@ -139,6 +150,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             } else {
                 provider.minecraftLibraries.dependencies.add(project.dependencies.create(element.asString))
             }
+        }
+
+        if (useUnionRelauncher) {
+            provider.minecraftLibraries.dependencies.add(project.dependencies.create("io.github.juuxel:union-relauncher:$unionRelauncherVersion"))
         }
 
         if (userdevCfg.has("inject")) {
@@ -417,7 +432,13 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         super.applyClientRunTransform(config)
         createLegacyClasspath()
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
-            val mainClass = get("main").asString
+            val mainClass = if (useUnionRelauncher) {
+                config.jvmArgs += listOf("-DunionRelauncher.mainClass=${get("main").asString}")
+                "juuxel.unionrelauncher.UnionRelauncher"
+            } else {
+                get("main").asString
+            }
+
             parent.tweakClassClient = get("env")?.asJsonObject?.get("tweakClass")?.asString
             if (mainClass.startsWith("net.minecraftforge.legacydev")) {
                 project.logger.info("[FG3] Using legacydev launchwrapper")
