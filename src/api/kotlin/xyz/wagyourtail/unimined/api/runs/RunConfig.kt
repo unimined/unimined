@@ -81,7 +81,7 @@ data class RunConfig(
                 }.${launchClasspath.name}"
             ),
             XMLBuilder("option").addStringOption("name", "PROGRAM_PARAMETERS")
-                .addStringOption("value", args.joinToString(" ")),
+                .addStringOption("value", args.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it }),
             XMLBuilder("option").addStringOption("name", "VM_PARAMETERS")
                 .addStringOption(
                     "value",
