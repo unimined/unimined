@@ -8,6 +8,8 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading.fixResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import xyz.wagyourtail.unimined.util.deleteRecursively
@@ -61,6 +63,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
     override val transform = (listOf<(FileSystem) -> Unit>(
         FixFG2Coremods::fixCoremods,
+        FixFG2ResourceLoading::fixResourceLoading,
     ) + super.transform).toMutableList()
 
     override fun apply() {
@@ -142,6 +145,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
         config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
         config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
+        config.env["MOD_CLASSES"] = parent.groups
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
@@ -171,6 +175,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
         config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
         config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
+        config.env["MOD_CLASSES"] = parent.groups
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {

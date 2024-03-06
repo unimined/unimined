@@ -332,12 +332,12 @@ abstract class ForgeLikeMinecraftTransformer(
         for ((proj, sourceSet) in groups.keys.toSet()) {
             if (proj.uniminedMaybe?.minecrafts?.map?.get(sourceSet)?.mcPatcher !is ForgeLikePatcher<*>) {
                 // merge with current
-                proj.logger.warn("[Unimined/ForgeLike] Non-forge ${(proj to sourceSet).toPath()} found in fabric classpath groups, merging with current (${(project to provider.sourceSet).toPath()}), this should've been manually specified with `combineWith`")
+                proj.logger.warn("[Unimined/ForgeLike] Non-forge ${(proj to sourceSet).toPath()} found in forge classpath groups, merging with current (${(project to provider.sourceSet).toPath()}), this should've been manually specified with `combineWith`")
                 groups[this.project to this.provider.sourceSet]!! += groups[proj to sourceSet]!!
                 groups.remove(proj to sourceSet)
             }
         }
-        project.logger.info("[Unimined/FabricLike] Classpath groups: ${groups.map { it.key.toPath() + " -> " + it.value.joinToString(", ") { it.toPath() } }.joinToString("\n    ")}")
+        project.logger.info("[Unimined/ForgeLike] Classpath groups: ${groups.map { it.key.toPath() + " -> " + it.value.joinToString(", ") { it.toPath() } }.joinToString("\n    ")}")
         groups.map { entry -> entry.value.flatMap { listOf(it.second.output.resourcesDir) + it.second.output.classesDirs }.joinToString(File.pathSeparator) { "${entry.key.toPath().replace(":", "_")}%%${it!!.absolutePath}" } }.joinToString(File.pathSeparator)
     }
 

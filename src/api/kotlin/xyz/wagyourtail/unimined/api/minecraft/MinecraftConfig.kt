@@ -166,7 +166,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         }
         val project = path.substringBeforeLast(":")
         val name = path.substringAfterLast(":")
-        combineWith(this.project.project(path), this.project.project(path).sourceSets.getByName(name))
+        combineWith(this.project.project(project), this.project.project(project).sourceSets.getByName(name))
     };
 
     /**
@@ -320,5 +320,5 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     val localCache by lazy { project.unimined.getLocalCache(sourceSet) }
 
     @get:ApiStatus.Internal
-    abstract val combinedWithList: MutableList<Pair<Project, SourceSet>>
+    abstract val combinedWithList: MutableSet<Pair<Project, SourceSet>>
 }

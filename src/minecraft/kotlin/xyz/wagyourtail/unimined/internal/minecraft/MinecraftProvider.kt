@@ -83,7 +83,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     private val patcherActions = ArrayDeque<() -> Unit>()
     private var lateActionsRunning by FinalizeOnWrite(false)
 
-    override val combinedWithList = mutableListOf<Pair<Project, SourceSet>>()
+    override val combinedWithList = mutableSetOf<Pair<Project, SourceSet>>()
 
     var applied: Boolean by FinalizeOnWrite(false)
         private set
@@ -116,12 +116,14 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     override fun combineWith(project: Project, sourceSet: SourceSet) {
-        combinedWithList.add(project to sourceSet)
-        if (project.uniminedMaybe != null && project.unimined.minecrafts.contains(sourceSet)) {
-            from(project, sourceSet)
+        project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${this.sourceSet.name}] Combining with ${project.path}:${sourceSet.name}")
+        if (combinedWithList.add(project to sourceSet)) {
+            if (project.uniminedMaybe != null && project.unimined.minecrafts.contains(sourceSet)) {
+                from(project, sourceSet)
+            }
+            this.sourceSet.compileClasspath += sourceSet.output
+            this.sourceSet.runtimeClasspath += sourceSet.output
         }
-        this.sourceSet.compileClasspath += sourceSet.output
-        this.sourceSet.runtimeClasspath += sourceSet.output
         // remove unimined deps
     }
 

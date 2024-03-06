@@ -21,6 +21,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.Mcp
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -69,6 +71,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
     override val merger: ClassMerger
         get() = throw UnsupportedOperationException("FG3+ does not support merging with unofficial merger.")
+
+    override val transform: MutableList<(FileSystem) -> Unit> = (
+            if (parent.provider.version == "1.12.2") { listOf(FixFG2ResourceLoading::fixResourceLoading) } else { emptyList() } +
+            super.transform
+            ).toMutableList()
 
 
     @ApiStatus.Internal
@@ -449,6 +456,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                 config.args += listOf("--tweakClass",
                     parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"
                 )
+                config.env += mapOf("MOD_CLASSES" to parent.groups)
             } else {
                 project.logger.info("[FG3] Using new client run config")
                 val args = get("args")?.asJsonArray?.map { it.asString } ?: listOf()
@@ -484,6 +492,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                 config.args += listOf("--tweakClass",
                     parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"
                 )
+                config.env += mapOf("MOD_CLASSES" to parent.groups)
             } else {
                 project.logger.info("[FG3] Using new server run config")
                 val args = get("args")?.asJsonArray?.map { it.asString } ?: listOf()

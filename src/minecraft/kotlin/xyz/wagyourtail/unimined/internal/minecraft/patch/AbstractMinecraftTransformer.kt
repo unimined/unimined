@@ -272,6 +272,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
                 throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${provider.sourceSet} on ${provider.version} and ${sourceSet} on ${minecraftConfig.version}")
             }
         }
+
+        // squash all combinedWith
         val map = mutableMapOf<Pair<Project, SourceSet>, Set<Pair<Project, SourceSet>>>()
         val resolveQueue = minecraftConfigs.keys.toMutableSet()
         while (resolveQueue.isNotEmpty()) {
