@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.transform.fixes
 
+import net.fabricmc.tinyremapper.extension.mixin.hard.annotation.ImplementsAnnotationVisitor.visitMethod
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
 import java.nio.file.FileSystem
@@ -11,7 +12,7 @@ object FixFG2ResourceLoading {
 
     val folderResourcePack = listOf(
         "cpw/mods/fml/client/FMLFolderResourcePack.class",
-        "net/minecraftforge/fml/client/FMLFolderResourcePack.class"
+        "net/minecraftforge/fml/client/FMLFolderResourcePack.class",
     )
 
     val languageRegistry = listOf(
@@ -22,6 +23,11 @@ object FixFG2ResourceLoading {
     val loadController = listOf(
         "cpw/mods/fml/common/LoadController.class",
         "net/minecraftforge/fml/common/LoadController.class",
+    )
+
+    val directoryDiscoverer = listOf(
+        "cpw/mods/fml/common/discovery/DirectoryDiscoverer.class",
+        "net/minecraftforge/fml/common/discovery/DirectoryDiscoverer.class",
     )
 
     fun fixResourceLoading(fs: FileSystem) {
@@ -85,11 +91,18 @@ object FixFG2ResourceLoading {
                                         super.visitInsn(opcode)
                                         return
                                     }
-                                    // unimined$dirs = unimined$getDirectories(modContainer)
+                                    // unimined$dirs = unimined$getDirectories(modContainer.getSource())
                                     super.visitVarInsn(Opcodes.ALOAD, 0)
                                     super.visitVarInsn(Opcodes.ALOAD, 0)
                                     super.visitVarInsn(Opcodes.ALOAD, 1)
-                                    super.visitMethodInsn(Opcodes.INVOKESTATIC, loadControllerIntl, "unimined\$getDirectories", "(L$modContainerIntl;)[Ljava/io/File;", false)
+                                    visitMethodInsn(
+                                        Opcodes.INVOKEINTERFACE,
+                                        modContainerIntl,
+                                        "getSource",
+                                        "()Ljava/io/File;",
+                                        true
+                                    )
+                                    super.visitMethodInsn(Opcodes.INVOKESTATIC, loadControllerIntl, "unimined\$getDirectories", "(Ljava/io/File;)[Ljava/io/File;", false)
                                     super.visitFieldInsn(Opcodes.PUTFIELD, self, "unimined\$dirs", "[Ljava/io/File;")
                                     super.visitInsn(opcode)
                                 }
@@ -431,9 +444,16 @@ object FixFG2ResourceLoading {
                     override fun visitEnd() {
                         visitMethod(Opcodes.ACC_PRIVATE, "unimined\$addLanguages", "(L$modContainerIntl;L$side;)V", null, null).apply {
                             visitCode()
-                            // val var3 = unimined$getDirectories(var1)
+                            // val var3 = unimined$getDirectories(var1.getSource())
                             visitVarInsn(Opcodes.ALOAD, 1)
-                            visitMethodInsn(Opcodes.INVOKESTATIC, loadControllerIntl, "unimined\$getDirectories", "(L$modContainerIntl;)[Ljava/io/File;", false)
+                            visitMethodInsn(
+                                Opcodes.INVOKEINTERFACE,
+                                modContainerIntl,
+                                "getSource",
+                                "()Ljava/io/File;",
+                                true
+                            )
+                            visitMethodInsn(Opcodes.INVOKESTATIC, loadControllerIntl, "unimined\$getDirectories", "(Ljava/io/File;)[Ljava/io/File;", false)
                             visitVarInsn(Opcodes.ASTORE, 3)
                             // for (int var4 = 0; var4 < var3.length; ++var4) {
                             visitInsn(Opcodes.ICONST_0)
@@ -489,7 +509,7 @@ object FixFG2ResourceLoading {
                 val writer = ClassWriter(reader, ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
                 reader.accept(object : ClassVisitor(Opcodes.ASM9, writer) {
                     override fun visitEnd() {
-                        visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "unimined\$getDirectories", "(L$modContainerIntl;)[Ljava/io/File;", null, null).apply {
+                        visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "unimined\$getDirectories", "(Ljava/io/File;)[Ljava/io/File;", null, null).apply {
                             visitCode()
                             // val var1 = System.getenv("MOD_CLASSES")
                             visitLdcInsn("MOD_CLASSES")
@@ -553,13 +573,6 @@ object FixFG2ResourceLoading {
                             //    if (var7.equals(var0.getSource())) {
                             visitVarInsn(Opcodes.ALOAD, 7)
                             visitVarInsn(Opcodes.ALOAD, 0)
-                            visitMethodInsn(
-                                Opcodes.INVOKEINTERFACE,
-                                modContainerIntl,
-                                "getSource",
-                                "()Ljava/io/File;",
-                                true
-                            )
                             val l7 = Label()
                             visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/File", "equals", "(Ljava/lang/Object;)Z", false)
                             visitJumpInsn(Opcodes.IFEQ, l7)
@@ -656,10 +669,164 @@ object FixFG2ResourceLoading {
                             )
                             visitTypeInsn(Opcodes.CHECKCAST, "[Ljava/io/File;")
                             visitInsn(Opcodes.ARETURN)
-                            //  return new File[0];
+                            //  return new File[1] { var0 };
                             visitLabel(l1)
-                            visitInsn(Opcodes.ICONST_0)
+                            visitInsn(Opcodes.ICONST_1)
                             visitTypeInsn(Opcodes.ANEWARRAY, "java/io/File")
+                            visitInsn(Opcodes.DUP)
+                            visitInsn(Opcodes.ICONST_0)
+                            visitVarInsn(Opcodes.ALOAD, 0)
+                            visitInsn(Opcodes.AASTORE)
+                            visitInsn(Opcodes.ARETURN)
+
+                            visitMaxs(0, 0)
+                            visitEnd()
+                        }
+
+                        super.visitEnd()
+                    }
+                }, 0)
+                path.writeBytes(writer.toByteArray())
+            }
+        }
+
+        for (file in directoryDiscoverer) {
+            val path = fs.getPath(file)
+            if (path.exists()) {
+
+                val loadControllerIntl = if (file.startsWith("cpw")) {
+                    "cpw/mods/fml/common/LoadController"
+                } else {
+                    "net/minecraftforge/fml/common/LoadController"
+                }
+
+                val modCandidateIntl = if (file.startsWith("cpw")) {
+                    "cpw/mods/fml/common/discovery/ModCandidate"
+                } else {
+                    "net/minecraftforge/fml/common/discovery/ModCandidate"
+                }
+
+                val metadataCollectionIntl = if (file.startsWith("cpw")) {
+                    "cpw/mods/fml/common/MetadataCollection"
+                } else {
+                    "net/minecraftforge/fml/common/MetadataCollection"
+                }
+
+                val self = file.substring(0, file.length - 6)
+
+                val reader = path.inputStream().use { ClassReader(it) }
+                val writer = ClassWriter(reader, ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
+                reader.accept(object : ClassVisitor(Opcodes.ASM9, writer) {
+
+                    override fun visitMethod(
+                        access: Int,
+                        name: String?,
+                        descriptor: String?,
+                        signature: String?,
+                        exceptions: Array<out String>?
+                    ): MethodVisitor {
+                        if (name == "exploreFileSystem") {
+                            // replace new File call with unimined$findMcModInfo
+                            return object : MethodVisitor(api, super.visitMethod(access, name, descriptor, signature, exceptions)) {
+
+                                var first = true
+                                override fun visitTypeInsn(opcode: Int, type: String?) {
+                                    if (opcode == Opcodes.NEW && type == "java/io/File") {
+                                        if (!first) {
+                                            super.visitTypeInsn(opcode, type)
+                                            return
+                                        }
+                                    } else {
+                                        super.visitTypeInsn(opcode, type)
+                                    }
+                                }
+
+                                override fun visitInsn(opcode: Int) {
+                                    if (opcode == Opcodes.DUP) {
+                                        if (!first) {
+                                            super.visitInsn(opcode)
+                                            return
+                                        }
+                                        super.visitVarInsn(Opcodes.ALOAD, 0)
+                                    } else {
+                                        super.visitInsn(opcode)
+                                    }
+                                }
+
+                                override fun visitMethodInsn(
+                                    opcode: Int,
+                                    owner: String?,
+                                    name: String?,
+                                    descriptor: String?,
+                                    isInterface: Boolean
+                                ) {
+                                    if (name == "<init>" && owner == "java/io/File") {
+                                        if (!first) {
+                                            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                                            return
+                                        }
+                                        first = false
+                                        // unimined$findMcModInfo(var1, var2)
+                                        super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, self, "unimined\$findMcModInfo", "(Ljava/io/File;Ljava/lang/String;)Ljava/io/File;", false)
+                                    } else {
+                                        super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                                    }
+                                }
+
+                            }
+                        } else {
+                            return super.visitMethod(access, name, descriptor, signature, exceptions)
+                        }
+                    }
+
+                    override fun visitEnd() {
+                        visitMethod(Opcodes.ACC_PRIVATE, "unimined\$findMcModInfo", "(Ljava/io/File;Ljava/lang/String;)Ljava/io/File;", null, null).apply {
+                            visitCode()
+                            // val var3 = LoadController.unimined$getDirectories(var1)
+                            visitVarInsn(Opcodes.ALOAD, 1)
+                            visitMethodInsn(Opcodes.INVOKESTATIC, loadControllerIntl, "unimined\$getDirectories", "(Ljava/io/File;)[Ljava/io/File;", false)
+                            visitVarInsn(Opcodes.ASTORE, 3)
+                            // for (int var4 = 0; var4 < var3.length; ++var4) {
+                            visitInsn(Opcodes.ICONST_0)
+                            visitVarInsn(Opcodes.ISTORE, 4)
+                            val l1 = Label()
+                            visitLabel(l1)
+                            visitVarInsn(Opcodes.ILOAD, 4)
+                            visitVarInsn(Opcodes.ALOAD, 3)
+                            visitInsn(Opcodes.ARRAYLENGTH)
+                            val l2 = Label()
+                            visitJumpInsn(Opcodes.IF_ICMPGE, l2)
+                            // val var5 = var3[var4]
+                            visitVarInsn(Opcodes.ALOAD, 3)
+                            visitVarInsn(Opcodes.ILOAD, 4)
+                            visitInsn(Opcodes.AALOAD)
+                            visitVarInsn(Opcodes.ASTORE, 5)
+                            // val var6 = new File(var5, var2)
+                            visitTypeInsn(Opcodes.NEW, "java/io/File")
+                            visitInsn(Opcodes.DUP)
+                            visitVarInsn(Opcodes.ALOAD, 5)
+                            visitVarInsn(Opcodes.ALOAD, 2)
+                            visitMethodInsn(Opcodes.INVOKESPECIAL, "java/io/File", "<init>", "(Ljava/io/File;Ljava/lang/String;)V", false)
+                            visitVarInsn(Opcodes.ASTORE, 6)
+                            // if (var6.exists()) {
+                            visitVarInsn(Opcodes.ALOAD, 6)
+                            visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/File", "exists", "()Z", false)
+                            val l3 = Label()
+                            visitJumpInsn(Opcodes.IFEQ, l3)
+                            // return var6
+                            visitVarInsn(Opcodes.ALOAD, 6)
+                            visitInsn(Opcodes.ARETURN)
+                            // }
+                            visitLabel(l3)
+                            visitIincInsn(4, 1)
+                            visitJumpInsn(Opcodes.GOTO, l1)
+                            visitLabel(l2)
+                            // return new File(var1, var2)
+                            visitTypeInsn(Opcodes.NEW, "java/io/File")
+                            visitInsn(Opcodes.DUP)
+                            visitVarInsn(Opcodes.ALOAD, 1)
+                            visitVarInsn(Opcodes.ALOAD, 2)
+                            visitMethodInsn(Opcodes.INVOKESPECIAL, "java/io/File", "<init>", "(Ljava/io/File;Ljava/lang/String;)V", false)
                             visitInsn(Opcodes.ARETURN)
 
                             visitMaxs(0, 0)
