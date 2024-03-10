@@ -7,8 +7,8 @@ object MixinExtra {
 
     object Annotation {
 
-        const val MODIFY_EXPRESSION_VALUE = "Lcom/llamalad7/mixinextras/injector/ModifyExpressionValue;"
         const val DEFINITION = "Lcom/llamalad7/mixinextras/expression/Definition;"
+        const val MODIFY_EXPRESSION_VALUE = "Lcom/llamalad7/mixinextras/injector/ModifyExpressionValue;"
         const val MODIFY_RECIEVER = "Lcom/llamalad7/mixinextras/injector/ModifyReciever;"
         const val MODIFY_RETURN_VALUE = "Lcom/llamalad7/mixinextras/injector/ModifyReturnValue;"
         const val WRAP_WITH_CONDITION = "Lcom/llamalad7/mixinextras/injector/WrapWithCondition;"
@@ -21,6 +21,7 @@ object MixinExtra {
     fun refmapBuilder(refmapBuilder: RefmapBuilderClassVisitor) {
 
         refmapBuilder.methodAnnotationVisitors.addAll(listOf(
+            DefinitionAnnotationVisitor.Companion::shouldVisit to ::DefinitionAnnotationVisitor,
             ModifyExpressionValueAnnotationVisitor.Companion::shouldVisit to ::ModifyExpressionValueAnnotationVisitor,
             ModifyRecieverAnnotationVisitor.Companion::shouldVisit to ::ModifyRecieverAnnotationVisitor,
             ModifyReturnValueAnnotationVisitor.Companion::shouldVisit to ::ModifyReturnValueAnnotationVisitor,
