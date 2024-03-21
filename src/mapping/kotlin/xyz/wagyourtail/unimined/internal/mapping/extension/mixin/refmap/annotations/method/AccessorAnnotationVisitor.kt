@@ -139,7 +139,7 @@ class AccessorAnnotationVisitor(
                                 refmap.addProperty(targetName.capitalized(), "$mappedName:$mappedDesc")
                             }
                             refmap.addProperty(targetName, "$mappedName:$mappedDesc")
-                            noRefmapAcceptor("$mappedName:$mappedDesc")
+                            noRefmapAcceptor(mappedName)
                         }
                     }
                     if (target.isPresent) return
@@ -151,7 +151,7 @@ class AccessorAnnotationVisitor(
                         '/',
                         '.'
                     )
-                }"
+                } targetClasses $targetClasses"
             )
             if (targetNames.isNotEmpty()) {
                 noRefmapAcceptor(targetNames.first())

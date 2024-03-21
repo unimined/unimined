@@ -125,7 +125,7 @@ class InvokerAnnotationVisitor(
 //                                    refmap.addProperty(targetName, mappedName)
 //                                } else {
                         refmap.addProperty(targetName, "$mappedName$mappedDesc")
-                        noRefmapAcceptor("$mappedName$mappedDesc")
+                        noRefmapAcceptor(mappedName)
 //                                }
                     }
                     if (target.isPresent) return
@@ -137,7 +137,7 @@ class InvokerAnnotationVisitor(
                         '/',
                         '.'
                     )
-                }"
+                } targetClasses: $targetClasses"
             )
             noRefmapAcceptor(targetNames.first())
         } else {
