@@ -558,22 +558,18 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             val mod = fs.getPath("META-INF/jarjar/metadata.json")
             val json = JsonObject()
 
-            Files.createDirectories(fs.getPath("META-INF/jarjar/"))
-            val includeCache = provider.localCache.resolve("includeCache")
-            Files.createDirectories(includeCache)
+            val jarDir = fs.getPath("META-INF/jarjar/").createDirectories()
             for (dep in include!!.dependencies) {
-                val path = fs.getPath("META-INF/jarjar/${dep.name}-${dep.version}.jar")
-                if (!Files.exists(path)) {
-                    Files.copy(
-                        include.files(dep).first { it.extension == "jar" }.toPath(),
-                        includeCache.resolve("${dep.name}-${dep.version}.jar"),
-                        StandardCopyOption.REPLACE_EXISTING
-                    )
+                val path = jarDir.resolve("${dep.name}-${dep.version}.jar")
+                if (!path.exists()) {
+                    include.files(dep).first { it.extension == "jar" }.toPath()
+                        .copyTo(jarDir.resolve("${dep.name}-${dep.version}.jar"), true)
                 }
 
                 addIncludeToMetadata(json, dep, "META-INF/jarjar/${dep.name}-${dep.version}.jar")
             }
-            Files.write(mod, FabricLikeMinecraftTransformer.GSON.toJson(json).toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
+
+            mod.writeBytes(FabricLikeMinecraftTransformer.GSON.toJson(json).toByteArray())
         }
     }
 
