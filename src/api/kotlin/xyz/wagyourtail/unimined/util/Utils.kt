@@ -85,6 +85,11 @@ object OSUtils {
             "x86_64" -> "64"
             else -> "unknown"
         }
+
+    const val WINDOWS = "windows"
+    const val LINUX = "linux"
+    const val OSX = "osx"
+    const val UNKNOWN = "unknown"
 }
 
 fun testSha1(size: Long, sha1: String, path: Path): Boolean {

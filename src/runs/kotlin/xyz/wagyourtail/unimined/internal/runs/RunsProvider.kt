@@ -5,6 +5,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.runs.RunsConfig
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.internal.runs.auth.AuthProvider
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.sourceSets
 import xyz.wagyourtail.unimined.util.withSourceSet
@@ -12,6 +13,7 @@ import xyz.wagyourtail.unimined.util.withSourceSet
 class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsConfig() {
     private var freeze = false
 
+    override val auth = AuthProvider(this)
     private val runConfigs = mutableMapOf<String, RunConfig>()
     private val transformers = defaultedMapOf<String, RunConfig.() -> Unit> { {} }
 

@@ -37,7 +37,7 @@ object InterfaceInjectionMinecraftTransformer {
                             reader.accept(node, 0)
 
                             if (node.interfaces == null) {
-                                node.interfaces = arrayListOf();
+                                node.interfaces = arrayListOf()
                             }
 
                             for (injected in injections[target]!!) {

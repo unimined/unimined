@@ -684,7 +684,8 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             minecraftData.metadata.getGameArgs(
                 "Dev",
                 workingDirectory.toPath(),
-                assetsDir
+                assetsDir,
+                runs.auth.authInfo
             ),
             (minecraftData.metadata.getJVMArgs(
                 workingDirectory.resolve("libraries").toPath(),
