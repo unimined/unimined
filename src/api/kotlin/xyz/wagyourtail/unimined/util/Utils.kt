@@ -51,7 +51,7 @@ fun Configuration.getFile(dep: Dependency, extension: String = "jar"): File {
 
 fun URI.stream(): InputStream {
     val conn = toURL().openConnection()
-    conn.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+    conn.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtail.xyz>)")
     return conn.getInputStream()
 }
 

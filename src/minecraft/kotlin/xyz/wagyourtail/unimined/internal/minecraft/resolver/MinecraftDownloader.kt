@@ -64,7 +64,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
             project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving launcher metadata")
 
             val urlConnection = URL("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json").openConnection() as HttpURLConnection
-            urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+            urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtail.xyz>)")
             urlConnection.requestMethod = "GET"
             urlConnection.connect()
 

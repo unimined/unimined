@@ -509,7 +509,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                 )
                     .toURL()
                     .openConnection() as HttpURLConnection
-                url.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+                url.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtail.xyz>)")
                 url.requestMethod = "GET"
                 url.connect()
                 if (url.responseCode == 200) {
