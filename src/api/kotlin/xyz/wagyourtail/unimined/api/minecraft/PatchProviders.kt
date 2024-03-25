@@ -377,14 +377,22 @@ interface PatchProviders {
 
     /**
      * requires `side "server"`
+     *
+     * this is currently done in a kinda dumb way that is slow, avoid if possible for now.
+     *
      * @since 1.2.0
      */
+    @ApiStatus.Experimental
     fun craftBukkit(action: CraftbukkitPatcher.() -> Unit)
 
     /**
      * requires `side "server"`
+     *
+     * this is currently done in a kinda dumb way that is slow, avoid if possible for now.
+     *
      * @since 1.2.0
      */
+    @ApiStatus.Experimental
     fun craftBukkit(
         @DelegatesTo(
             value = CraftbukkitPatcher::class,
@@ -399,14 +407,22 @@ interface PatchProviders {
 
     /**
      * requires `side "server"`
+     *
+     * this is currently done in a kinda dumb way that is slow, avoid if possible for now.
+     *
      * @since 1.2.0
      */
+    @ApiStatus.Experimental
     fun spigot(action: SpigotPatcher.() -> Unit)
 
     /**
      * requires `side "server"`
+     *
+     * this is currently done in a kinda dumb way that is slow, avoid if possible for now.
+     *
      * @since 1.2.0
      */
+    @ApiStatus.Experimental
     fun spigot(
         @DelegatesTo(
             value = SpigotPatcher::class,
