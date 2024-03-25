@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.resolver
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import org.apache.commons.compress.archivers.zip.ZipFile
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -19,7 +20,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
 
@@ -321,20 +321,17 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     fun extract(dependency: Dependency, extract: Extract, path: Path) {
         val resolved = provider.minecraftLibraries.resolvedConfiguration
         resolved.getFiles { it == dependency }.forEach { file ->
-            ZipInputStream(file.inputStream()).use { stream ->
-                var entry = stream.nextEntry
-                while (entry != null) {
+            ZipFile(file).use {
+                for (entry in it.entries) {
                     if (entry.isDirectory) {
-                        entry = stream.nextEntry
                         continue
                     }
-                    if (extract.exclude.any { entry!!.name.startsWith(it) }) {
-                        entry = stream.nextEntry
+                    if (extract.exclude.any { entry.name.startsWith(it) }) {
                         continue
                     }
-                    path.resolve(entry.name).parent.createDirectories()
-                    Files.copy(stream, path.resolve(entry.name), StandardCopyOption.REPLACE_EXISTING)
-                    entry = stream.nextEntry
+                    val outPath = path.resolve(entry.name)
+                    outPath.parent.createDirectories()
+                    Files.copy(it.getInputStream(entry), outPath, StandardCopyOption.REPLACE_EXISTING)
                 }
             }
         }

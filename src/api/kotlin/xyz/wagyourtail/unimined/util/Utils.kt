@@ -303,29 +303,31 @@ fun Path.readZipContents(): List<String> {
 }
 
 fun Path.forEachInZip(action: (String, InputStream) -> Unit) {
-    ZipInputStream(inputStream()).use { stream ->
-        var entry = stream.nextEntry
-        while (entry != null) {
-            if (entry.isDirectory) {
-                entry = stream.nextEntry
-                continue
+    Files.newByteChannel(this).use { sbc ->
+        ZipFile(sbc).use { zip ->
+            for (zipArchiveEntry in zip.entries.iterator()) {
+                if (zipArchiveEntry.isDirectory) {
+                    continue
+                }
+                zip.getInputStream(zipArchiveEntry).use {
+                    action(zipArchiveEntry.name, it)
+                }
             }
-            action(entry.name, stream)
-            entry = stream.nextEntry
         }
     }
 }
 
 fun Path.forEntryInZip(action: (ZipEntry, InputStream) -> Unit) {
-    ZipInputStream(inputStream()).use { stream ->
-        var entry = stream.nextEntry
-        while (entry != null) {
-            if (entry.isDirectory) {
-                entry = stream.nextEntry
-                continue
+    Files.newByteChannel(this).use { sbc ->
+        ZipFile(sbc).use { zip ->
+            for (zipArchiveEntry in zip.entries.iterator()) {
+                if (zipArchiveEntry.isDirectory) {
+                    continue
+                }
+                zip.getInputStream(zipArchiveEntry).use {
+                    action(zipArchiveEntry, it)
+                }
             }
-            action(entry, stream)
-            entry = stream.nextEntry
         }
     }
 }
