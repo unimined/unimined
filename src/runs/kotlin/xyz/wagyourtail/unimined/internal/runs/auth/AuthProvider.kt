@@ -34,7 +34,7 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
     }
 
     val client = HttpClient().apply {
-        setHeader("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)")
+        setHeader("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtail.xyz>)")
     }
 
     fun passwordGenerator(): String {

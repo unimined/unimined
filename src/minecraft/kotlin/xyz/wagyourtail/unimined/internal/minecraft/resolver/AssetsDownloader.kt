@@ -104,7 +104,7 @@ object AssetsDownloader {
 
                 urlConnection.addRequestProperty(
                     "User-Agent",
-                    "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtal.xyz>)"
+                    "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtail.xyz>)"
                 )
                 urlConnection.addRequestProperty("Accept", "*/*")
                 urlConnection.addRequestProperty("Accept-Encoding", "gzip")
