@@ -559,6 +559,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             val json = JsonObject()
 
             val jarDir = fs.getPath("META-INF/jarjar/").createDirectories()
+            var hasJarJar = false
             for (dep in include!!.dependencies) {
                 val path = jarDir.resolve("${dep.name}-${dep.version}.jar")
                 if (!path.exists()) {
@@ -567,9 +568,12 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                 }
 
                 addIncludeToMetadata(json, dep, "META-INF/jarjar/${dep.name}-${dep.version}.jar")
+                hasJarJar = true
             }
 
-            mod.writeBytes(FabricLikeMinecraftTransformer.GSON.toJson(json).toByteArray())
+            if (hasJarJar) {
+                mod.writeBytes(FabricLikeMinecraftTransformer.GSON.toJson(json).toByteArray())
+            }
         }
     }
 
