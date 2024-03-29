@@ -314,18 +314,23 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     private fun insertIncludes(output: Path) {
+        if (include.dependencies.isEmpty()) {
+            return
+        }
         output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
+            val includeCache = provider.localCache.resolve("includeCache".withSourceSet(provider.sourceSet))
+            val jars = fs.getPath("META-INF/jars")
+
             val mod = fs.getPath(modJsonName)
             if (!Files.exists(mod)) {
                 throw IllegalStateException("$modJsonName not found in jar")
             }
             val json = JsonParser.parseReader(InputStreamReader(Files.newInputStream(mod))).asJsonObject
 
-            Files.createDirectories(fs.getPath("META-INF/jars/"))
-            val includeCache = provider.localCache.resolve("includeCache")
+            Files.createDirectories(jars)
             Files.createDirectories(includeCache)
             for (dep in include.dependencies) {
-                val path = fs.getPath("META-INF/jars/${dep.name}-${dep.version}.jar")
+                val path = jars.resolve("${dep.name}-${dep.version}.jar")
                 val cachePath = includeCache.resolve("${dep.name}-${dep.version}.jar")
                 if (!Files.exists(cachePath)) {
                     Files.copy(
@@ -364,7 +369,7 @@ abstract class FabricLikeMinecraftTransformer(
 
                 Files.copy(cachePath, path, StandardCopyOption.REPLACE_EXISTING)
 
-                addIncludeToModJson(json, dep, "META-INF/jars/${dep.name}-${dep.version}.jar")
+                addIncludeToModJson(json, dep, path.toString().removePrefix("/"))
             }
             Files.write(mod, GSON.toJson(json).toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
         }
