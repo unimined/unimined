@@ -179,7 +179,7 @@ dependencies {
 
     implementation("org.eclipse.jgit:org.eclipse.jgit:5.13.2.202306221912-r")
 
-    implementation("com.github.javakeyring:java-keyring:1.0.3")
+    implementation("com.github.javakeyring:java-keyring:1.0.2")
     implementation("net.raphimc:MinecraftAuth:4.0.0")
 
     compileOnly("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {

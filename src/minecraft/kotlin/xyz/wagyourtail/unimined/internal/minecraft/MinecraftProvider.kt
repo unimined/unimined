@@ -475,6 +475,13 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                         it.from(sourceSet.output)
                     }
                 }
+            } else if (task != null) {
+                (task as Jar).also {
+                    it.from(sourceSet.output)
+                    for ((_, sourceSet) in combinedWithList) {
+                        it.from(sourceSet.output)
+                    }
+                }
             }
             if (task != null && task is Jar) {
                 val classifier: String= task.archiveClassifier.getOrElse("")
