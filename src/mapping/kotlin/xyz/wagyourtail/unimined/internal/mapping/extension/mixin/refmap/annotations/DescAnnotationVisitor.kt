@@ -4,8 +4,6 @@ import net.fabricmc.tinyremapper.extension.mixin.common.ResolveUtility
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.Type
-import sun.jvm.hotspot.oops.CellTypeState.value
-import xyz.wagyourtail.unimined.internal.mapping.extension.ArrayVisitorWrapper
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.RefmapBuilderClassVisitor
 import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.*
