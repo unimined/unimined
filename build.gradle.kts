@@ -299,7 +299,7 @@ publishing {
 }
 
 // A task to output a json file with a list of all the test to run
-tasks.create("writeActionsTestMatrix") {
+tasks.register("writeActionsTestMatrix") {
     doLast {
         val testMatrix = arrayListOf<String>()
 
@@ -322,3 +322,19 @@ tasks.create("writeActionsTestMatrix") {
     }
 }
 
+/**
+ * Replaces invalid characters in test names for GitHub Actions artifacts.
+ */
+abstract class PrintActionsTestName : DefaultTask() {
+    @Input
+    @Option(option = "name", description = "The test name")
+    val testName = "The test name";
+
+    @TaskAction
+    fun run() {
+        val sanitised = testName.replace('*', '_')
+        File(System.getenv()["GITHUB_OUTPUT"]).writeText("\ntest=$sanitised")
+    }
+}
+
+tasks.register<PrintActionsTestName>("printActionsTestName") {}

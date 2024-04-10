@@ -75,7 +75,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - run: gradle test --tests ${{ matrix.test }}
+      - run: gradle printActionsTestName --name="${{ matrix.test }}" test --tests ${{ matrix.test }} --stacktrace --warning-mode fail
         env:
           TEST_WARNING_MODE: fail
         id: test
@@ -109,7 +109,7 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
-      - run: ./gradlew test --tests ${{ matrix.test }}
+      - run: ./gradlew printActionsTestName --name="${{ matrix.test }}" test --tests ${{ matrix.test }} --stacktrace --warning-mode fail
         env:
           TEST_WARNING_MODE: fail
         id: test
