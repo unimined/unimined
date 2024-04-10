@@ -326,13 +326,13 @@ tasks.register("writeActionsTestMatrix") {
  * Replaces invalid characters in test names for GitHub Actions artifacts.
  */
 abstract class PrintActionsTestName : DefaultTask() {
-    @Input
-    @Option(option = "name", description = "The test name")
-    val testName = "The test name";
+    @get:Input
+    @get:Option(option = "name", description = "The test name")
+    abstract val testName: Property<String>;
 
     @TaskAction
     fun run() {
-        val sanitised = testName.replace('*', '_')
+        val sanitised = testName.get().replace('*', '_')
         File(System.getenv()["GITHUB_OUTPUT"]).writeText("\ntest=$sanitised")
     }
 }
