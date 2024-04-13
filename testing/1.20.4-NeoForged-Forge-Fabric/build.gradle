@@ -22,8 +22,14 @@ sourceSets {
 repositories {
     mavenCentral()
     maven {
+        url = "https://files.minecraftforge.net/maven"
+    }
+    maven {
         name = "sponge"
         url = "https://repo.spongepowered.org/maven"
+    }
+    maven {
+        url = "https://maven.wagyourtail.xyz/releases"
     }
 }
 
@@ -32,10 +38,15 @@ unimined.minecraft {
 
     mappings {
         intermediary()
-        mojmap()
-        parchment("1.20.2", "2023.12.10")
+        yarn(1)
 
         devFallbackNamespace "intermediary"
+
+        stub.withMappings("intermediary", ["yarn"]) {
+            c("net/minecraft/class_1927", []) {
+                m("method_55109", "()Lnet/minecraft/class_243;", ["getPos"])
+            }
+        }
     }
 
     defaultRemapJar = false
