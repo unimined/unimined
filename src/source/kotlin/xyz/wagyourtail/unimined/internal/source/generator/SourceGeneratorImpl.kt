@@ -47,7 +47,7 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
 
     override fun generate(classpath: FileCollection, inputPath: Path, outputPath: Path, linemappedPath: Path?) {
         if (generator.dependencies.isEmpty()) {
-            generator("1.9.3")
+            generator("1.10.1")
         }
 
         outputPath.deleteIfExists()
