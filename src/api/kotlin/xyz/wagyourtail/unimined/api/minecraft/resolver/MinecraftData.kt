@@ -19,4 +19,5 @@ abstract class MinecraftData {
 
     abstract val minecraftClientFile: File
     abstract val minecraftServerFile: File
+    abstract val hasMappings: Boolean
 }

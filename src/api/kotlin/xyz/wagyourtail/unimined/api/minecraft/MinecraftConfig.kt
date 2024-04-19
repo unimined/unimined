@@ -17,7 +17,8 @@ import xyz.wagyourtail.unimined.api.minecraft.remap.MinecraftRemapConfig
 import xyz.wagyourtail.unimined.api.minecraft.resolver.MinecraftData
 import xyz.wagyourtail.unimined.api.mod.ModsConfig
 import xyz.wagyourtail.unimined.api.runs.RunsConfig
-import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.source.SourceConfig
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
@@ -107,6 +108,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     abstract val runs: RunsConfig
     abstract val minecraftData: MinecraftData
     abstract val minecraftRemapper: MinecraftRemapConfig
+    abstract val sourceProvider: SourceConfig
 
 
 
@@ -164,7 +166,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         }
         val project = path.substringBeforeLast(":")
         val name = path.substringAfterLast(":")
-        combineWith(this.project.project(path), this.project.project(path).sourceSets.getByName(name))
+        combineWith(this.project.project(project), this.project.project(project).sourceSets.getByName(name))
     };
 
     /**
@@ -272,6 +274,21 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         }
     }
 
+    fun source(action: SourceConfig.() -> Unit) {
+        sourceProvider.action()
+    }
+
+    fun source(
+        @DelegatesTo(value = SourceConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        source {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
     @ApiStatus.Internal
     abstract fun getMinecraft(
         namespace: MappingNamespaceTree.Namespace,
@@ -280,6 +297,9 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
 
     @get:ApiStatus.Internal
     abstract val minecraftFileDev: File
+
+    @get:ApiStatus.Internal
+    abstract val minecraftSourceFileDev: File?
 
     @get:ApiStatus.Internal
     abstract val mergedOfficialMinecraftFile: File?
@@ -300,5 +320,5 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     val localCache by lazy { project.unimined.getLocalCache(sourceSet) }
 
     @get:ApiStatus.Internal
-    abstract val combinedWithList: MutableList<Pair<Project, SourceSet>>
+    abstract val combinedWithList: MutableSet<Pair<Project, SourceSet>>
 }

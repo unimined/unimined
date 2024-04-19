@@ -314,7 +314,7 @@ object MCPReader {
     }
 
     fun readPackages(envType: EnvType, reader: Reader): (MappingVisitor) -> PackageRemappingVisitor {
-        return readPackages(envType, reader, setOf(MappingUtil.NS_SOURCE_FALLBACK, MappingUtil.NS_TARGET_FALLBACK))
+        return readPackages(envType, reader, setOf(MappingUtil.NS_TARGET_FALLBACK))
     }
 
     fun readPackages(

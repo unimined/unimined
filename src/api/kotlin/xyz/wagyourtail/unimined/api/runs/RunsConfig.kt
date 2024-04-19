@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.api.runs
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
 abstract class RunsConfig {
@@ -10,6 +11,7 @@ abstract class RunsConfig {
      * just a flag to disable all.
      */
     var off: Boolean by FinalizeOnRead(false)
+    abstract val auth: AuthConfig
 
     fun config(
         config: String,

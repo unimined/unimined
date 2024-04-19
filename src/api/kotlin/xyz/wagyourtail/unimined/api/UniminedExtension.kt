@@ -5,8 +5,8 @@ import groovy.lang.DelegatesTo
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikeApiExtension
 import xyz.wagyourtail.unimined.util.DefaultMap
@@ -116,6 +116,52 @@ abstract class UniminedExtension(val project: Project) {
         }
     }
 
+    /**
+     * @since 1.2.0
+     */
+    @JvmOverloads
+    abstract fun migrateMappings(sourceSet: SourceSet = sourceSets.getByName("main"), action: MigrateMappingsTask.() -> Unit)
+
+    /**
+     * @since 1.2.0
+     */
+    fun migrateMappings(
+        vararg sourceSets: SourceSet,
+        action: MigrateMappingsTask.() -> Unit
+    ) {
+        for (sourceSet in sourceSets) {
+            migrateMappings(sourceSet, action)
+        }
+    }
+
+    /**
+     * @since 1.2.0
+     */
+    @JvmOverloads
+    fun migrateMappings(
+        sourceSet: SourceSet = sourceSets.getByName("main"),
+        @DelegatesTo(value = MigrateMappingsTask::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        migrateMappings(sourceSet) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * @since 1.2.0
+     */
+    fun migrateMappings(
+        sourceSets: List<SourceSet>,
+        @DelegatesTo(value = MigrateMappingsTask::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        for (sourceSet in sourceSets) {
+            migrateMappings(sourceSet, action)
+        }
+    }
 
     @ApiStatus.Internal
     fun getLocalCache(): Path {
@@ -152,4 +198,11 @@ abstract class UniminedExtension(val project: Project) {
 
     abstract fun neoForgedMaven()
     abstract fun sonatypeStaging()
+    abstract fun spongeMaven();
+
+    abstract fun jitpack()
+
+    abstract fun spigot()
+
+    abstract fun flintMaven(name: String)
 }

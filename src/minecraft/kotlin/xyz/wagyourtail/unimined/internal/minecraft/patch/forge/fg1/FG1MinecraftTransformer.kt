@@ -9,8 +9,8 @@ import org.objectweb.asm.tree.*
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
@@ -20,8 +20,6 @@ import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.io.InputStream
-import java.net.URI
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
@@ -34,6 +32,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 ) {
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG1 transformer")
+        parent.accessTransformerTransformer.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
     }
 
     override val prodNamespace: MappingNamespaceTree.Namespace
@@ -200,19 +199,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        val out = fixForge(baseMinecraft)
-        return out.path.openZipFileSystem().use { fs ->
-            val ats = listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) }
-            // make sure remap at's to modern
-            for (at in ats) {
-                AccessTransformerMinecraftTransformer.toModern(at)
-            }
-            // apply at's
-            parent.applyATs(
-                out,
-                ats
-            )
-        }
+        return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
@@ -251,7 +238,7 @@ class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                     }
                     val ats = listOf(out.getPath("forge_at.cfg"), out.getPath("fml_at.cfg")).filter { Files.exists(it) }
                     for (at in ats) {
-                        AccessTransformerMinecraftTransformer.toModern(at)
+                        AccessTransformerApplier.toModern(at)
                     }
                 }
             } catch (e: Throwable) {

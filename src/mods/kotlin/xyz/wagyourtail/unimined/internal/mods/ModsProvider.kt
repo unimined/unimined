@@ -30,7 +30,7 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
 
     private var default by FinalizeOnRead<ModRemapProvider.() -> Unit> {}
 
-    private val remapConfigsResolved = mutableMapOf<Configuration, ModRemapProvider>()
+    val remapConfigsResolved = mutableMapOf<Configuration, ModRemapProvider>()
 
     fun modTransformFolder(): Path {
         return project.unimined.getLocalCache().resolve("modTransform").createDirectories()
@@ -77,11 +77,11 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         }
     }
 
-    fun getClasspath(): Set<File> {
+    override fun getClasspath(): Set<File> {
         return remapConfigsResolved.keys.flatMap { it.resolve() }.toSet()
     }
 
-    fun getClasspathAs(namespace: MappingNamespaceTree.Namespace, fallbackNamespace: MappingNamespaceTree.Namespace, classpath: Set<File>): Set<File> {
+    override fun getClasspathAs(namespace: MappingNamespaceTree.Namespace, fallbackNamespace: MappingNamespaceTree.Namespace, classpath: Set<File>): Set<File> {
         val remapCp = classpath.associateWith { file ->
             remapConfigsResolved.values.firstNotNullOfOrNull { conf -> conf.getConfigForFile(file)?.let { conf to it } }
         }

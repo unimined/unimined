@@ -12,7 +12,7 @@ import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.impldep.org.eclipse.jgit.lib.ObjectChecker
-import xyz.wagyourtail.unimined.api.task.ExportMappingsTask
+import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets

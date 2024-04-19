@@ -69,9 +69,15 @@ interface ContainedMapping {
     fun sourceNamespace(namespace: String)
 
     /**
+     * insert forward visitor that converts class names to the ClassNs
+     */
+    @Deprecated(message = "use memberNameReplacer", replaceWith = ReplaceWith("memberNameReplacer(targetNs, classNs, setOf(\"class\"))"))
+    fun classNameReplacer(targetNs: String, classNs: String)
+
+    /**
      * insert forward visitor that converts srg to searge names.
      */
-    fun srgToSearge()
+    fun memberNameReplacer(targetNs: String, memberNs: String,  types: Set<String>)
 
     /**
      * insert forward visitor that only allows existing src names.
@@ -145,4 +151,6 @@ interface ContainedMapping {
     fun disallowDuplicateOutputs()
 
     fun renest()
+    fun exclude()
+    fun clearExclude()
 }

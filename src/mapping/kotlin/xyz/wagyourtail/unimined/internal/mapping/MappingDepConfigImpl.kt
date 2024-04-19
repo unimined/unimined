@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
+import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor
 import net.fabricmc.mappingio.format.*
@@ -7,6 +8,7 @@ import net.fabricmc.mappingio.tree.MappingTree
 import net.fabricmc.mappingio.tree.MappingTree.ClassMapping
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.artifacts.Dependency
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.ContainedMapping
 import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
@@ -101,17 +103,96 @@ class ContainedMappingImpl() : ContainedMapping {
         inputActions.add { setSource(namespace) }
     }
 
-    override fun srgToSearge() {
+    @Deprecated(
+        "use memberNameReplacer",
+        replaceWith = ReplaceWith("memberNameReplacer(targetNs, classNs, setOf(\"class\"))")
+    )
+    override fun classNameReplacer(targetNs: String, classNs: String) {
+        checkFinalized()
+        memberNameReplacer(targetNs, classNs, setOf(MappedElementKind.CLASS))
+    }
+
+    override fun memberNameReplacer(targetNs: String, memberNs: String, types: Set<String>) {
+        memberNameReplacer(
+            targetNs,
+            memberNs,
+            types.map { MappedElementKind.valueOf(it.uppercase()) }.toSet()
+        )
+    }
+
+    @JvmName("memberNameReplacerIntl")
+    @ApiStatus.Internal
+    fun memberNameReplacer(targetNs: String, memberNs: String, types: Set<MappedElementKind>) {
         checkFinalized()
         inputActions.add {
-            forwardVisitor { v, _ ->
-                SrgToSeargeMapper(
-                    v,
-                    "srg",
-                    "searge",
-                    "mojmap",
-                    (mappingsConfig as MappingsProvider)::getMojmapMappings
-                )
+            afterRemap {
+//                println("memberNameReplacer")
+//                println("types: $types")
+                val targetKey = it.getNamespaceId(targetNs)
+
+                if (targetKey == MappingTreeView.NULL_NAMESPACE_ID) {
+                    throw IllegalStateException("Target namespace $targetNs does not exist")
+                }
+
+                val memberKey = it.getNamespaceId(memberNs)
+
+                if (memberKey == MappingTreeView.NULL_NAMESPACE_ID) {
+                    throw IllegalStateException("Member namespace $memberNs does not exist")
+                }
+
+//                println("target: $targetKey")
+//                println("member: $memberKey")
+//
+//                println("namespaces: ${it.srcNamespace} -> ${it.dstNamespaces}")
+
+                for (classMapping in it.classes) {
+                    if (types.contains(MappedElementKind.CLASS)) {
+//                        println("classMapping: $classMapping")
+                        val className = classMapping.getName(memberKey)
+                        if (className != null) {
+//                            println("className: $className")
+                            classMapping.setDstName(className, targetKey)
+                        }
+                    }
+                    if (types.contains(MappedElementKind.METHOD) || types.contains(MappedElementKind.METHOD_ARG) || types.contains(MappedElementKind.METHOD_VAR)) {
+                        for (method in classMapping.methods) {
+                            if (types.contains(MappedElementKind.METHOD)) {
+//                                println("method: $method")
+                                val memberName = method.getName(memberKey)
+                                if (memberName != null) {
+//                                    println("memberName: $memberName")
+                                    method.setDstName(memberName, targetKey)
+                                }
+                            }
+                            if (types.contains(MappedElementKind.METHOD_ARG)) {
+                                for (arg in method.args) {
+                                    val argName = arg.getName(memberKey)
+                                    if (argName != null) {
+                                        arg.setDstName(argName, targetKey)
+                                    }
+                                }
+                            }
+                            if (types.contains(MappedElementKind.METHOD_VAR)) {
+                                for (local in method.vars) {
+                                    val localName = local.getName(memberKey)
+                                    if (localName != null) {
+                                        local.setDstName(localName, targetKey)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (types.contains(MappedElementKind.FIELD)) {
+                        for (field in classMapping.fields) {
+//                            println("field: $field")
+                            val fieldName = field.getName(memberKey)
+                            if (fieldName != null) {
+                                field.setDstName(fieldName, targetKey)
+                            }
+                        }
+                    }
+                }
+
             }
         }
     }
@@ -293,5 +374,17 @@ class ContainedMappingImpl() : ContainedMapping {
     override fun clearOutputs() {
         checkFinalized()
         outputs.clear()
+    }
+
+    override fun exclude() {
+        inputActions.add {
+            exclude()
+        }
+    }
+
+    override fun clearExclude() {
+        inputActions.add {
+            clearExclude()
+        }
     }
 }

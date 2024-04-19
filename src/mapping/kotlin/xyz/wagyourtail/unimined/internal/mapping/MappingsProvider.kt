@@ -1,11 +1,9 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
+import com.google.gson.JsonParser
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
-import net.fabricmc.mappingio.format.MappingTreeBuilder
-import net.fabricmc.mappingio.format.ProGuardReader
-import net.fabricmc.mappingio.format.Tiny2Reader2
-import net.fabricmc.mappingio.format.Tiny2Writer2
+import net.fabricmc.mappingio.format.*
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import net.fabricmc.tinyremapper.IMappingProvider
@@ -21,11 +19,12 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.util.*
 import java.io.IOException
 import java.io.StringWriter
+import java.net.URI
 import java.nio.file.Path
 import java.security.MessageDigest
 import kotlin.io.path.*
 
-class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsConfig(project, minecraft) {
+class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mappingKey: String = "mappings"): MappingsConfig(project, minecraft) {
 
     override var side: EnvType by FinalizeOnRead(LazyMutable { minecraft.side })
 
@@ -150,12 +149,30 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         officialMappingsFromJar {
             action()
         }
-        mapping(mappings, key) {
-            mapNamespace("obf", "official")
-            onlyExistingSrc()
-            srgToSearge()
-            outputs("searge", false) { listOf("official") }
-            action()
+        // if we need to replace class names with mojmap
+        if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.16.5") > 0) {
+            postProcess(key, {
+                mojmap()
+                mapping(mappings, key) {
+                    mapNamespace("obf", "official")
+                    dependsOn("mojmap")
+                    classNameReplacer("srg", "mojmap")
+                    onlyExistingSrc()
+                    dependsOn("mojmap")
+                    outputs("srg", false) { listOf("official") }
+                }
+            }) {
+                mapNamespace("srg", "searge")
+                outputs("searge", false) { listOf("official") }
+                action()
+            }
+        } else {
+            mapping(mappings, key) {
+                mapNamespace("obf", "official")
+                outputs("searge", false) { listOf("official") }
+                onlyExistingSrc()
+                action()
+            }
         }
     }
 
@@ -205,7 +222,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                     t == "MCP" || t == "OLDER_MCP"
                 }) {
                     onlyExistingSrc()
-                    srgToSearge()
                     outputs("mcp", true) { listOf("searge") }
                     sourceNamespace("searge")
                 }
@@ -224,7 +240,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
                 }
             } else {
                 onlyExistingSrc()
-                srgToSearge()
                 outputs("mcp", true) { listOf("searge") }
                 sourceNamespace("searge")
             }
@@ -377,8 +392,74 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         }
     }
 
+    override fun spigotDev(mcVersion: String, key: String, action: MappingDepConfig.() -> Unit) {
+
+        // TODO: have a common sourceSet where it would make sense to put this
+        val cache = project.unimined.getLocalCache(minecraft.sourceSet).resolve("spigot").resolve(mcVersion)
+        cache.createDirectories()
+        val buildInfo = run {
+            val buildInfoFile = cache.resolve("BuildInfo-${mcVersion}.json")
+            if (!buildInfoFile.exists() || project.unimined.forceReload) {
+                URI.create("https://hub.spigotmc.org/versions/${mcVersion}.json").stream()
+                    .use { input ->
+                        buildInfoFile.outputStream().use {
+                            input.copyTo(it)
+                        }
+                    }
+            }
+            val buildInfoJson = JsonParser.parseString(buildInfoFile.readText())
+            buildInfoJson.asJsonObject
+        }
+
+        val buildDataZip = run {
+            val buildDataFile = cache.resolve("BuildData-${mcVersion}-${buildInfo["name"].asString}.zip")
+            if (!buildDataFile.exists() || project.unimined.forceReload) {
+                val version = buildInfo["refs"].asJsonObject["BuildData"].asString
+                URI.create("https://hub.spigotmc.org/stash/rest/api/latest/projects/SPIGOT/repos/builddata/archive?at=$version&format=zip")
+                    .stream()
+                    .use { input ->
+                        buildDataFile.outputStream().use {
+                            input.copyTo(it)
+                        }
+                    }
+            }
+            buildDataFile
+        }
+
+        val (layerMojmap, hasMembers) = buildDataZip.readZipInputStreamFor("info.json") {
+            val info = it.reader().use { JsonParser.parseReader(it).asJsonObject }
+
+            listOf(info.has("mappingsUrl"), info.has("memberMappings"))
+        }
+
+        if (layerMojmap) {
+            project.logger.lifecycle("[Unimined/MappingsProvider] Layering mojmap on top of spigot")
+            postProcess(key, {
+                mojmap()
+                mapping(project.files(buildDataZip), key) {
+                    mapNamespace("spigot", "spigot_dev")
+                    outputs("spigot_dev", true) { listOf("official", "mojmap") }
+                    dependsOn("mojmap")
+                    memberNameReplacer("spigot_dev", "mojmap", if (hasMembers) setOf("field") else setOf("method", "field", "method_arg", "method_var"))
+                    renest()
+                }
+            }) {
+                outputs("spigot_dev", true) { listOf("official") }
+                action()
+            }
+        } else {
+            mapping(project.files(buildDataZip), key) {
+                mapNamespace("spigot", "spigot_dev")
+                outputs("spigot_dev", true) { listOf("official") }
+                renest()
+                action()
+            }
+        }
+
+    }
+
     override fun postProcess(key: String, mappings: MappingsConfig.() -> Unit, merger: MappingDepConfig.() -> Unit) {
-        val mappingsConfig = MappingsProvider(project, minecraft)
+        val mappingsConfig = MappingsProvider(project, minecraft, "postProcess-$key")
         mappingsConfig.mappings()
         mappingsConfig.resolveMappingTree()
         mapping(project.dependencies.create(
@@ -433,7 +514,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         return tree
     }
 
-    private fun resolveMappingTree(): MappingTreeView {
+    fun resolveMappingTree(): MappingTreeView {
         project.logger.lifecycle("[Unimined/MappingsProvider] Resolving mappings for ${minecraft.sourceSet}")
         lateinit var mappings: MappingTreeView
         if (!freeze) freeze = true
@@ -509,9 +590,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         resolveMappingTree()
     }
 
-    private fun mappingCacheFile(): Path =
+    public fun mappingCacheFile(): Path =
         (if (hasStubs) minecraft.localCache else project.unimined.getGlobalCache())
-            .resolve("mappings").resolve("mappings-${side}-${combinedNames}.tiny")
+            .resolve("mappings").resolve("${mappingKey}-${side}-${combinedNames}.tiny")
 
 
     override val combinedNames: String by lazy {
@@ -571,6 +652,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig): MappingsCo
         remap: Pair<Namespace, Namespace>,
         remapLocals: Boolean,
     ) : (IMappingProvider.MappingAcceptor) -> Unit {
+        this.freeze()
         return { acceptor ->
             val srcName = remap.first
             val dstName = remap.second

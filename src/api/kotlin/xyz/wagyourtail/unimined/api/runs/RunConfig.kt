@@ -8,6 +8,7 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
+import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.XMLBuilder
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
@@ -31,7 +32,7 @@ data class RunConfig(
     var workingDir: File,
     val env: MutableMap<String, String>,
     val runFirst: MutableList<Task> = mutableListOf(),
-    var disabled : Boolean = false,
+    var disabled : Boolean = false
 ) {
 
     fun createIdeaRunConfig() {

@@ -9,7 +9,9 @@ unified minecraft modding environment with support for legacy environments.
 * Neoforge
 * Modloader
 * [JarModAgent](https://github.com/unimined/JarModAgent)
+* [Flint Loader](https://flintloader.net)
 * just plain jarmodding
+* Rift
 
 ## Planned Loaders
 * Bukkit Derrivitives (at least paper)
@@ -23,7 +25,6 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 ## TODO
 * stop using artifactural
 * rework mcpconfig runner to be more kotlin and less old version of arch-loom code
-* Fabric injected interfaces
 * Forge JarJar
 * Support for launch configs in other dev envs
   * vscode

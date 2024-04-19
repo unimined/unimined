@@ -2,15 +2,19 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2
 
 import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading.fixResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import xyz.wagyourtail.unimined.util.deleteRecursively
+import xyz.wagyourtail.unimined.util.readZipContents
+import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import java.net.URI
 import java.nio.file.*
 import kotlin.io.path.*
@@ -23,6 +27,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 ) {
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG2 transformer")
+        parent.accessTransformerTransformer.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
     }
 
     override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }
@@ -58,6 +63,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
     override val transform = (listOf<(FileSystem) -> Unit>(
         FixFG2Coremods::fixCoremods,
+        FixFG2ResourceLoading::fixResourceLoading,
     ) + super.transform).toMutableList()
 
     override fun apply() {
@@ -139,6 +145,7 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
         config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
         config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
+        config.env["MOD_CLASSES"] = parent.groups
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
@@ -168,15 +175,11 @@ class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
         config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
         config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
+        config.env["MOD_CLASSES"] = parent.groups
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        val out = fixForge(baseMinecraft)
-        return out.path.openZipFileSystem().use { fs ->
-            parent.applyATs(
-                out,
-                listOf(fs.getPath("forge_at.cfg"), fs.getPath("fml_at.cfg")).filter { Files.exists(it) })
-        }
+        return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {

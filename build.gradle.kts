@@ -66,11 +66,19 @@ sourceSets {
             sourceSets["api"]
         )
     }
+    create("source") {
+        inputOf(main.get())
+        outputOf(
+            sourceSets["mapping"],
+            sourceSets["api"]
+        )
+    }
     create("mods") {
         inputOf(main.get())
         outputOf(
             sourceSets["api"],
-            sourceSets["mapping"]
+            sourceSets["mapping"],
+            sourceSets["source"]
         )
     }
     create("runs") {
@@ -85,14 +93,18 @@ sourceSets {
             sourceSets["api"],
             sourceSets["mapping"],
             sourceSets["mods"],
-            sourceSets["runs"]
+            sourceSets["runs"],
+            sourceSets["source"]
         )
     }
     main {
         outputOf(
             sourceSets["api"],
             sourceSets["mapping"],
-            sourceSets["minecraft"]
+            sourceSets["source"],
+            sourceSets["mods"],
+            sourceSets["runs"],
+            sourceSets["minecraft"],
         )
     }
     test {
@@ -101,10 +113,11 @@ sourceSets {
         )
         outputOf(
             sourceSets["api"],
-            sourceSets["minecraft"],
             sourceSets["mapping"],
+            sourceSets["source"],
             sourceSets["mods"],
             sourceSets["runs"],
+            sourceSets["minecraft"],
             main.get()
         )
     }
@@ -132,16 +145,6 @@ dependencies {
     implementation("org.ow2.asm:asm-tree:9.5")
     implementation("org.ow2.asm:asm-analysis:9.5")
     implementation("org.ow2.asm:asm-util:9.5")
-
-    // artifact transformer
-    implementation("net.neoforged:artifactural:3.0.17") {
-        exclude(group = "dev.gradleplugins", module = "gradle-api")
-        exclude(group = "net.minecraftforge", module = "unsafe")
-    }
-    implementation("net.minecraftforge:unsafe:0.2.0") {
-        exclude(group = "org.apache.logging.log4j")
-    }
-    implementation("org.apache.logging.log4j:log4j-core:2.20.0")
 
     // remapper
     implementation("net.fabricmc:tiny-remapper:0.8.7") {
@@ -174,18 +177,27 @@ dependencies {
         exclude(group = "org.ow2.asm")
     }
 
+    implementation("org.eclipse.jgit:org.eclipse.jgit:5.13.2.202306221912-r")
+
+    implementation("com.github.javakeyring:java-keyring:1.0.2")
+    implementation("net.raphimc:MinecraftAuth:4.0.0")
+
     compileOnly("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false
     }
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.6.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.jar {
     from(
         sourceSets["api"].output,
-        sourceSets["minecraft"].output,
         sourceSets["mapping"].output,
+        sourceSets["source"].output,
         sourceSets["mods"].output,
         sourceSets["runs"].output,
+        sourceSets["minecraft"].output,
         sourceSets["main"].output
     )
 
@@ -212,6 +224,7 @@ tasks.create("sourcesJar", Jar::class) {
         sourceSets["api"].allSource,
         sourceSets["minecraft"].allSource,
         sourceSets["mapping"].allSource,
+        sourceSets["source"].allSource,
         sourceSets["mods"].allSource,
         sourceSets["runs"].allSource,
         sourceSets["main"].allSource
@@ -286,7 +299,7 @@ publishing {
 }
 
 // A task to output a json file with a list of all the test to run
-tasks.create("writeActionsTestMatrix") {
+tasks.register("writeActionsTestMatrix") {
     doLast {
         val testMatrix = arrayListOf<String>()
 
@@ -309,3 +322,19 @@ tasks.create("writeActionsTestMatrix") {
     }
 }
 
+/**
+ * Replaces invalid characters in test names for GitHub Actions artifacts.
+ */
+abstract class PrintActionsTestName : DefaultTask() {
+    @get:Input
+    @get:Option(option = "name", description = "The test name")
+    abstract val testName: Property<String>;
+
+    @TaskAction
+    fun run() {
+        val sanitised = testName.get().replace('*', '_')
+        File(System.getenv()["GITHUB_OUTPUT"]).writeText("\ntest=$sanitised")
+    }
+}
+
+tasks.register<PrintActionsTestName>("printActionsTestName") {}

@@ -4,11 +4,9 @@ import net.fabricmc.tinyremapper.extension.mixin.common.ResolveUtility
 import net.fabricmc.tinyremapper.extension.mixin.common.data.AnnotationElement
 import net.fabricmc.tinyremapper.extension.mixin.common.data.Constant
 import org.objectweb.asm.AnnotationVisitor
-import xyz.wagyourtail.unimined.internal.mapping.extension.ArrayVisitorWrapper
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.JarModAgent
 import xyz.wagyourtail.unimined.internal.mapping.extension.jma.refmap.annotations.CSliceAnnotationVisitor
 import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.RefmapBuilderClassVisitor
-import xyz.wagyourtail.unimined.internal.mapping.extension.mixin.refmap.annotations.DescAnnotationVisitor
 import xyz.wagyourtail.unimined.util.orElseOptional
 import java.util.*
 

@@ -10,9 +10,10 @@ import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
-import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
@@ -271,6 +272,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
                 throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${provider.sourceSet} on ${provider.version} and ${sourceSet} on ${minecraftConfig.version}")
             }
         }
+
+        // squash all combinedWith
         val map = mutableMapOf<Pair<Project, SourceSet>, Set<Pair<Project, SourceSet>>>()
         val resolveQueue = minecraftConfigs.keys.toMutableSet()
         while (resolveQueue.isNotEmpty()) {

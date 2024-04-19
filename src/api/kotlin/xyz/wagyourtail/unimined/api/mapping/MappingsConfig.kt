@@ -192,7 +192,6 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-
     abstract fun mcp(channel: String, version: String, key: String = "mcp", action: MappingDepConfig.() -> Unit = {})
 
     @JvmOverloads
@@ -477,6 +476,27 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         action: Closure<*>
     ) {
         parchment(mcVersion, version, checked, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    @JvmOverloads
+    abstract fun spigotDev(
+        mcVersion: String = minecraft.version,
+        key: String = "spigot_dev",
+        action: MappingDepConfig.() -> Unit = {}
+    )
+
+    @JvmOverloads
+    fun spigotDev(
+        mcVersion: String = minecraft.version,
+        key: String = "spigot_dev",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        spigotDev(mcVersion, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()

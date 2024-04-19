@@ -2,13 +2,13 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalDependency
-import xyz.wagyourtail.unimined.api.minecraft.patch.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
-import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
-import xyz.wagyourtail.unimined.internal.mods.task.RemapJarTaskImpl
+import xyz.wagyourtail.unimined.internal.minecraft.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.util.getTempFilePath
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
@@ -75,14 +75,7 @@ open class JarModAgentMinecraftTransformer(
 
     override fun apply() {
         if (jarModAgent.dependencies.isEmpty()) {
-            project.unimined.wagYourMaven("snapshots")
-            jarModAgent.dependencies.add(
-                project.dependencies.create(
-                    "xyz.wagyourtail.unimined:jarmod-agent:0.1.4-SNAPSHOT:all"
-                ).also {
-                    (it as ExternalDependency).isTransitive = false
-                }
-            )
+            agentVersion("0.1.4-SNAPSHOT")
         }
 
         super.apply()

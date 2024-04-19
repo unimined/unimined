@@ -1,18 +1,13 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod
 
 import org.gradle.api.Project
-import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetContainer
-import xyz.wagyourtail.unimined.api.minecraft.patch.JarModPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModPatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.ModLoaderPatches
-import xyz.wagyourtail.unimined.util.consumerApply
-import xyz.wagyourtail.unimined.util.deleteRecursively
-import xyz.wagyourtail.unimined.util.openZipFileSystem
-import xyz.wagyourtail.unimined.util.withSourceSet
+import xyz.wagyourtail.unimined.util.*
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -74,24 +69,17 @@ open class JarModMinecraftTransformer(
                         out.getPath("META-INF").deleteRecursively()
                     }
                     for (file in jarmod) {
-                        ZipInputStream(file.inputStream()).use {
-                            var entry = it.nextEntry
-                            while (entry != null) {
-                                if (entry.isDirectory) {
-                                    Files.createDirectories(out.getPath(entry.name))
-                                } else {
-                                    out.getPath(entry.name).parent?.let { path ->
-                                        Files.createDirectories(path)
-                                    }
-                                    Files.write(
-                                        out.getPath(entry.name),
-                                        it.readBytes(),
-                                        StandardOpenOption.CREATE,
-                                        StandardOpenOption.TRUNCATE_EXISTING
-                                    )
+                        file.toPath().forEachInZip { name, stream ->
+                            name.substringBeforeLast('/', "").let { path ->
+                                if (path.isNotEmpty()) {
+                                    Files.createDirectories(out.getPath(path))
                                 }
-                                entry = it.nextEntry
                             }
+                            Files.copy(
+                                stream,
+                                out.getPath(name),
+                                StandardCopyOption.REPLACE_EXISTING
+                            )
                         }
                     }
                     transform.forEach { it(out) }

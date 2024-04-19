@@ -9,6 +9,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
+import org.slf4j.helpers.Util
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -17,6 +18,7 @@ import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.*
+import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.collections.HashMap
@@ -83,6 +85,11 @@ object OSUtils {
             "x86_64" -> "64"
             else -> "unknown"
         }
+
+    const val WINDOWS = "windows"
+    const val LINUX = "linux"
+    const val OSX = "osx"
+    const val UNKNOWN = "unknown"
 }
 
 fun testSha1(size: Long, sha1: String, path: Path): Boolean {
@@ -296,15 +303,31 @@ fun Path.readZipContents(): List<String> {
 }
 
 fun Path.forEachInZip(action: (String, InputStream) -> Unit) {
-    ZipInputStream(inputStream()).use { stream ->
-        var entry = stream.nextEntry
-        while (entry != null) {
-            if (entry.isDirectory) {
-                entry = stream.nextEntry
-                continue
+    Files.newByteChannel(this).use { sbc ->
+        ZipFile(sbc).use { zip ->
+            for (zipArchiveEntry in zip.entries.iterator()) {
+                if (zipArchiveEntry.isDirectory) {
+                    continue
+                }
+                zip.getInputStream(zipArchiveEntry).use {
+                    action(zipArchiveEntry.name, it)
+                }
             }
-            action(entry.name, stream)
-            entry = stream.nextEntry
+        }
+    }
+}
+
+fun Path.forEntryInZip(action: (ZipEntry, InputStream) -> Unit) {
+    Files.newByteChannel(this).use { sbc ->
+        ZipFile(sbc).use { zip ->
+            for (zipArchiveEntry in zip.entries.iterator()) {
+                if (zipArchiveEntry.isDirectory) {
+                    continue
+                }
+                zip.getInputStream(zipArchiveEntry).use {
+                    action(zipArchiveEntry, it)
+                }
+            }
         }
     }
 }
@@ -323,6 +346,22 @@ fun <T> Path.readZipInputStreamFor(path: String, throwIfMissing: Boolean = true,
         }
     }
     return null as T
+}
+
+fun Path.zipContains(path: String): Boolean {
+    Files.newByteChannel(this).use {
+        ZipFile(it).use { zip ->
+            val entry = zip.getEntry(path.replace("\\", "/"))
+            if (entry != null) {
+                return true
+            }
+        }
+    }
+    return false
+}
+
+fun Path.openZipFileSystem(vararg args: Pair<String, Any>): FileSystem {
+    return openZipFileSystem(args.associate { it })
 }
 
 fun Path.openZipFileSystem(args: Map<String, *> = mapOf<String, Any>()): FileSystem {

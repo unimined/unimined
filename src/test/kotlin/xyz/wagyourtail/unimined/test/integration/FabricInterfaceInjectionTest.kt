@@ -3,6 +3,8 @@ package xyz.wagyourtail.unimined.test.integration
 import org.gradle.testkit.runner.TaskOutcome
 import org.gradle.testkit.runner.UnexpectedBuildFailure
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
@@ -13,11 +15,12 @@ import kotlin.io.path.inputStream
 import kotlin.test.*
 
 class FabricInterfaceInjectionTest {
-    @Test
-    fun test_fabric_interface_injection() {
+    @ParameterizedTest
+    @MethodSource("xyz.wagyourtail.unimined.util.IntegrationTestUtils#versions")
+    fun test_fabric_interface_injection(gradleVersion: String) {
         val projectName = "Fabric-Interface-Injection"
         try {
-            val result = runTestProject(projectName)
+            val result = runTestProject(projectName, gradleVersion)
 
             try {
                 result.task(":build")?.outcome?.let {

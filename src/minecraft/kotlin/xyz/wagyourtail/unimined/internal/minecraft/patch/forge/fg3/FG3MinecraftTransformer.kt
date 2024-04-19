@@ -1,26 +1,31 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3
 
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.minecraftforge.binarypatcher.ConsoleTool
 import org.apache.commons.io.output.NullOutputStream
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.LogLevel
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.internal.minecraft.patch.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
-import xyz.wagyourtail.unimined.api.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.FabricLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigData
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
-import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
+import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -35,6 +40,16 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     project, parent.provider, jarModProvider = "forge", providerName = "${parent.providerName}-FG3"
 ) {
 
+    val useUnionRelauncher by lazy {
+        if (parent is MinecraftForgeMinecraftTransformer) {
+            parent.useUnionRelaunch
+        } else {
+            false
+        }
+    }
+
+    var unionRelauncherVersion: String = "1.0.0"
+
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG3 transformer")
         parent.provider.minecraftRemapper.addResourceRemapper { JsCoreModRemapper(project.logger) }
@@ -44,7 +59,15 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             forgeHardcodedNames.contains(it)
         } }
         unprotectRuntime = true
+        parent.accessTransformerTransformer.accessTransformerPaths = listOf("fml_at.cfg", "forge_at.cfg", "META-INF/accesstransformer.cfg")
     }
+
+    private val include: Configuration? =
+        if (provider.minecraftData.mcVersionCompare(provider.version, "1.18") >= 0) {
+            project.configurations.maybeCreate("include".withSourceSet(provider.sourceSet))
+        } else {
+            null
+        }
 
     override val prodNamespace by lazy {
         if (userdevCfg["mcp"].asString.contains("neoform")) {
@@ -58,6 +81,11 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
 
     override val merger: ClassMerger
         get() = throw UnsupportedOperationException("FG3+ does not support merging with unofficial merger.")
+
+    override val transform: MutableList<(FileSystem) -> Unit> = (
+            if (parent.provider.version == "1.12.2") { listOf(FixFG2ResourceLoading::fixResourceLoading) } else { emptyList() } +
+            super.transform
+            ).toMutableList()
 
 
     @ApiStatus.Internal
@@ -109,10 +137,6 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         forgeUd.getFile(forgeUd.dependencies.last())
     }
 
-    override val transform = (listOf<(FileSystem) -> Unit>(
-        FixFG2Coremods::fixCoremods
-    ) + super.transform).toMutableList()
-
     override fun beforeMappingsResolve() {
         project.logger.info("[Unimined/ForgeTransformer] FG3: beforeMappingsResolve")
         provider.mappings {
@@ -143,6 +167,10 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             } else {
                 provider.minecraftLibraries.dependencies.add(project.dependencies.create(element.asString))
             }
+        }
+
+        if (useUnionRelauncher) {
+            provider.minecraftLibraries.dependencies.add(project.dependencies.create("io.github.juuxel:union-relauncher:$unionRelauncherVersion"))
         }
 
         if (userdevCfg.has("inject")) {
@@ -421,7 +449,13 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
         super.applyClientRunTransform(config)
         createLegacyClasspath()
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
-            val mainClass = get("main").asString
+            val mainClass = if (useUnionRelauncher) {
+                config.jvmArgs += listOf("-DunionRelauncher.mainClass=${get("main").asString}")
+                "juuxel.unionrelauncher.UnionRelauncher"
+            } else {
+                get("main").asString
+            }
+
             parent.tweakClassClient = get("env")?.asJsonObject?.get("tweakClass")?.asString
             if (mainClass.startsWith("net.minecraftforge.legacydev")) {
                 project.logger.info("[FG3] Using legacydev launchwrapper")
@@ -432,6 +466,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                 config.args += listOf("--tweakClass",
                     parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"
                 )
+                config.env += mapOf("MOD_CLASSES" to parent.groups)
             } else {
                 project.logger.info("[FG3] Using new client run config")
                 val args = get("args")?.asJsonArray?.map { it.asString } ?: listOf()
@@ -467,6 +502,7 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
                 config.args += listOf("--tweakClass",
                     parent.tweakClassClient ?: "net.minecraftforge.fml.common.launcher.FMLTweaker"
                 )
+                config.env += mapOf("MOD_CLASSES" to parent.groups)
             } else {
                 project.logger.info("[FG3] Using new server run config")
                 val args = get("args")?.asJsonArray?.map { it.asString } ?: listOf()
@@ -495,16 +531,56 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
-        val out = fixForge(baseMinecraft)
-        out.path.openZipFileSystem().use { fs ->
-            return parent.applyATs(out, listOf(
-                fs.getPath("fml_at.cfg"), fs.getPath("forge_at.cfg"), fs.getPath("META-INF/accesstransformer.cfg")
-            ).filter { Files.exists(it) })
+        return parent.accessTransformerTransformer.afterRemap(fixForge(baseMinecraft))
+    }
+
+    private fun addIncludeToMetadata(json: JsonObject, dep: Dependency, path: String) {
+        var jars = json.get("jars")?.asJsonArray
+        if (jars == null) {
+            jars = JsonArray()
+            json.add("jars", jars)
+        }
+        jars.add(JsonObject().apply {
+            add("identifier", JsonObject().apply {
+                addProperty("group", dep.group)
+                addProperty("artifact", dep.name)
+            })
+            add("version", JsonObject().apply {
+                addProperty("range", "[${dep.version},)")
+                addProperty("artifactVersion", dep.version)
+            })
+            addProperty("path", path)
+        })
+    }
+
+    private fun doJarJar(remapJarTask: RemapJarTask, output: Path) {
+        if (include!!.dependencies.isEmpty()) {
+            return
+        }
+        output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
+            val json = JsonObject()
+            val jarDir = fs.getPath("META-INF/jarjar/")
+            val mod = jarDir.resolve("metadata.json")
+
+            jarDir.createDirectories()
+            for (dep in include.dependencies) {
+                val path = jarDir.resolve("${dep.name}-${dep.version}.jar")
+                if (!path.exists()) {
+                    include.files(dep).first { it.extension == "jar" }.toPath()
+                        .copyTo(jarDir.resolve("${dep.name}-${dep.version}.jar"), true)
+                }
+
+                addIncludeToMetadata(json, dep, "META-INF/jarjar/${dep.name}-${dep.version}.jar")
+            }
+
+            mod.writeBytes(FabricLikeMinecraftTransformer.GSON.toJson(json).toByteArray())
         }
     }
 
     override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
-        //TODO: JarJar
+        if (provider.minecraftData.mcVersionCompare(provider.version, "1.18") >= 0) {
+            doJarJar(remapJarTask, output)
+        }
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {

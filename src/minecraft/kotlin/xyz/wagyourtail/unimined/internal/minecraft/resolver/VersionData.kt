@@ -4,6 +4,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.gradle.api.JavaVersion
+import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.OSUtils
 import xyz.wagyourtail.unimined.util.consumerApply
 import java.net.MalformedURLException
@@ -145,6 +146,7 @@ data class VersionData(
         username: String,
         gameDir: Path,
         assets: Path,
+        authInfo: AuthConfig.AuthInfo?
     ): MutableList<String> {
         val args = getArgsRecursive()
         return applyGameArgs(
@@ -154,7 +156,8 @@ data class VersionData(
             assets,
             assetIndex?.id ?: "",
             id,
-            type!!
+            type!!,
+            authInfo
         )
     }
 }
@@ -166,22 +169,24 @@ fun applyGameArgs(
     assets: Path,
     assetIndex: String,
     id: String,
-    type: String
+    type: String,
+    authInfo: AuthConfig.AuthInfo?
 ): MutableList<String> {
-    return args.mapNotNull { e: String ->
-        if (e == "--uuid" || e == "\${auth_uuid}") null
-        else e.replace("\${auth_player_name}", username)
+    return args.asSequence().mapNotNull { e: String ->
+        if (authInfo == null && (e == "--uuid" || e == "\${auth_uuid}")) null
+        else e.replace("\${auth_player_name}", authInfo?.username ?: username)
             .replace("\${version_name}", id)
             .replace("\${game_directory}", gameDir.toAbsolutePath().toString())
             .replace("\${assets_root}", assets.toString())
             .replace("\${game_assets}", gameDir.resolve("resources").toString())
             .replace("\${assets_index_name}", assetIndex)
             .replace("\${assets_index}", assetIndex)
-            .replace("\${auth_access_token}", "0")
-            .replace("\${clientid}", "0")
+            .replace("\${auth_access_token}", authInfo?.accessToken ?: "0")
+            .replace("\${clientid}", "unimined")
             .replace("\${user_type}", "msa")
             .replace("\${version_type}", type)
             .replace("\${user_properties}", "{}")
+            .replace("\${auth_uuid}", authInfo?.uuid.toString())
     }.toMutableList()
 }
 

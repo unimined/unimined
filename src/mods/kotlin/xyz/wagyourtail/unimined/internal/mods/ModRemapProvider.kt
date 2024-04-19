@@ -16,11 +16,11 @@ import org.gradle.api.artifacts.ResolvedArtifact
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.minecraft.patch.ForgeLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.mod.ModRemapConfig
 import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
+import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerApplier
 import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
 import xyz.wagyourtail.unimined.util.*
 import java.io.*
@@ -333,14 +333,14 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 inpFile.toPath(),
                 remapper.first,
                 listOf(
-                    AccessWidenerMinecraftTransformer.AwRemapper(
+                    AccessWidenerApplier.AwRemapper(
                         if (remap.first.named) "named" else remap.first.name,
                         if (remap.second.named) "named" else remap.second.name,
                         catchAWNs,
                         project.logger
                     ),
                     innerJarStripper,
-                    AccessTransformerMinecraftTransformer.AtRemapper(project.logger, remapAtToLegacy, manifest)
+                    AccessTransformerApplier.AtRemapper(project.logger, remapAtToLegacy, manifest)
                 ) + NonClassCopyMode.FIX_META_INF.remappers
             )
             remapper.first.apply(it, input.first)

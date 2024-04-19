@@ -3,8 +3,8 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 import com.google.gson.JsonObject
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
-import xyz.wagyourtail.unimined.api.minecraft.patch.NeoForgedPatcher
-import xyz.wagyourtail.unimined.api.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
@@ -14,7 +14,8 @@ import xyz.wagyourtail.unimined.util.FinalizeOnWrite
 import xyz.wagyourtail.unimined.util.MustSet
 import xyz.wagyourtail.unimined.util.SemVerUtils
 
-class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "NeoForged"), NeoForgedPatcher<JarModMinecraftTransformer> {
+class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "NeoForged"),
+    NeoForgedPatcher<JarModMinecraftTransformer> {
 
     override var forgeTransformer: JarModMinecraftTransformer by FinalizeOnWrite(MustSet())
 
