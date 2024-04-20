@@ -595,7 +595,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override val minecraftSourceFileDev: File? by lazy {
         // check if there is a -source file
-        val source = minecraftFileDev.parentFile.resolve("${minecraftFileDev.nameWithoutExtension}-sources.jar")
+        val source = minecraftFileDev.parentFile.resolve("${getMcDevFile().nameWithoutExtension}-sources.jar")
         if (source.exists()) {
             source
         } else {
