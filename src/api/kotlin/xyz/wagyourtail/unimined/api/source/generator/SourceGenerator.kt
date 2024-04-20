@@ -13,6 +13,12 @@ import java.nio.file.Path
 interface SourceGenerator {
 
     /**
+     * jvmArgs for the decompiler
+     * @since 1.2.1
+     */
+    var jvmArgs: List<String>
+
+    /**
      * shared args for the decompiler
      * (flags)
      */
