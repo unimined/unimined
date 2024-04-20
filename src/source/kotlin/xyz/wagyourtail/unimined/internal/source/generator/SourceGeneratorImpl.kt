@@ -22,6 +22,12 @@ import kotlin.io.path.*
 
 class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : SourceGenerator {
 
+    override var jvmArgs: List<String> by FinalizeOnRead(listOf(
+        "-Xmx2G",
+        "-Xms1G",
+        "-Xss4M",
+    ))
+
     override var args: List<String> by FinalizeOnRead(listOf(
         "-jrt=1"
     ))
@@ -52,6 +58,7 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
 
         outputPath.deleteIfExists()
         project.javaexec { spec ->
+
             val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
             spec.executable = toolchain.launcherFor {
                 it.languageVersion.set(JavaLanguageVersion.of(11))
@@ -61,7 +68,9 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
                 }
             ).get().executablePath.asFile.absolutePath
 
+            spec.jvmArgs(jvmArgs)
             spec.classpath(generator)
+
             val args = args.toMutableList()
             if (linemappedPath != null) {
                 args += "-bsm=1"
