@@ -41,7 +41,16 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         if (intersect != null) {
             throw IllegalArgumentException("cannot have configuration(s) in multiple remaps $intersect")
         }
-        remapConfigs[config.toSet()] = action
+        val configSet = config.toSet()
+        val old = remapConfigs[configSet]
+        remapConfigs[configSet] = {
+            if (old != null) {
+                old()
+            } else {
+                default()
+            }
+            action()
+        }
     }
 
     @ApiStatus.Internal
