@@ -4,7 +4,7 @@ unified minecraft modding environment with support for legacy environments.
 
 ## LTS Branch
 
-In order to better support buildscripts. when I plan on making big/breaking changes, I will leave an LTS branch behind until they are done.
+In order to better support buildscripts. when I plan on making big/breaking changes, I will leave an LTS branch behind.
 In effect, this means that I always support the previous minor version for bugfixes.
 
 By consequence, seeing as it's only bugfixes, snapshots on the LTS branch are considered *relatively* stable as well.
