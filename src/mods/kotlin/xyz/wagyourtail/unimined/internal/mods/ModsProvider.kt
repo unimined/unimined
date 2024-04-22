@@ -37,11 +37,20 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
     }
 
     override fun remap(config: List<Configuration>, action: ModRemapConfig.() -> Unit) {
-        val intersect = remapConfigs.keys.firstOrNull { config.intersect(it).isNotEmpty() }
+        val intersect = remapConfigs.keys.firstOrNull { config.intersect(it).isNotEmpty() }?.intersect(config.toSet())
         if (intersect != null) {
             throw IllegalArgumentException("cannot have configuration(s) in multiple remaps $intersect")
         }
-        remapConfigs[config.toSet()] = action
+        val configSet = config.toSet()
+        val old = remapConfigs[configSet]
+        remapConfigs[configSet] = {
+            if (old != null) {
+                old()
+            } else {
+                default()
+            }
+            action()
+        }
     }
 
     @ApiStatus.Internal
