@@ -23,7 +23,7 @@ import kotlin.io.path.*
 class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : SourceGenerator {
 
     override var jvmArgs: List<String> by FinalizeOnRead(listOf(
-        "-Xmx2G",
+        "-Xmx4G",
         "-Xms1G",
         "-Xss4M",
     ))

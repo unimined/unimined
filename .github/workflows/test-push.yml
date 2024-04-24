@@ -11,8 +11,8 @@ jobs:
       fail-fast: false
       matrix:
         gradle: [
-          8.1,
-          8.4, # version used by buildscript
+          8.4,
+          8.7, # version used by buildscript
           8 # latest
         ]
         java: [
@@ -70,7 +70,7 @@ jobs:
 
     runs-on: ubuntu-22.04
     container:
-      image: gradle:8.4-jdk${{ matrix.java }}
+      image: gradle:8.7-jdk${{ matrix.java }}
       options: --user root
 
     steps:
@@ -97,7 +97,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [17]
+        java: [21]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: windows-2022
