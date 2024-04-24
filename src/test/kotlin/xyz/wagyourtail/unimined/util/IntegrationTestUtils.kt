@@ -31,7 +31,7 @@ class IntegrationTestUtils {
     companion object {
         private val GRADLE_VERSION = arrayOf(
 //            "7.6.3",
-            "8.1.1",
+            "8.4",
             "8.7",
             GRADLE_CURRENT,
         )
