@@ -3,6 +3,8 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer
 import org.apache.commons.io.output.NullOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainService
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessConvert
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.unimined
@@ -34,9 +36,9 @@ class AccessTransformerMinecraftTransformer(
 
     override var accessTransformerPaths: List<String> by FinalizeOnRead(listOf())
 
-    override var dependency: Dependency by FinalizeOnRead(project.dependencies.create("net.neoforged:accesstransformers:9.0.3"))
+    override var dependency: Dependency by FinalizeOnRead(project.dependencies.create("net.neoforged.accesstransformers:at-cli:11.0.0"))
 
-    override var atMainClass: String by FinalizeOnRead("net.neoforged.accesstransformer.TransformerProcessor")
+    override var atMainClass: String by FinalizeOnRead("net.neoforged.accesstransformer.cli.TransformerProcessor")
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
         baseMinecraft.path.openZipFileSystem().use { fs ->
@@ -106,6 +108,11 @@ class AccessTransformerMinecraftTransformer(
             }
         }
         val result = project.javaexec { spec ->
+            val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+            spec.executable = toolchain.launcherFor {
+                it.languageVersion.set(JavaLanguageVersion.of(21))
+            }.get().executablePath.asFile.absolutePath
+
             spec.classpath = project.configurations.detachedConfiguration(dependency)
             spec.mainClass.set(atMainClass)
             spec.args = listOf("--inJar", baseMinecraft.absolutePathString(), "--outJar", output.absolutePathString(), "--atFile", temp.absolutePathString())
