@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.util.defaultedMapOf
 import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 
 abstract class PerInputTagExtension<T : PerInputTagExtension.InputTagExtension> : TinyRemapper.Extension {
     object SKIP
@@ -26,7 +27,7 @@ abstract class PerInputTagExtension<T : PerInputTagExtension.InputTagExtension> 
         }
     }
 
-    private val inputTagExtensions: MutableMap<Any?, InputTagExtension> = defaultedMapOf {
+    private val inputTagExtensions: MutableMap<Any?, InputTagExtension> = defaultedMapOf(ConcurrentHashMap()) {
         if (it == SKIP) object : InputTagExtension {
             override val inputTag: InputTag? = null
         }
