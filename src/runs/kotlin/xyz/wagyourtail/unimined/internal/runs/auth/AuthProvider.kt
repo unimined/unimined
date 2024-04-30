@@ -33,7 +33,7 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
         private var daemonCache2: JsonObject? = null
     }
 
-    val client = HttpClient().apply {
+    val client = MinecraftAuth.createHttpClient().apply {
         setHeader("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtail.xyz>)")
     }
 
@@ -137,7 +137,6 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
                 val session = MinecraftAuth.JAVA_DEVICE_CODE_LOGIN.fromJson(existingCreds.asJsonObject)
                 runProvider.project.logger.lifecycle("Refreshing auth")
                 MinecraftAuth.JAVA_DEVICE_CODE_LOGIN.refresh(client, session)
-                session
             } catch (e: Exception) {
                 runProvider.project.logger.lifecycle("[Unimined/Auth] $existingCreds")
                 throw e
