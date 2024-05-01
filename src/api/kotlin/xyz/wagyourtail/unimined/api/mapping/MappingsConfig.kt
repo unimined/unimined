@@ -258,6 +258,40 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         yarn(build.toInt(), key, action)
     }
 
+
+
+    @JvmOverloads
+    abstract fun yarnv1(build: Int, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+
+    @JvmOverloads
+    fun yarnv1(build: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+        yarnv1(build.toInt(), key, action)
+    }
+
+    @JvmOverloads
+    fun yarnv1(
+        build: Int,
+        key: String = "yarn",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        yarnv1(build, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    @JvmOverloads
+    fun yarnv1(
+        build: String,
+        key: String = "yarn",
+        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        yarn(build.toInt(), key, action)
+    }
+
     @JvmOverloads
     abstract fun feather(build: Int, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
 

@@ -20,7 +20,9 @@ import xyz.wagyourtail.unimined.util.*
 import java.io.IOException
 import java.io.StringWriter
 import java.net.URI
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
 import kotlin.io.path.*
 
@@ -263,6 +265,40 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
     override fun yarn(build: Int, key: String, action: MappingDepConfig.() -> Unit) {
         project.unimined.fabricMaven()
         mapping("net.fabricmc:yarn:${minecraft.version}+build.${build}:v2", key) {
+            outputs("yarn", true) { listOf("intermediary") }
+            mapNamespace("named", "yarn")
+            sourceNamespace("intermediary")
+            renest()
+            action()
+        }
+    }
+
+    override fun yarnv1(build: Int, key: String, action: MappingDepConfig.() -> Unit) {
+        project.unimined.fabricMaven()
+        val files = project.configurations.detachedConfiguration(project.dependencies.create("net.fabricmc:yarn:${minecraft.version}+build.${build}")).resolve()
+        val jar = files.first { it.extension == "jar" }
+        val temp = Files.createTempFile("yarnv1+${build}", ".tiny")
+        jar.toPath().readZipInputStreamFor("mappings/mappings.tiny") {
+            it.copyTo(temp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
+        }
+        val output = Files.createTempFile("yarnv1+${build}+filled", ".tiny")
+
+        project.javaexec {
+            it.classpath = project.configurations.detachedConfiguration(
+                project.dependencies.create(
+                    "net.fabricmc:stitch:0.6.2"
+                )
+            )
+            it.mainClass.set("net.fabricmc.stitch.Main")
+            it.args = listOf(
+                "proposeFieldNames",
+                minecraft.minecraftData.minecraftClientFile.absolutePath,
+                temp.absolutePathString(),
+                output.absolutePathString()
+            )
+        }.assertNormalExitValue().rethrowFailure()
+
+        mapping(project.files(output.toFile()), key) {
             outputs("yarn", true) { listOf("intermediary") }
             mapNamespace("named", "yarn")
             sourceNamespace("intermediary")
