@@ -137,7 +137,12 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         }
         val project = path.substringBeforeLast(":")
         val name = path.substringAfterLast(":")
-        from(this.project.project(path).sourceSets.getByName(name))
+        if (project.isEmpty()) {
+            from(this.project, this.project.sourceSets.getByName(name))
+        } else {
+            val proj = this.project.project(path)
+            from(proj, proj.sourceSets.getByName(name))
+        }
     }
 
     /**
@@ -166,7 +171,13 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         }
         val project = path.substringBeforeLast(":")
         val name = path.substringAfterLast(":")
-        combineWith(this.project.project(project), this.project.project(project).sourceSets.getByName(name))
+        if (project.isEmpty()) {
+            combineWith(this.project, this.project.sourceSets.getByName(name))
+            return
+        } else {
+            val proj = this.project.project(path)
+            combineWith(proj, proj.sourceSets.getByName(name))
+        }
     };
 
     /**
