@@ -66,4 +66,22 @@ abstract class RunsConfig {
     abstract fun addTarget(config: RunConfig)
 
     abstract fun configFirst(config: String, action: RunConfig.() -> Unit)
+
+    /**
+     * @since 1.2.5
+     */
+    abstract fun auth(action: AuthConfig.() -> Unit)
+
+    fun auth(
+        @DelegatesTo(
+            value = AuthConfig::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        auth {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
 }
