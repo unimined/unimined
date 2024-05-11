@@ -30,9 +30,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.writeText
+import java.nio.file.attribute.FileTime
+import java.util.concurrent.TimeUnit
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import kotlin.io.path.*
 
 abstract class FabricLikeMinecraftTransformer(
     project: Project,
@@ -330,18 +332,21 @@ abstract class FabricLikeMinecraftTransformer(
             Files.createDirectories(jars)
             Files.createDirectories(includeCache)
             for (dep in include.dependencies) {
+                val source = include.files(dep).first { it.extension == "jar" }.toPath()
                 val path = jars.resolve("${dep.name}-${dep.version}.jar")
-                val cachePath = includeCache.resolve("${dep.name}-${dep.version}.jar")
-                if (!Files.exists(cachePath)) {
-                    Files.copy(
-                        include.files(dep).first { it.extension == "jar" }.toPath(),
-                        includeCache.resolve("${dep.name}-${dep.version}.jar"),
-                        StandardCopyOption.REPLACE_EXISTING
-                    )
-
-                    cachePath.openZipFileSystem(mapOf("mutable" to true)).use { innerfs ->
-                        val innermod = innerfs.getPath(modJsonName)
-                        if (!Files.exists(innermod)) {
+                if (!source.zipContains(modJsonName)) {
+                    val cachePath = includeCache.resolve("${dep.name}-${dep.version}.jar")
+                    if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
+                        ZipOutputStream(cachePath.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use { out ->
+                            source.forEntryInZip { entry, stream ->
+                                out.putNextEntry(entry)
+                                stream.copyTo(out)
+                            }
+                            out.putNextEntry(ZipEntry(modJsonName).also { entry ->
+                                entry.creationTime = FileTime.fromMillis(0)
+                                entry.lastAccessTime = FileTime.fromMillis(0)
+                                entry.lastModifiedTime = FileTime.fromMillis(0)
+                            })
                             val innerjson = JsonObject()
                             innerjson.addProperty("schemaVersion", 1)
                             var artifactString = ""
@@ -349,7 +354,6 @@ abstract class FabricLikeMinecraftTransformer(
                                 artifactString += dep.group!!.replace(".", "_") + "_"
                             }
                             artifactString += dep.name
-
                             innerjson.addProperty("id", artifactString.lowercase())
                             innerjson.addProperty("version", dep.version)
                             innerjson.addProperty("name", dep.name)
@@ -357,17 +361,13 @@ abstract class FabricLikeMinecraftTransformer(
                             custom.addProperty("fabric-loom:generated", true)
                             custom.addProperty("unimined:generated", true)
                             innerjson.add("custom", custom)
-                            Files.write(
-                                innermod,
-                                innerjson.toString().toByteArray(),
-                                StandardOpenOption.CREATE,
-                                StandardOpenOption.TRUNCATE_EXISTING
-                            )
+                            out.write(GSON.toJson(innerjson).toByteArray())
                         }
                     }
+                    cachePath.copyTo(path, StandardCopyOption.REPLACE_EXISTING)
+                } else {
+                    source.copyTo(path, StandardCopyOption.REPLACE_EXISTING)
                 }
-
-                Files.copy(cachePath, path, StandardCopyOption.REPLACE_EXISTING)
 
                 addIncludeToModJson(json, dep, path.toString().removePrefix("/"))
             }
