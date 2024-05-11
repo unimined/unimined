@@ -317,9 +317,9 @@ class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTr
             if (minecraft.envType == EnvType.CLIENT) {
                 createClientExtra(minecraft, null, output.path)
             }
-            if (!output.path.exists() || project.unimined.forceReload) {
-                executeMcp("rename", output.path, EnvType.CLIENT)
-            }
+//            if (!output.path.exists() || project.unimined.forceReload) {
+                executeMcp("rename", output.path, minecraft.envType)
+//            }
             output
         } else {
             minecraft

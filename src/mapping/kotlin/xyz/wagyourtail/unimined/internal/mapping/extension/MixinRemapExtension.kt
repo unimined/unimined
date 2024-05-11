@@ -209,12 +209,14 @@ class MixinRemapExtension(
                         onEnd = {
                             if (target.size() > 0) {
                                 extension.logger.info("[RefmapBuilder] adding ${target.size()} mappings for ${cls.name}")
-                                val refmapJson = metadata.getRefmapFor(dot(cls.name))
-                                if (!refmapJson.has("mappings")) {
-                                    refmapJson.add("mappings", JsonObject())
+                                synchronized(metadata) {
+                                    val refmapJson = metadata.getRefmapFor(dot(cls.name))
+                                    if (!refmapJson.containsKey("mappings")) {
+                                        refmapJson["mappings"] = TreeMap<String, Any>()
+                                    }
+                                    val refmapMappings = refmapJson["mappings"] as TreeMap<String, Any>
+                                    refmapMappings[cls.name] = target
                                 }
-                                val refmapMappings = refmapJson.get("mappings").asJsonObject
-                                refmapMappings.add(cls.name, target)
                             }
                         },
                         allowImplicitWildcards = extension.allowImplicitWildcards
@@ -251,7 +253,7 @@ class MixinRemapExtension(
         abstract fun readInput(vararg input: Path): CompletableFuture<*>
 
         abstract fun contains(className: String): Boolean
-        abstract fun getRefmapFor(className: String): JsonObject
+        abstract fun getRefmapFor(className: String): TreeMap<String, Any>
 
         abstract fun writeExtra(fs: FileSystem)
         abstract fun getExistingRefmapFor(className: String): JsonObject?
@@ -272,7 +274,7 @@ class MixinRemapExtension(
             return metadata.any { it.contains(className) }
         }
 
-        override fun getRefmapFor(className: String): JsonObject {
+        override fun getRefmapFor(className: String): TreeMap<String, Any> {
             return metadata.first { it.contains(className) }.getRefmapFor(className)
         }
 

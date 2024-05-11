@@ -9,7 +9,6 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
-import org.slf4j.helpers.Util
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -19,9 +18,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.*
 import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-import kotlin.collections.HashMap
 import kotlin.io.path.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -372,3 +369,5 @@ fun Path.openZipFileSystem(args: Map<String, *> = mapOf<String, Any>()): FileSys
     }
     return FileSystems.newFileSystem(URI.create("jar:${toUri()}"), args, null)
 }
+
+val CONSTANT_TIME_FOR_ZIP_ENTRIES = GregorianCalendar(1980, Calendar.FEBRUARY, 1, 0, 0, 0).timeInMillis
