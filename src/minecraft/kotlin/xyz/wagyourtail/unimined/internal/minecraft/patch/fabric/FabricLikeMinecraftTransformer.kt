@@ -343,9 +343,7 @@ abstract class FabricLikeMinecraftTransformer(
                                 stream.copyTo(out)
                             }
                             out.putNextEntry(ZipEntry(modJsonName).also { entry ->
-                                entry.creationTime = FileTime.fromMillis(0)
-                                entry.lastAccessTime = FileTime.fromMillis(0)
-                                entry.lastModifiedTime = FileTime.fromMillis(0)
+                                entry.time = CONSTANT_TIME_FOR_ZIP_ENTRIES
                             })
                             val innerjson = JsonObject()
                             innerjson.addProperty("schemaVersion", 1)

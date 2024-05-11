@@ -8,6 +8,7 @@ import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.util.TreeMap
 import java.util.concurrent.CompletableFuture
 import java.util.jar.Manifest
 import kotlin.io.path.inputStream
@@ -17,7 +18,7 @@ import kotlin.io.path.writeText
 class JarModAgentMetaData(parent: MixinRemapExtension) : MixinRemapExtension.MixinMetadata(parent) {
     private val GSON = GsonBuilder().setPrettyPrinting().create()
     private val classesToRefmap = mutableMapOf<String, String>()
-    private val refmaps = mutableMapOf<String, JsonObject>()
+    private val refmaps = mutableMapOf<String, TreeMap<String, Any>>()
     private val existingRefmaps = mutableMapOf<String, JsonObject>()
 
     override fun readInput(vararg input: Path): CompletableFuture<*> {
@@ -47,7 +48,7 @@ class JarModAgentMetaData(parent: MixinRemapExtension) : MixinRemapExtension.Mix
             parent.logger.info("[PreRead] Found JarModAgent refmaps: $refmaps")
             for (transform in transforms) {
                 val refmapName = transform.substringBeforeLast(".") + "-refmap.json"
-                this.refmaps.computeIfAbsent(refmapName) { JsonObject() }
+                this.refmaps.computeIfAbsent(refmapName) { TreeMap() }
                 input.readZipInputStreamFor(transform, false) {
                     it.bufferedReader().use { reader ->
                         for (line in reader.lines()) {
@@ -82,7 +83,7 @@ class JarModAgentMetaData(parent: MixinRemapExtension) : MixinRemapExtension.Mix
         return classesToRefmap.containsKey(className)
     }
 
-    override fun getRefmapFor(className: String): JsonObject {
+    override fun getRefmapFor(className: String): TreeMap<String, Any> {
         return refmaps[classesToRefmap[className]]!!
     }
 

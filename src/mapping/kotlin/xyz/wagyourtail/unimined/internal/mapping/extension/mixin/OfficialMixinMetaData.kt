@@ -8,13 +8,14 @@ import xyz.wagyourtail.unimined.util.forEachInZip
 import java.nio.file.FileSystem
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.util.*
 import java.util.concurrent.CompletableFuture
 import kotlin.io.path.writeText
 
 class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.MixinMetadata(parent) {
     private val GSON = GsonBuilder().setPrettyPrinting().create()
     private val classesToRefmap = mutableMapOf<String, String>()
-    private val refmaps = mutableMapOf<String, JsonObject>()
+    private val refmaps = mutableMapOf<String, TreeMap<String, Any>>()
     private val existingRefmaps = mutableMapOf<String, JsonObject>()
     private val mixinJsons = mutableMapOf<String, JsonObject>()
 
@@ -57,7 +58,7 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
                         val json = JsonParser.parseReader(stream.reader()).asJsonObject
                         val refmap = json["refmap"]?.asString ?: refmapNameCalculator(file)
                         val pkg = json.get("package")?.asString
-                        refmaps.computeIfAbsent(refmap) { JsonObject() }
+                        refmaps.computeIfAbsent(refmap) { TreeMap() }
                         val mixins = (json["mixins"]?.asJsonArray ?: listOf()) +
                                 (json["client"]?.asJsonArray ?: listOf()) +
                                 (json["server"]?.asJsonArray ?: listOf())
@@ -92,7 +93,7 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
         return classesToRefmap.containsKey(className)
     }
 
-    override fun getRefmapFor(className: String): JsonObject {
+    override fun getRefmapFor(className: String): TreeMap<String, Any> {
         return refmaps[classesToRefmap[className]]!!
     }
 
@@ -104,6 +105,7 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
         if (!parent.noRefmap.contains("BaseMixin")) {
             for ((name, json) in refmaps) {
                 parent.logger.info("[Unimined/MixinMetaData] Writing refmap $name")
+                // re-sort json entries
                 fs.getPath(name).writeText(
                     GSON.toJson(json),
                     Charsets.UTF_8,
