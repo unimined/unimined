@@ -349,6 +349,7 @@ abstract class FabricLikeMinecraftTransformer(
                                 source.forEntryInZip { entry, stream ->
                                     out.putArchiveEntry(entry)
                                     stream.copyTo(out)
+                                    out.closeArchiveEntry()
                                 }
                                 out.putArchiveEntry(ZipArchiveEntry(modJsonName).also { entry ->
                                     entry.time = CONSTANT_TIME_FOR_ZIP_ENTRIES
@@ -370,7 +371,7 @@ abstract class FabricLikeMinecraftTransformer(
                                 out.write(GSON.toJson(innerjson).toByteArray())
                             }
                         } catch (e: Exception) {
-                            project.logger.error("[Unimined/Fabric] Failed to create $modJsonName stub for ${dep.name}-${dep.version}.", e)
+                            project.logger.error("[Unimined/Fabric] Failed to create $modJsonName stub for ${source.absolutePathString()}.", e)
                             throw e
                         }
                     }
