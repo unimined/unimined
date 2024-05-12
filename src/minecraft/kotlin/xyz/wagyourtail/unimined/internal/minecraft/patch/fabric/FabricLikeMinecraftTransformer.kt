@@ -1,6 +1,8 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
 
 import com.google.gson.*
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -337,12 +339,12 @@ abstract class FabricLikeMinecraftTransformer(
                 if (!source.zipContains(modJsonName)) {
                     val cachePath = includeCache.resolve("${dep.name}-${dep.version}.jar")
                     if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
-                        ZipOutputStream(cachePath.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use { out ->
+                        ZipArchiveOutputStream(cachePath.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use { out ->
                             source.forEntryInZip { entry, stream ->
-                                out.putNextEntry(entry)
+                                out.putArchiveEntry(entry)
                                 stream.copyTo(out)
                             }
-                            out.putNextEntry(ZipEntry(modJsonName).also { entry ->
+                            out.putArchiveEntry(ZipArchiveEntry(modJsonName).also { entry ->
                                 entry.time = CONSTANT_TIME_FOR_ZIP_ENTRIES
                             })
                             val innerjson = JsonObject()

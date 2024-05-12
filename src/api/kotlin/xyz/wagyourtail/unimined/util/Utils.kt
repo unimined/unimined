@@ -2,6 +2,7 @@
 
 package xyz.wagyourtail.unimined.util
 
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -301,7 +302,7 @@ fun Path.readZipContents(): List<String> {
 
 fun Path.forEachInZip(action: (String, InputStream) -> Unit) {
     Files.newByteChannel(this).use { sbc ->
-        ZipFile(sbc).use { zip ->
+        ZipFile.builder().setIgnoreLocalFileHeader(true).setSeekableByteChannel(sbc).get().use { zip ->
             for (zipArchiveEntry in zip.entries.iterator()) {
                 if (zipArchiveEntry.isDirectory) {
                     continue
@@ -314,9 +315,9 @@ fun Path.forEachInZip(action: (String, InputStream) -> Unit) {
     }
 }
 
-fun Path.forEntryInZip(action: (ZipEntry, InputStream) -> Unit) {
+fun Path.forEntryInZip(action: (ZipArchiveEntry, InputStream) -> Unit) {
     Files.newByteChannel(this).use { sbc ->
-        ZipFile(sbc).use { zip ->
+        ZipFile.builder().setIgnoreLocalFileHeader(true).setSeekableByteChannel(sbc).get().use { zip ->
             for (zipArchiveEntry in zip.entries.iterator()) {
                 if (zipArchiveEntry.isDirectory) {
                     continue
@@ -331,7 +332,7 @@ fun Path.forEntryInZip(action: (ZipEntry, InputStream) -> Unit) {
 
 fun <T> Path.readZipInputStreamFor(path: String, throwIfMissing: Boolean = true, action: (InputStream) -> T): T {
     Files.newByteChannel(this).use {
-        ZipFile(it).use { zip ->
+        ZipFile.builder().setIgnoreLocalFileHeader(true).setSeekableByteChannel(it).get().use { zip ->
             val entry = zip.getEntry(path.replace("\\", "/"))
             if (entry != null) {
                 return zip.getInputStream(entry).use(action)
@@ -347,7 +348,7 @@ fun <T> Path.readZipInputStreamFor(path: String, throwIfMissing: Boolean = true,
 
 fun Path.zipContains(path: String): Boolean {
     Files.newByteChannel(this).use {
-        ZipFile(it).use { zip ->
+        ZipFile.builder().setIgnoreLocalFileHeader(true).setSeekableByteChannel(it).get().use { zip ->
             val entry = zip.getEntry(path.replace("\\", "/"))
             if (entry != null) {
                 return true
