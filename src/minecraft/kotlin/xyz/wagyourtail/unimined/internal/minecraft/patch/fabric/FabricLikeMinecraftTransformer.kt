@@ -341,8 +341,6 @@ abstract class FabricLikeMinecraftTransformer(
                     if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
                         ZipArchiveOutputStream(cachePath.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use { out ->
                             source.forEntryInZip { entry, stream ->
-                                // skip directory entries
-                                if (entry.size == 0L) return@forEntryInZip
                                 out.putArchiveEntry(entry)
                                 stream.copyTo(out)
                             }
