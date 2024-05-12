@@ -319,7 +319,7 @@ fun Path.forEntryInZip(action: (ZipArchiveEntry, InputStream) -> Unit) {
     Files.newByteChannel(this).use { sbc ->
         ZipFile.builder().setIgnoreLocalFileHeader(true).setSeekableByteChannel(sbc).get().use { zip ->
             for (zipArchiveEntry in zip.entries.iterator()) {
-                if (zipArchiveEntry.isDirectory || zipArchiveEntry.name.isEmpty()) {
+                if (zipArchiveEntry.isDirectory) {
                     continue
                 }
                 zip.getInputStream(zipArchiveEntry).use {

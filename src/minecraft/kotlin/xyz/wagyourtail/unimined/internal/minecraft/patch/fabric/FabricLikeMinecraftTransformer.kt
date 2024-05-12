@@ -339,29 +339,39 @@ abstract class FabricLikeMinecraftTransformer(
                 if (!source.zipContains(modJsonName)) {
                     val cachePath = includeCache.resolve("${dep.name}-${dep.version}.jar")
                     if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
-                        ZipArchiveOutputStream(cachePath.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)).use { out ->
-                            source.forEntryInZip { entry, stream ->
-                                out.putArchiveEntry(entry)
-                                stream.copyTo(out)
+                        try {
+                            ZipArchiveOutputStream(
+                                cachePath.outputStream(
+                                    StandardOpenOption.CREATE,
+                                    StandardOpenOption.TRUNCATE_EXISTING
+                                )
+                            ).use { out ->
+                                source.forEntryInZip { entry, stream ->
+                                    out.putArchiveEntry(entry)
+                                    stream.copyTo(out)
+                                }
+                                out.putArchiveEntry(ZipArchiveEntry(modJsonName).also { entry ->
+                                    entry.time = CONSTANT_TIME_FOR_ZIP_ENTRIES
+                                })
+                                val innerjson = JsonObject()
+                                innerjson.addProperty("schemaVersion", 1)
+                                var artifactString = ""
+                                if (dep.group != null) {
+                                    artifactString += dep.group!!.replace(".", "_") + "_"
+                                }
+                                artifactString += dep.name
+                                innerjson.addProperty("id", artifactString.lowercase())
+                                innerjson.addProperty("version", dep.version)
+                                innerjson.addProperty("name", dep.name)
+                                val custom = JsonObject()
+                                custom.addProperty("fabric-loom:generated", true)
+                                custom.addProperty("unimined:generated", true)
+                                innerjson.add("custom", custom)
+                                out.write(GSON.toJson(innerjson).toByteArray())
                             }
-                            out.putArchiveEntry(ZipArchiveEntry(modJsonName).also { entry ->
-                                entry.time = CONSTANT_TIME_FOR_ZIP_ENTRIES
-                            })
-                            val innerjson = JsonObject()
-                            innerjson.addProperty("schemaVersion", 1)
-                            var artifactString = ""
-                            if (dep.group != null) {
-                                artifactString += dep.group!!.replace(".", "_") + "_"
-                            }
-                            artifactString += dep.name
-                            innerjson.addProperty("id", artifactString.lowercase())
-                            innerjson.addProperty("version", dep.version)
-                            innerjson.addProperty("name", dep.name)
-                            val custom = JsonObject()
-                            custom.addProperty("fabric-loom:generated", true)
-                            custom.addProperty("unimined:generated", true)
-                            innerjson.add("custom", custom)
-                            out.write(GSON.toJson(innerjson).toByteArray())
+                        } catch (e: Exception) {
+                            project.logger.error("[Unimined/Fabric] Failed to create $modJsonName stub for ${dep.name}-${dep.version}.", e)
+                            throw e
                         }
                     }
                     cachePath.copyTo(path, StandardCopyOption.REPLACE_EXISTING)
