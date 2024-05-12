@@ -369,6 +369,7 @@ abstract class FabricLikeMinecraftTransformer(
                                 custom.addProperty("unimined:generated", true)
                                 innerjson.add("custom", custom)
                                 out.write(GSON.toJson(innerjson).toByteArray())
+                                out.closeArchiveEntry()
                             }
                         } catch (e: Exception) {
                             project.logger.error("[Unimined/Fabric] Failed to create $modJsonName stub for ${source.absolutePathString()}.", e)
