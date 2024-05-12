@@ -40,7 +40,8 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     }
 
     override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
-        val old = mixinRemapOptions
+        val delegate: FinalizeOnRead<MixinRemapOptions.() -> Unit> = RemapJarTask::class.getField("mixinRemapOptions")!!.getDelegate(this) as FinalizeOnRead<MixinRemapOptions.() -> Unit>
+        val old = delegate.value as MixinRemapOptions.() -> Unit
         mixinRemapOptions = {
             old()
             action()
