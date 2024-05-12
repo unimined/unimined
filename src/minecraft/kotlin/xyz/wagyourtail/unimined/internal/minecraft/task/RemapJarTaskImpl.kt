@@ -40,7 +40,11 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     }
 
     override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
-        mixinRemapOptions = action
+        val old = mixinRemapOptions
+        mixinRemapOptions = {
+            old()
+            action()
+        }
     }
 
     override var allowImplicitWildcards by FinalizeOnRead(false)
