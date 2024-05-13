@@ -5,7 +5,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.SpigotPatcher
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.buildtools.BuildToolsExecutor
 
-class SpigotMinecraftTransformer(project: Project,
+open class SpigotMinecraftTransformer(project: Project,
                                  provider: MinecraftProvider
 ) : CraftbukkitMinecraftTransformer(
     project,

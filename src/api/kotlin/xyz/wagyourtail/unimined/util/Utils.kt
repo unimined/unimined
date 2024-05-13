@@ -307,6 +307,9 @@ fun Path.forEachInZip(action: (String, InputStream) -> Unit) {
                 if (zipArchiveEntry.isDirectory) {
                     continue
                 }
+//                if (zipArchiveEntry.name.isEmpty() && zipArchiveEntry.size == 0L) {
+//                    continue
+//                }
                 zip.getInputStream(zipArchiveEntry).use {
                     action(zipArchiveEntry.name, it)
                 }
@@ -322,6 +325,9 @@ fun Path.forEntryInZip(action: (ZipArchiveEntry, InputStream) -> Unit) {
                 if (zipArchiveEntry.isDirectory) {
                     continue
                 }
+//                if (zipArchiveEntry.name.isEmpty() && zipArchiveEntry.size == 0L) {
+//                    continue
+//                }
                 zip.getInputStream(zipArchiveEntry).use {
                     action(zipArchiveEntry, it)
                 }

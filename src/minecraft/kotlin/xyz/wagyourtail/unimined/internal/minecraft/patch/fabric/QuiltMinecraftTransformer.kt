@@ -13,7 +13,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import java.io.InputStreamReader
 import java.nio.file.Files
 
-class QuiltMinecraftTransformer(
+open class QuiltMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider
 ): FabricLikeMinecraftTransformer(

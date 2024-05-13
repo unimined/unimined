@@ -19,7 +19,7 @@ import java.net.URI
 import java.nio.file.*
 import kotlin.io.path.*
 
-class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModMinecraftTransformer(
+open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModMinecraftTransformer(
     project,
     parent.provider,
     jarModProvider = "forge",

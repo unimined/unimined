@@ -25,7 +25,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
-class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModAgentMinecraftTransformer(
+open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModAgentMinecraftTransformer(
     project,
     parent.provider,
     providerName = "${parent.providerName}-FG1"

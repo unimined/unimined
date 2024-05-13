@@ -15,7 +15,7 @@ import java.io.File
 import kotlin.io.path.exists
 
 
-class AccessWidenerMinecraftTransformer(
+open class AccessWidenerMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider,
     providerName: String = "accessWidener",

@@ -23,7 +23,7 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
-class AccessTransformerMinecraftTransformer(
+open class AccessTransformerMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider,
     providerName: String = "accessTransformer",
