@@ -7,7 +7,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
-class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider): FabricMinecraftTransformer(project, provider) {
+open class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider): FabricMinecraftTransformer(project, provider) {
 
     override var canCombine: Boolean by FinalizeOnRead(true)
 

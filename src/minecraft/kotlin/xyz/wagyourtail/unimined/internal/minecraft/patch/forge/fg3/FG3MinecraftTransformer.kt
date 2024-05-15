@@ -36,7 +36,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.*
 import kotlin.io.path.*
 
-class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModMinecraftTransformer(
+open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecraftTransformer): JarModMinecraftTransformer(
     project, parent.provider, jarModProvider = "forge", providerName = "${parent.providerName}-FG3"
 ) {
 

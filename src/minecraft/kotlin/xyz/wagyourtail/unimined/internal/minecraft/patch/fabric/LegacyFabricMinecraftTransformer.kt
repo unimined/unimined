@@ -7,7 +7,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.util.SemVerUtils
 
-class LegacyFabricMinecraftTransformer(
+open class LegacyFabricMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider
 ): FabricMinecraftTransformer(project, provider) {

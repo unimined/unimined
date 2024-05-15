@@ -37,16 +37,9 @@ unimined.minecraft {
     version project.minecraft_version
 
     mappings {
-        intermediary()
-        yarn(1)
+        mojmap()
 
-        devFallbackNamespace "intermediary"
-
-        stub.withMappings("intermediary", ["yarn"]) {
-            c("net/minecraft/class_1927", []) {
-                m("method_55109", "()Lnet/minecraft/class_243;", ["getPos"])
-            }
-        }
+        devFallbackNamespace "official"
     }
 
     defaultRemapJar = false

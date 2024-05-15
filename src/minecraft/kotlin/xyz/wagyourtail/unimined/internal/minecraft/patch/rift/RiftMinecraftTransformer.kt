@@ -14,7 +14,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransf
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.util.withSourceSet
 
-class RiftMinecraftTransformer(
+open class RiftMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider,
     private val accessTransformerMinecraftTransformer: AccessTransformerMinecraftTransformer = AccessTransformerMinecraftTransformer(project, provider, "Rift")

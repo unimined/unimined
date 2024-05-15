@@ -250,6 +250,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     init {
+        project.repositories.mavenCentral()
         project.repositories.maven {
             it.name = "minecraft"
             it.url = URI.create("https://libraries.minecraft.net/")

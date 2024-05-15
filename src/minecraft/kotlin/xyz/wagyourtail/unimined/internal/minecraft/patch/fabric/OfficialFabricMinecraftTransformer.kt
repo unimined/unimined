@@ -6,7 +6,7 @@ import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.util.SemVerUtils
 
-class OfficialFabricMinecraftTransformer(
+open class OfficialFabricMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider
 ) : FabricMinecraftTransformer(project, provider) {

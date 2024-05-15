@@ -17,7 +17,7 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.exists
 
-class FlintMinecraftTransformer(
+open class FlintMinecraftTransformer(
     project: Project,
     provider: MinecraftProvider
 ): FabricLikeMinecraftTransformer(

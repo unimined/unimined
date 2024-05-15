@@ -14,7 +14,7 @@ import xyz.wagyourtail.unimined.util.FinalizeOnWrite
 import xyz.wagyourtail.unimined.util.MustSet
 import xyz.wagyourtail.unimined.util.SemVerUtils
 
-class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "NeoForged"),
+open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "NeoForged"),
     NeoForgedPatcher<JarModMinecraftTransformer> {
 
     override var forgeTransformer: JarModMinecraftTransformer by FinalizeOnWrite(MustSet())
