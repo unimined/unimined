@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.api.runs
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
@@ -10,6 +11,7 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
 import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.XMLBuilder
+import xyz.wagyourtail.unimined.util.sourceSets
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.nio.charset.StandardCharsets
@@ -25,7 +27,8 @@ data class RunConfig(
     val name: String,
     val taskName: String,
     var description: String,
-    var launchClasspath: SourceSet,
+    var sourceSet: SourceSet,
+    var launchClasspath: FileCollection,
     var mainClass: String,
     val args: MutableList<String>,
     val jvmArgs: MutableList<String>,
@@ -38,12 +41,12 @@ data class RunConfig(
     fun createIdeaRunConfig() {
         val file = project.rootDir.resolve(".idea")
             .resolve("runConfigurations")
-            .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+${taskName.withSourceSet(launchClasspath)}.xml")
+            .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+${taskName.withSourceSet(sourceSet)}.xml")
 
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
             .addStringOption("name", buildString {
-                if (project != project.rootProject) append("${project.path}+")
-                if (launchClasspath.name != "main") append("${launchClasspath.name} ")
+                if (project != project.rootProject) append(project.path)
+                if (sourceSet.name != "main") append("+${sourceSet.name} ")
                 append(description)
             })
             .addStringOption("type", "Application")
@@ -79,7 +82,15 @@ data class RunConfig(
                             "."
                         )
                     }" else project.name
-                }.${launchClasspath.name}"
+                }.${sourceSet.name}"
+            ),
+            XMLBuilder("classpathModifications").append(
+                *launchClasspath.filter { !sourceSet.runtimeClasspath.contains(it) }.map {
+                    XMLBuilder("entry").addStringOption("path", it.absolutePath)
+                }.toTypedArray(),
+                *sourceSet.runtimeClasspath.filter { !launchClasspath.contains(it) }.map {
+                    XMLBuilder("entry").addStringOption("exclude", "true").addStringOption("path", it.absolutePath)
+                }.toTypedArray()
             ),
             XMLBuilder("option").addStringOption("name", "PROGRAM_PARAMETERS")
                 .addStringOption("value", args.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it }),
@@ -135,7 +146,7 @@ data class RunConfig(
     //TODO: add eclipse/vsc run configs
 
     fun createGradleTask(tasks: TaskContainer, group: String): Task {
-        return tasks.create(taskName.withSourceSet(launchClasspath), JavaExec::class.java) {
+        return tasks.create(taskName.withSourceSet(sourceSet), JavaExec::class.java) {
 
             javaVersion?.let { jv ->
                 val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
@@ -147,7 +158,7 @@ data class RunConfig(
 
             it.environment.putAll(env)
 
-            it.classpath = launchClasspath.runtimeClasspath
+            it.classpath = launchClasspath
 
             it.args = args
             it.jvmArgs = jvmArgs

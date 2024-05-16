@@ -687,6 +687,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             "run${name.capitalized()}",
             "Minecraft Client",
             sourceSet,
+            sourceSet.runtimeClasspath,
             minecraftData.metadata.mainClass,
             minecraftData.metadata.getGameArgs(
                 "Dev",
@@ -723,6 +724,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             "run${name.capitalized()}",
             "Minecraft Server",
             sourceSet,
+            sourceSet.runtimeClasspath,
             mainClass ?: throw IllegalStateException("Could not find main class for server"),
             mutableListOf("nogui"),
             mutableListOf(),
