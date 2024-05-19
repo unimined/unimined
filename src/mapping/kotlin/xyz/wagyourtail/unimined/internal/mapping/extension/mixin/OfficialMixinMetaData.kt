@@ -49,6 +49,11 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
                         parent.logger.info("[PreRead] Found refmap: $file")
                         val json = JsonParser.parseReader(stream.reader()).asJsonObject
                         existingRefmaps[file] = json
+                        // fallback if in refmap, but not in mixin config
+                        // check json entries for class->refmap entries
+                        for (s in json.get("mappings")?.asJsonObject?.keySet() ?: emptySet()) {
+                            classesToRefmap[s.replace('/', '.')] = file
+                        }
                     } catch (e: Exception) {
                         parent.logger.error("[PreRead] Failed to parse refmap $file: ${e.message}")
                     }
