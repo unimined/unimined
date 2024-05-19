@@ -117,4 +117,8 @@ class JarModAgentMetaData(parent: MixinRemapExtension) : MixinRemapExtension.Mix
         }
     }
 
+    override fun fallbackRefmap(): TreeMap<String, Any> {
+        return refmaps.values.first()
+    }
+
 }

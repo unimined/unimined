@@ -166,7 +166,21 @@ class MixinRemapExtension(
                     }
                     visitor
                 } else {
-                    return next
+                    if (!extension.off) {
+                        val visitor = HardTargetRemappingClassVisitor(
+                            next,
+                            className,
+                            emptyMap(),
+                            extension.logger
+                        )
+                        extension.modifyHardRemapper(visitor)
+                        synchronized(tasks) {
+                            tasks[mrjVersion].add(visitor::runRemap)
+                        }
+                        return visitor
+                    } else {
+                        return next
+                    }
                 }
             } catch (e: Exception) {
                 throw IllegalStateException("Error while processing class $className: ${e.javaClass.simpleName}: ${e.message}", e)
@@ -225,7 +239,31 @@ class MixinRemapExtension(
                     visitor
                 } else {
                     if (!extension.off) {
-                        object : ClassVisitor(Constant.ASM_VERSION, next) {
+                        val target = JsonObject()
+                        val visitor = RefmapBuilderClassVisitor(
+                            CommonData(cls.environment, extension.logger),
+                            cls.name,
+                            target,
+                            next,
+                            emptyMap(),
+                            extension,
+                            onEnd = {
+                                if (target.size() > 0) {
+                                    extension.logger.info("[RefmapBuilder] adding ${target.size()} mappings for ${cls.name}")
+                                    synchronized(metadata) {
+                                        val refmapJson = metadata.fallbackRefmap()
+                                        if (!refmapJson.containsKey("mappings")) {
+                                            refmapJson["mappings"] = TreeMap<String, Any>()
+                                        }
+                                        val refmapMappings = refmapJson["mappings"] as TreeMap<String, Any>
+                                        refmapMappings[cls.name] = target
+                                    }
+                                }
+                            },
+                            allowImplicitWildcards = extension.allowImplicitWildcards
+                        )
+                        extension.modifyRefmapBuilder(visitor)
+                        object : ClassVisitor(Constant.ASM_VERSION, visitor) {
                             override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor? {
                                 if (descriptor == Annotation.MIXIN) {
                                     extension.logger.warn("[RefmapBuilder] found mixin class ${cls.name} without entry!")
@@ -257,6 +295,8 @@ class MixinRemapExtension(
 
         abstract fun writeExtra(fs: FileSystem)
         abstract fun getExistingRefmapFor(className: String): JsonObject?
+
+        abstract fun fallbackRefmap(): TreeMap<String, Any>
     }
 
     class MergedMetadata(parent: MixinRemapExtension) : MixinMetadata(parent) {
@@ -284,6 +324,10 @@ class MixinRemapExtension(
 
         override fun getExistingRefmapFor(className: String): JsonObject? {
             return metadata.firstOrNull { it.contains(className) }?.getExistingRefmapFor(className)
+        }
+
+        override fun fallbackRefmap(): TreeMap<String, Any> {
+            return metadata.first().fallbackRefmap()
         }
 
     }

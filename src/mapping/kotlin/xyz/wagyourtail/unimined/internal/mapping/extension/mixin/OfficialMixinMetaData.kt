@@ -125,4 +125,8 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
         }
     }
 
+    override fun fallbackRefmap(): TreeMap<String, Any> {
+        return refmaps.values.first()
+    }
+
 }
