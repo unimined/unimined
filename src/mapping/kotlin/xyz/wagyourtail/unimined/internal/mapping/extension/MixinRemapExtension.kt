@@ -138,7 +138,7 @@ class MixinRemapExtension(
         }
 
         override fun readInput(remapper: TinyRemapper, vararg input: Path): CompletableFuture<*> {
-            return metadata.readInput(*input).thenComposeAsync { super.readInput(remapper, *input) }
+            return metadata.readInput(*input).thenCompose { super.readInput(remapper, *input) }
         }
 
         override fun analyzeVisitor(mrjVersion: Int, className: String, next: ClassVisitor): ClassVisitor {
