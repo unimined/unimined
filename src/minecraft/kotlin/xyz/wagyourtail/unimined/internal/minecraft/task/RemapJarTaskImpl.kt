@@ -94,9 +94,9 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                 provider.sourceSet.compileClasspath.files
             ).map { it.toPath() }.filter { it.exists() && !provider.isMinecraftJar(it) }
 
-            project.logger.lifecycle("[Unimined/RemapJar ${path}] classpath: ")
+            project.logger.debug("[Unimined/RemapJar ${path}] classpath: ")
             classpath.forEach {
-                project.logger.lifecycle("[Unimined/RemapJar ${path}]    $it")
+                project.logger.debug("[Unimined/RemapJar ${path}]    $it")
             }
 
             remapToInternal(prevTarget, nextTarget, prevNamespace, step, (classpath + listOf(mc)).toTypedArray())
