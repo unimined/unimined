@@ -147,7 +147,7 @@ dependencies {
     implementation("org.ow2.asm:asm-util:9.5")
 
     // remapper
-    implementation("net.fabricmc:tiny-remapper:0.9.0") {
+    implementation("net.fabricmc:tiny-remapper:0.8.7") {
         exclude(group = "org.ow2.asm")
     }
 
