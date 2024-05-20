@@ -83,19 +83,24 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             project.logger.info("[Unimined/RemapJar ${this.path}]    $step")
             val nextTarget = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("${inputFile.nameWithoutExtension}-temp-${step.name}.jar")
             nextTarget.deleteIfExists()
-            val mcNamespace = prevNamespace
-            val mcFallbackNamespace = prevPrevNamespace
 
             val mc = provider.getMinecraft(
-                mcNamespace,
-                mcFallbackNamespace
+                prevNamespace,
+                prevPrevNamespace
             )
             val classpath = provider.mods.getClasspathAs(
                 prevNamespace,
                 prevPrevNamespace,
-                provider.sourceSet.runtimeClasspath.files
+                provider.sourceSet.compileClasspath.files
             ).map { it.toPath() }.filter { it.exists() && !provider.isMinecraftJar(it) }
-            remapToInternal(prevTarget, nextTarget, prevNamespace, step, (classpath + mc).toTypedArray())
+
+            project.logger.lifecycle("[Unimined/RemapJar ${path}] classpath: ")
+            classpath.forEach {
+                project.logger.lifecycle("[Unimined/RemapJar ${path}]    $it")
+            }
+
+            remapToInternal(prevTarget, nextTarget, prevNamespace, step, (classpath + listOf(mc)).toTypedArray())
+
             prevTarget = nextTarget
             prevPrevNamespace = prevNamespace
             prevNamespace = step
@@ -156,7 +161,6 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         provider.minecraftRemapper.tinyRemapperConf(remapperB)
         val remapper = remapperB.build()
         val tag = remapper.createInputTag()
-        project.logger.debug("[Unimined/RemapJar ${path}] classpath: ")
         project.logger.debug("[Unimined/RemapJar ${path}] input: $from")
         betterMixinExtension.readClassPath(remapper, *classpathList).thenCompose {
             project.logger.info("[Unimined/RemapJar ${path}] reading input: $from (time: ${System.currentTimeMillis()})")
