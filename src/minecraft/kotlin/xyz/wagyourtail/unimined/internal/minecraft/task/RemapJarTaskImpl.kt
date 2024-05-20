@@ -90,7 +90,12 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
                 mcNamespace,
                 mcFallbackNamespace
             )
-            remapToInternal(prevTarget, nextTarget, prevNamespace, step, mc)
+            val classpath = provider.mods.getClasspathAs(
+                prevNamespace,
+                prevPrevNamespace,
+                provider.sourceSet.runtimeClasspath.files
+            ).map { it.toPath() }.filter { it.exists() && !provider.isMinecraftJar(it) }
+            remapToInternal(prevTarget, nextTarget, prevNamespace, step, (classpath + mc).toTypedArray())
             prevTarget = nextTarget
             prevPrevNamespace = prevNamespace
             prevNamespace = step
@@ -124,7 +129,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         target: Path,
         fromNs: MappingNamespaceTree.Namespace,
         toNs: MappingNamespaceTree.Namespace,
-        mc: Path
+        classpathList: Array<Path>
     ) {
         project.logger.info("[Unimined/RemapJar ${path}] remapping $fromNs -> $toNs (start time: ${System.currentTimeMillis()})")
         val remapperB = TinyRemapper.newRemapper()
@@ -152,18 +157,8 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         val remapper = remapperB.build()
         val tag = remapper.createInputTag()
         project.logger.debug("[Unimined/RemapJar ${path}] classpath: ")
-        (provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
-            .filter { !provider.isMinecraftJar(it) }
-            .filter { it.exists() } + listOf(mc))
-            .joinToString { "\n[Unimined/RemapJar ${path}]  -  $it" }
-            .let { project.logger.debug(it) }
         project.logger.debug("[Unimined/RemapJar ${path}] input: $from")
-        betterMixinExtension.readClassPath(remapper,
-            *(provider.sourceSet.runtimeClasspath.files.map { it.toPath() }
-                .filter { !provider.isMinecraftJar(it) }
-                .filter { it.exists() } + listOf(mc))
-                .toTypedArray()
-        ).thenCompose {
+        betterMixinExtension.readClassPath(remapper, *classpathList).thenCompose {
             project.logger.info("[Unimined/RemapJar ${path}] reading input: $from (time: ${System.currentTimeMillis()})")
             betterMixinExtension.readInput(remapper, tag, from)
         }.thenRun {
