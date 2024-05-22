@@ -46,7 +46,8 @@ data class RunConfig(
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
             .addStringOption("name", buildString {
                 if (project != project.rootProject) append(project.path)
-                if (sourceSet.name != "main") append("+${sourceSet.name} ")
+                if (sourceSet.name != "main") append("+${sourceSet.name}")
+                append(" ")
                 append(description)
             })
             .addStringOption("type", "Application")
