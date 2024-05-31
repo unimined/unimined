@@ -2,6 +2,8 @@
 
 unified minecraft modding environment with support for legacy environments.
 
+for details on usage, see [USAGE.md](./docs/USAGE.md)
+
 ## LTS Branch
 
 In order to better support buildscripts. when I plan on making big/breaking changes, I will leave an LTS branch behind.
@@ -58,5 +60,5 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 * direct porting of arch-loom projects without changing the directory structure is possible.
 * instructions pending...
 ### third party template(s)
-* arch style: https://github.com/firstdarkdev/fdd-xplat
+* arch style: https://github.com/firstdarkdev/fdd-xplat or https://github.com/LegacyModdingMC/examplemod
 * //todo: add more

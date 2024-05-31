@@ -250,7 +250,16 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     init {
-        project.repositories.mavenCentral()
+        project.repositories.mavenCentral { repo ->
+            repo.content {
+                // don't need to look here.
+                it.excludeGroup("com.mojang")
+                // 1.21 natives-macos-patch missing
+                it.excludeGroup("org.lwjgl")
+                // native jar missing on central
+                it.excludeGroup("ca.weblite")
+            }
+        }
         project.repositories.maven {
             it.name = "minecraft"
             it.url = URI.create("https://libraries.minecraft.net/")

@@ -667,6 +667,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                         StandardOpenOption.TRUNCATE_EXISTING,
                         StandardOpenOption.CREATE
                     )
+                } else if (url.responseCode == 404) {
+                    // doesn't exist
+                    infoFile.writeText("")
                 }
             }
         }

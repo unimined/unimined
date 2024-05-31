@@ -246,7 +246,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 for (artifact in originalDepsFiles[c].keys) {
                     if (artifact.extension == "pom") continue
                     val classifier = artifact.classifier?.let { "$it-" } ?: ""
-                    val output = "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${provider.mappings.combinedNames}-${provider.mappings.devNamespace}-${provider.mappings.devFallbackNamespace}@${artifact.extension ?: "jar"}"
+                    val output = "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${provider.mappings.combinedNames}-${devNamespace}-${devFallbackNamespace}@${artifact.extension ?: "jar"}"
                     outConf.dependencies.add(
                         project.dependencies.create(
                             output
