@@ -10,6 +10,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
+import xyz.wagyourtail.unimined.api.unimined
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -20,10 +21,12 @@ import java.security.MessageDigest
 import java.util.*
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
+import kotlin.math.pow
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
+import kotlin.time.Duration.Companion.days
 
 val Project.sourceSets
     get() = extensions.findByType(SourceSetContainer::class.java)!!
@@ -89,11 +92,56 @@ object OSUtils {
     const val UNKNOWN = "unknown"
 }
 
-fun testSha1(size: Long, sha1: String, path: Path): Boolean {
+fun Project.cachingDownload(
+    url: URI,
+    size: Long = -1L,
+    sha1: String = "",
+    cachePath: Path = unimined.getGlobalCache().resolve(url.path.substring(1)),
+    expireTime: Long = 1.days.inWholeMilliseconds,
+    retryCount: Int = 3,
+    backoff: (Int) -> Int = { 1000 * 10.0.pow(it.toDouble()).toInt() }, // first backoff -> 1s, second -> 10s, third -> 100s
+): Path {
+    if (gradle.startParameter.isOffline) {
+        if (testSha1(size, sha1, cachePath, Long.MAX_VALUE)) {
+            return cachePath
+        }
+        if (cachePath.exists()) {
+            throw IllegalStateException("cached $url doesn't match expected (sha: $sha1, size: $size) and offline mode is enabled")
+        } else {
+            throw IllegalStateException("cached $url doesn't exist and offline mode is enabled")
+        }
+    }
+    if (testSha1(size, sha1, cachePath, if (gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) 0 else expireTime)) {
+        return cachePath
+    }
+    var exception: Exception? = null
+    cachePath.parent?.createDirectories()
+    for (i in 1 .. retryCount) {
+        try {
+            url.stream().use {
+                cachePath.outputStream().use { os -> it.copyTo(os) }
+            }
+        } catch (e: Exception) {
+            logger.warn("[Unimined/Cache] Failed to download $url, retrying in ${backoff(i)}ms...")
+            Thread.sleep(backoff(i).toLong())
+            exception = e
+            continue
+        }
+        if (testSha1(size, sha1, cachePath)) {
+            return cachePath
+        }
+        logger.warn("[Unimined/Cache] Failed to download $url, retrying in ${backoff(i)}ms...")
+        Thread.sleep(backoff(i).toLong())
+    }
+    throw IllegalStateException("Failed to download $url", exception)
+}
+
+fun testSha1(size: Long, sha1: String, path: Path, expireTime: Long = 1.days.inWholeMilliseconds): Boolean {
     if (path.exists()) {
         if (path.fileSize() == size || size == -1L) {
             if (sha1.isEmpty()) {
-                return true
+                // fallback: expire if older than a day
+                return path.getLastModifiedTime().toMillis() < System.currentTimeMillis() - expireTime
             }
             val digestSha1 = MessageDigest.getInstance("SHA-1")
             path.inputStream().use {
@@ -287,9 +335,6 @@ fun <E, K, V> Iterable<E>.associateNonNull(apply: (E) -> Pair<K, V>?): Map<K, V>
 fun Path.isZip(): Boolean =
     inputStream().use { stream -> ByteArray(4).also { stream.read(it, 0, 4) } }
         .contentEquals(byteArrayOf(0x50, 0x4B, 0x03, 0x04))
-
-
-
 
 fun Path.readZipContents(): List<String> {
     val contents = mutableListOf<String>()

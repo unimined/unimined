@@ -15,7 +15,6 @@ import java.io.File
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URI
-import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -57,31 +56,15 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     override val minecraftServerFile: File
         get() = minecraftServer.path.toFile()
 
+    override var launcherMetaUrl by FinalizeOnRead(URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"))
+
     val launcherMeta by lazy {
         val file = project.unimined.getGlobalCache().resolve("manifest.json")
-        if (!project.gradle.startParameter.isOffline) {
 
-            project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving launcher metadata")
-
-            val urlConnection = URL("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json").openConnection() as HttpURLConnection
-            urlConnection.setRequestProperty("User-Agent", "Wagyourtail/Unimined 1.0 (<wagyourtail@wagyourtail.xyz>)")
-            urlConnection.requestMethod = "GET"
-            urlConnection.connect()
-
-            if (urlConnection.responseCode != 200) {
-                project.logger.warn("Failed to get metadata, ${urlConnection.responseCode}: ${urlConnection.responseMessage}")
-            } else {
-                // write out to file
-                file.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-                    .use {
-                        urlConnection.inputStream.copyTo(it)
-                    }
-            }
-        } else {
-            if (!file.exists()) {
-                throw IllegalStateException("Offline mode is enabled, but version metadata is not available")
-            }
-        }
+        project.cachingDownload(
+            launcherMetaUrl,
+            cachePath = file
+        )
 
         val versionsList = file.reader().use {
             JsonParser.parseReader(it).asJsonObject
@@ -114,31 +97,27 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         if (!versionJson.exists() || project.unimined.forceReload) {
             versionJson.parent.createDirectories()
 
-            val url = metadataURL
-            url.stream().use {
-                Files.copy(it, versionJson, StandardCopyOption.REPLACE_EXISTING)
-            }
+            project.cachingDownload(
+                metadataURL,
+                cachePath = versionJson
+            )
+
         }
         parseVersionData(
             versionJson.reader().use {
                 JsonParser.parseReader(it).asJsonObject
             }
         )
+
     }
 
     fun download(download: Download, path: Path) {
-
-        if (testSha1(download.size, download.sha1, path)) {
-            return
-        }
-
-        download.url?.stream()?.use {
-            Files.copy(it, path, StandardCopyOption.REPLACE_EXISTING)
-        }
-
-        if (!testSha1(download.size, download.sha1, path)) {
-            throw Exception("Failed to download " + download.url)
-        }
+        project.cachingDownload(
+            download.url!!,
+            download.size,
+            download.sha1,
+            cachePath = path
+        )
     }
 
     val minecraftClient: MinecraftJar by lazy {
@@ -176,21 +155,10 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         val versionOverrides = mutableMapOf<String, String>()
         val versionOverridesFile = project.unimined.getGlobalCache().resolve("server-version-overrides.json")
 
-        if (!versionOverridesFile.exists()) {
-            try {
-                URI.create("https://maven.wagyourtail.xyz/releases/mc-c2s.json").stream().use {
-                    Files.write(
-                        versionOverridesFile,
-                        it.readBytes(),
-                        StandardOpenOption.CREATE,
-                        StandardOpenOption.TRUNCATE_EXISTING
-                    )
-                }
-            } catch (e: Exception) {
-                versionOverridesFile.deleteIfExists()
-                throw e
-            }
-        }
+        project.cachingDownload(
+            URI.create("https://maven.wagyourtail.xyz/releases/mc-c2s.json"),
+            cachePath = versionOverridesFile
+        )
 
         // read file into json
         if (versionOverridesFile.exists()) {

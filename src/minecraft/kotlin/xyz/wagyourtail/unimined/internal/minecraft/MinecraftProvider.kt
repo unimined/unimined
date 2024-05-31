@@ -644,6 +644,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         val infoFile = minecraftData.mcVersionFolder
             .resolve("${version}.info")
+        // TODO: replace with function to overlay betacraft version json in metadata
         if (!infoFile.exists()) {
             if (!project.gradle.startParameter.isOffline) {
                 //test if betacraft has our version on file
