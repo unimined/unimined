@@ -2,6 +2,8 @@
 
 unified minecraft modding environment with support for legacy environments.
 
+for details on usage, see [USAGE.md](./docs/USAGE.md)
+
 ## Supported Loaders
 * Fabric
 * Quilt
@@ -51,5 +53,5 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 * direct porting of arch-loom projects without changing the directory structure is possible.
 * instructions pending...
 ### third party template(s)
-* arch style: https://github.com/firstdarkdev/fdd-xplat
+* arch style: https://github.com/firstdarkdev/fdd-xplat or https://github.com/LegacyModdingMC/examplemod
 * //todo: add more
