@@ -10,7 +10,10 @@ add the following to settings.gradle:
 pluginManagement {
     repositories {
         maven {
-            url = uri("https://maven.wagyourtail.xyz")
+            url = uri("https://maven.wagyourtail.xyz/releases")
+        }
+        maven {
+            url = uri("https://maven.wagyourtail.xyz/snapshots")
         }
         mavenCentral() // highly recommended, but not required
         gradlePluginPortal {
