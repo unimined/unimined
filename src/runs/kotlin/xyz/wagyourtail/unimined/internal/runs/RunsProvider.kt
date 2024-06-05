@@ -17,14 +17,27 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsC
     override val auth = AuthProvider(this)
     private val runConfigs = mutableMapOf<String, RunConfig>()
     private val transformers = defaultedMapOf<String, RunConfig.() -> Unit> { {} }
+    private var all: RunConfig.() -> Unit = {}
 
     private val transformedRunConfig = defaultedMapOf<String, RunConfig>{
         if (!freeze) throw IllegalStateException("Cannot get transformed run configs before apply has been called.")
-        runConfigs[it].apply { transformers[it].invoke(this!!) }!!
+        runConfigs[it].apply {
+            transformers[it].invoke(this!!)
+            all(this)
+        }!!
     }
 
     override fun auth(action: AuthConfig.() -> Unit) {
         auth.apply(action)
+    }
+
+    override fun all(action: RunConfig.() -> Unit) {
+        if (freeze) throw IllegalStateException("Cannot register run configs after apply has been called.")
+        val prev = all
+        all = {
+            prev.invoke(this)
+            action.invoke(this)
+        }
     }
 
     override fun config(config: String, action: RunConfig.() -> Unit) {

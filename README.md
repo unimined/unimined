@@ -27,7 +27,6 @@ yes, this is possible, see [PrcraftExampleMod](https://github.com/prcraft-minecr
 ## TODO
 * stop using artifactural
 * rework mcpconfig runner to be more kotlin and less old version of arch-loom code
-* Forge JarJar
 * Support for launch configs in other dev envs
   * vscode
   * eclipse
