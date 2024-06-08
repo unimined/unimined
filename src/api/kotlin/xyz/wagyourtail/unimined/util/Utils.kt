@@ -45,7 +45,7 @@ fun Configuration.getFile(dep: Dependency, extension: Regex): File {
 
 fun Configuration.getFile(dep: Dependency, extension: String = "jar"): File {
     resolve()
-    return files(dep).first { it.extension == extension }
+    return files(dep).firstOrNull { it.extension == extension } ?: error("No $extension file found for $dep")
 }
 
 fun URI.stream(): InputStream {
