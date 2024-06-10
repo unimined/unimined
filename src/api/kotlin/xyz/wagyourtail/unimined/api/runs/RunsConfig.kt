@@ -84,4 +84,25 @@ abstract class RunsConfig {
             action.call()
         }
     }
+
+    /**
+     * @since 1.2.7
+     */
+    abstract fun all(action: RunConfig.() -> Unit)
+
+    /**
+     * @since 1.2.7
+     */
+    fun all(
+        @DelegatesTo(
+            value = RunConfig::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        all {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
 }
