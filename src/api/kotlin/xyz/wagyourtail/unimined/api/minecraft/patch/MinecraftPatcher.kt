@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.api.minecraft.patch
 
 import groovy.lang.Closure
+import org.gradle.api.file.FileCollection
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
@@ -57,4 +58,7 @@ interface MinecraftPatcher {
 
     @ApiStatus.Internal
     fun configureRemapJar(task: RemapJarTask)
+
+    @ApiStatus.Internal
+    fun createSourcesJar(classpath: FileCollection, patchedJar: Path, outputPath: Path, linemappedPath: Path?)
 }

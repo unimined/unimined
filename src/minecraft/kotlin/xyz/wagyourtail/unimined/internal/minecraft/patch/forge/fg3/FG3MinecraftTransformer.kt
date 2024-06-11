@@ -8,6 +8,7 @@ import org.apache.commons.io.output.NullOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.LogLevel
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.*
@@ -606,5 +607,15 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             return target
         }
         return baseMinecraft
+    }
+
+    override fun createSourcesJar(
+        classpath: FileCollection,
+        patchedJar: Path,
+        outputPath: Path,
+        linemappedPath: Path?
+    ) {
+        //TODO: replace with mcp_config patches
+        super.createSourcesJar(classpath, patchedJar, outputPath, linemappedPath)
     }
 }

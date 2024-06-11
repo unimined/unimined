@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch
 
 import org.gradle.api.Project
+import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
@@ -304,4 +305,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     override fun configureRemapJar(task: RemapJarTask) {}
+
+    override fun createSourcesJar(classpath: FileCollection, patchedJar: Path, outputPath: Path, linemappedPath: Path?) {
+        provider.sourceProvider.sourceGenerator.generate(provider.sourceSet.compileClasspath, patchedJar, outputPath, linemappedPath)
+    }
 }
