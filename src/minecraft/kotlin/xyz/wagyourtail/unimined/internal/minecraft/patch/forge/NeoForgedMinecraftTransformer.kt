@@ -28,7 +28,11 @@ open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftPr
             if (provider.version == "1.20.1") {
                 project.dependencies.create("net.neoforged:forge:${provider.version}-$dep:universal")
             } else {
-                project.dependencies.create("net.neoforged:neoforge:${provider.version.removePrefix("1.")}.$dep:universal")
+                var version = provider.version.removePrefix("1.")
+                if (!version.contains(".")) {
+                    version = "$version.0"
+                }
+                project.dependencies.create("net.neoforged:neoforge:$version.$dep:universal")
             }
         } else {
             project.dependencies.create(dep)

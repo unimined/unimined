@@ -249,13 +249,16 @@ interface PatchProviders {
      * enables the NeoForged patcher.
      * @since 1.1.0
      */
-    fun neoForged(action: NeoForgedPatcher<*>.() -> Unit)
+    @Deprecated(message = "neoForged -> neoForge", replaceWith = ReplaceWith("neoForge(action)"))
+    fun neoForged(action: NeoForgedPatcher<*>.() -> Unit) {
+        neoForge(action)
+    }
 
     /**
      * enables the NeoForged patcher.
      * @since 1.1.0
      */
-
+    @Deprecated(message = "neoForged -> neoForge", replaceWith = ReplaceWith("neoForge(action)"))
     fun neoForged(
         @DelegatesTo(
             value = NeoForgedPatcher::class,
@@ -273,8 +276,28 @@ interface PatchProviders {
      * enables the NeoForged patcher.
      * @since 1.1.0
      */
+    @Deprecated(message = "neoForged -> neoForge", replaceWith = ReplaceWith("neoForge()"))
     fun neoForged() {
         neoForged {}
+    }
+
+    fun neoForge(action: NeoForgedPatcher<*>.() -> Unit)
+
+    fun neoForge(
+        @DelegatesTo(
+            value = NeoForgedPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        neoForge {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun neoForge() {
+        neoForge {}
     }
 
     /**

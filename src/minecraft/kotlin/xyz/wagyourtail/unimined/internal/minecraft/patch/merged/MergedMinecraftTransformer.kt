@@ -159,7 +159,7 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         patchers.add(forge)
     }
 
-    override fun neoForged(action: NeoForgedPatcher<*>.() -> Unit) {
+    override fun neoForge(action: NeoForgedPatcher<*>.() -> Unit) {
         val forge = NeoForgedMinecraftTransformer(project, provider)
         forge.action()
         patchers.add(forge)
