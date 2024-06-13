@@ -26,7 +26,10 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 val Project.sourceSets
     get() = extensions.findByType(SourceSetContainer::class.java)!!
@@ -97,12 +100,12 @@ fun Project.cachingDownload(
     size: Long = -1L,
     sha1: String = "",
     cachePath: Path = unimined.getGlobalCache().resolve(url.path.substring(1)),
-    expireTime: Long = 1.days.inWholeMilliseconds,
+    expireTime: Duration = 1.days,
     retryCount: Int = 3,
     backoff: (Int) -> Int = { 1000 * 10.0.pow(it.toDouble()).toInt() }, // first backoff -> 1s, second -> 10s, third -> 100s
 ): Path {
     if (gradle.startParameter.isOffline) {
-        if (testSha1(size, sha1, cachePath, Long.MAX_VALUE)) {
+        if (testSha1(size, sha1, cachePath, Long.MAX_VALUE.milliseconds)) {
             return cachePath
         }
         if (cachePath.exists()) {
@@ -111,11 +114,13 @@ fun Project.cachingDownload(
             throw IllegalStateException("cached $url doesn't exist and offline mode is enabled")
         }
     }
-    if (testSha1(size, sha1, cachePath, if (gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) 0 else expireTime)) {
+    if (testSha1(size, sha1, cachePath, if (gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) 0.seconds else expireTime)) {
+        logger.lifecycle("[Unimined/Cache] Using cached $url at $cachePath")
         return cachePath
     }
     var exception: Exception? = null
     cachePath.parent?.createDirectories()
+    logger.lifecycle("[Unimined/Cache] Downloading $url to $cachePath")
     for (i in 1 .. retryCount) {
         try {
             url.stream().use {
@@ -136,12 +141,12 @@ fun Project.cachingDownload(
     throw IllegalStateException("Failed to download $url", exception)
 }
 
-fun testSha1(size: Long, sha1: String, path: Path, expireTime: Long = 1.days.inWholeMilliseconds): Boolean {
+fun testSha1(size: Long, sha1: String, path: Path, expireTime: Duration = 1.days): Boolean {
     if (path.exists()) {
         if (path.fileSize() == size || size == -1L) {
             if (sha1.isEmpty()) {
                 // fallback: expire if older than a day
-                return path.getLastModifiedTime().toMillis() < System.currentTimeMillis() - expireTime
+                return path.getLastModifiedTime().toMillis() > System.currentTimeMillis() - expireTime.inWholeMilliseconds
             }
             val digestSha1 = MessageDigest.getInstance("SHA-1")
             path.inputStream().use {

@@ -21,6 +21,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
+import kotlin.time.Duration.Companion.seconds
 
 class MinecraftDownloader(val project: Project, val provider: MinecraftProvider) : MinecraftData() {
 
@@ -63,7 +64,8 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
 
         project.cachingDownload(
             launcherMetaUrl,
-            cachePath = file
+            cachePath = file,
+            expireTime = 0.seconds
         )
 
         val versionsList = file.reader().use {
