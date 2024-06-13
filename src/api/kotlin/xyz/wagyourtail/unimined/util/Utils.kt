@@ -102,7 +102,7 @@ fun Project.cachingDownload(
     cachePath: Path = unimined.getGlobalCache().resolve(url.path.substring(1)),
     expireTime: Duration = 1.days,
     retryCount: Int = 3,
-    backoff: (Int) -> Int = { 1000 * 10.0.pow(it.toDouble()).toInt() }, // first backoff -> 1s, second -> 10s, third -> 100s
+    backoff: (Int) -> Int = { 1000 * 3.0.pow(it.toDouble()).toInt() }, // first backoff -> 1s, second -> 3s, third -> 9s
 ): Path {
     if (gradle.startParameter.isOffline) {
         if (testSha1(size, sha1, cachePath, Long.MAX_VALUE.milliseconds)) {
