@@ -24,7 +24,7 @@ open class NeoForgedMinecraftTransformer(project: Project, provider: MinecraftPr
     }
 
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
-        forge.dependencies.add(if (dep is String && !dep.contains(":")) {
+        forge.dependencies.add(if ((dep is String && !dep.contains(":")) || dep is Int) {
             if (provider.version == "1.20.1") {
                 project.dependencies.create("net.neoforged:forge:${provider.version}-$dep:universal")
             } else {
