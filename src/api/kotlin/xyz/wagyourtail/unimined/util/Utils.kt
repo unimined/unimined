@@ -109,18 +109,18 @@ fun Project.cachingDownload(
             return cachePath
         }
         if (cachePath.exists()) {
-            throw IllegalStateException("cached $url doesn't match expected (sha: $sha1, size: $size) and offline mode is enabled")
+            throw IllegalStateException("cached $url at $cachePath doesn't match expected (sha: $sha1, size: $size) and offline mode is enabled")
         } else {
-            throw IllegalStateException("cached $url doesn't exist and offline mode is enabled")
+            throw IllegalStateException("cached $url at $cachePath doesn't exist and offline mode is enabled")
         }
     }
     if (testSha1(size, sha1, cachePath, if (gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) 0.seconds else expireTime)) {
-        logger.lifecycle("[Unimined/Cache] Using cached $url at $cachePath")
+        logger.info("[Unimined/Cache] Using cached $url at $cachePath")
         return cachePath
     }
     var exception: Exception? = null
     cachePath.parent?.createDirectories()
-    logger.lifecycle("[Unimined/Cache] Downloading $url to $cachePath")
+    logger.info("[Unimined/Cache] Downloading $url to $cachePath")
     for (i in 1 .. retryCount) {
         try {
             url.stream().use {
