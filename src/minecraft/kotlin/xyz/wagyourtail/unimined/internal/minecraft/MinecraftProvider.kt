@@ -281,7 +281,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    override fun neoForged(action: NeoForgedPatcher<*>.() -> Unit) {
+    override fun neoForge(action: NeoForgedPatcher<*>.() -> Unit) {
         mcPatcher = NeoForgedMinecraftTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)
