@@ -65,7 +65,7 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
         forgeTransformer = if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") < 0) {
             FG1MinecraftTransformer(project, this)
         } else {
-            val jar = forge.files(forgeDep).first { it.extension == "zip" || it.extension == "jar" }
+            val jar = forge.getFiles(forgeDep) { it.extension == "jar" || it.extension == "zip" }.singleFile
             determineForgeProviderFromUniversal(jar)
         }
     }
