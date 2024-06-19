@@ -3,14 +3,16 @@ package xyz.wagyourtail.unimined.internal.mapping
 import com.google.gson.JsonParser
 import net.fabricmc.mappingio.MappingVisitor
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
-import net.fabricmc.mappingio.format.*
+import net.fabricmc.mappingio.format.MappingTreeBuilder
+import net.fabricmc.mappingio.format.ProGuardReader
+import net.fabricmc.mappingio.format.Tiny2Reader2
+import net.fabricmc.mappingio.format.Tiny2Writer2
 import net.fabricmc.mappingio.tree.MappingTreeView
 import net.fabricmc.mappingio.tree.MemoryMappingTree
 import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
 import org.gradle.api.artifacts.FileCollectionDependency
 import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.mapping.MemoryMapping
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
@@ -593,12 +595,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
             // parse each dep
             for (dep in mappingsDeps.values) {
                 dep as MappingDepConfigImpl
-                project.logger.info("[Unimined/MappingsProvider] Loading mappings from ${dep.dep.name}")
+                project.logger.lifecycle("[Unimined/MappingsProvider] Loading mappings from ${dep.dep}")
                 // resolve dep to files, no pom
                 val files = configuration.getFiles(dep.dep) { it.extension != "pom" }
 
                 // load each file
-                project.logger.info("[Unimined/MappingsProvider] Loading mappings files ${files.joinToString(", ")}")
+                project.logger.lifecycle("[Unimined/MappingsProvider] Loading mappings files ${files.joinToString(", ")}")
 
                 for (file in files) {
                     if (minecraft.isMinecraftJar(file.toPath())) {
