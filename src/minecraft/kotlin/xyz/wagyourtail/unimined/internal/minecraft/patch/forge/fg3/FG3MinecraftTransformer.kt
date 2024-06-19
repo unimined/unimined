@@ -71,7 +71,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
 
     override val prodNamespace by lazy {
-        if (userdevCfg["mcp"].asString.contains("neoform") || provider.minecraftData.mcVersionCompare(provider.version, "1.20.5") <= 0) {
+        if (userdevCfg["mcp"].asString.contains("neoform") || provider.minecraftData.mcVersionCompare(provider.version, "1.20.5") >= 0) {
             provider.mappings.getNamespace("mojmap")
         } else {
             provider.mappings.getNamespace("searge")

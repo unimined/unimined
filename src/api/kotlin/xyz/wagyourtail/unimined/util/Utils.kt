@@ -7,6 +7,7 @@ import org.apache.commons.compress.archivers.zip.ZipFile
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
@@ -46,6 +47,13 @@ inline fun <T, U> consumerApply(crossinline action: T.() -> U): (T) -> U {
 
 fun Configuration.getFile(dep: Dependency, extension: Regex): File {
     resolve()
+    incoming.artifactView {
+        when (it) {
+            is ModuleComponentIdentifier -> {
+                it.group == dep.group && it.module == dep.name
+            }
+        }
+    }.files
     return files(dep).first { it.extension.matches(extension) }
 }
 

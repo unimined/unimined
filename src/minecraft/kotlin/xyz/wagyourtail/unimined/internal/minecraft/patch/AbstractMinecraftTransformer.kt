@@ -214,6 +214,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
         "META-INF/**",
         "net/minecraft/**",
         "com/mojang/blaze3d/**",
+        "com/mojang/realmsclient/**",
         "paulscode/sound/**",
         "com/jcraft/**"
     )
