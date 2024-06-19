@@ -8,7 +8,7 @@ import xyz.wagyourtail.unimined.util.globToRegex
 
 class PackageRemappingVisitor(next: MappingVisitor?, val namespaces: Set<String>, matcherGlobToPackage: List<Pair<String, String>>) : ForwardingMappingVisitor(next) {
 
-    val matcherRegexToPackage = matcherGlobToPackage.map { it.first.globToRegex() to it.second }.reversed()
+    val matcherRegexToPackage = matcherGlobToPackage.map { it.first.globToRegex() to it.second }.asReversed()
 
     lateinit var namespaceIds: Set<Int>
 

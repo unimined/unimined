@@ -129,7 +129,7 @@ dependencies {
     runtimeOnly(gradleApi())
 
     // kotlin metadata
-    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.6.2") {
+    implementation("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0") {
         isTransitive = false
     }
 
