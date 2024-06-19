@@ -10,7 +10,7 @@ import org.gradle.process.JavaExecSpec
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
-import xyz.wagyourtail.unimined.util.getFile
+import xyz.wagyourtail.unimined.util.getFiles
 import xyz.wagyourtail.unimined.util.readZipInputStreamFor
 import java.io.File
 import java.io.IOException
@@ -92,7 +92,7 @@ data class McpExecutor(
         val configuration = project.configurations.detachedConfiguration()
         configuration.dependencies.add(transformer.mcpConfig)
         configuration.resolve()
-        val mcpConfig = configuration.getFile(transformer.mcpConfig, Regex("zip"))
+        val mcpConfig = configuration.getFiles(transformer.mcpConfig, "zip").singleFile
         val target = getStepCache(step.name).createDirectories()
             .resolve(transformer.mcpConfigData.mappingsPath.split("/").last())
         mcpConfig.toPath().readZipInputStreamFor(transformer.mcpConfigData.mappingsPath) {
@@ -186,7 +186,7 @@ data class McpExecutor(
             val configuration = project.configurations.detachedConfiguration()
             configuration.dependencies.add(transformer.mcpConfig)
             configuration.resolve()
-            val mcpConfig = configuration.getFile(transformer.mcpConfig, Regex("zip"))
+            val mcpConfig = configuration.getFiles(transformer.mcpConfig, "zip").singleFile
             val target = getStepCache(step.name).createDirectories()
                 .resolve(transformer.mcpConfigData.mappingsPath.split("/").last())
             mcpConfig.toPath().readZipInputStreamFor(transformer.mcpConfigData.mappingsPath) {

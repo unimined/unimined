@@ -109,7 +109,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         val configuration = project.configurations.detachedConfiguration()
         configuration.dependencies.add(mcpConfig)
         configuration.resolve()
-        val config = configuration.getFile(mcpConfig, Regex("zip"))
+        val config = configuration.getFiles(mcpConfig, "zip").singleFile
         val configJson = config.toPath().readZipInputStreamFor("config.json") {
             JsonParser.parseReader(InputStreamReader(it)).asJsonObject
         }
@@ -121,7 +121,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
         // detect if userdev3 or userdev
         //   read if forgeDep has binpatches file
-        val forgeUni = parent.forge.getFile(forgeDep)
+        val forgeUni = parent.forge.getFiles(forgeDep).singleFile
         val userdevClassifier = forgeUni.toPath().readZipInputStreamFor<String?>(
             "binpatches.pack.lzma", false
         ) {
@@ -134,7 +134,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         forgeUd.dependencies.add(project.dependencies.create(userdev))
 
         // get forge userdev jar
-        forgeUd.getFile(forgeUd.dependencies.last())
+        forgeUd.getFiles(forgeUd.dependencies.last()).singleFile
     }
 
     override fun beforeMappingsResolve() {
@@ -407,7 +407,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                     userdevCfg.get("modules").asJsonArray.joinToString(File.pathSeparator) {
                         val dep = libs[it.asString.removeSuffix("@jar")]
                             ?: throw IllegalStateException("Module ${it.asString} not found in mc libraries")
-                        provider.minecraftLibraries.getFile(dep).toString()
+                        provider.minecraftLibraries.getFiles(dep).singleFile.toString()
                     }
                 }
 

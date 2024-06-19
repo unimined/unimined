@@ -8,6 +8,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
@@ -39,21 +40,26 @@ inline fun <T, U> consumerApply(crossinline action: T.() -> U): (T) -> U {
     return { action(it) }
 }
 
-fun Configuration.getFile(dep: Dependency, extension: Regex): File {
+fun Configuration.getFiles(dep: Dependency, extension: Regex): FileCollection {
     resolve()
-    incoming.artifactView {
+    return incoming.artifactView {
         when (it) {
             is ModuleComponentIdentifier -> {
                 it.group == dep.group && it.module == dep.name
             }
         }
-    }.files
-    return files(dep).first { it.extension.matches(extension) }
+    }.files.filter { it.extension.matches(extension) }
 }
 
-fun Configuration.getFile(dep: Dependency, extension: String = "jar"): File {
+fun Configuration.getFiles(dep: Dependency, extension: String = "jar"): FileCollection {
     resolve()
-    return files(dep).firstOrNull { it.extension == extension } ?: error("No $extension file found for $dep")
+    return incoming.artifactView {
+        when (it) {
+            is ModuleComponentIdentifier -> {
+                it.group == dep.group && it.module == dep.name
+            }
+        }
+    }.files.filter { it.extension == extension }
 }
 
 fun URI.stream(): InputStream {
