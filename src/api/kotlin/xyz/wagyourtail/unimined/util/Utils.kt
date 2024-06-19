@@ -46,7 +46,7 @@ inline fun <T, U> consumerApply(crossinline action: T.() -> U): (T) -> U {
     return { action(it) }
 }
 
-fun Configuration.getFiles(dep: Dependency, extension: Regex): FileCollection {
+fun Configuration.getFiles(dep: Dependency, filter: (File) -> Boolean): FileCollection {
     resolve()
     return incoming.artifactView {
         when (it) {
@@ -54,7 +54,7 @@ fun Configuration.getFiles(dep: Dependency, extension: Regex): FileCollection {
                 it.group == dep.group && it.module == dep.name
             }
         }
-    }.files.filter { it.extension.matches(extension) }
+    }.files.filter(filter)
 }
 
 fun Configuration.getFiles(dep: Dependency, extension: String = "jar"): FileCollection {
