@@ -673,10 +673,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
 
-        // first, because it inserts before
-        runs.configFirst(name, (mcPatcher as AbstractMinecraftTransformer)::applyClientRunTransform)
-
-        // then this inserts before again, so it's before the patches
         runs.configFirst(name) {
             properties.putAll(mapOf(
                 "natives_directory" to {
@@ -716,6 +712,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             jvmArgs = minecraftData.metadata.getJVMArgs() + betacraftArgs
             args = minecraftData.metadata.getGameArgs()
 
+            (mcPatcher as AbstractMinecraftTransformer).applyClientRunTransform(this)
         }
     }
 
@@ -723,8 +720,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     fun provideRunServerTask(name: String, defaultWorkingDir: File) {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] server config, $name")
         val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
-
-        runs.configFirst(name, (mcPatcher as AbstractMinecraftTransformer)::applyServerRunTransform)
 
         runs.configFirst(name) {
             javaLauncher.set(toolchains.launcherFor {
@@ -741,6 +736,8 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                 }
             }
             args = mutableListOf("nogui")
+
+            (mcPatcher as AbstractMinecraftTransformer).applyServerRunTransform(this)
         }
     }
 }
