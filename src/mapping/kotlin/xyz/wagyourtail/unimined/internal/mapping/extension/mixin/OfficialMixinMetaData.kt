@@ -92,6 +92,9 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
                     }
                 }
             }
+            if (refmaps.isEmpty()) {
+                refmaps["unknown-refmap.json"] = TreeMap()
+            }
         }
     }
 
