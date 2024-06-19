@@ -236,7 +236,7 @@ abstract class ForgeLikeMinecraftTransformer(
 
         // test if pre unified jar
         if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") > 0) {
-            val jar = forge.files(forgeDep).first { it.extension == "zip" || it.extension == "jar" }
+            val jar = forge.getFiles(forgeDep) { it.extension == "zip" || it.extension == "jar" }.singleFile
 
             //parse version json from universal jar and apply
             jar.toPath().readZipInputStreamFor("version.json", false) {

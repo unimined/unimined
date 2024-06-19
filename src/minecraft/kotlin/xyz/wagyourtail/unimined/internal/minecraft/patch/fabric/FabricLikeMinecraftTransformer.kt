@@ -334,7 +334,7 @@ abstract class FabricLikeMinecraftTransformer(
             Files.createDirectories(jars)
             Files.createDirectories(includeCache)
             for (dep in include.dependencies) {
-                val source = include.files(dep).first { it.extension == "jar" }.toPath()
+                val source = include.getFiles(dep, "jar").singleFile.toPath()
                 val path = jars.resolve("${dep.name}-${dep.version}.jar")
                 if (!source.zipContains(modJsonName)) {
                     val cachePath = includeCache.resolve("${dep.name}-${dep.version}.jar")
