@@ -136,16 +136,20 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             null
         }
         if (tweakClassClient != null) {
-            config.args += listOf("--tweakClass",
+            config.args("--tweakClass",
                 tweakClassClient
             )
         }
 
-        config.mainClass = parent.mainClass ?: config.mainClass
-        config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
-        config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
-        config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-        config.env["MOD_CLASSES"] = parent.groups
+        parent.mainClass?.let {
+            config.mainClass.set(it)
+        }
+        config.jvmArgs(
+            "-Dfml.ignoreInvalidMinecraftCertificates=true",
+            "-Dfml.deobfuscatedEnvironment=true",
+            "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
+        )
+        config.environment["MOD_CLASSES"] = parent.groups
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
@@ -166,16 +170,20 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
 
         if (tweakClassServer != null) {
-            config.args += listOf("--tweakClass",
+            config.args(
+                "--tweakClass",
                 tweakClassServer
             )
         }
-
-        config.mainClass = parent.mainClass ?: config.mainClass
-        config.jvmArgs += "-Dfml.ignoreInvalidMinecraftCertificates=true"
-        config.jvmArgs += "-Dfml.deobfuscatedEnvironment=true"
-        config.jvmArgs += "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
-        config.env["MOD_CLASSES"] = parent.groups
+        parent.mainClass?.let {
+            config.mainClass.set(it)
+        }
+        config.jvmArgs(
+            "-Dfml.ignoreInvalidMinecraftCertificates=true",
+            "-Dfml.deobfuscatedEnvironment=true",
+            "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
+        )
+        config.environment["MOD_CLASSES"] = parent.groups
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {

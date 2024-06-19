@@ -94,7 +94,7 @@ open class QuiltMinecraftTransformer(
 
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
-        config.jvmArgs += listOf(
+        config.jvmArgs(
             "-Dloader.development=true",
             "-Dloader.remapClasspathFile=${intermediaryClasspath}",
             "-Dloader.classPathGroups=${groups}"
@@ -103,7 +103,7 @@ open class QuiltMinecraftTransformer(
 
     override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
-        config.jvmArgs += listOf(
+        config.jvmArgs(
             "-Dloader.development=true",
             "-Dloader.remapClasspathFile=${intermediaryClasspath}",
             "-Dloader.classPathGroups=${groups}"

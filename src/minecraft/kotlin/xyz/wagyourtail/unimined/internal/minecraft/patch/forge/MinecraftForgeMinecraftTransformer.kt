@@ -12,10 +12,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2.FG2MinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.FinalizeOnWrite
-import xyz.wagyourtail.unimined.util.MustSet
-import xyz.wagyourtail.unimined.util.forEachInZip
+import xyz.wagyourtail.unimined.util.*
 import java.io.File
 
 open class MinecraftForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "MinecraftForge"),
@@ -65,7 +62,7 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
         forgeTransformer = if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") < 0) {
             FG1MinecraftTransformer(project, this)
         } else {
-            val jar = forge.files(forgeDep).first { it.extension == "zip" || it.extension == "jar" }
+            val jar = forge.getFiles(forgeDep, Regex("jar|zip")).singleFile
             determineForgeProviderFromUniversal(jar)
         }
     }

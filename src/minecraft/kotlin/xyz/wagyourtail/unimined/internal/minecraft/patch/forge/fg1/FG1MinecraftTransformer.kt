@@ -194,8 +194,8 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             }
         }
 
-        config.jvmArgs.add("-Dminecraft.applet.TargetDirectory=\"${config.workingDir.absolutePath}\"")
-        if (parent.mainClass != null) config.mainClass = parent.mainClass!!
+        config.jvmArgs("-Dminecraft.applet.TargetDirectory=\"${config.workingDir.absolutePath}\"")
+        if (parent.mainClass != null) config.mainClass.set(parent.mainClass!!)
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {

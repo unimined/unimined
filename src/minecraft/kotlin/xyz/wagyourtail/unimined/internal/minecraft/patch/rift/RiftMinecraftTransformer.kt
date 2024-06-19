@@ -53,15 +53,21 @@ open class RiftMinecraftTransformer(
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
-        config.mainClass = "net.minecraft.launchwrapper.Launch"
+        config.mainClass.set("net.minecraft.launchwrapper.Launch")
 
-        config.args.addAll(arrayOf("--tweakClass", "org.dimdev.riftloader.launch.RiftLoaderClientTweaker").toList())
+        config.args(
+            "--tweakClass",
+            "org.dimdev.riftloader.launch.RiftLoaderClientTweaker"
+        )
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
-        config.mainClass = "net.minecraft.launchwrapper.Launch"
+        config.mainClass.set("net.minecraft.launchwrapper.Launch")
 
-        config.args.addAll(arrayOf("--tweakClass", "org.dimdev.riftloader.launch.RiftLoaderServerTweaker").toList())
+        config.args(
+            "--tweakClass",
+            "org.dimdev.riftloader.launch.RiftLoaderServerTweaker"
+        )
     }
 
     private fun createRiftDependency(name: String, transitive: Boolean = false) {

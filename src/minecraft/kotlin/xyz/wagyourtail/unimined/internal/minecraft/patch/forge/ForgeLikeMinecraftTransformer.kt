@@ -346,7 +346,7 @@ abstract class ForgeLikeMinecraftTransformer(
         project.logger.info("[Unimined/ForgeTransformer] Adding mixin config $mixinConfig to client run config")
         forgeTransformer.applyClientRunTransform(config)
         for (mixin in mixinConfig) {
-            config.args += listOf("--mixin", mixin)
+            config.args("--mixin", mixin)
         }
     }
 
@@ -354,7 +354,7 @@ abstract class ForgeLikeMinecraftTransformer(
         project.logger.info("[Unimined/ForgeTransformer] Adding mixin config $mixinConfig to server run config")
         forgeTransformer.applyServerRunTransform(config)
         for (mixin in mixinConfig) {
-            config.args += listOf("--mixin", mixin)
+            config.args("--mixin", mixin)
         }
     }
 

@@ -1,132 +1,118 @@
 package xyz.wagyourtail.unimined.internal.runs
 
 import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.tasks.TaskProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.runs.RunsConfig
 import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.runs.auth.AuthProvider
-import xyz.wagyourtail.unimined.util.defaultedMapOf
-import xyz.wagyourtail.unimined.util.sourceSets
-import xyz.wagyourtail.unimined.util.withSourceSet
+import xyz.wagyourtail.unimined.util.*
 
-class RunsProvider(val project: Project, val minecraft: MinecraftConfig) : RunsConfig() {
+class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsConfig() {
     private var freeze = false
+    private var runTasks: Map<String, TaskProvider<RunConfig>> by FinalizeOnRead(MustSet())
 
-    override val auth = AuthProvider(this)
-    private val runConfigs = mutableMapOf<String, RunConfig>()
-    private val transformers = defaultedMapOf<String, RunConfig.() -> Unit> { {} }
+    override val auth = AuthProvider(project)
+
+    private val preLaunch = mutableMapOf<String, RunConfig.() -> Unit>()
+    private val actions = mutableMapOf<String, RunConfig.() -> Unit>()
     private var all: RunConfig.() -> Unit = {}
 
-    private val transformedRunConfig = defaultedMapOf<String, RunConfig>{
-        if (!freeze) throw IllegalStateException("Cannot get transformed run configs before apply has been called.")
-        runConfigs[it].apply {
-            transformers[it].invoke(this!!)
-            all(this)
-        }!!
+    fun freezeCheck() {
+        if (freeze) throw IllegalStateException("Cannot change run configs after apply has been called.")
     }
 
-    override fun auth(action: AuthConfig.() -> Unit) {
-        auth.apply(action)
-    }
-
-    override fun all(action: RunConfig.() -> Unit) {
-        if (freeze) throw IllegalStateException("Cannot register run configs after apply has been called.")
-        val prev = all
-        all = {
-            prev.invoke(this)
+    override fun preLaunch(config: String, action: RunConfig.() -> Unit) {
+        freezeCheck()
+        val old = preLaunch[config]
+        preLaunch[config] = {
+            old?.invoke(this)
             action.invoke(this)
         }
     }
 
     override fun config(config: String, action: RunConfig.() -> Unit) {
-        if (freeze) throw IllegalStateException("Cannot register run configs after apply has been called.")
-        transformers.compute(config) { _, prev ->
-            {
-                prev?.invoke(this)
-                action.invoke(this)
-            }
+        freezeCheck()
+        val old = actions[config]
+        actions[config] = {
+            old?.invoke(this)
+            action.invoke(this)
         }
     }
 
-    override fun addTarget(config: RunConfig) {
-        if (freeze) throw IllegalStateException("Cannot register run configs after apply has been called.")
-        runConfigs[config.name] = config
+    override fun configFirst(config: String, action: RunConfig.() -> Unit) {
+        freezeCheck()
+        val old = actions[config]
+        actions[config] = {
+            action.invoke(this)
+            old?.invoke(this)
+        }
     }
 
-    override fun configFirst(config: String, action: RunConfig.() -> Unit) {
-        if (freeze) throw IllegalStateException("Cannot register run configs after apply has been called.")
-        transformers.compute(config) { _, prev ->
-            {
-                action.invoke(this)
-                prev?.invoke(this)
+    override fun auth(action: AuthConfig.() -> Unit) {
+        freezeCheck()
+        auth.apply(action)
+    }
+
+    override fun all(action: RunConfig.() -> Unit) {
+        freezeCheck()
+        val old = all
+        all = {
+            old.invoke(this)
+            action.invoke(this)
+        }
+    }
+
+    val genIntellijRunsTask = project.tasks.register("genIntellijRuns".withSourceSet(minecraft.sourceSet)) {
+        if (minecraft.sourceSet == project.sourceSets.getByName("main")) {
+            it.group = "unimined_runs"
+            it.dependsOn(*project.unimined.minecrafts.keys.filter { it != minecraft.sourceSet }.map { "genIntellijRuns".withSourceSet(minecraft.sourceSet) }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
+        } else {
+            it.group = "unimined_internal"
+        }
+        it.doLast {
+            for (value in runTasks.values) {
+                value.get().createIdeaRunConfig()
             }
         }
     }
 
     fun apply() {
         freeze = true
-        if (!off) {
-            project.afterEvaluate {
-                (transformers.keys - runConfigs.keys).apply {
-                    if (isNotEmpty()) throw IllegalStateException("You have transformers for run configs that don't exist: $this")
-                }
-                project.logger.lifecycle("[Unimined/Runs] Applying runs")
-                genIntellijRunsTask()
-                createGradleRuns()
-            }
-        } else {
-            project.afterEvaluate {
-                if (project.tasks.findByName("genIntellijRuns") == null) {
-                    project.tasks.register("genIntellijRuns") { task ->
-                        task.group = "unimined_runs"
-                        if (minecraft.sourceSet != project.sourceSets.getByName("main")) {
-                            task.dependsOn(*project.unimined.minecrafts.keys.map {
-                                "genIntellijRuns".withSourceSet(
-                                    minecraft.sourceSet
-                                )
-                            }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
-                        }
-                    }
-                }
-            }
+        if (off) return
+        if ((preLaunch.keys - actions.keys).isNotEmpty()) {
+            throw IllegalStateException("You have preLaunch for run configs that don't exist: ${preLaunch.keys - actions.keys}")
         }
-    }
+        runTasks = actions.mapValues { action ->
+            val preRun: TaskProvider<Task> = project.tasks.register("preRun${action.key.capitalized()}".withSourceSet(minecraft.sourceSet))
 
-    private fun doGenIntellijRuns() {
-        for (configName in runConfigs.keys) {
-            if (transformedRunConfig[configName].disabled) continue
-            project.logger.info("[Unimined/Runs] Creating idea run config for $configName")
-            transformedRunConfig[configName].createIdeaRunConfig()
-        }
-    }
+            val task: TaskProvider<RunConfig> = project.tasks.register("run${action.key.capitalized()}".withSourceSet(minecraft.sourceSet), RunConfig::class.java, minecraft.sourceSet, preRun)
+            task.configure {
+                it.apply(all)
+                it.apply(action.value)
+            }
 
-    private fun genIntellijRunsTask() {
-        val genIntellijRuns = project.tasks.register("genIntellijRuns".withSourceSet(minecraft.sourceSet)) {
-            if (minecraft.sourceSet == project.sourceSets.getByName("main")) {
-                it.group = "unimined_runs"
-                it.dependsOn(*project.unimined.minecrafts.keys.filter { it != minecraft.sourceSet }.map { "genIntellijRuns".withSourceSet(minecraft.sourceSet) }.mapNotNull { project.tasks.findByName(it) }.toTypedArray())
-            } else {
+            preRun.configure {
                 it.group = "unimined_internal"
+                it.doLast {
+                    preLaunch[action.key]?.invoke(task.get())
+                }
             }
-            it.doLast {
-                doGenIntellijRuns()
-            }
+
+
+            task
         }
-        project.afterEvaluate {
-            if (java.lang.Boolean.getBoolean("idea.sync.active")) {
-                doGenIntellijRuns()
+        //TODO: vscode/eclipse support
+
+        if (System.getProperty("idea.sync.active", "false").lowercase() == "true") {
+            project.afterEvaluate {
+                for (value in runTasks.values) {
+                    value.get().createIdeaRunConfig()
+                }
             }
         }
     }
-
-    private fun createGradleRuns() {
-        for (configName in runConfigs.keys) {
-            if (transformedRunConfig[configName].disabled) continue
-            project.logger.info("[Unimined/Runs] Creating gradle task for $configName")
-            transformedRunConfig[configName].createGradleTask(project.tasks, "unimined_runs")
-        }
-    }
-
 }

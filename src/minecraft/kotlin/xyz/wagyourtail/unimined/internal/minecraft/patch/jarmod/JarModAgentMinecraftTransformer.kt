@@ -93,14 +93,14 @@ open class JarModAgentMinecraftTransformer(
 
     private fun applyJarModAgent(config: RunConfig) {
         if (transforms.isNotEmpty()) {
-            config.jvmArgs.add("-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}")
+            config.jvmArgs("-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}")
         }
         // priority classpath
         val priorityClasspath = detectProjectSourceSets().map { it.second.output.classesDirs.toMutableSet().also {set-> it.second.output.resourcesDir.let { set.add(it) } } }.flatten()
         if (priorityClasspath.isNotEmpty()) {
-            config.jvmArgs.add("-D${JMA_PRIORITY_CLASSPATH}=${priorityClasspath.joinToString(File.pathSeparator) { it.absolutePath }}")
+            config.jvmArgs("-D${JMA_PRIORITY_CLASSPATH}=${priorityClasspath.joinToString(File.pathSeparator) { it.absolutePath }}")
         }
-        config.jvmArgs.add("-javaagent:${jmaFile}")
+        config.jvmArgs("-javaagent:${jmaFile}")
         //TODO: add mods to priority classpath, and resolve their jma.transformers
     }
 

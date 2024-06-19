@@ -585,7 +585,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
                 dep as MappingDepConfigImpl
                 project.logger.info("[Unimined/MappingsProvider] Loading mappings from ${dep.dep.name}")
                 // resolve dep to files, no pom
-                val files = configuration.files(dep.dep).filter { it.extension != "pom" }
+                val files = configuration.getFiles(dep.dep).filter { it.extension != "pom" }
 
                 // load each file
                 project.logger.info("[Unimined/MappingsProvider] Loading mappings files ${files.joinToString(", ")}")

@@ -2,16 +2,21 @@ package xyz.wagyourtail.unimined.api.runs
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
 abstract class RunsConfig {
+
     /**
-     * just a flag to disable all.
+     * flag to disable all
      */
     var off: Boolean by FinalizeOnRead(false)
     abstract val auth: AuthConfig
+
+    abstract fun config(
+        config: String,
+        action: RunConfig.() -> Unit
+    )
 
     fun config(
         config: String,
@@ -27,45 +32,26 @@ abstract class RunsConfig {
         }
     }
 
-    abstract fun config(
+    @Deprecated("dont use this, it will break as vanilla will overwrite it")
+    abstract fun configFirst(
         config: String,
         action: RunConfig.() -> Unit
     )
 
-    @Deprecated("use setConfig instead", ReplaceWith("setConfig(\"client\", action)"))
-    fun setClient(
+    @Deprecated("dont use this, it will break as vanilla will overwrite it")
+    fun configFirst(
+        config: String,
         @DelegatesTo(
             value = RunConfig::class,
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {
-        config("client", action)
+        configFirst(config) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
     }
-
-    @Deprecated("use setConfig instead", ReplaceWith("setConfig(\"client\", action)"))
-    fun setClient(action: RunConfig.() -> Unit) {
-        config("client", action)
-    }
-
-    @Deprecated("use setConfig instead", ReplaceWith("setConfig(\"server\", action)"))
-    fun setServer(
-        @DelegatesTo(
-            value = RunConfig::class,
-            strategy = Closure.DELEGATE_FIRST
-        ) action: Closure<*>
-    ) {
-        config("server", action)
-    }
-
-    @Deprecated("use setConfig instead", ReplaceWith("setConfig(\"server\", action)"))
-    fun setServer(action: RunConfig.() -> Unit) {
-        config("server", action)
-    }
-
-    @ApiStatus.Internal
-    abstract fun addTarget(config: RunConfig)
-
-    abstract fun configFirst(config: String, action: RunConfig.() -> Unit)
 
     /**
      * @since 1.2.5
@@ -90,9 +76,6 @@ abstract class RunsConfig {
      */
     abstract fun all(action: RunConfig.() -> Unit)
 
-    /**
-     * @since 1.2.7
-     */
     fun all(
         @DelegatesTo(
             value = RunConfig::class,
@@ -105,4 +88,12 @@ abstract class RunsConfig {
             action.call()
         }
     }
+
+    /**
+     * add a task before RunClientV2 runs, this should not change the run config,
+     * but is for stuff like copying the natives into the run dir.
+     * @since 1.3.0
+     */
+    abstract fun preLaunch(config: String, action: RunConfig.() -> Unit)
+
 }

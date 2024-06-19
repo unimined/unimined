@@ -428,11 +428,15 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
-        config.mainClass = mainClass?.get("client")?.asString ?: config.mainClass
+        mainClass?.get("client")?.asString?.let {
+            config.mainClass.set(it)
+        }
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
-        config.mainClass = mainClass?.get("server")?.asString ?: config.mainClass
+        mainClass?.get("server")?.asString?.let {
+            config.mainClass.set(it)
+        }
     }
 
     override fun libraryFilter(library: Library): Boolean {

@@ -177,7 +177,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
             val unprotect = project.configurations.detachedConfiguration(
                 project.dependencies.create("io.github.juuxel:unprotect:1.3.0")
             ).resolve().first { it.extension == "jar" }
-            config.jvmArgs.add("-javaagent:${unprotect.absolutePath}")
+            config.jvmArgs("-javaagent:${unprotect.absolutePath}")
         }
     }
 
@@ -187,7 +187,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
             val unprotect = project.configurations.detachedConfiguration(
                 project.dependencies.create("io.github.juuxel:unprotect:1.3.0")
             ).resolve().first { it.extension == "jar" }
-            config.jvmArgs.add("-javaagent:${unprotect.absolutePath}")
+            config.jvmArgs("-javaagent:${unprotect.absolutePath}")
         }
     }
 
@@ -268,10 +268,10 @@ abstract class AbstractMinecraftTransformer protected constructor(
         for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
             if (provider.mappings.devNamespace != minecraftConfig.mappings.devNamespace ||
                 provider.mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace) {
-                throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${provider.sourceSet} on ${provider.mappings.devNamespace}/${provider.mappings.devFallbackNamespace} and ${sourceSet} on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
+                throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${provider.sourceSet} on ${provider.mappings.devNamespace}/${provider.mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
             }
             if (provider.version != minecraftConfig.version) {
-                throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${provider.sourceSet} on ${provider.version} and ${sourceSet} on ${minecraftConfig.version}")
+                throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${provider.sourceSet} on ${provider.version} and $sourceSet on ${minecraftConfig.version}")
             }
         }
 

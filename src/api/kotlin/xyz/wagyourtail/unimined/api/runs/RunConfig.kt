@@ -1,47 +1,70 @@
 package xyz.wagyourtail.unimined.api.runs
 
-import org.gradle.api.JavaVersion
-import org.gradle.api.Project
+import groovy.lang.Closure
 import org.gradle.api.Task
-import org.gradle.api.file.FileCollection
-import org.gradle.api.tasks.JavaExec
-import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.TaskContainer
+import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
-import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.XMLBuilder
-import xyz.wagyourtail.unimined.util.sourceSets
+import xyz.wagyourtail.unimined.util.removeALl
 import xyz.wagyourtail.unimined.util.withSourceSet
-import java.io.File
 import java.nio.charset.StandardCharsets
+import javax.inject.Inject
 import kotlin.io.path.relativeTo
 
-/**
- * abstraction layer for minecraft run configs.
- * @since 0.2.3
- */
-data class RunConfig(
-    val project: Project,
-    var javaVersion: JavaVersion?, // set to null to use whatever gradle/idea is using
-    val name: String,
-    val taskName: String,
-    var description: String,
-    var sourceSet: SourceSet,
-    var launchClasspath: FileCollection,
-    var mainClass: String,
-    val args: MutableList<String>,
-    val jvmArgs: MutableList<String>,
-    var workingDir: File,
-    val env: MutableMap<String, String>,
-    val runFirst: MutableList<Task> = mutableListOf(),
-    var disabled : Boolean = false
-) {
+abstract class RunConfig @Inject constructor(
+    @get:Input
+    val sourceSet: SourceSet,
+    @get:Internal
+    val preRunTask: TaskProvider<Task>
+) : JavaExec() {
+
+    @get:Internal
+    val properties: MutableMap<String, () -> String> = mutableMapOf()
+
+    init {
+        group = "unimined_runs"
+        dependsOn(preRunTask)
+    }
+
+    fun setProperty(
+        key: String,
+        value: Closure<String>
+    ) {
+        properties[key] = { value.call() }
+    }
+
+    private fun <T> applyProperties(arg: T): T {
+        return if (arg is String) {
+            arg.replace(Regex("\\$\\{([^}]+)}")) {
+                val key = it.groupValues[1]
+                if (properties.containsKey(key)) {
+                    properties.getValue(key).invoke()
+                } else {
+                    throw IllegalArgumentException("Property $key not found")
+                }
+            } as T
+        } else arg
+    }
+
+    private fun applyAll() {
+        args = args!!.map { applyProperties(it) }
+        jvmArgs = jvmArgs!!.map { applyProperties(it) }
+        environment = environment.mapValues { (_, value) -> applyProperties(value) }
+    }
+
+    @TaskAction
+    override fun exec() {
+        applyAll()
+        super.exec()
+    }
 
     fun createIdeaRunConfig() {
+        if (!this.enabled) return
+        applyAll()
         val file = project.rootDir.resolve(".idea")
             .resolve("runConfigurations")
-            .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+${taskName.withSourceSet(sourceSet)}.xml")
+            .resolve("${if (project.path != ":") project.path.replace(":", "_") + "_" else ""}+${name.withSourceSet(sourceSet)}.xml")
 
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
             .addStringOption("name", buildString {
@@ -53,7 +76,7 @@ data class RunConfig(
             .addStringOption("type", "Application")
             .addStringOption("factoryName", "Application")
 
-        javaVersion?.let { jv ->
+        javaVersion.let { jv ->
             val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
             val launcher = toolchain.launcherFor { spec ->
                 spec.languageVersion.set(JavaLanguageVersion.of(jv.majorVersion))
@@ -68,12 +91,12 @@ data class RunConfig(
 
         configuration.append(
             XMLBuilder("envs").append(
-                *env.map { (key, value) ->
-                    XMLBuilder("env").addStringOption("name", key).addStringOption("value", value)
+                *(environment.removeALl(System.getenv())).map { (key, value) ->
+                    XMLBuilder("env").addStringOption("name", key).addStringOption("value", value.toString())
                 }.toTypedArray()
             ),
             XMLBuilder("option").addStringOption("name", "MAIN_CLASS_NAME")
-                .addStringOption("value", mainClass),
+                .addStringOption("value", mainClass.getOrElse("")),
             XMLBuilder("module").addStringOption(
                 "name",
                 "${
@@ -86,19 +109,19 @@ data class RunConfig(
                 }.${sourceSet.name}"
             ),
             XMLBuilder("classpathModifications").append(
-                *launchClasspath.filter { !sourceSet.runtimeClasspath.contains(it) }.map {
+                *classpath.filter { !sourceSet.runtimeClasspath.contains(it) }.map {
                     XMLBuilder("entry").addStringOption("path", it.absolutePath)
                 }.toTypedArray(),
-                *sourceSet.runtimeClasspath.filter { !launchClasspath.contains(it) }.map {
+                *sourceSet.runtimeClasspath.filter { !classpath.contains(it) }.map {
                     XMLBuilder("entry").addStringOption("exclude", "true").addStringOption("path", it.absolutePath)
                 }.toTypedArray()
             ),
             XMLBuilder("option").addStringOption("name", "PROGRAM_PARAMETERS")
-                .addStringOption("value", args.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it }),
+                .addStringOption("value", args?.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it } ?: ""),
             XMLBuilder("option").addStringOption("name", "VM_PARAMETERS")
                 .addStringOption(
                     "value",
-                    jvmArgs.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it }),
+                    jvmArgs?.joinToString(" ") { if (it.contains(" ")) "&quot;$it&quot;" else it } ?: ""),
             XMLBuilder("option").addStringOption("name", "WORKING_DIRECTORY")
                 .addStringOption(
                     "value",
@@ -115,23 +138,21 @@ data class RunConfig(
                 XMLBuilder("option").addStringOption("name", "Make").addStringOption("enabled", "true")
             )
 
-        if (runFirst.isNotEmpty()) {
-            mv2.append(
-                XMLBuilder("option")
-                    .addStringOption("name", "Gradle.BeforeRunTask")
-                    .addStringOption("enabled", "true")
-                    .addStringOption("tasks", runFirst.joinToString(" ") { it.name })
-                    .addStringOption(
-                        "externalProjectPath",
-                        "\$PROJECT_DIR\$/${
-                            project.projectDir.toPath()
-                                .relativeTo(project.rootProject.projectDir.toPath())
-                        }"
-                    )
-                    .addStringOption("vmOptions", "")
-                    .addStringOption("scriptParameters", "")
-            )
-        }
+        mv2.append(
+            XMLBuilder("option")
+                .addStringOption("name", "Gradle.BeforeRunTask")
+                .addStringOption("enabled", "true")
+                .addStringOption("tasks", preRunTask.name)
+                .addStringOption(
+                    "externalProjectPath",
+                    "\$PROJECT_DIR\$/${
+                        project.projectDir.toPath()
+                            .relativeTo(project.rootProject.projectDir.toPath())
+                    }"
+                )
+                .addStringOption("vmOptions", "")
+                .addStringOption("scriptParameters", "")
+        )
 
         configuration.append(mv2)
 
@@ -142,39 +163,7 @@ data class RunConfig(
             ).toString(),
             StandardCharsets.UTF_8
         )
+
     }
 
-    //TODO: add eclipse/vsc run configs
-
-    fun createGradleTask(tasks: TaskContainer, group: String): Task {
-        return tasks.create(taskName.withSourceSet(sourceSet), JavaExec::class.java) {
-
-            javaVersion?.let { jv ->
-                val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
-                val launcher = toolchain.launcherFor { spec ->
-                    spec.languageVersion.set(JavaLanguageVersion.of(jv.majorVersion))
-                }
-                it.javaLauncher.set(launcher)
-            }
-
-            it.environment.putAll(env)
-
-            it.classpath = launchClasspath
-
-            it.args = args
-            it.jvmArgs = jvmArgs
-
-            it.group = group
-            it.description = description
-            it.mainClass.set(mainClass)
-            it.workingDir = workingDir
-            workingDir.mkdirs()
-
-            if (runFirst.isNotEmpty()) {
-                for (task in runFirst) {
-                    it.dependsOn(task)
-                }
-            }
-        }
-    }
 }

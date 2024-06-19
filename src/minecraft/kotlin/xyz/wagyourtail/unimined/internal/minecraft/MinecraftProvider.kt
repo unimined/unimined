@@ -8,11 +8,14 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
@@ -24,14 +27,13 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
-import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.NoTransformMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
@@ -48,8 +50,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.Extract
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.MinecraftDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.task.GenSourcesTaskImpl
-import xyz.wagyourtail.unimined.internal.mods.ModsProvider
 import xyz.wagyourtail.unimined.internal.minecraft.task.RemapJarTaskImpl
+import xyz.wagyourtail.unimined.internal.mods.ModsProvider
 import xyz.wagyourtail.unimined.internal.runs.RunsProvider
 import xyz.wagyourtail.unimined.internal.source.SourceProvider
 import xyz.wagyourtail.unimined.util.*
@@ -392,14 +394,14 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     private fun clientRun() {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] client config")
-        runs.addTarget(provideVanillaRunClientTask("client", project.file("run/client")))
-        runs.configFirst("client", (mcPatcher as AbstractMinecraftTransformer)::applyClientRunTransform)
+        provideVanillaRunClientTask("client", project.file("run/client"))
+        runs.config("client", (mcPatcher as AbstractMinecraftTransformer)::applyClientRunTransform)
     }
 
     private fun serverRun() {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] server config")
-        runs.addTarget(provideVanillaRunServerTask("server", project.file("run/server")))
-        runs.configFirst("server", (mcPatcher as AbstractMinecraftTransformer)::applyServerRunTransform)
+        provideVanillaRunServerTask("server", project.file("run/server"))
+        runs.config("server", (mcPatcher as AbstractMinecraftTransformer)::applyServerRunTransform)
     }
 
     fun applyRunConfigs() {
@@ -548,8 +550,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             sources.deleteIfExists()
         }
 
-        // add minecraft dep
-        minecraft.dependencies.add(minecraftDependency)
 
         // create ivy repo for mc dev file / mc dev source file
         val repo = project.repositories.ivy { ivy ->
@@ -565,6 +565,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                 it.includeVersion("net.minecraft", minecraftDepName, version)
             }
         }
+
+        // add minecraft dep
+        minecraft.dependencies.add(minecraftDependency)
 
         project.logger.info("[Unimined/MinecraftProvider ${project.path}:${sourceSet.name}] minecraft file: $minecraftFileDev")
 
@@ -622,25 +625,20 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
 
     @ApiStatus.Internal
-    fun provideVanillaRunClientTask(name: String, workingDirectory: File): RunConfig {
-        val nativeDir = workingDirectory.resolve("natives")
-
-        val preRunClient = project.tasks.create("preRun${name.capitalized()}".withSourceSet(sourceSet), consumerApply {
-            group = "unimined_internal"
-            description = "Prepares the run configuration for $name by extracting natives and downloading assets"
-            doLast {
-                if (nativeDir.exists()) {
-                    nativeDir.deleteRecursively()
-                }
-                nativeDir.mkdirs()
-                extractDependencies.forEach { (dep, extract) ->
-                    minecraftData.extract(dep, extract, nativeDir.toPath())
-                }
-                minecraftData.metadata.assetIndex?.let {
-                    AssetsDownloader.downloadAssets(project, it)
-                }
+    fun provideVanillaRunClientTask(name: String, defaultWorkingDir: File) {
+        runs.preLaunch(name) {
+            val nativeDir = File(properties.getValue("natives_directory").invoke())
+            if (nativeDir.exists()) {
+                nativeDir.deleteRecursively()
             }
-        })
+            nativeDir.mkdirs()
+            extractDependencies.forEach { (dep, extract) ->
+                minecraftData.extract(dep, extract, nativeDir.toPath())
+            }
+            minecraftData.metadata.assetIndex?.let {
+                AssetsDownloader.downloadAssets(project, it)
+            }
+        }
 
         val infoFile = minecraftData.mcVersionFolder
             .resolve("${version}.info")
@@ -674,8 +672,8 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             }
         }
 
-        val properties = Properties()
         val betacraftArgs = if (infoFile.exists()) {
+            val properties = Properties()
             infoFile.inputStream().use { properties.load(it) }
             properties.getProperty("proxy-args")?.split(" ") ?: listOf()
         } else {
@@ -684,56 +682,68 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         val assetsDir = AssetsDownloader.assetsDir(project)
 
-        return RunConfig(
-            project,
-            minecraftData.metadata.javaVersion,
-            name,
-            "run${name.capitalized()}",
-            "Minecraft Client",
-            sourceSet,
-            sourceSet.runtimeClasspath,
-            minecraftData.metadata.mainClass,
-            minecraftData.metadata.getGameArgs(
-                "Dev",
-                workingDirectory.toPath(),
-                assetsDir,
-                runs.auth.authInfo
-            ),
-            (minecraftData.metadata.getJVMArgs(
-                workingDirectory.resolve("libraries").toPath(),
-                nativeDir.toPath()
-            ) + betacraftArgs).toMutableList(),
-            workingDirectory,
-            mutableMapOf(),
-            mutableListOf(preRunClient)
-        )
+        val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
+
+        runs.config(name) {
+            properties.putAll(mapOf(
+                "natives_directory" to {
+                    workingDir.resolve("natives").absolutePath
+                },
+                "library_directory" to {
+                    workingDir.resolve("libraries").absolutePath
+                },
+                "auth_player_name" to {
+                    runs.auth.authInfo?.username ?: "Dev"
+                },
+                "auth_uuid" to {
+                    runs.auth.authInfo?.uuid?.toString() ?: UUID.nameUUIDFromBytes("OfflinePlayer:${properties.getValue("auth_player_name").invoke()}".toByteArray(StandardCharsets.UTF_8)).toString()
+                },
+                "game_directory" to {
+                    workingDir.absolutePath
+                },
+                "assets_root" to {
+                    assetsDir.absolutePathString()
+                },
+                "game_assets" to {
+                    workingDir.resolve("resources").toString()
+                },
+                "auth_access_token" to {
+                    runs.auth.authInfo?.accessToken ?: "0"
+                },
+                "auth_session" to {
+                    runs.auth.authInfo?.accessToken ?: "0"
+                },
+            ))
+            javaLauncher.set(toolchains.launcherFor {
+                it.languageVersion.set(JavaLanguageVersion.of(minecraftData.metadata.javaVersion.majorVersion))
+            })
+            workingDir = defaultWorkingDir
+            classpath = sourceSet.runtimeClasspath
+            mainClass.set(minecraftData.metadata.mainClass)
+            jvmArgs = minecraftData.metadata.getJVMArgs() + betacraftArgs
+            args = minecraftData.metadata.getGameArgs()
+        }
     }
 
     @ApiStatus.Internal
-    fun provideVanillaRunServerTask(name: String, workingDirectory: File): RunConfig {
-        var mainClass: String? = null
-        minecraftData.minecraftServer.path.openZipFileSystem().use {
-            val properties = Properties()
-            val metainf = it.getPath("META-INF/MANIFEST.MF")
-            if (metainf.exists()) {
-                metainf.inputStream().use { properties.load(it) }
-                mainClass = properties.getProperty("Main-Class")
-            }
-        }
+    fun provideVanillaRunServerTask(name: String, defaultWorkingDir: File) {
+        val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
 
-        return RunConfig(
-            project,
-            minecraftData.metadata.javaVersion,
-            name,
-            "run${name.capitalized()}",
-            "Minecraft Server",
-            sourceSet,
-            sourceSet.runtimeClasspath,
-            mainClass ?: throw IllegalStateException("Could not find main class for server"),
-            mutableListOf("nogui"),
-            mutableListOf(),
-            workingDirectory,
-            mutableMapOf()
-        )
+        runs.config("server") {
+            javaLauncher.set(toolchains.launcherFor {
+                it.languageVersion.set(JavaLanguageVersion.of(minecraftData.metadata.javaVersion.majorVersion))
+            })
+            workingDir = defaultWorkingDir
+            classpath = sourceSet.runtimeClasspath
+            minecraftData.minecraftServer.path.openZipFileSystem().use {
+                val properties = Properties()
+                val metainf = it.getPath("META-INF/MANIFEST.MF")
+                if (metainf.exists()) {
+                    metainf.inputStream().use { properties.load(it) }
+                    mainClass.set(properties.getProperty("Main-Class"))
+                }
+            }
+            args = mutableListOf("nogui")
+        }
     }
 }

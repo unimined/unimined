@@ -444,3 +444,10 @@ fun Path.openZipFileSystem(args: Map<String, *> = mapOf<String, Any>()): FileSys
 }
 
 val CONSTANT_TIME_FOR_ZIP_ENTRIES = GregorianCalendar(1980, Calendar.FEBRUARY, 1, 0, 0, 0).timeInMillis
+
+fun <K, V> MutableMap<K, V>.removeALl(other: Map<K, V>): MutableMap<K, V> {
+    other.forEach {
+        remove(it.key, it.value)
+    }
+    return this
+}

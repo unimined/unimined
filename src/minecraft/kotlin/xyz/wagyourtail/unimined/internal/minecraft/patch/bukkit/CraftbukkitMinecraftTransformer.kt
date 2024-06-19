@@ -196,9 +196,9 @@ open class CraftbukkitMinecraftTransformer(
 
     override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
-        config.mainClass = "org.bukkit.craftbukkit.Main"
-        config.jvmArgs.add("-javaagent:${cplFile.toAbsolutePath()}")
-        config.jvmArgs.add("-D${CPL_GROUPS}=$groups")
+        config.mainClass.set("org.bukkit.craftbukkit.Main")
+        config.jvmArgs("-javaagent:${cplFile.toAbsolutePath()}")
+        config.jvmArgs("-D${CPL_GROUPS}=$groups")
     }
 
 }
