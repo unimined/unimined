@@ -395,23 +395,24 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     val legacyClasspath = provider.localCache.createDirectories().resolve("legacy_classpath.txt")
 
-    private fun addProperties(config: RunConfig) = mapOf<String, () -> String>(
-        "minecraft_classpath_file" to {
-            legacyClasspath.absolutePathString()
-        },
-        "modules" to {
-            val libs = mapOf(*provider.minecraftLibraries.dependencies.map { it.group + ":" + it.name + ":" + it.version to it }
-                .toTypedArray())
-            userdevCfg.get("modules").asJsonArray.joinToString(File.pathSeparator) {
-                val dep = libs[it.asString.removeSuffix("@jar")]
-                    ?: throw IllegalStateException("Module ${it.asString} not found in mc libraries")
-                provider.minecraftLibraries.getFiles(dep).singleFile.toString()
+    private fun addProperties(config: RunConfig) {
+        config.properties.putAll(mapOf(
+            "minecraft_classpath_file" to {
+                legacyClasspath.absolutePathString()
+            },
+            "modules" to {
+                val libs = mapOf(*provider.minecraftLibraries.dependencies.map { it.group + ":" + it.name + ":" + it.version to it }
+                    .toTypedArray())
+                userdevCfg.get("modules").asJsonArray.joinToString(File.pathSeparator) {
+                    val dep = libs[it.asString.removeSuffix("@jar")]
+                        ?: throw IllegalStateException("Module ${it.asString} not found in mc libraries")
+                    provider.minecraftLibraries.getFiles(dep).singleFile.toString()
+                }
             }
-        },
+        ))
+    }
 
-    )
-
-    private fun getArgValue(config: RunConfig, arg: String): String {
+    private fun getArgValue(arg: String): String {
         return if (arg.startsWith("{")) {
             when (arg) {
                 "{minecraft_classpath_file}" -> legacyClasspath.toString()
@@ -470,13 +471,13 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 val props = get("props")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString } ?: mapOf()
                 addProperties(config)
                 config.mainClass.set(mainClass)
-                config.args = args.map { getArgValue(config, it) }
-                config.jvmArgs = jvmArgs.map { getArgValue(config, it) }
-                config.jvmArgs(props.map { "-D${it.key}=${getArgValue(config, it.value)}" })
+                config.args = args.map { getArgValue(it) }
+                config.jvmArgs = jvmArgs.map { getArgValue(it) }
+                config.jvmArgs(props.map { "-D${it.key}=${getArgValue(it.value)}" })
                 config.environment["FORGE_SPEC"] = userdevCfg.get("spec").asNumber.toString()
-                config.environment.putAll(env.map { it.key to getArgValue(config, it.value) })
+                config.environment.putAll(env.map { it.key to getArgValue(it.value) })
                 config.environment.computeIfAbsent("MOD_CLASSES") {
-                    getArgValue(config, "{source_roots}")
+                    getArgValue("{source_roots}")
                 }
             }
         }
@@ -509,13 +510,13 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 val props = get("props")?.asJsonObject?.entrySet()?.associate { it.key to it.value.asString } ?: mapOf()
                 addProperties(config)
                 config.mainClass.set(mainClass)
-                config.args = args.map { getArgValue(config, it) }
-                config.jvmArgs = jvmArgs.map { getArgValue(config, it) }
-                config.jvmArgs(props.map { "-D${it.key}=${getArgValue(config, it.value)}" })
+                config.args = args.map { getArgValue(it) }
+                config.jvmArgs = jvmArgs.map { getArgValue(it) }
+                config.jvmArgs(props.map { "-D${it.key}=${getArgValue(it.value)}" })
                 config.environment["FORGE_SPEC"] = userdevCfg.get("spec").asNumber.toString()
-                config.environment.putAll(env.map { it.key to getArgValue(config, it.value) })
+                config.environment.putAll(env.map { it.key to getArgValue(it.value) })
                 config.environment.computeIfAbsent("MOD_CLASSES") {
-                    getArgValue(config, "{source_roots}")
+                    getArgValue("{source_roots}")
                 }
             }
         }

@@ -41,7 +41,8 @@ abstract class RunConfig @Inject constructor(
                 if (properties.containsKey(key)) {
                     properties.getValue(key).invoke()
                 } else {
-                    throw IllegalArgumentException("Property $key not found")
+                    project.logger.warn("[Unimined/RunConfig ${path}]Property $key not found")
+                    ""
                 }
             } as T
         } else arg
