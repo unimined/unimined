@@ -12,7 +12,11 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2.FG2MinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
-import xyz.wagyourtail.unimined.util.*
+import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.FinalizeOnWrite
+import xyz.wagyourtail.unimined.util.MustSet
+import xyz.wagyourtail.unimined.util.forEachInZip
+import xyz.wagyourtail.unimined.util.getFiles
 import java.io.File
 
 open class MinecraftForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "MinecraftForge"),
