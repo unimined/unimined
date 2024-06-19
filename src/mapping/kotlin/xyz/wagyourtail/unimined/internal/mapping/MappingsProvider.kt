@@ -158,7 +158,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
                 mapping(mappings, key) {
                     mapNamespace("obf", "official")
                     dependsOn("mojmap")
-                    classNameReplacer("srg", "mojmap")
+                    memberNameReplacer("srg", "mojmap", setOf("class"))
                     onlyExistingSrc()
                     dependsOn("mojmap")
                     outputs("srg", false) { listOf("official") }
