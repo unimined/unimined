@@ -42,10 +42,13 @@ inline fun <T, U> consumerApply(crossinline action: T.() -> U): (T) -> U {
 
 fun Configuration.getFiles(dep: Dependency, filter: (File) -> Boolean): FileCollection {
     resolve()
-    return incoming.artifactView {
-        when (it) {
-            is ModuleComponentIdentifier -> {
-                it.group == dep.group && it.module == dep.name
+    return incoming.artifactView { view ->
+        view.componentFilter {
+            when (it) {
+                is ModuleComponentIdentifier -> {
+                    it.group == dep.group && it.module == dep.name
+                }
+                else -> false
             }
         }
     }.files.filter(filter)
