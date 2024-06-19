@@ -59,10 +59,13 @@ fun Configuration.getFiles(dep: Dependency, extension: Regex): FileCollection {
 
 fun Configuration.getFiles(dep: Dependency, extension: String = "jar"): FileCollection {
     resolve()
-    return incoming.artifactView {
-        when (it) {
-            is ModuleComponentIdentifier -> {
-                it.group == dep.group && it.module == dep.name
+    return incoming.artifactView { view ->
+        view.componentFilter {
+            when (it) {
+                is ModuleComponentIdentifier -> {
+                    it.group == dep.group && it.module == dep.name
+                }
+                else -> false
             }
         }
     }.files.filter { it.extension == extension }
