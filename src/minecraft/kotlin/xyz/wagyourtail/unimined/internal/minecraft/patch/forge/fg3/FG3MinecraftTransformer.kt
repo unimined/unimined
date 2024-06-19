@@ -328,7 +328,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
         val patchedMC = MinecraftJar(
             inputMC,
-            name = if (parent is NeoForgedMinecraftTransformer) "neoforge" else "forge",
+            name = if (parent is NeoForgedMinecraftTransformer && parent.provider.minecraftData.mcVersionCompare(provider.version, "1.20.1") != 0) "neoforge" else "forge",
             version = forgeUniversal.version!!,
             parentPath = outFolder
         )

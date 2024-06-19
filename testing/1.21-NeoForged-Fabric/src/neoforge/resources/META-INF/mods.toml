@@ -12,9 +12,12 @@ description = '''
     This is an example description! Tell everyone what your mod is about!
 '''
 
+[[mixins]]
+config="modid.mixins.json"
+
 [[dependencies.modid]]
 modId="minecraft"
 mandatory=true
-versionRange="[1.20.3]"
+versionRange="[1.21]"
 ordering="NONE"
 side="BOTH"
