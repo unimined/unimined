@@ -28,7 +28,6 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
-import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
@@ -392,30 +391,18 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    private fun clientRun() {
-        project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] client config")
-        provideVanillaRunClientTask("client", project.file("run/client"))
-        runs.config("client", (mcPatcher as AbstractMinecraftTransformer)::applyClientRunTransform)
-    }
-
-    private fun serverRun() {
-        project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] server config")
-        provideVanillaRunServerTask("server", project.file("run/server"))
-        runs.config("server", (mcPatcher as AbstractMinecraftTransformer)::applyServerRunTransform)
-    }
-
     fun applyRunConfigs() {
         project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Applying run configs")
         when (side) {
             EnvType.CLIENT -> {
-                clientRun()
+                provideRunClientTask("client", project.file("run/client"))
             }
             EnvType.SERVER -> {
-                serverRun()
+                provideRunServerTask("server", project.file("run/server"))
             }
             EnvType.COMBINED -> {
-                clientRun()
-                serverRun()
+                provideRunClientTask("client", project.file("run/client"))
+                provideRunServerTask("server", project.file("run/server"))
             }
             else -> {
             }
@@ -625,7 +612,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
 
     @ApiStatus.Internal
-    fun provideVanillaRunClientTask(name: String, defaultWorkingDir: File) {
+    fun provideRunClientTask(name: String, defaultWorkingDir: File) {
+        project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] client config, $name")
+
         runs.preLaunch(name) {
             val nativeDir = File(properties.getValue("natives_directory").invoke())
             if (nativeDir.exists()) {
@@ -684,7 +673,11 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
 
-        runs.config(name) {
+        // first, because it inserts before
+        runs.configFirst(name, (mcPatcher as AbstractMinecraftTransformer)::applyClientRunTransform)
+
+        // then this inserts before again, so it's before the patches
+        runs.configFirst(name) {
             properties.putAll(mapOf(
                 "natives_directory" to {
                     workingDir.resolve("natives").absolutePath
@@ -722,14 +715,18 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             mainClass.set(minecraftData.metadata.mainClass)
             jvmArgs = minecraftData.metadata.getJVMArgs() + betacraftArgs
             args = minecraftData.metadata.getGameArgs()
+
         }
     }
 
     @ApiStatus.Internal
-    fun provideVanillaRunServerTask(name: String, defaultWorkingDir: File) {
+    fun provideRunServerTask(name: String, defaultWorkingDir: File) {
+        project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] server config, $name")
         val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
 
-        runs.config("server") {
+        runs.configFirst(name, (mcPatcher as AbstractMinecraftTransformer)::applyServerRunTransform)
+
+        runs.configFirst(name) {
             javaLauncher.set(toolchains.launcherFor {
                 it.languageVersion.set(JavaLanguageVersion.of(minecraftData.metadata.javaVersion.majorVersion))
             })

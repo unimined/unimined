@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.api.runs
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
@@ -32,13 +33,13 @@ abstract class RunsConfig {
         }
     }
 
-    @Deprecated("dont use this, it will break as vanilla will overwrite it")
+    @ApiStatus.Internal
     abstract fun configFirst(
         config: String,
         action: RunConfig.() -> Unit
     )
 
-    @Deprecated("dont use this, it will break as vanilla will overwrite it")
+    @ApiStatus.Internal
     fun configFirst(
         config: String,
         @DelegatesTo(
