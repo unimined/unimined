@@ -16,6 +16,7 @@ import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.FinalizeOnWrite
 import xyz.wagyourtail.unimined.util.MustSet
 import xyz.wagyourtail.unimined.util.forEachInZip
+import xyz.wagyourtail.unimined.util.getFiles
 import java.io.File
 
 open class MinecraftForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "MinecraftForge"),
