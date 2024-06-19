@@ -17,7 +17,7 @@ config="modid.mixins.json"
 
 [[dependencies.modid]]
 modId="minecraft"
-mandatory=true
+type = "required"
 versionRange="[1.21]"
 ordering="NONE"
 side="BOTH"
