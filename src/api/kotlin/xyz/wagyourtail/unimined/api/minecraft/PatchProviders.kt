@@ -265,7 +265,7 @@ interface PatchProviders {
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {
-        neoForged {
+        neoForge {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -278,7 +278,7 @@ interface PatchProviders {
      */
     @Deprecated(message = "neoForged -> neoForge", replaceWith = ReplaceWith("neoForge()"))
     fun neoForged() {
-        neoForged {}
+        neoForge {}
     }
 
     fun neoForge(action: NeoForgedPatcher<*>.() -> Unit)
