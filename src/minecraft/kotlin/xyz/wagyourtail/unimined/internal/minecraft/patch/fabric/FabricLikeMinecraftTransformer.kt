@@ -178,7 +178,7 @@ abstract class FabricLikeMinecraftTransformer(
         }
 
         val json = InputStreamReader(
-            fabricJson.files(fabricJson.dependencies.last())
+            fabricJson.getFiles(fabricJson.dependencies.last(), "json")
                 .last()
                 .inputStream()
         ).use { reader ->

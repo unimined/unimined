@@ -135,7 +135,7 @@ abstract class ForgeLikeMinecraftTransformer(
     private val actualSideMarker by lazy {
         if (forge.dependencies.isEmpty()) return@lazy null // pre 1.3 - see below
         val forgeUniversal = forge.dependencies.last()
-        val forgeJar = forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+        val forgeJar = forge.getFiles(forgeUniversal) { it.extension == "zip" || it.extension == "jar" }.singleFile
 
         val type = forgeJar.toPath().readZipContents().map {
             it.substringBefore(".class") to sideMarkers[it.substringBefore(".class")]
