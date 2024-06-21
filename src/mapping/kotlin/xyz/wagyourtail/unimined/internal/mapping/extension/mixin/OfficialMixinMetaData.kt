@@ -124,6 +124,7 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
             }
         }
         for ((name, json) in mixinJsons) {
+            if (json.isEmpty) continue
             parent.logger.info("[Unimined/MixinMetaData] Writing mixin config $name")
             fs.getPath(name).writeText(GSON.toJson(json), Charsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }
