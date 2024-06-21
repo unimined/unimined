@@ -24,6 +24,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransf
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseLibrary
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -224,11 +225,14 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     private fun createFabricLoaderDependency(it: JsonElement) {
-        val dep: ModuleDependency = project.dependencies.create(
-            it.asJsonObject.get("name").asString
-        ) as ModuleDependency
-        dep.isTransitive = false
-        provider.minecraftLibraries.dependencies.add(dep)
+        val lib = parseLibrary(it.asJsonObject)
+        if (lib.rules.all { it.testRule() }) {
+            val dep: ModuleDependency = project.dependencies.create(
+                lib.name
+            ) as ModuleDependency
+            dep.isTransitive = false
+            provider.minecraftLibraries.dependencies.add(dep)
+        }
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar = applyInterfaceInjection(accessWidenerTransformer.afterRemap(baseMinecraft))
