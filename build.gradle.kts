@@ -134,17 +134,17 @@ dependencies {
     }
 
     // guava
-    implementation("com.google.guava:guava:31.1-jre")
+    implementation("com.google.guava:guava:33.2.1-jre")
 
     // gson
-    implementation("com.google.code.gson:gson:2.9.0")
+    implementation("com.google.code.gson:gson:2.11.0")
 
     // asm
-    implementation("org.ow2.asm:asm:9.5")
-    implementation("org.ow2.asm:asm-commons:9.5")
-    implementation("org.ow2.asm:asm-tree:9.5")
-    implementation("org.ow2.asm:asm-analysis:9.5")
-    implementation("org.ow2.asm:asm-util:9.5")
+    implementation("org.ow2.asm:asm:9.7")
+    implementation("org.ow2.asm:asm-commons:9.7")
+    implementation("org.ow2.asm:asm-tree:9.7")
+    implementation("org.ow2.asm:asm-analysis:9.7")
+    implementation("org.ow2.asm:asm-util:9.7")
 
     // remapper
     implementation("net.fabricmc:tiny-remapper:0.8.7") {
@@ -157,13 +157,13 @@ dependencies {
     }
 
     // jetbrains annotations
-    implementation("org.jetbrains:annotations-java5:23.0.0")
+    implementation("org.jetbrains:annotations-java5:24.1.0")
 
     // binpatcher
     implementation("net.minecraftforge:binarypatcher:1.1.1") {
         exclude(mapOf("group" to "commons-io"))
     }
-    implementation("commons-io:commons-io:2.12.0")
+    implementation("commons-io:commons-io:2.16.1")
 
     // pack200 provided by apache commons-compress
     implementation("org.apache.commons:commons-compress:1.26.1")
@@ -180,13 +180,13 @@ dependencies {
     implementation("org.eclipse.jgit:org.eclipse.jgit:5.13.2.202306221912-r")
 
     implementation("com.github.javakeyring:java-keyring:1.0.2")
-    implementation("net.raphimc:MinecraftAuth:4.0.0")
+    implementation("net.raphimc:MinecraftAuth:4.0.2")
 
     compileOnly("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
         isTransitive = false
     }
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.6.3")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
