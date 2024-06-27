@@ -20,6 +20,7 @@ abstract class RunConfig @Inject constructor(
     val preRunTask: TaskProvider<Task>
 ) : JavaExec() {
 
+    @get:Suppress("ACCIDENTAL_OVERRIDE")
     var javaVersion: JavaVersion?
         get() = super.getJavaVersion()
         set(value) {
