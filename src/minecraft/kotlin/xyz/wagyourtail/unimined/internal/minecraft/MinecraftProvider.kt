@@ -703,9 +703,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                     runs.auth.authInfo?.accessToken ?: "0"
                 },
             ))
-            javaLauncher.set(toolchains.launcherFor {
-                it.languageVersion.set(JavaLanguageVersion.of(minecraftData.metadata.javaVersion.majorVersion))
-            })
+            javaVersion = minecraftData.metadata.javaVersion
             workingDir = defaultWorkingDir
             classpath = sourceSet.runtimeClasspath
             mainClass.set(minecraftData.metadata.mainClass)
@@ -722,9 +720,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
 
         runs.configFirst(name) {
-            javaLauncher.set(toolchains.launcherFor {
-                it.languageVersion.set(JavaLanguageVersion.of(minecraftData.metadata.javaVersion.majorVersion))
-            })
+            javaVersion = minecraftData.metadata.javaVersion
             workingDir = defaultWorkingDir
             classpath = sourceSet.runtimeClasspath
             minecraftData.minecraftServer.path.openZipFileSystem().use {

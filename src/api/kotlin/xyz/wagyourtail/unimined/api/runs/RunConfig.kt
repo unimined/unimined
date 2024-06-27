@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.api.runs
 
 import groovy.lang.Closure
+import org.gradle.api.JavaVersion
 import org.gradle.api.Task
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -18,6 +19,19 @@ abstract class RunConfig @Inject constructor(
     @get:Internal
     val preRunTask: TaskProvider<Task>
 ) : JavaExec() {
+
+    var javaVersion: JavaVersion?
+        get() = super.getJavaVersion()
+        set(value) {
+            val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
+            if (value == null) {
+                javaLauncher.set(toolchains.launcherFor { })
+            } else {
+                javaLauncher.set(toolchains.launcherFor {
+                    it.languageVersion.set(JavaLanguageVersion.of(value.majorVersion))
+                })
+            }
+        }
 
     @get:Internal
     val properties: MutableMap<String, () -> String> = mutableMapOf()
@@ -77,14 +91,10 @@ abstract class RunConfig @Inject constructor(
             .addStringOption("type", "Application")
             .addStringOption("factoryName", "Application")
 
-        javaVersion.let { jv ->
-            val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
-            val launcher = toolchain.launcherFor { spec ->
-                spec.languageVersion.set(JavaLanguageVersion.of(jv.majorVersion))
-            }
+        javaLauncher.orNull?.let { launcher ->
             configuration.append(
                 XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH")
-                    .addStringOption("value", launcher.get().metadata.installationPath.asFile.absolutePath),
+                    .addStringOption("value", launcher.metadata.installationPath.asFile.absolutePath),
                 XMLBuilder("option").addStringOption("name", "ALTERNATIVE_JRE_PATH_ENABLED")
                     .addStringOption("value", "true")
             )
