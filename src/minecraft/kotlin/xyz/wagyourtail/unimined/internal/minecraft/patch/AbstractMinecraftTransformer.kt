@@ -41,6 +41,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     override val prodNamespace: MappingNamespaceTree.Namespace = provider.mappings.OFFICIAL
 
+    override val addVanillaLibraries: Boolean by FinalizeOnRead(true)
+
     override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit by FinalizeOnRead { cl, _, _, e ->
         throw RuntimeException("Error merging class ${cl.name}", e)
     }

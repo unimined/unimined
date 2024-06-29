@@ -20,6 +20,9 @@ interface MinecraftPatcher {
         return this::class.simpleName!!
     }
 
+    @get:ApiStatus.Internal
+    val addVanillaLibraries: Boolean
+
     /**
      * the namespace to use for the production jar.
      */

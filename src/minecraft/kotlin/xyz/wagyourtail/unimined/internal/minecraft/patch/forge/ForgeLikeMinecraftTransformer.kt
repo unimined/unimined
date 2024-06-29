@@ -207,7 +207,6 @@ abstract class ForgeLikeMinecraftTransformer(
                 targetNamespace = setOf(provider.mappings.devNamespace)
             }
             export.validate()
-            export.validate()
             export.exportFunc(provider.mappings.mappingTree)
         }
     })

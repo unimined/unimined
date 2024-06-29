@@ -461,7 +461,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
 
         // add minecraft libraries
-        addLibraries(minecraftData.metadata.libraries)
+        if (mcPatcher.addVanillaLibraries) addLibraries(minecraftData.metadata.libraries)
 
         // create remapjar task
         if (defaultRemapJar) {

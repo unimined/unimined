@@ -48,7 +48,6 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
                 targetNamespace = setOf(provider.mappings.devNamespace)
             }
             export.validate()
-            export.validate()
             export.exportFunc(provider.mappings.mappingTree)
         }
     })
