@@ -51,7 +51,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
     }
 
-    var unionRelauncherVersion: String = "1.0.0"
+    var unionRelauncherVersion: String = "1.1.0"
 
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG3 transformer")
