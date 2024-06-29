@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.internal.minecraft.transform.fixes
 
-import net.fabricmc.tinyremapper.extension.mixin.hard.annotation.ImplementsAnnotationVisitor.visitMethod
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
 import java.nio.file.FileSystem

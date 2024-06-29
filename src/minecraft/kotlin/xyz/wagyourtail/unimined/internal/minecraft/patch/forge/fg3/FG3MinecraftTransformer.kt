@@ -8,9 +8,11 @@ import org.apache.commons.io.output.NullOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.LogLevel
 import org.jetbrains.annotations.ApiStatus
+import org.jetbrains.annotations.VisibleForTesting
 import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
@@ -77,7 +79,8 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             provider.mappings.getNamespace("searge")
         }
     }
-    
+
+    @VisibleForTesting
     var binpatchFile: Path? = null
 
     override val merger: ClassMerger
@@ -100,7 +103,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         )
     }
 
-    val obfNamespace by lazy {
+    open val obfNamespace by lazy {
         if (userdevCfg["notchObf"]?.asBoolean == true) "official"
         else if (userdevCfg["mcp"].asString.contains("neoform")) "mojmap"
         else "searge"
@@ -117,22 +120,28 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         McpConfigData.fromJson(configJson)
     }
 
-    val forgeUd by lazy {
+    open val userdevClassifier by lazy {
         val forgeDep = parent.forge.dependencies.first()
 
         // detect if userdev3 or userdev
         //   read if forgeDep has binpatches file
         val forgeUni = parent.forge.getFiles(forgeDep).singleFile
-        val userdevClassifier = forgeUni.toPath().readZipInputStreamFor<String?>(
+        forgeUni.toPath().readZipInputStreamFor<String?>(
             "binpatches.pack.lzma", false
         ) {
             "userdev3"
         } ?: "userdev"
+    }
+
+    val forgeUd by lazy {
+        val forgeDep = parent.forge.dependencies.first()
 
         val userdev = "${forgeDep.group}:${forgeDep.name}:${forgeDep.version}:$userdevClassifier"
 
         val forgeUd = project.configurations.detachedConfiguration()
-        forgeUd.dependencies.add(project.dependencies.create(userdev))
+        forgeUd.dependencies.add(project.dependencies.create(userdev).apply {
+            (this as ExternalDependency).isTransitive = false
+        })
 
         // get forge userdev jar
         forgeUd.getFiles(forgeUd.dependencies.last()).singleFile
@@ -203,7 +212,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         super.apply()
     }
 
-    val userdevCfg by lazy {
+    open val userdevCfg by lazy {
         forgeUd.toPath().readZipInputStreamFor("config.json") {
             JsonParser.parseReader(InputStreamReader(it)).asJsonObject
         }!!

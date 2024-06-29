@@ -22,6 +22,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.SpigotPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.CleanroomPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
@@ -39,6 +40,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWi
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.CraftbukkitMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.SpigotMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.*
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.CleanroomMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
@@ -142,6 +144,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override val mergedOfficialMinecraftFile: File? by lazy {
         val client = minecraftData.minecraftClient
+        if (!client.path.exists()) throw IOException("minecraft path $client does not exist")
         val server = minecraftData.minecraftServer
         val noTransform = NoTransformMinecraftTransformer(project, this)
         if (noTransform.canCombine) {
@@ -155,6 +158,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Providing minecraft files for $it")
         val mc = if (side == EnvType.COMBINED) {
             val client = minecraftData.minecraftClient
+            if (!client.path.exists()) throw IOException("minecraft path $client does not exist")
             val server = minecraftData.minecraftServer
             (mcPatcher as AbstractMinecraftTransformer).merge(client, server)
         } else {
@@ -284,6 +288,14 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun neoForge(action: NeoForgedPatcher<*>.() -> Unit) {
         mcPatcher = NeoForgedMinecraftTransformer(project, this).also {
+            patcherActions.addFirst {
+                action(it)
+            }
+        }
+    }
+
+    override fun cleanroom(action: CleanroomPatcher<*>.() -> Unit) {
+        mcPatcher = CleanroomMinecraftTransformer(project, this).also {
             patcherActions.addFirst {
                 action(it)
             }

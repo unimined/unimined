@@ -249,6 +249,29 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Flint Loader maven: ${flintMaven[name]}")
     }
 
+    val cleanroomMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
+        project.repositories.maven {
+            it.name = "cleanroom-$it"
+            it.url = URI.create("https://repo.cleanroommc.com/$name")
+        }
+    }
+
+    override fun cleanroomRepos() {
+        project.logger.info("[Unimined] adding cleanroom maven: ${cleanroomMaven["snapshots"]}")
+        project.logger.info("[Unimined] adding cleanroom maven: ${cleanroomMaven["releases"]}")
+    }
+
+    val outlandsMaven by lazy {
+        project.repositories.maven {
+            it.name = "outlands"
+            it.url = URI.create("https://maven.outlands.top/releases")
+        }
+    }
+
+    override fun outlandsMaven() {
+        project.logger.info("[Unimined] adding outlands maven: $outlandsMaven")
+    }
+
     init {
         project.repositories.mavenCentral { repo ->
             repo.content {

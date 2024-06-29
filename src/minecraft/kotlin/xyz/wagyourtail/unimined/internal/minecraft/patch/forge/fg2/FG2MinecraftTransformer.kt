@@ -15,6 +15,7 @@ import xyz.wagyourtail.unimined.util.*
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.readZipContents
 import xyz.wagyourtail.unimined.util.readZipInputStreamFor
+import java.io.File
 import java.net.URI
 import java.nio.file.*
 import kotlin.io.path.*
@@ -109,14 +110,18 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
         if (!patchedMC.path.exists() || project.unimined.forceReload) {
             patchedMC.path.deleteIfExists()
-            FG2TaskApplyBinPatches(project).doTask(
-                minecraft.path.toFile(),
-                binaryPatchFile.toFile(),
-                patchedMC.path.toFile(),
-                if (minecraft.envType == EnvType.SERVER) "server" else "client"
-            )
+            applyBinPatches(minecraft, binaryPatchFile, patchedMC)
         }
         return patchedMC
+    }
+
+    open fun applyBinPatches(minecraft: MinecraftJar, binaryPatchFile: Path, patchedMC: MinecraftJar) {
+        FG2TaskApplyBinPatches(project).doTask(
+            minecraft.path.toFile(),
+            binaryPatchFile.toFile(),
+            patchedMC.path.toFile(),
+            if (minecraft.envType == EnvType.SERVER) "server" else "client"
+        )
     }
 
     override fun applyClientRunTransform(config: RunConfig) {

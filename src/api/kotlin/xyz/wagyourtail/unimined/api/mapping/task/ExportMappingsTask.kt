@@ -144,7 +144,7 @@ abstract class ExportMappingsTask : ConventionTask() {
             if (targetNamespace == null || targetNamespace!!.isEmpty()) {
                 throw IllegalArgumentException("Mapping export target namespace must be set.")
             }
-            if (type == MappingExportTypes.MCP || type == MappingExportTypes.SRG) {
+            if (type == MappingExportTypes.MCP || type == MappingExportTypes.SRG || type == MappingExportTypes.TSRG_V1) {
                 if (targetNamespace!!.size != 1) {
                     throw IllegalArgumentException("Mapping export target namespace must be a single namespace for ${type!!.name} exports.")
                 }
@@ -157,7 +157,7 @@ abstract class ExportMappingsTask : ConventionTask() {
     }
 
     enum class MappingExportTypes {
-        TINY_V2, SRG, MCP
+        TINY_V2, TSRG_V1, SRG, MCP
     }
 
 }

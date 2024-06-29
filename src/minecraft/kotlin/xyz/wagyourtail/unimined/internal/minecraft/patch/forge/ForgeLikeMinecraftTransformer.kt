@@ -207,6 +207,7 @@ abstract class ForgeLikeMinecraftTransformer(
                 targetNamespace = setOf(provider.mappings.devNamespace)
             }
             export.validate()
+            export.validate()
             export.exportFunc(provider.mappings.mappingTree)
         }
     })
@@ -232,15 +233,17 @@ abstract class ForgeLikeMinecraftTransformer(
         project.unimined.minecraftForgeMaven()
     }
 
-    override fun apply() {
+    open val versionJsonJar by lazy {
         val forgeDep = forge.dependencies.first()
+        forge.getFiles(forgeDep) { it.extension == "zip" || it.extension == "jar" }.singleFile
+    }
+
+    override fun apply() {
 
         // test if pre unified jar
         if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") > 0) {
-            val jar = forge.getFiles(forgeDep) { it.extension == "zip" || it.extension == "jar" }.singleFile
-
             //parse version json from universal jar and apply
-            jar.toPath().readZipInputStreamFor("version.json", false) {
+            versionJsonJar.toPath().readZipInputStreamFor("version.json", false) {
                 JsonParser.parseReader(InputStreamReader(it)).asJsonObject
             }?.let { versionJson ->
                 parseVersionJson(versionJson)

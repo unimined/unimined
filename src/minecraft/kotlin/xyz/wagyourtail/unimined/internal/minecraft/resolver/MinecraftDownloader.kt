@@ -126,7 +126,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         project.logger.info("[Unimined/MinecraftDownloader] retrieving minecraft client jar")
         val clientPath = mcVersionFolder.resolve("minecraft-$version-client.jar")
         if (!clientPath.exists() || project.unimined.forceReload) {
-            clientPath.parent.createDirectories()
+            mcVersionFolder.createDirectories()
             if (version.startsWith("empty-")) {
                 clientPath.outputStream().use {
                     ZipOutputStream(it).close()
@@ -181,7 +181,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         project.logger.info("[Unimined/MinecraftDownloader] retrieving minecraft server jar")
         var serverPath = mcVersionFolder.resolve("minecraft-$version-server.jar")
         if (!serverPath.exists() || project.unimined.forceReload) {
-            serverPath.parent.createDirectories()
+            mcVersionFolder.createDirectories()
             if (version.startsWith("empty-")) {
                 serverPath.outputStream().use {
                     ZipOutputStream(it).close()
