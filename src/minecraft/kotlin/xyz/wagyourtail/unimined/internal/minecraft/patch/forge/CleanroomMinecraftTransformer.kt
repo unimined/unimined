@@ -18,6 +18,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2.FG2MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -100,6 +101,13 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
             !it.name.startsWith("com.cleanroommc:cleanroom:")
         })
         tweakClassClient = args.split("--tweakClass")[1].trim()
+    }
+
+    override fun libraryFilter(library: Library): Boolean {
+        if (library.name.startsWith("oshi-project:")) {
+            return false
+        }
+        return super.libraryFilter(library)
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
