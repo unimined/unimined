@@ -185,6 +185,7 @@ fun Project.cachingDownload(
         Thread.sleep(backoff(i).toLong())
     }
     if (testSha1(size, sha1, cachePath, Long.MAX_VALUE.milliseconds)) {
+        logger.warn("[Unimined/Cache] Falling back on expired cache $cachePath for $url")
         return cachePath
     }
     throw IllegalStateException("Failed to download $url", exception)
