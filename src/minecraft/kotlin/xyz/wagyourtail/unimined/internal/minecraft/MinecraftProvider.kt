@@ -729,7 +729,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     @ApiStatus.Internal
     fun provideRunServerTask(name: String, defaultWorkingDir: File) {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] server config, $name")
-        val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
 
         runs.configFirst(name) {
             description = "Minecraft Server"
