@@ -3,6 +3,7 @@ package xyz.wagyourtail.unimined.api.runs
 import groovy.lang.Closure
 import org.gradle.api.JavaVersion
 import org.gradle.api.Task
+import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
@@ -32,6 +33,13 @@ abstract class RunConfig @Inject constructor(
                     it.languageVersion.set(JavaLanguageVersion.of(value.majorVersion))
                 })
             }
+        }
+
+    @get:Suppress("ACCIDENTAL_OVERRIDE")
+    var classpath: FileCollection
+        get() = super.getClasspath()
+        set(value) {
+            super.setClasspath(value.filter { it.extension != "pom" })
         }
 
     @get:Internal
@@ -85,9 +93,13 @@ abstract class RunConfig @Inject constructor(
         val configuration = XMLBuilder("configuration").addStringOption("default", "false")
             .addStringOption("name", buildString {
                 if (project != project.rootProject) append(project.path)
-                if (sourceSet.name != "main") append("+${sourceSet.name}")
                 append(" ")
-                append(description)
+                if (description != null) {
+                    append(description)
+                    if (sourceSet.name != "main") append(" (${sourceSet.name})")
+                } else {
+                    append(name)
+                }
             })
             .addStringOption("type", "Application")
             .addStringOption("factoryName", "Application")

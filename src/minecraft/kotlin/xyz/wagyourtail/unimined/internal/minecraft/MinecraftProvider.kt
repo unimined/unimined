@@ -683,9 +683,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         val assetsDir = AssetsDownloader.assetsDir(project)
 
-        val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
-
         runs.configFirst(name) {
+            description = "Minecraft Client"
+
             properties.putAll(mapOf(
                 "natives_directory" to {
                     workingDir.resolve("natives").absolutePath
@@ -732,6 +732,8 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         val toolchains = project.extensions.getByType(JavaToolchainService::class.java)
 
         runs.configFirst(name) {
+            description = "Minecraft Server"
+
             javaVersion = minecraftData.metadata.javaVersion
             workingDir = defaultWorkingDir
             classpath = sourceSet.runtimeClasspath
