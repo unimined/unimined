@@ -16,17 +16,6 @@ unimined.useGlobalCache = false
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
 
-sourceSets {
-    fabric {
-        compileClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.main.output
-    }
-    forge {
-        compileClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.main.output
-    }
-}
-
 repositories {
     maven {
         name = "wagyourtail releases"
@@ -51,37 +40,10 @@ unimined.minecraft {
     }
 }
 
-configurations {
-    mainImplementation
-    implementation {
-        extendsFrom forgeImplementation
-        extendsFrom fabricImplementation
-    }
-}
-
-sourceSets {
-    main {
-        compileClasspath += configurations.mainImplementation
-        runtimeClasspath += configurations.mainImplementation
-    }
-}
-
 dependencies {
 }
 
-jar {
-    enabled = false
-}
-
-processFabricResources {
-    inputs.property "version", project.version
-
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version
-    }
-}
-
-processForgeResources {
+processResources {
     inputs.property "version", project.version
 
     filesMatching("META-INF/mods.toml") {

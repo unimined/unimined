@@ -171,6 +171,9 @@ fun Project.cachingDownload(
             }
         } catch (e: Exception) {
             logger.warn("[Unimined/Cache] Failed to download $url, retrying in ${backoff(i)}ms...")
+            if (i == 1) {
+                logger.warn("[Unimined/Cache]    If you are offline, please run gradle with \"--offline\"")
+            }
             Thread.sleep(backoff(i).toLong())
             exception = e
             continue
@@ -180,6 +183,9 @@ fun Project.cachingDownload(
         }
         logger.warn("[Unimined/Cache] Failed to download $url, retrying in ${backoff(i)}ms...")
         Thread.sleep(backoff(i).toLong())
+    }
+    if (testSha1(size, sha1, cachePath, Long.MAX_VALUE.milliseconds)) {
+        return cachePath
     }
     throw IllegalStateException("Failed to download $url", exception)
 }

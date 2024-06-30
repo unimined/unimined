@@ -133,11 +133,11 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit) {
         val remapTask = project.tasks.register(name, RemapJarTaskImpl::class.java, this)
         remapTask.configure {
+            it.dependsOn(task)
             if (task is Jar) {
-                it.inputFile.value(task.archiveFile)
+                it.inputFile.set(task.archiveFile)
             }
             it.action()
-            it.dependsOn(task)
             mcPatcher.configureRemapJar(it)
         }
     }
