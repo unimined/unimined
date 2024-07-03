@@ -53,6 +53,14 @@ abstract class AbstractMinecraftTransformer protected constructor(
     fun isAnonClass(node: ClassNode): Boolean =
         node.innerClasses?.firstOrNull { it.name == node.name }.let { it != null && it.innerName == null }
 
+    open fun mergedJar(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
+        return MinecraftJar(
+            clientjar,
+            envType = EnvType.COMBINED,
+            patches = listOf("$providerName-merged") + clientjar.patches + serverjar.patches
+        )
+    }
+
     open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar = merge(clientjar, serverjar, false)
 
     fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, ignoreFallback: Boolean): MinecraftJar {
@@ -60,11 +68,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
         if (clientjar.mappingNamespace != serverjar.mappingNamespace ||(!ignoreFallback && clientjar.fallbackNamespace != serverjar.fallbackNamespace)) {
             throw IllegalArgumentException("client and server jars must have the same mapping namespace")
         }
-        val merged = MinecraftJar(
-            clientjar,
-            envType = EnvType.COMBINED,
-            patches = listOf("$providerName-merged") + clientjar.patches + serverjar.patches
-        )
+        val merged = mergedJar(clientjar, serverjar)
 
         if (merged.path.exists() && !project.unimined.forceReload) {
             return merged
