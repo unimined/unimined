@@ -238,9 +238,8 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         Files.copy(output, outputPath, StandardCopyOption.REPLACE_EXISTING)
     }
 
-    override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
-        project.logger.lifecycle("Merging client and server jars...")
-        val output = MinecraftJar(
+    override fun mergedJar(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
+        return MinecraftJar(
             clientjar,
             parentPath = provider.minecraftData.mcVersionFolder
                 .resolve(providerName),
@@ -248,6 +247,11 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             mappingNamespace = provider.mappings.getNamespace(obfNamespace),
             fallbackNamespace = provider.mappings.OFFICIAL
         )
+    }
+
+    override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
+        project.logger.lifecycle("Merging client and server jars...")
+        val output = mergedJar(clientjar, serverjar)
         createClientExtra(clientjar, serverjar, output.path)
         if (output.path.exists() && !project.unimined.forceReload) {
             return output
