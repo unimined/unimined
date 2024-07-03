@@ -33,10 +33,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import java.nio.file.attribute.FileTime
-import java.util.concurrent.TimeUnit
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
 
 abstract class FabricLikeMinecraftTransformer(
@@ -45,8 +41,12 @@ abstract class FabricLikeMinecraftTransformer(
     providerName: String,
     val modJsonName: String,
     val accessWidenerJsonKey: String,
-    private val accessWidenerTransformer: AccessWidenerMinecraftTransformer = AccessWidenerMinecraftTransformer(project, provider, providerName),
-): AbstractMinecraftTransformer(
+    private val accessWidenerTransformer: AccessWidenerMinecraftTransformer = AccessWidenerMinecraftTransformer(
+        project,
+        provider,
+        providerName
+    ),
+) : AbstractMinecraftTransformer(
     project,
     provider,
     providerName
@@ -66,6 +66,8 @@ abstract class FabricLikeMinecraftTransformer(
 
     override var customIntermediaries: Boolean by FinalizeOnRead(false)
 
+    override var stripEnvironmentAnnotations: Boolean by FinalizeOnRead(false)
+
     override var skipInsertAw: Boolean by FinalizeOnRead(false)
 
     protected abstract val ENVIRONMENT: String
@@ -73,6 +75,7 @@ abstract class FabricLikeMinecraftTransformer(
 
     override val merger: ClassMerger = ClassMerger(
         { node, env ->
+            if (stripEnvironmentAnnotations) return@ClassMerger
             if (env == EnvType.COMBINED) return@ClassMerger
             if (isAnonClass(node)) return@ClassMerger
             val visitor = node.visitAnnotation(ENVIRONMENT, true)
@@ -80,18 +83,18 @@ abstract class FabricLikeMinecraftTransformer(
             visitor.visitEnd()
         },
         { node, env ->
-            if (env != EnvType.COMBINED) {
-                val visitor = node.visitAnnotation(ENVIRONMENT, true)
-                visitor.visitEnum("value", ENV_TYPE, env.name)
-                visitor.visitEnd()
-            }
+            if (stripEnvironmentAnnotations) return@ClassMerger
+            if (env == EnvType.COMBINED) return@ClassMerger
+            val visitor = node.visitAnnotation(ENVIRONMENT, true)
+            visitor.visitEnum("value", ENV_TYPE, env.name)
+            visitor.visitEnd()
         },
         { node, env ->
-            if (env != EnvType.COMBINED) {
-                val visitor = node.visitAnnotation(ENVIRONMENT, true)
-                visitor.visitEnum("value", ENV_TYPE, env.name)
-                visitor.visitEnd()
-            }
+            if (stripEnvironmentAnnotations) return@ClassMerger
+            if (env == EnvType.COMBINED) return@ClassMerger
+            val visitor = node.visitAnnotation(ENVIRONMENT, true)
+            visitor.visitEnum("value", ENV_TYPE, env.name)
+            visitor.visitEnd()
         }
     )
 

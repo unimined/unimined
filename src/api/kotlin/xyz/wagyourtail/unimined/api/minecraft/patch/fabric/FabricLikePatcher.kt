@@ -44,6 +44,9 @@ interface FabricLikePatcher: MinecraftPatcher, AccessWidenerPatcher {
     @set:ApiStatus.Experimental
     var customIntermediaries: Boolean
 
+    @set:ApiStatus.Experimental
+    var stripEnvironmentAnnotations: Boolean
+
     /**
      * @since 1.0.0
      */
