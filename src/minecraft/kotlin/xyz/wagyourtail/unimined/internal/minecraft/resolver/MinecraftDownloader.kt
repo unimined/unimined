@@ -60,7 +60,11 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     override var launcherMetaUrl by FinalizeOnRead(URI.create("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"))
 
     val launcherMeta by lazy {
-        val file = project.unimined.getGlobalCache().resolve("manifest.json")
+        val file = if (launcherMetaUrl.host.equals("launchermeta.mojang.com")) {
+            project.unimined.getGlobalCache().resolve("manifest.json")
+        } else {
+            project.unimined.getGlobalCache().resolve("manifest-${launcherMetaUrl.host}.json")
+        }
 
         project.cachingDownload(
             launcherMetaUrl,
@@ -93,7 +97,12 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     })
 
     val metadata by lazy {
-        val versionJson = mcVersionFolder.resolve("version.json")
+        val versionJson = if (metadataURL.host.equals("piston-meta.mojang.com")) {
+            project.unimined.getGlobalCache().resolve("version.json")
+        } else {
+            project.unimined.getGlobalCache().resolve("version-$version-${metadataURL.host}.json")
+        }
+
         project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving version metadata")
         project.logger.info("[Unimined/MinecraftDownloader]     metadata url $metadataURL")
         if (!versionJson.exists() || project.unimined.forceReload) {

@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2.FG2MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.FinalizeOnWrite
@@ -115,12 +116,12 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
         val libraries = parseAllLibraries(json.getAsJsonArray("libraries"))
         mainClass = json.get("mainClass").asString
         val args = json.get("minecraftArguments").asString
-        provider.addLibraries(libraries.filter {
-            !it.name.startsWith("net.minecraftforge:minecraftforge:") && !it.name.startsWith(
-                "net.minecraftforge:forge:"
-            )
-        })
+        provider.addLibraries(libraries)
         tweakClassClient = args.split("--tweakClass")[1].trim()
+    }
+
+    override fun libraryFilter(library: Library): Boolean {
+        return !library.name.startsWith("net.minecraftforge:minecraftforge:") && !library.name.startsWith("net.minecraftforge:forge:")
     }
 
 }
