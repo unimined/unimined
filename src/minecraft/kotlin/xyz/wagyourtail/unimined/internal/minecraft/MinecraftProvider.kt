@@ -442,14 +442,11 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
         // late actions done
 
-        // ensure minecraft deps are clear
         if (minecraft.dependencies.isNotEmpty()) {
-            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] $minecraft dependencies are not empty! clearing...")
-            minecraft.dependencies.clear()
+            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] $minecraft dependencies are not empty!")
         }
         if (minecraftLibraries.dependencies.isNotEmpty()) {
-            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] $minecraftLibraries dependencies are not empty! clearing...")
-            minecraftLibraries.dependencies.clear()
+            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] $minecraftLibraries dependencies are not empty!")
         }
 
         if (minecraftRemapper.replaceJSRWithJetbrains) {
