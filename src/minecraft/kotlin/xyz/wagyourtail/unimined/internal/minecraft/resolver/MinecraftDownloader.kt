@@ -100,7 +100,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         val versionJson = if (metadataURL.host.equals("piston-meta.mojang.com")) {
             mcVersionFolder.resolve("version.json")
         } else {
-            mcVersionFolder.resolve("version-$version-${metadataURL.host}.json")
+            mcVersionFolder.resolve("version-${metadataURL.host}.json")
         }
 
         project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving version metadata")
