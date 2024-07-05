@@ -98,9 +98,9 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
 
     val metadata by lazy {
         val versionJson = if (metadataURL.host.equals("piston-meta.mojang.com")) {
-            project.unimined.getGlobalCache().resolve("version.json")
+            mcVersionFolder.resolve("version.json")
         } else {
-            project.unimined.getGlobalCache().resolve("version-$version-${metadataURL.host}.json")
+            mcVersionFolder.resolve("version-$version-${metadataURL.host}.json")
         }
 
         project.logger.lifecycle("[Unimined/MinecraftDownloader] retrieving version metadata")
