@@ -438,7 +438,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
     }
 
-    private fun createLegacyClasspath() {
+    open fun createLegacyClasspath() {
 //        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
 //        val source = sourceSets.findByName("client") ?: sourceSets.getByName("main")
 
