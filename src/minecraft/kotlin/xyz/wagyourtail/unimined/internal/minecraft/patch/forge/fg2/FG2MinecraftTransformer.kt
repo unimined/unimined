@@ -84,7 +84,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     private fun transformIntern(minecraft: MinecraftJar): MinecraftJar {
         val forgeUniversal = parent.forge.dependencies.last()
-        val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+        val forgeJar = parent.forge.getFiles(forgeUniversal) { it.extension == "zip" || it.extension == "jar" }.singleFile
 
         val outFolder = minecraft.path.parent.resolve(providerName).resolve("${forgeUniversal.version}")
             .createDirectories()
@@ -123,7 +123,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         super.applyClientRunTransform(config)
 
         val forgeUniversal = parent.forge.dependencies.last()
-        val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+        val forgeJar = parent.forge.getFiles(forgeUniversal) { it.extension == "zip" || it.extension == "jar" }.singleFile
 
         val contents = forgeJar.toPath().readZipContents()
 
@@ -152,7 +152,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         super.applyServerRunTransform(config)
 
         val forgeUniversal = parent.forge.dependencies.last()
-        val forgeJar = parent.forge.files(forgeUniversal).first { it.extension == "zip" || it.extension == "jar" }
+        val forgeJar = parent.forge.getFiles(forgeUniversal) { it.extension == "zip" || it.extension == "jar" }.singleFile
 
         val contents = forgeJar.toPath().readZipContents()
 

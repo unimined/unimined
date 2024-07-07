@@ -570,7 +570,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             for (dep in include.dependencies) {
                 val path = jarDir.resolve("${dep.name}-${dep.version}.jar")
                 if (!path.exists()) {
-                    include.files(dep).first { it.extension == "jar" }.toPath()
+                    include.getFiles(dep) { it.extension == "jar" }.singleFile.toPath()
                         .copyTo(jarDir.resolve("${dep.name}-${dep.version}.jar"), true)
                 }
 
