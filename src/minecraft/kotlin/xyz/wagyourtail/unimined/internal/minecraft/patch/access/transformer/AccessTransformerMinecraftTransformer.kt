@@ -108,29 +108,37 @@ open class AccessTransformerMinecraftTransformer(
                 }
             }
         }
-        val result = project.javaexec { spec ->
-            val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
-            spec.executable = toolchain.launcherFor {
-                it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion))
-            }.get().executablePath.asFile.absolutePath
+        try {
+            project.javaexec { spec ->
+                val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+                spec.executable = toolchain.launcherFor {
+                    it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion))
+                }.get().executablePath.asFile.absolutePath
 
-            spec.classpath = project.configurations.detachedConfiguration(dependency)
-            spec.mainClass.set(atMainClass)
-            spec.args = listOf("--inJar", baseMinecraft.absolutePathString(), "--outJar", output.absolutePathString(), "--atFile", temp.absolutePathString())
-            if (AccessTransformerApplier.shouldShowVerboseStdout(project)) {
-                spec.standardOutput = System.out
-            } else {
-                spec.standardOutput = NullOutputStream.NULL_OUTPUT_STREAM
-            }
-            if (AccessTransformerApplier.shouldShowVerboseStderr(project)) {
-                spec.errorOutput = System.err
-            } else {
-                spec.errorOutput = NullOutputStream.NULL_OUTPUT_STREAM
-            }
-        }
-        if (result.exitValue != 0) {
+                spec.classpath = project.configurations.detachedConfiguration(dependency)
+                spec.mainClass.set(atMainClass)
+                spec.args = listOf(
+                    "--inJar",
+                    baseMinecraft.absolutePathString(),
+                    "--outJar",
+                    output.absolutePathString(),
+                    "--atFile",
+                    temp.absolutePathString()
+                )
+                if (AccessTransformerApplier.shouldShowVerboseStdout(project)) {
+                    spec.standardOutput = System.out
+                } else {
+                    spec.standardOutput = NullOutputStream.NULL_OUTPUT_STREAM
+                }
+                if (AccessTransformerApplier.shouldShowVerboseStderr(project)) {
+                    spec.errorOutput = System.err
+                } else {
+                    spec.errorOutput = NullOutputStream.NULL_OUTPUT_STREAM
+                }
+            }.assertNormalExitValue().rethrowFailure()
+        } catch (e: Exception) {
             output.deleteIfExists()
-            throw IllegalStateException("Failed to run AccessTransformerProcessor")
+            throw e
         }
     }
 
