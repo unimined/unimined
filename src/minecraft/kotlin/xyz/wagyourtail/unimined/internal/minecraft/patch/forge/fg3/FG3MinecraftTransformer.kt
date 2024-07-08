@@ -331,9 +331,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             if (minecraft.envType == EnvType.CLIENT) {
                 createClientExtra(minecraft, null, output.path)
             }
-//            if (!output.path.exists() || project.unimined.forceReload) {
+            if (!output.path.exists() || project.unimined.forceReload) {
                 executeMcp("rename", output.path, minecraft.envType)
-//            }
+            }
             output
         } else {
             minecraft
@@ -578,7 +578,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             for (dep in include.dependencies) {
                 val path = jarDir.resolve("${dep.name}-${dep.version}.jar")
                 if (!path.exists()) {
-                    include.files(dep).first { it.extension == "jar" }.toPath()
+                    include.getFiles(dep) { it.extension == "jar" }.singleFile.toPath()
                         .copyTo(jarDir.resolve("${dep.name}-${dep.version}.jar"), true)
                 }
 
