@@ -1,22 +1,15 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.bukkit.buildtools
 
 import com.google.gson.JsonParser
-import net.fabricmc.mappingio.format.PackageRemappingVisitor
 import org.eclipse.jgit.api.Git
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.mapping.MappingDepConfig
-import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.util.forEachInZip
-import xyz.wagyourtail.unimined.util.stream
+import xyz.wagyourtail.unimined.util.cachingDownload
 import java.net.URI
 import java.nio.file.Path
 import javax.xml.parsers.DocumentBuilderFactory
-import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
-import kotlin.io.path.outputStream
 import kotlin.io.path.readText
 
 class BuildToolsExecutor(
@@ -30,12 +23,10 @@ class BuildToolsExecutor(
     val buildInfo: BuildInfo by lazy {
         val buildInfoFile = cache.resolve("BuildInfo-$rev.json")
         if (!buildInfoFile.exists() || project.unimined.forceReload) {
-            URI.create("https://hub.spigotmc.org/versions/${rev}.json").stream()
-                .use { input ->
-                    buildInfoFile.outputStream().use {
-                        input.copyTo(it)
-                    }
-                }
+            project.cachingDownload(
+                URI.create("https://hub.spigotmc.org/versions/${rev}.json"),
+                cachePath = buildInfoFile
+            )
         }
         val buildInfoJson = JsonParser.parseString(buildInfoFile.readText())
         parseBuildInfo(buildInfoJson.asJsonObject)
@@ -44,12 +35,10 @@ class BuildToolsExecutor(
     val buildTools by lazy {
         val buildTools = cache.resolve("BuildTools.jar")
         if (!buildTools.exists() || project.unimined.forceReload) {
-            URI.create("https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar").stream()
-                .use { input ->
-                    buildTools.outputStream().use {
-                        input.copyTo(it)
-                    }
-                }
+            project.cachingDownload(
+                URI.create("https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar"),
+                cachePath = buildTools
+            )
         }
         buildTools
     }

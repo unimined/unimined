@@ -83,7 +83,7 @@ open class FlintMinecraftTransformer(
 
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
-        config.jvmArgs += listOf(
+        config.jvmArgs(
             "-Dflint.development=true",
             "-Dflint.remapClasspathFile=${intermediaryClasspath}",
             "-Dflint.classPathGroups=${groups}"

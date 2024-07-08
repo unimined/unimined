@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch
 
 import org.gradle.api.Project
+import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
@@ -39,6 +40,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
     open val merger: ClassMerger = ClassMerger()
 
     override val prodNamespace: MappingNamespaceTree.Namespace = provider.mappings.OFFICIAL
+
+    override val addVanillaLibraries: Boolean by FinalizeOnRead(true)
 
     override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit by FinalizeOnRead { cl, _, _, e ->
         throw RuntimeException("Error merging class ${cl.name}", e)
@@ -180,7 +183,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
             val unprotect = project.configurations.detachedConfiguration(
                 project.dependencies.create("io.github.juuxel:unprotect:1.3.0")
             ).resolve().first { it.extension == "jar" }
-            config.jvmArgs.add("-javaagent:${unprotect.absolutePath}")
+            config.jvmArgs("-javaagent:${unprotect.absolutePath}")
         }
     }
 
@@ -190,7 +193,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
             val unprotect = project.configurations.detachedConfiguration(
                 project.dependencies.create("io.github.juuxel:unprotect:1.3.0")
             ).resolve().first { it.extension == "jar" }
-            config.jvmArgs.add("-javaagent:${unprotect.absolutePath}")
+            config.jvmArgs("-javaagent:${unprotect.absolutePath}")
         }
     }
 
@@ -271,10 +274,10 @@ abstract class AbstractMinecraftTransformer protected constructor(
         for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
             if (provider.mappings.devNamespace != minecraftConfig.mappings.devNamespace ||
                 provider.mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace) {
-                throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${provider.sourceSet} on ${provider.mappings.devNamespace}/${provider.mappings.devFallbackNamespace} and ${sourceSet} on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
+                throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${provider.sourceSet} on ${provider.mappings.devNamespace}/${provider.mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
             }
             if (provider.version != minecraftConfig.version) {
-                throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${provider.sourceSet} on ${provider.version} and ${sourceSet} on ${minecraftConfig.version}")
+                throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${provider.sourceSet} on ${provider.version} and $sourceSet on ${minecraftConfig.version}")
             }
         }
 
@@ -309,4 +312,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
     }
 
     override fun configureRemapJar(task: RemapJarTask) {}
+
+    override fun createSourcesJar(classpath: FileCollection, patchedJar: Path, outputPath: Path, linemappedPath: Path?) {
+        provider.sourceProvider.sourceGenerator.generate(provider.sourceSet.compileClasspath, patchedJar, outputPath, linemappedPath)
+    }
 }

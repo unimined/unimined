@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.api.minecraft.patch
 
 import groovy.lang.Closure
+import org.gradle.api.file.FileCollection
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
@@ -18,6 +19,9 @@ interface MinecraftPatcher {
     fun name(): String {
         return this::class.simpleName!!
     }
+
+    @get:ApiStatus.Internal
+    val addVanillaLibraries: Boolean
 
     /**
      * the namespace to use for the production jar.
@@ -57,4 +61,7 @@ interface MinecraftPatcher {
 
     @ApiStatus.Internal
     fun configureRemapJar(task: RemapJarTask)
+
+    @ApiStatus.Internal
+    fun createSourcesJar(classpath: FileCollection, patchedJar: Path, outputPath: Path, linemappedPath: Path?)
 }

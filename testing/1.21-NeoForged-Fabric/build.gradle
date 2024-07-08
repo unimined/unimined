@@ -10,6 +10,12 @@ base {
     archivesName = "UniminedExampleMod"
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
 
@@ -57,9 +63,8 @@ unimined.minecraft(sourceSets.fabric) {
 unimined.minecraft(sourceSets.neoforge) {
     combineWith(sourceSets.main)
 
-    neoForged {
+    neoForge {
         loader project.neoforge_version
-        mixinConfig "modid.mixins.json"
     }
 
     minecraftRemapper.config {
@@ -98,7 +103,7 @@ processFabricResources {
 processNeoforgeResources {
     inputs.property "version", project.version
 
-    filesMatching("META-INF/mods.toml") {
+    filesMatching("META-INF/neoforge.mods.toml") {
         expand "version": project.version
     }
 }

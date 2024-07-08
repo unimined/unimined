@@ -311,7 +311,7 @@ abstract class FabricLikeMinecraftTransformer(
             prodNamespace,
             prodNamespace,
             provider.sourceSet.runtimeClasspath.filter { !provider.isMinecraftJar(it.toPath()) }.toSet()
-        ) + provider.getMinecraft(prodNamespace, prodNamespace).toFile()).filter { it.exists() && !it.isDirectory }
+        ) + provider.getMinecraft(prodNamespace, prodNamespace).toFile()).filter { it.exists() && !it.isDirectory && (it.extension == "jar" || it.extension == "zip") }
         // write to file
         intermediaryClasspath.writeText(classpath.joinToString(File.pathSeparator), options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
     }
@@ -432,11 +432,15 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     override fun applyClientRunTransform(config: RunConfig) {
-        config.mainClass = mainClass?.get("client")?.asString ?: config.mainClass
+        mainClass?.get("client")?.asString?.let {
+            config.mainClass.set(it)
+        }
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
-        config.mainClass = mainClass?.get("server")?.asString ?: config.mainClass
+        mainClass?.get("server")?.asString?.let {
+            config.mainClass.set(it)
+        }
     }
 
     override fun libraryFilter(library: Library): Boolean {

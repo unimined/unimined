@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
@@ -231,15 +232,17 @@ abstract class ForgeLikeMinecraftTransformer(
         project.unimined.minecraftForgeMaven()
     }
 
-    override fun apply() {
+    open val versionJsonJar by lazy {
         val forgeDep = forge.dependencies.first()
+        forge.getFiles(forgeDep) { it.extension == "zip" || it.extension == "jar" }.singleFile
+    }
+
+    override fun apply() {
 
         // test if pre unified jar
         if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") > 0) {
-            val jar = forge.getFiles(forgeDep) { it.extension == "zip" || it.extension == "jar" }.singleFile
-
             //parse version json from universal jar and apply
-            jar.toPath().readZipInputStreamFor("version.json", false) {
+            versionJsonJar.toPath().readZipInputStreamFor("version.json", false) {
                 JsonParser.parseReader(InputStreamReader(it)).asJsonObject
             }?.let { versionJson ->
                 parseVersionJson(versionJson)
@@ -345,7 +348,7 @@ abstract class ForgeLikeMinecraftTransformer(
         project.logger.info("[Unimined/ForgeTransformer] Adding mixin config $mixinConfig to client run config")
         forgeTransformer.applyClientRunTransform(config)
         for (mixin in mixinConfig) {
-            config.args += listOf("--mixin", mixin)
+            config.args("--mixin", mixin)
         }
     }
 
@@ -353,7 +356,7 @@ abstract class ForgeLikeMinecraftTransformer(
         project.logger.info("[Unimined/ForgeTransformer] Adding mixin config $mixinConfig to server run config")
         forgeTransformer.applyServerRunTransform(config)
         for (mixin in mixinConfig) {
-            config.args += listOf("--mixin", mixin)
+            config.args("--mixin", mixin)
         }
     }
 
@@ -387,6 +390,15 @@ abstract class ForgeLikeMinecraftTransformer(
 
     override fun configureRemapJar(task: RemapJarTask) {
         forgeTransformer.configureRemapJar(task)
+    }
+
+    override fun createSourcesJar(
+        classpath: FileCollection,
+        patchedJar: Path,
+        outputPath: Path,
+        linemappedPath: Path?
+    ) {
+        forgeTransformer.createSourcesJar(classpath, patchedJar, outputPath, linemappedPath)
     }
 
 }

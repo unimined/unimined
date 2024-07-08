@@ -4,10 +4,7 @@ import net.fabricmc.mappingio.MappedElementKind
 import net.fabricmc.mappingio.MappingWriter
 import net.fabricmc.mappingio.adapter.MappingNsRenamer
 import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
-import net.fabricmc.mappingio.format.MCPWriter
-import net.fabricmc.mappingio.format.MappingDstNsFilter
-import net.fabricmc.mappingio.format.SrgWriter
-import net.fabricmc.mappingio.format.Tiny2Writer2
+import net.fabricmc.mappingio.format.*
 import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
@@ -81,6 +78,7 @@ open class ExportMappingsTaskImpl @Inject constructor(@get:Internal val mappings
                         }
 
                         MappingExportTypes.SRG -> SrgWriter(OutputStreamWriter(os, StandardCharsets.UTF_8))
+                        MappingExportTypes.TSRG_V1 -> TsrgV1Writer(OutputStreamWriter(os, StandardCharsets.UTF_8))
                         else -> throw RuntimeException("Unknown export type ${ObjectChecker.type}")
                     }
                     if (skipComments) {

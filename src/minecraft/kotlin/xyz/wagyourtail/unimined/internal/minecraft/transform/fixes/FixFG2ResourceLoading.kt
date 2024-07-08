@@ -1,6 +1,5 @@
 package xyz.wagyourtail.unimined.internal.minecraft.transform.fixes
 
-import net.fabricmc.tinyremapper.extension.mixin.hard.annotation.ImplementsAnnotationVisitor.visitMethod
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
 import java.nio.file.FileSystem
@@ -496,15 +495,6 @@ object FixFG2ResourceLoading {
         for (file in loadController) {
             val path = fs.getPath(file)
             if (path.exists()) {
-
-                val modContainerIntl = if (file.startsWith("cpw")) {
-                    "cpw/mods/fml/common/ModContainer"
-                } else {
-                    "net/minecraftforge/fml/common/ModContainer"
-                }
-
-                val self = file.substring(0, file.length - 6)
-
                 val reader = path.inputStream().use { ClassReader(it) }
                 val writer = ClassWriter(reader, ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
                 reader.accept(object : ClassVisitor(Opcodes.ASM9, writer) {
@@ -698,18 +688,6 @@ object FixFG2ResourceLoading {
                     "cpw/mods/fml/common/LoadController"
                 } else {
                     "net/minecraftforge/fml/common/LoadController"
-                }
-
-                val modCandidateIntl = if (file.startsWith("cpw")) {
-                    "cpw/mods/fml/common/discovery/ModCandidate"
-                } else {
-                    "net/minecraftforge/fml/common/discovery/ModCandidate"
-                }
-
-                val metadataCollectionIntl = if (file.startsWith("cpw")) {
-                    "cpw/mods/fml/common/MetadataCollection"
-                } else {
-                    "net/minecraftforge/fml/common/MetadataCollection"
                 }
 
                 val self = file.substring(0, file.length - 6)

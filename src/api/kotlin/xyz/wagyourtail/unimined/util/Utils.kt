@@ -16,6 +16,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
+import xyz.wagyourtail.unimined.api.unimined
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -26,10 +27,15 @@ import java.security.MessageDigest
 import java.util.*
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
+import kotlin.math.pow
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 val Project.sourceSets
     get() = extensions.findByType(SourceSetContainer::class.java)!!
@@ -132,11 +138,65 @@ object OSUtils {
     const val UNKNOWN = "unknown"
 }
 
-fun testSha1(size: Long, sha1: String, path: Path): Boolean {
+fun Project.cachingDownload(
+    url: URI,
+    size: Long = -1L,
+    sha1: String = "",
+    cachePath: Path = unimined.getGlobalCache().resolve(url.path.substring(1)),
+    expireTime: Duration = 1.days,
+    retryCount: Int = 3,
+    backoff: (Int) -> Int = { 1000 * 3.0.pow(it.toDouble()).toInt() }, // first backoff -> 1s, second -> 3s, third -> 9s
+): Path {
+    if (gradle.startParameter.isOffline) {
+        if (testSha1(size, sha1, cachePath, Long.MAX_VALUE.milliseconds)) {
+            return cachePath
+        }
+        if (cachePath.exists()) {
+            throw IllegalStateException("cached $url at $cachePath doesn't match expected (sha: $sha1, size: $size) and offline mode is enabled")
+        } else {
+            throw IllegalStateException("cached $url at $cachePath doesn't exist and offline mode is enabled")
+        }
+    }
+    if (testSha1(size, sha1, cachePath, if (gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) 0.seconds else expireTime)) {
+        logger.info("[Unimined/Cache] Using cached $url at $cachePath")
+        return cachePath
+    }
+    var exception: Exception? = null
+    cachePath.parent?.createDirectories()
+    logger.info("[Unimined/Cache] Downloading $url to $cachePath")
+    for (i in 1 .. retryCount) {
+        try {
+            url.stream().use {
+                cachePath.outputStream().use { os -> it.copyTo(os) }
+            }
+        } catch (e: Exception) {
+            logger.warn("[Unimined/Cache] Failed to download $url, retrying in ${backoff(i)}ms...")
+            if (i == 1) {
+                logger.warn("[Unimined/Cache]    If you are offline, please run gradle with \"--offline\"")
+            }
+            Thread.sleep(backoff(i).toLong())
+            exception = e
+            continue
+        }
+        if (testSha1(size, sha1, cachePath)) {
+            return cachePath
+        }
+        logger.warn("[Unimined/Cache] Failed to download $url, retrying in ${backoff(i)}ms...")
+        Thread.sleep(backoff(i).toLong())
+    }
+    if (testSha1(size, sha1, cachePath, Long.MAX_VALUE.milliseconds)) {
+        logger.warn("[Unimined/Cache] Falling back on expired cache $cachePath for $url")
+        return cachePath
+    }
+    throw IllegalStateException("Failed to download $url", exception)
+}
+
+fun testSha1(size: Long, sha1: String, path: Path, expireTime: Duration = 1.days): Boolean {
     if (path.exists()) {
         if (path.fileSize() == size || size == -1L) {
             if (sha1.isEmpty()) {
-                return true
+                // fallback: expire if older than a day
+                return path.getLastModifiedTime().toMillis() > System.currentTimeMillis() - expireTime.inWholeMilliseconds
             }
             val digestSha1 = MessageDigest.getInstance("SHA-1")
             path.inputStream().use {
@@ -331,9 +391,6 @@ fun Path.isZip(): Boolean =
     inputStream().use { stream -> ByteArray(4).also { stream.read(it, 0, 4) } }
         .contentEquals(byteArrayOf(0x50, 0x4B, 0x03, 0x04))
 
-
-
-
 fun Path.readZipContents(): List<String> {
     val contents = mutableListOf<String>()
     forEachInZip { entry, _ ->
@@ -420,3 +477,10 @@ fun Path.openZipFileSystem(args: Map<String, *> = mapOf<String, Any>()): FileSys
 }
 
 val CONSTANT_TIME_FOR_ZIP_ENTRIES = GregorianCalendar(1980, Calendar.FEBRUARY, 1, 0, 0, 0).timeInMillis
+
+fun <K, V> MutableMap<K, V>.removeALl(other: Map<K, V>): MutableMap<K, V> {
+    other.forEach {
+        remove(it.key, it.value)
+    }
+    return this
+}

@@ -109,12 +109,10 @@ open class AccessTransformerMinecraftTransformer(
             }
         }
         val result = project.javaexec { spec ->
-            if (provider.minecraftData.metadata.javaVersion >= JavaVersion.VERSION_21) {
-                val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
-                spec.executable = toolchain.launcherFor {
-                    it.languageVersion.set(JavaLanguageVersion.of(21))
-                }.get().executablePath.asFile.absolutePath
-            }
+            val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
+            spec.executable = toolchain.launcherFor {
+                it.languageVersion.set(JavaLanguageVersion.of(provider.minecraftData.metadata.javaVersion.majorVersion))
+            }.get().executablePath.asFile.absolutePath
 
             spec.classpath = project.configurations.detachedConfiguration(dependency)
             spec.mainClass.set(atMainClass)

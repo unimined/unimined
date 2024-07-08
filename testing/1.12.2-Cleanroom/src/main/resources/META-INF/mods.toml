@@ -1,6 +1,6 @@
 modLoader="javafml"
-loaderVersion="[1,)"
-issueTrackerURL="https://github.com/wagyourtail/jsmacros"
+loaderVersion="[36,)"
+issueTrackerURL=""
 license = "MPL-2.0"
 
 [[mods]]
@@ -15,6 +15,6 @@ description = '''
 [[dependencies.modid]]
 modId="minecraft"
 mandatory=true
-versionRange="[1.20.3]"
+versionRange="[1.8.9]"
 ordering="NONE"
 side="BOTH"

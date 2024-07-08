@@ -51,7 +51,7 @@ abstract class FabricMinecraftTransformer(
 
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
-        config.jvmArgs += listOf(
+        config.jvmArgs(
             "-Dfabric.development=true",
             "-Dfabric.remapClasspathFile=${intermediaryClasspath}",
             "-Dfabric.classPathGroups=${groups}"
@@ -60,7 +60,7 @@ abstract class FabricMinecraftTransformer(
 
     override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
-        config.jvmArgs += listOf(
+        config.jvmArgs(
             "-Dfabric.development=true",
             "-Dfabric.remapClasspathFile=${intermediaryClasspath}",
             "-Dfabric.classPathGroups=${groups}"

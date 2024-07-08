@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.SpigotPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.CleanroomPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
@@ -298,6 +299,39 @@ interface PatchProviders {
 
     fun neoForge() {
         neoForge {}
+    }
+
+    /**
+     * enables the cleanroom patcher.
+     * @since 1.3.0
+     */
+    fun cleanroom() {
+        cleanroom {}
+    }
+
+    /**
+     * enables the cleanroom patcher.
+     * @param action the action to configure the patcher.
+     * @since 1.3.0
+     */
+    fun cleanroom(action: CleanroomPatcher<*>.() -> Unit)
+
+    /**
+     * enables the cleanroom patcher.
+     * @param action the action to configure the patcher.
+     * @since 1.3.0
+     */
+    fun cleanroom(
+        @DelegatesTo(
+            value = CleanroomPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        cleanroom {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
     }
 
     /**

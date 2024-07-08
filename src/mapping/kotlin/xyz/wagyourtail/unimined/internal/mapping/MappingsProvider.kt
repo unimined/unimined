@@ -437,14 +437,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
         cache.createDirectories()
         val buildInfo = run {
             val buildInfoFile = cache.resolve("BuildInfo-${mcVersion}.json")
-            if (!buildInfoFile.exists() || project.unimined.forceReload) {
-                URI.create("https://hub.spigotmc.org/versions/${mcVersion}.json").stream()
-                    .use { input ->
-                        buildInfoFile.outputStream().use {
-                            input.copyTo(it)
-                        }
-                    }
-            }
+            project.cachingDownload(URI.create("https://hub.spigotmc.org/versions/${mcVersion}.json"), cachePath = cache)
             val buildInfoJson = JsonParser.parseString(buildInfoFile.readText())
             buildInfoJson.asJsonObject
         }
@@ -453,19 +446,16 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
             val buildDataFile = cache.resolve("BuildData-${mcVersion}-${buildInfo["name"].asString}.zip")
             if (!buildDataFile.exists() || project.unimined.forceReload) {
                 val version = buildInfo["refs"].asJsonObject["BuildData"].asString
-                URI.create("https://hub.spigotmc.org/stash/rest/api/latest/projects/SPIGOT/repos/builddata/archive?at=$version&format=zip")
-                    .stream()
-                    .use { input ->
-                        buildDataFile.outputStream().use {
-                            input.copyTo(it)
-                        }
-                    }
+                project.cachingDownload(
+                    URI.create("https://hub.spigotmc.org/stash/rest/api/latest/projects/SPIGOT/repos/builddata/archive?at=$version&format=zip"),
+                    cachePath = buildDataFile
+                )
             }
             buildDataFile
         }
 
-        val (layerMojmap, hasMembers) = buildDataZip.readZipInputStreamFor("info.json") {
-            val info = it.reader().use { JsonParser.parseReader(it).asJsonObject }
+        val (layerMojmap, hasMembers) = buildDataZip.readZipInputStreamFor("info.json") { ifs ->
+            val info = ifs.reader().use { JsonParser.parseReader(it).asJsonObject }
 
             listOf(info.has("mappingsUrl"), info.has("memberMappings"))
         }

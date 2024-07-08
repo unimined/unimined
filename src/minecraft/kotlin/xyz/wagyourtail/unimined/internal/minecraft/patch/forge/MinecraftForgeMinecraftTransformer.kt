@@ -11,6 +11,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2.FG2MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.FinalizeOnWrite
@@ -27,7 +28,7 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
     override var useUnionRelaunch: Boolean by FinalizeOnRead(provider.minecraftData.mcVersionCompare(provider.version, "1.20.3") >= 0)
 
     init {
-        accessTransformerTransformer.dependency = project.dependencies.create("net.minecraftforge:accesstransformers:8.1.3")
+        accessTransformerTransformer.dependency = project.dependencies.create("net.minecraftforge:accesstransformers:8.1.6")
         accessTransformerTransformer.atMainClass = "net.minecraftforge.accesstransformer.TransformerProcessor"
     }
 
@@ -115,12 +116,12 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
         val libraries = parseAllLibraries(json.getAsJsonArray("libraries"))
         mainClass = json.get("mainClass").asString
         val args = json.get("minecraftArguments").asString
-        provider.addLibraries(libraries.filter {
-            !it.name.startsWith("net.minecraftforge:minecraftforge:") && !it.name.startsWith(
-                "net.minecraftforge:forge:"
-            )
-        })
+        provider.addLibraries(libraries)
         tweakClassClient = args.split("--tweakClass")[1].trim()
+    }
+
+    override fun libraryFilter(library: Library): Boolean {
+        return !library.name.startsWith("net.minecraftforge:minecraftforge:") && !library.name.startsWith("net.minecraftforge:forge:")
     }
 
 }

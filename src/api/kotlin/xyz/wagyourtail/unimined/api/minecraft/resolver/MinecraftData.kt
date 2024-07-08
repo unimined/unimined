@@ -7,6 +7,9 @@ import java.net.URI
 abstract class MinecraftData {
 
     @set:ApiStatus.Experimental
+    abstract var launcherMetaUrl: URI?
+
+    @set:ApiStatus.Experimental
     abstract var metadataURL: URI
 
     @get:ApiStatus.Internal

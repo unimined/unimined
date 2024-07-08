@@ -7,6 +7,7 @@ import org.gradle.api.JavaVersion
 import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.OSUtils
 import xyz.wagyourtail.unimined.util.consumerApply
+import java.io.File
 import java.net.MalformedURLException
 import java.net.URI
 import java.nio.file.Path
@@ -37,7 +38,7 @@ data class VersionData(
 ) {
 
 
-    fun getJVMArgs(libDir: Path, nativeDir: Path): List<String> {
+    fun getJVMArgs(): List<String> {
         val args = mutableListOf<String>()
         args.addAll(
             "-Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+UseG1GC -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50 -XX:G1HeapRegionSize=32M".split(
@@ -113,13 +114,8 @@ data class VersionData(
             if (e == "\${classpath}" || e == "-cp") null
             else e.replace("\${launcher_name}", "UniminedDev")
                 .replace("\${launcher_version}", "1.0.0")
-                .replace(
-                    "\${version_name}",
-                    id
-                )
-                .replace("\${natives_directory}", nativeDir.toString())
-                .replace("\${library_directory}", libDir.toString())
-                .replace("\${classpath_separator}", ":")
+                .replace("\${version_name}", id)
+                .replace("\${classpath_separator}", File.pathSeparator)
         }
     }
 
@@ -142,51 +138,31 @@ data class VersionData(
         return args
     }
 
-    fun getGameArgs(
-        username: String,
-        gameDir: Path,
-        assets: Path,
-        authInfo: AuthConfig.AuthInfo?
-    ): MutableList<String> {
+    fun getGameArgs(): MutableList<String> {
         val args = getArgsRecursive()
         return applyGameArgs(
             args,
-            username,
-            gameDir,
-            assets,
             assetIndex?.id ?: "",
             id,
             type!!,
-            authInfo
         )
     }
 }
 
 fun applyGameArgs(
     args: List<String>,
-    username: String,
-    gameDir: Path,
-    assets: Path,
     assetIndex: String,
     id: String,
     type: String,
-    authInfo: AuthConfig.AuthInfo?
 ): MutableList<String> {
-    return args.asSequence().mapNotNull { e: String ->
-        if (authInfo == null && (e == "--uuid" || e == "\${auth_uuid}")) null
-        else e.replace("\${auth_player_name}", authInfo?.username ?: username)
-            .replace("\${version_name}", id)
-            .replace("\${game_directory}", gameDir.toAbsolutePath().toString())
-            .replace("\${assets_root}", assets.toString())
-            .replace("\${game_assets}", gameDir.resolve("resources").toString())
+    return args.asSequence().map { e: String ->
+            e.replace("\${version_name}", id)
             .replace("\${assets_index_name}", assetIndex)
             .replace("\${assets_index}", assetIndex)
-            .replace("\${auth_access_token}", authInfo?.accessToken ?: "0")
             .replace("\${clientid}", "unimined")
             .replace("\${user_type}", "msa")
             .replace("\${version_type}", type)
             .replace("\${user_properties}", "{}")
-            .replace("\${auth_uuid}", authInfo?.uuid.toString())
     }.toMutableList()
 }
 

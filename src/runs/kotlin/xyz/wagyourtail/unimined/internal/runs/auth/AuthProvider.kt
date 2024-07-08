@@ -4,12 +4,11 @@ import com.github.javakeyring.Keyring
 import com.github.javakeyring.PasswordAccessException
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import net.lenni0451.commons.httpclient.HttpClient
 import net.raphimc.minecraftauth.MinecraftAuth
 import net.raphimc.minecraftauth.step.msa.StepMsaDeviceCode
+import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.internal.runs.RunsProvider
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.OSUtils
@@ -24,10 +23,11 @@ import kotlin.io.path.exists
 import kotlin.io.path.readBytes
 import kotlin.io.path.writeBytes
 
-class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
-    override var enabled: Boolean by FinalizeOnRead((runProvider.project.findProperty("unimined.auth.enabled") as String?)?.toBoolean() ?: false)
-    override var storeCredentials: Boolean by FinalizeOnRead((runProvider.project.findProperty("unimined.auth.storeCredentials") as String?)?.toBoolean() ?: true)
-    override var encryptStoredCredentials: Boolean by FinalizeOnRead((runProvider.project.findProperty("unimined.auth.encryptStoredCredentials") as String?)?.toBoolean() ?: true)
+class AuthProvider(val project: Project) : AuthConfig {
+    override var enabled: Boolean by FinalizeOnRead((project.findProperty("unimined.auth.enabled") as String?)?.toBoolean() ?: false)
+    override var storeCredentials: Boolean by FinalizeOnRead((project.findProperty("unimined.auth.storeCredentials") as String?)?.toBoolean() ?: true)
+    override var encryptStoredCredentials: Boolean by FinalizeOnRead((project.findProperty("unimined.auth.encryptStoredCredentials") as String?)?.toBoolean() ?: true)
+    override var username: String? by FinalizeOnRead(project.findProperty("unimined.auth.username") as String?)
 
     companion object {
         private var daemonCache2: JsonObject? = null
@@ -66,12 +66,12 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
     override var authInfo: AuthConfig.AuthInfo? by FinalizeOnRead(LazyMutable {
         if (!enabled) return@LazyMutable null
 
-        runProvider.project.logger.lifecycle("[Unimined/Auth] Getting Auth Info")
-        val authFile = runProvider.project.unimined.getGlobalCache().resolve("auth.json")
-        val encAuthFile = runProvider.project.unimined.getGlobalCache().resolve("auth.json.enc")
+        project.logger.lifecycle("[Unimined/Auth] Getting Auth Info")
+        val authFile = project.unimined.getGlobalCache().resolve("auth.json")
+        val encAuthFile = project.unimined.getGlobalCache().resolve("auth.json.enc")
 
         val existingCredList = if (daemonCache2 != null) {
-            runProvider.project.logger.lifecycle("[Unimined/Auth] Using in-memory cached auth from previous run")
+            project.logger.lifecycle("[Unimined/Auth] Using in-memory cached auth from previous run")
             daemonCache2
         } else if (storeCredentials) {
             val fileBytes = if (authFile.exists() && encryptStoredCredentials) {
@@ -88,7 +88,7 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
 
                     authData
                 } catch (e: Exception) {
-                    runProvider.project.logger.error("[Unimined/Auth] Failed writing encrypted session data, no credentials will be stored!", e)
+                    project.logger.error("[Unimined/Auth] Failed writing encrypted session data, no credentials will be stored!", e)
                     null
                 }
             } else if (encryptStoredCredentials && encAuthFile.exists()) {
@@ -98,7 +98,7 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
                 try {
                     decryptAES256(encData, passwordToBytes(encKey))
                 } catch (e: Exception) {
-                    runProvider.project.logger.error("[Unimined/Auth] Failed decrypting session data!", e)
+                    project.logger.error("[Unimined/Auth] Failed decrypting session data!", e)
                     null
                 }
             } else if (!encryptStoredCredentials && authFile.exists()) {
@@ -111,7 +111,7 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
                 try {
                     JsonParser.parseReader(ByteArrayInputStream(fileBytes).reader())
                 } catch (e: Exception) {
-                    runProvider.project.logger.error("[Unimined/Auth] Failed reading session data!", e)
+                    project.logger.error("[Unimined/Auth] Failed reading session data!", e)
                     null
                 }
             } else {
@@ -122,7 +122,6 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
         }
 
         val existingCreds = if (existingCredList != null) {
-            val username = runProvider.project.findProperty("unimined.auth.username") as String?
             if (username != null) {
                 existingCredList.asJsonObject.get(username)
             } else {
@@ -135,16 +134,16 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
         val session = if (existingCreds != null) {
             try {
                 val session = MinecraftAuth.JAVA_DEVICE_CODE_LOGIN.fromJson(existingCreds.asJsonObject)
-                runProvider.project.logger.lifecycle("Refreshing auth")
+                project.logger.lifecycle("Refreshing auth")
                 MinecraftAuth.JAVA_DEVICE_CODE_LOGIN.refresh(client, session)
             } catch (e: Exception) {
-                runProvider.project.logger.lifecycle("[Unimined/Auth] $existingCreds")
+                project.logger.lifecycle("[Unimined/Auth] $existingCreds")
                 throw e
             }
         } else {
-            runProvider.project.logger.lifecycle("[Unimined/Auth] Logging in to Minecraft!")
+            project.logger.lifecycle("[Unimined/Auth] Logging in to Minecraft!")
             MinecraftAuth.JAVA_DEVICE_CODE_LOGIN.getFromInput(client, StepMsaDeviceCode.MsaDeviceCodeCallback {
-                runProvider.project.logger.lifecycle("[Unimined/Auth] If your web browser does not open, please go to ${it.directVerificationUri}")
+                project.logger.lifecycle("[Unimined/Auth] If your web browser does not open, please go to ${it.directVerificationUri}")
                 openUrl(it.directVerificationUri)
             })
         }
@@ -165,7 +164,7 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
                     val encData = encryptAES256(creds.toString().toByteArray(), passwordToBytes(password))
                     encAuthFile.writeBytes(encData)
                 } catch (e: Exception) {
-                    runProvider.project.logger.error("[Unimined/Auth] Failed writing encrypted session data, no credentials will be stored!", e)
+                    project.logger.error("[Unimined/Auth] Failed writing encrypted session data, no credentials will be stored!", e)
                 }
             } else {
                 authFile.writeBytes(creds.toString().toByteArray())
@@ -181,11 +180,11 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
 
     private fun getOrSetPassword(): String {
         Keyring.create().use {
-            runProvider.project.logger.info("[Unimined/Auth] Keyring Info: ${it.keyringStorageType}")
+            project.logger.info("[Unimined/Auth] Keyring Info: ${it.keyringStorageType}")
             val existing = try {
                 it.getPassword("unimined", "authEncKey")
             } catch (e: PasswordAccessException) {
-                runProvider.project.logger.error("[Unimined/Auth] error retrieving encryption password", e)
+                project.logger.error("[Unimined/Auth] error retrieving encryption password", e)
                 null
             }
             return if (existing != null) {
@@ -218,4 +217,5 @@ class AuthProvider(val runProvider: RunsProvider) : AuthConfig {
             }
         }
     }
+
 }

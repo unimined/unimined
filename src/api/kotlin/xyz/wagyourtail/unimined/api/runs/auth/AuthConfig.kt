@@ -37,6 +37,12 @@ interface AuthConfig {
      */
     var encryptStoredCredentials: Boolean
 
+    /**
+     * when multiple auth are available, picks the one with the username specified.
+     * this value can also be set by the `unimined.auth.username` gradle property.
+     */
+    var username: String?
+
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
     var authInfo: AuthInfo?
