@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.merged
 
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
@@ -44,7 +45,7 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     override var libraryFilter: MergedPatcher.LibraryFilter by FinalizeOnRead(MergedPatcher.LibraryFilter.ALL)
 
-    override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit
+    override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: ZipArchiveOutputStream, exception: Exception) -> Unit
         get() = patchers.first().onMergeFail
         set(value) {
             patchers.first().onMergeFail = value

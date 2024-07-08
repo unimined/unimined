@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.api.minecraft.patch
 
 import groovy.lang.Closure
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.file.FileCollection
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
@@ -33,7 +34,7 @@ interface MinecraftPatcher {
      * @since 0.4.2
      */
     @set:ApiStatus.Experimental
-    var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit
+    var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: ZipArchiveOutputStream, exception: Exception) -> Unit
 
     /**
      * @since 0.4.2

@@ -172,7 +172,10 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     }
 
     override fun getMinecraft(namespace: MappingNamespaceTree.Namespace, fallbackNamespace: MappingNamespaceTree.Namespace): Path {
-        return minecraftFiles[namespace to fallbackNamespace]?.path ?: error("minecraft file not found for $namespace")
+        synchronized(this) {
+            return minecraftFiles[namespace to fallbackNamespace]?.path
+                ?: error("minecraft file not found for $namespace")
+        }
     }
 
     private val mojmapIvys by lazy {

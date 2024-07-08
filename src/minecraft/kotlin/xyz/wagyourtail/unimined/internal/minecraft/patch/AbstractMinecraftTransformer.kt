@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch
 
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet
@@ -43,7 +45,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     override val addVanillaLibraries: Boolean by FinalizeOnRead(true)
 
-    override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit by FinalizeOnRead { cl, _, _, e ->
+    override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: ZipArchiveOutputStream, exception: Exception) -> Unit by FinalizeOnRead { cl, _, _, e ->
         throw RuntimeException("Error merging class ${cl.name}", e)
     }
 
@@ -77,8 +79,9 @@ abstract class AbstractMinecraftTransformer protected constructor(
             return merged
         }
 
+        val written = mutableSetOf<String>()
         merged.path.deleteIfExists()
-        merged.path.openZipFileSystem(mapOf("create" to true, "mutable" to true)).use { mergedFS ->
+        ZipArchiveOutputStream(Files.newByteChannel(merged.path)).use { zipOutput ->
             val clientClassEntries = mutableMapOf<String, ClassNode>()
             clientjar.path.forEachInZip { path, stream ->
                 if (path.startsWith("META-INF/")) return@forEachInZip
@@ -91,9 +94,10 @@ abstract class AbstractMinecraftTransformer protected constructor(
                     clientClassEntries[path] = classNode
                 } else {
                     // copy directly
-                    val mergedPath = mergedFS.getPath(path)
-                    mergedPath.parent?.createDirectories()
-                    mergedPath.writeBytes(stream.readBytes())
+                    written.add(path)
+                    zipOutput.putArchiveEntry(ZipArchiveEntry(path))
+                    stream.copyTo(zipOutput)
+                    zipOutput.closeArchiveEntry()
                 }
             }
             val serverClassEntries = mutableMapOf<String, ClassNode>()
@@ -108,13 +112,14 @@ abstract class AbstractMinecraftTransformer protected constructor(
                     serverClassEntries[path] = classNode
                 } else {
                     // copy directly
-                    val mergedPath = mergedFS.getPath(path)
-                    mergedPath.parent?.createDirectories()
-                    if (mergedPath.exists()) {
+                    if (written.add(path)) {
+                        zipOutput.putArchiveEntry(ZipArchiveEntry(path))
+                        stream.copyTo(zipOutput)
+                        zipOutput.closeArchiveEntry()
+                    } else {
                         project.logger.info("[Unimined/MappingsProvider] Entry in server jar already exists in client jar: $path, skipping")
                         return@forEachInZip
                     }
-                    mergedPath.writeBytes(stream.readBytes())
                 }
             }
             // merge classes
@@ -124,22 +129,22 @@ abstract class AbstractMinecraftTransformer protected constructor(
                 val out = try {
                     merger.accept(node, serverNode)
                 } catch (e: Exception) {
-                    onMergeFail(node, serverNode!!, mergedFS, e)
+                    onMergeFail(node, serverNode!!, zipOutput, e)
                     continue
                 }
                 out.accept(classWriter)
-                val path = mergedFS.getPath(name)
-                path.parent?.createDirectories()
-                path.writeBytes(classWriter.toByteArray())
+                zipOutput.putArchiveEntry(ZipArchiveEntry(name))
+                zipOutput.write(classWriter.toByteArray())
+                zipOutput.closeArchiveEntry()
                 serverClassEntries.remove(name)
             }
             for ((name, node) in serverClassEntries) {
                 val classWriter = ClassWriter(0)
                 val out = merger.accept(null, node)
                 out.accept(classWriter)
-                val path = mergedFS.getPath(name)
-                path.parent?.createDirectories()
-                path.writeBytes(classWriter.toByteArray())
+                zipOutput.putArchiveEntry(ZipArchiveEntry(name))
+                zipOutput.write(classWriter.toByteArray())
+                zipOutput.closeArchiveEntry()
             }
         }
         return merged

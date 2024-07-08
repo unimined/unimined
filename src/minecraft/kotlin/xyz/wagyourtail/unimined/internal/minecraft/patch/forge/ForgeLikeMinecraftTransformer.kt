@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileCollection
@@ -60,7 +61,7 @@ abstract class ForgeLikeMinecraftTransformer(
             super.canCombine = value
         }
 
-    override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit
+    override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: ZipArchiveOutputStream, exception: Exception) -> Unit
         get() = forgeTransformer.onMergeFail
         set(value) {
             forgeTransformer.onMergeFail = value
