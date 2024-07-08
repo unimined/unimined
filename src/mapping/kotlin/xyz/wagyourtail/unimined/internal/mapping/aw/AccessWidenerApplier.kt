@@ -3,6 +3,8 @@ package xyz.wagyourtail.unimined.internal.mapping.aw
 import net.fabricmc.accesswidener.*
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.logging.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
@@ -10,6 +12,7 @@ import org.objectweb.asm.Opcodes
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
+import xyz.wagyourtail.unimined.util.forEachInZip
 import xyz.wagyourtail.unimined.util.openZipFileSystem
 import java.io.BufferedReader
 import java.io.ByteArrayInputStream
@@ -71,34 +74,48 @@ object AccessWidenerApplier {
         AccessWidenerReader(aw).read(BufferedReader(accessWidener.reader()))
         if (aw.namespace == namespace) {
             Files.copy(baseMinecraft, output, StandardCopyOption.REPLACE_EXISTING)
-            output.openZipFileSystem(mapOf("mutable" to true)).use { fs ->
-                logger.debug("Transforming $output with access widener $accessWidener and namespace $namespace")
-                for (target in aw.targets) {
-                    try {
-                        val targetClass = "/" + target.replace(".", "/") + ".class"
-                        val targetPath = fs.getPath(targetClass)
-                        logger.debug("Transforming $targetPath")
-                        if (Files.exists(targetPath)) {
-                            val reader = ClassReader(targetPath.inputStream())
-                            val writer = ClassWriter(0)
-                            val visitor = AccessWidenerClassVisitor.createClassVisitor(Opcodes.ASM9, writer, aw)
-                            reader.accept(visitor, 0)
-                            Files.write(
-                                targetPath,
-                                writer.toByteArray(),
-                                StandardOpenOption.CREATE,
-                                StandardOpenOption.TRUNCATE_EXISTING
-                            )
+            try {
+                val targets = aw.targets.toMutableSet()
+                ZipArchiveOutputStream(output.outputStream()).use { zipOutput ->
+                    logger.debug("Transforming $output with access widener $accessWidener and namespace $namespace")
+                    baseMinecraft.forEachInZip { path, stream ->
+                        if (path.endsWith(".class")) {
+                            val target = path.removeSuffix(".class").replace("/", ".")
+                            if (target in targets) {
+                                try {
+                                    logger.debug("Transforming $path")
+                                    val reader = ClassReader(stream)
+                                    val writer = ClassWriter(0)
+                                    val visitor = AccessWidenerClassVisitor.createClassVisitor(Opcodes.ASM9, writer, aw)
+                                    reader.accept(visitor, 0)
+                                    zipOutput.putArchiveEntry(ZipArchiveEntry(path))
+                                    zipOutput.write(writer.toByteArray())
+                                    zipOutput.closeArchiveEntry()
+                                } catch (e: Exception) {
+                                    logger.warn(
+                                        "An error occurred while transforming $target with access widener $accessWidener for namespace $namespace in $output",
+                                        e
+                                    )
+                                }
+                                targets.remove(target)
+                            } else {
+                                zipOutput.putArchiveEntry(ZipArchiveEntry(path))
+                                stream.copyTo(zipOutput)
+                                zipOutput.closeArchiveEntry()
+                            }
                         } else {
-                            logger.warn("Could not find class $targetClass in $output")
+                            zipOutput.putArchiveEntry(ZipArchiveEntry(path))
+                            stream.copyTo(zipOutput)
+                            zipOutput.closeArchiveEntry()
                         }
-                    } catch (e: Exception) {
-                        logger.warn(
-                            "An error occurred while transforming $target with access widener $accessWidener for namespace $namespace in $output",
-                            e
-                        )
                     }
                 }
+                if (targets.isNotEmpty()) {
+                    logger.warn("AccessWidener $accessWidener did not find the following classes: $targets")
+                }
+            } catch (e: Exception) {
+                output.deleteIfExists()
+                throw e
             }
             return true
         }

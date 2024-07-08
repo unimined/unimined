@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch
 
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet
@@ -26,10 +28,7 @@ import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import kotlin.io.path.createDirectories
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.exists
-import kotlin.io.path.writeBytes
+import kotlin.io.path.*
 
 abstract class AbstractMinecraftTransformer protected constructor(
     protected val project: Project,
@@ -43,7 +42,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     override val addVanillaLibraries: Boolean by FinalizeOnRead(true)
 
-    override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: FileSystem, exception: Exception) -> Unit by FinalizeOnRead { cl, _, _, e ->
+    override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: ZipArchiveOutputStream, exception: Exception) -> Unit by FinalizeOnRead { cl, _, _, e ->
         throw RuntimeException("Error merging class ${cl.name}", e)
     }
 
@@ -77,70 +76,78 @@ abstract class AbstractMinecraftTransformer protected constructor(
             return merged
         }
 
-        merged.path.deleteIfExists()
-        merged.path.openZipFileSystem(mapOf("create" to true, "mutable" to true)).use { mergedFS ->
-            val clientClassEntries = mutableMapOf<String, ClassNode>()
-            clientjar.path.forEachInZip { path, stream ->
-                if (path.startsWith("META-INF/")) return@forEachInZip
-                if (path.endsWith(".class")) {
-                    if (shouldStripClass(path)) return@forEachInZip
-                    // add entry
-                    val classReader = ClassReader(stream)
-                    val classNode = ClassNode()
-                    classReader.accept(classNode, 0)
-                    clientClassEntries[path] = classNode
-                } else {
-                    // copy directly
-                    val mergedPath = mergedFS.getPath(path)
-                    mergedPath.parent?.createDirectories()
-                    mergedPath.writeBytes(stream.readBytes())
-                }
-            }
-            val serverClassEntries = mutableMapOf<String, ClassNode>()
-            serverjar.path.forEachInZip { path, stream ->
-                if (path.startsWith("META-INF/")) return@forEachInZip
-                if (path.endsWith(".class")) {
-                    if (shouldStripClass(path)) return@forEachInZip
-                    // add entry
-                    val classReader = ClassReader(stream)
-                    val classNode = ClassNode()
-                    classReader.accept(classNode, 0)
-                    serverClassEntries[path] = classNode
-                } else {
-                    // copy directly
-                    val mergedPath = mergedFS.getPath(path)
-                    mergedPath.parent?.createDirectories()
-                    if (mergedPath.exists()) {
-                        project.logger.info("[Unimined/MappingsProvider] Entry in server jar already exists in client jar: $path, skipping")
-                        return@forEachInZip
+        try {
+            val written = mutableSetOf<String>()
+            merged.path.deleteIfExists()
+            ZipArchiveOutputStream(merged.path.outputStream()).use { zipOutput ->
+                val clientClassEntries = mutableMapOf<String, ClassNode>()
+                clientjar.path.forEachInZip { path, stream ->
+                    if (path.startsWith("META-INF/")) return@forEachInZip
+                    if (path.endsWith(".class")) {
+                        if (shouldStripClass(path)) return@forEachInZip
+                        // add entry
+                        val classReader = ClassReader(stream)
+                        val classNode = ClassNode()
+                        classReader.accept(classNode, 0)
+                        clientClassEntries[path] = classNode
+                    } else {
+                        // copy directly
+                        written.add(path)
+                        zipOutput.putArchiveEntry(ZipArchiveEntry(path))
+                        stream.copyTo(zipOutput)
+                        zipOutput.closeArchiveEntry()
                     }
-                    mergedPath.writeBytes(stream.readBytes())
+                }
+                val serverClassEntries = mutableMapOf<String, ClassNode>()
+                serverjar.path.forEachInZip { path, stream ->
+                    if (path.startsWith("META-INF/")) return@forEachInZip
+                    if (path.endsWith(".class")) {
+                        if (shouldStripClass(path)) return@forEachInZip
+                        // add entry
+                        val classReader = ClassReader(stream)
+                        val classNode = ClassNode()
+                        classReader.accept(classNode, 0)
+                        serverClassEntries[path] = classNode
+                    } else {
+                        // copy directly
+                        if (written.add(path)) {
+                            zipOutput.putArchiveEntry(ZipArchiveEntry(path))
+                            stream.copyTo(zipOutput)
+                            zipOutput.closeArchiveEntry()
+                        } else {
+                            project.logger.info("[Unimined/MappingsProvider] Entry in server jar already exists in client jar: $path, skipping")
+                            return@forEachInZip
+                        }
+                    }
+                }
+                // merge classes
+                for ((name, node) in clientClassEntries) {
+                    val classWriter = ClassWriter(0)
+                    val serverNode = serverClassEntries[name]
+                    val out = try {
+                        merger.accept(node, serverNode)
+                    } catch (e: Exception) {
+                        onMergeFail(node, serverNode!!, zipOutput, e)
+                        continue
+                    }
+                    out.accept(classWriter)
+                    zipOutput.putArchiveEntry(ZipArchiveEntry(name))
+                    zipOutput.write(classWriter.toByteArray())
+                    zipOutput.closeArchiveEntry()
+                    serverClassEntries.remove(name)
+                }
+                for ((name, node) in serverClassEntries) {
+                    val classWriter = ClassWriter(0)
+                    val out = merger.accept(null, node)
+                    out.accept(classWriter)
+                    zipOutput.putArchiveEntry(ZipArchiveEntry(name))
+                    zipOutput.write(classWriter.toByteArray())
+                    zipOutput.closeArchiveEntry()
                 }
             }
-            // merge classes
-            for ((name, node) in clientClassEntries) {
-                val classWriter = ClassWriter(0)
-                val serverNode = serverClassEntries[name]
-                val out = try {
-                    merger.accept(node, serverNode)
-                } catch (e: Exception) {
-                    onMergeFail(node, serverNode!!, mergedFS, e)
-                    continue
-                }
-                out.accept(classWriter)
-                val path = mergedFS.getPath(name)
-                path.parent?.createDirectories()
-                path.writeBytes(classWriter.toByteArray())
-                serverClassEntries.remove(name)
-            }
-            for ((name, node) in serverClassEntries) {
-                val classWriter = ClassWriter(0)
-                val out = merger.accept(null, node)
-                out.accept(classWriter)
-                val path = mergedFS.getPath(name)
-                path.parent?.createDirectories()
-                path.writeBytes(classWriter.toByteArray())
-            }
+        } catch (e: Exception) {
+            merged.path.deleteIfExists()
+            throw e
         }
         return merged
     }

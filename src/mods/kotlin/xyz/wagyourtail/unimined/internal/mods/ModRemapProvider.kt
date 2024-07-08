@@ -328,26 +328,31 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         val targetFile = input.second.second
         val manifest = (JarFile(inpFile).use { it.manifest }?.mainAttributes?.getValue("FMLAT") as String?)?.split(" ") ?: emptyList()
         project.logger.info("[Unimined/ModRemapper] Remapping mod from $inpFile -> $targetFile with mapping target ${remap.first}/${remap.second}")
-        OutputConsumerPath.Builder(targetFile).build().use {
-            it.addNonClassFiles(
-                inpFile.toPath(),
-                remapper.first,
-                listOf(
-                    AccessWidenerApplier.AwRemapper(
-                        if (remap.first.named) "named" else remap.first.name,
-                        if (remap.second.named) "named" else remap.second.name,
-                        catchAWNs,
-                        project.logger
-                    ),
-                    innerJarStripper,
-                    AccessTransformerApplier.AtRemapper(project.logger, remapAtToLegacy, manifest)
-                ) + NonClassCopyMode.FIX_META_INF.remappers
-            )
-            remapper.first.apply(it, input.first)
-        }
+        try {
+            OutputConsumerPath.Builder(targetFile).build().use {
+                it.addNonClassFiles(
+                    inpFile.toPath(),
+                    remapper.first,
+                    listOf(
+                        AccessWidenerApplier.AwRemapper(
+                            if (remap.first.named) "named" else remap.first.name,
+                            if (remap.second.named) "named" else remap.second.name,
+                            catchAWNs,
+                            project.logger
+                        ),
+                        innerJarStripper,
+                        AccessTransformerApplier.AtRemapper(project.logger, remapAtToLegacy, manifest)
+                    ) + NonClassCopyMode.FIX_META_INF.remappers
+                )
+                remapper.first.apply(it, input.first)
+            }
 
-        targetFile.openZipFileSystem(mapOf("mutable" to true)).use {
-            remapper.second.insertExtra(input.first, it)
+            targetFile.openZipFileSystem(mapOf("mutable" to true)).use {
+                remapper.second.insertExtra(input.first, it)
+            }
+        } catch (e: Exception) {
+            targetFile.deleteIfExists()
+            throw e
         }
     }
 
