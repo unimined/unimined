@@ -98,6 +98,10 @@ object AccessWidenerApplier {
                                     )
                                 }
                                 targets.remove(target)
+                            } else {
+                                zipOutput.putArchiveEntry(ZipArchiveEntry(path))
+                                stream.copyTo(zipOutput)
+                                zipOutput.closeArchiveEntry()
                             }
                         } else {
                             zipOutput.putArchiveEntry(ZipArchiveEntry(path))
