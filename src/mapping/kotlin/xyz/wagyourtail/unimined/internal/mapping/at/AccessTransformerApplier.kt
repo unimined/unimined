@@ -120,7 +120,7 @@ object AccessTransformerApplier {
             if (line == null) {
                 return -1
             }
-            line = transformFromLegacyTransformer(line!!) + "\n"
+            line = transformFromLegacyTransformer(line!!.trimStart()) + "\n"
             return read(cbuf, off, len)
         }
 
