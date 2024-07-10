@@ -14,6 +14,7 @@ object MixinExtra {
         const val WRAP_WITH_CONDITION = "Lcom/llamalad7/mixinextras/injector/WrapWithCondition;"
         const val WRAP_WITH_CONDITION_V2 = "Lcom/llamalad7/mixinextras/injector/v2/WrapWithCondition;"
         const val WRAP_OPERATION = "Lcom/llamalad7/mixinextras/injector/wrapoperation/WrapOperation;"
+        const val WRAP_METHOD = "Lcom/llamalad7/mixinextras/injector/wrapmethod/WrapMethod;"
 
 
     }
@@ -27,6 +28,7 @@ object MixinExtra {
             ModifyReturnValueAnnotationVisitor.Companion::shouldVisit to ::ModifyReturnValueAnnotationVisitor,
             WrapWithConditionAnnotationVisitor.Companion::shouldVisit to ::WrapWithConditionAnnotationVisitor,
             WrapOperationAnnotationVisitor.Companion::shouldVisit to ::WrapOperationAnnotationVisitor,
+            WrapMethodAnnotationVisitor.Companion::shouldVisit to ::WrapMethodAnnotationVisitor,
         ))
 
     }

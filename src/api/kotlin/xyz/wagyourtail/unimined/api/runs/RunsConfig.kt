@@ -2,6 +2,8 @@ package xyz.wagyourtail.unimined.api.runs
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import org.gradle.api.Task
+import org.gradle.api.tasks.TaskProvider
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
@@ -96,5 +98,34 @@ abstract class RunsConfig {
      * @since 1.3.0
      */
     abstract fun preLaunch(config: String, action: RunConfig.() -> Unit)
+
+    fun preLaunch(
+        config: String,
+        @DelegatesTo(
+            value = RunConfig::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        preLaunch(config) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * @since 1.3.1
+     */
+    abstract fun preLaunch(config: String, action: TaskProvider<Task>)
+
+    /**
+     * @since 1.3.1
+     */
+    abstract fun preLaunch(config: String, action: Task)
+
+    /**
+     * @since 1.3.1
+     */
+    abstract fun preLaunch(config: String, action: String)
 
 }
