@@ -17,6 +17,7 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
 
     override val auth = AuthProvider(project)
 
+    private val preLaunchTasks = defaultedMapOf<String, MutableList<Any>> { mutableListOf() }
     private val preLaunch = mutableMapOf<String, RunConfig.() -> Unit>()
     private val actions = mutableMapOf<String, RunConfig.() -> Unit>()
     private var all: RunConfig.() -> Unit = {}
@@ -32,6 +33,21 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
             old?.invoke(this)
             action.invoke(this)
         }
+    }
+
+    override fun preLaunch(config: String, action: TaskProvider<Task>) {
+        freezeCheck()
+        preLaunchTasks[config].add(action)
+    }
+
+    override fun preLaunch(config: String, action: Task) {
+        freezeCheck()
+        preLaunchTasks[config].add(action)
+    }
+
+    override fun preLaunch(config: String, action: String) {
+        freezeCheck()
+        preLaunchTasks[config].add(action)
     }
 
     override fun config(config: String, action: RunConfig.() -> Unit) {
@@ -97,6 +113,7 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
 
             preRun.configure {
                 it.group = "unimined_internal"
+                it.dependsOn(*preLaunchTasks[action.key].toTypedArray())
                 it.doLast {
                     preLaunch[action.key]?.invoke(task.get())
                 }
