@@ -10,7 +10,8 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import kotlin.io.path.writeText
+import java.util.jar.Manifest
+import kotlin.io.path.*
 
 class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.MixinMetadata(parent) {
     private val GSON = GsonBuilder().setPrettyPrinting().create()
@@ -111,7 +112,15 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
     }
 
     override fun writeExtra(fs: FileSystem) {
-        if (!parent.noRefmap.contains("BaseMixin")) {
+        val noRefmap = parent.noRefmap.contains("BaseMixin")
+        val manifest = fs.getPath("META-INF/MANIFEST.MF").let { file ->
+            if (file.exists()) {
+                file.inputStream().use { Manifest(it) }
+            } else {
+                Manifest()
+            }
+        }
+        if (!noRefmap) {
             for ((name, json) in refmaps) {
                 if (json.isEmpty()) continue
                 parent.logger.info("[Unimined/MixinMetaData] Writing refmap $name")
@@ -123,6 +132,13 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
                     StandardOpenOption.TRUNCATE_EXISTING
                 )
             }
+            manifest.mainAttributes.putValue("Fabric-Loom-Mixin-Remap-Type", "mixin")
+        } else {
+            manifest.mainAttributes.putValue("Fabric-Loom-Mixin-Remap-Type", "static")
+        }
+        fs.getPath("META-INF").createDirectories()
+        fs.getPath("META-INF/MANIFEST.MF").outputStream(StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE).use {
+            manifest.write(it)
         }
         for ((name, json) in mixinJsons) {
             parent.logger.info("[Unimined/MixinMetaData] Writing mixin config $name")

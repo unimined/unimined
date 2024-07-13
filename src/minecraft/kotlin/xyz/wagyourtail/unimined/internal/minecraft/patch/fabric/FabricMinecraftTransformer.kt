@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.util.SemVerUtils
 import java.io.InputStreamReader
 import java.nio.file.Files
 
@@ -30,6 +31,53 @@ abstract class FabricMinecraftTransformer(
     override fun addMavens() {
         project.unimined.fabricMaven()
     }
+
+    override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
+        if (canCombine) {
+            return super.merge(clientjar, serverjar)
+        } else if (this is BabricMinecraftTransformer || SemVerUtils.matches(fabricDep.version!!, ">=0.16.0")) {
+            val INTERMEDIARY = provider.mappings.getNamespace("intermediary")
+            val CLIENT = if (this is BabricMinecraftTransformer) {
+                provider.mappings.findNamespace("clientOfficial") ?: provider.mappings.getNamespace("client")
+            } else {
+                provider.mappings.getNamespace("clientOfficial")
+            }
+            val SERVER = if (this is BabricMinecraftTransformer) {
+                provider.mappings.findNamespace("serverOfficial") ?: provider.mappings.getNamespace("server")
+            } else {
+                provider.mappings.getNamespace("serverOfficial")
+            }
+            val clientJarFixed = MinecraftJar(
+                clientjar.parentPath,
+                clientjar.name,
+                clientjar.envType,
+                clientjar.version,
+                clientjar.patches,
+                CLIENT,
+                CLIENT,
+                clientjar.awOrAt,
+                clientjar.extension,
+                clientjar.path
+            )
+            val serverJarFixed = MinecraftJar(
+                serverjar.parentPath,
+                serverjar.name,
+                serverjar.envType,
+                serverjar.version,
+                serverjar.patches,
+                SERVER,
+                SERVER,
+                serverjar.awOrAt,
+                serverjar.extension,
+                serverjar.path
+            )
+            val intermediaryClientJar = provider.minecraftRemapper.provide(clientJarFixed, INTERMEDIARY, CLIENT)
+            val intermediaryServerJar = provider.minecraftRemapper.provide(serverJarFixed, INTERMEDIARY, SERVER)
+            return super.merge(intermediaryClientJar, intermediaryServerJar, true)
+        }
+        throw UnsupportedOperationException("Merging is not supported for this version")
+    }
+
 
     override fun addIncludeToModJson(json: JsonObject, dep: Dependency, path: String) {
         var jars = json.get("jars")?.asJsonArray

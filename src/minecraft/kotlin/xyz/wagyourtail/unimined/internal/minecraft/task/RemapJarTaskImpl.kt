@@ -69,7 +69,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         if (path.isEmpty()) {
             project.logger.lifecycle("[Unimined/RemapJar ${this.path}] detected empty remap path, jumping to after remap tasks")
             provider.mcPatcher.afterRemapJarTask(this, inputFile)
-            afterRemap(inputFile, inputFile)
+            afterRemap(inputFile)
             return
         }
 
@@ -81,7 +81,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         for (i in path.indices) {
             val step = path[i]
             project.logger.info("[Unimined/RemapJar ${this.path}]    $step")
-            val nextTarget = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("${inputFile.nameWithoutExtension}-temp-${step.name}.jar")
+            val nextTarget = temporaryDir.toPath().resolve("${inputFile.nameWithoutExtension}-temp-${step.name}.jar")
             nextTarget.deleteIfExists()
 
             val mc = provider.getMinecraft(
@@ -107,15 +107,15 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
         }
         project.logger.info("[Unimined/RemapJar ${path}] after remap tasks started ${System.currentTimeMillis()}")
         provider.mcPatcher.afterRemapJarTask(this, prevTarget)
-        afterRemap(inputFile, prevTarget)
+        afterRemap(prevTarget)
         project.logger.info("[Unimined/RemapJar ${path}] after remap tasks finished ${System.currentTimeMillis()}")
     }
 
-    private fun afterRemap(inputFile: Path, afterRemapJar: Path) {
+    private fun afterRemap(afterRemapJar: Path) {
         // merge in manifest from input jar
-        inputFile.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
+        afterRemapJar.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
             // write to temp file
-            val inpTmp = project.buildDir.resolve("tmp").resolve(name).toPath().resolve("input-manifest.MF")
+            val inpTmp = temporaryDir.toPath().resolve("input-manifest.MF")
             inpTmp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
                 inp.copyTo(out)
             }

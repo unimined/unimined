@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.SemVerUtils
 
 open class BabricMinecraftTransformer(project: Project, provider: MinecraftProvider): FabricMinecraftTransformer(project, provider) {
 
@@ -23,39 +24,6 @@ open class BabricMinecraftTransformer(project: Project, provider: MinecraftProvi
                 project.dependencies.create("babric:fabric-loader:$dep")
             } else project.dependencies.create(dep)).apply(action)
         )
-    }
-
-    override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
-        val INTERMEDIARY = provider.mappings.getNamespace("intermediary")
-        val CLIENT = provider.mappings.getNamespace("client")
-        val SERVER = provider.mappings.getNamespace("server")
-        val clientJarFixed = MinecraftJar(
-            clientjar.parentPath,
-            clientjar.name,
-            clientjar.envType,
-            clientjar.version,
-            clientjar.patches,
-            CLIENT,
-            CLIENT,
-            clientjar.awOrAt,
-            clientjar.extension,
-            clientjar.path
-        )
-        val serverJarFixed = MinecraftJar(
-            serverjar.parentPath,
-            serverjar.name,
-            serverjar.envType,
-            serverjar.version,
-            serverjar.patches,
-            SERVER,
-            SERVER,
-            serverjar.awOrAt,
-            serverjar.extension,
-            serverjar.path
-        )
-        val intermediaryClientJar = provider.minecraftRemapper.provide(clientJarFixed, INTERMEDIARY, CLIENT)
-        val intermediaryServerJar = provider.minecraftRemapper.provide(serverJarFixed, INTERMEDIARY, SERVER)
-        return super.merge(intermediaryClientJar, intermediaryServerJar, true)
     }
 
     override fun addMavens() {

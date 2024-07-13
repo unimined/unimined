@@ -144,6 +144,11 @@ open class MappingNamespaceTree {
         return namespaces[name.lowercase()] ?: throw IllegalArgumentException("Namespace $name does not exist")
     }
 
+    @ApiStatus.Experimental
+    fun findNamespace(name: String): Namespace? {
+        return namespaces[name.lowercase()]
+    }
+
     override fun toString(): String {
         var s = "MappingNamespaceTree.MappingNamespace: {\n"
         for (namespace in namespaces.values) {
