@@ -11,10 +11,7 @@ import java.nio.file.StandardOpenOption
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.jar.Manifest
-import kotlin.io.path.exists
-import kotlin.io.path.inputStream
-import kotlin.io.path.outputStream
-import kotlin.io.path.writeText
+import kotlin.io.path.*
 
 class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.MixinMetadata(parent) {
     private val GSON = GsonBuilder().setPrettyPrinting().create()
@@ -139,6 +136,7 @@ class OfficialMixinMetaData(parent: MixinRemapExtension) : MixinRemapExtension.M
         } else {
             manifest.mainAttributes.putValue("Fabric-Loom-Mixin-Remap-Type", "static")
         }
+        fs.getPath("META-INF").createDirectories()
         fs.getPath("META-INF/MANIFEST.MF").outputStream(StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE).use {
             manifest.write(it)
         }
