@@ -130,7 +130,10 @@ abstract class RunConfig @Inject constructor(
                             "."
                         )
                     }" else project.name
-                }.${sourceSet.name}"
+                }.${sourceSet.name}".replace(
+                    " ",
+                    "_"
+                )
             ),
             XMLBuilder("classpathModifications").append(
                 *classpath.filter { !sourceSet.runtimeClasspath.contains(it) }.map {
