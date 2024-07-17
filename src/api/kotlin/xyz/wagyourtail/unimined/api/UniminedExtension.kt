@@ -214,4 +214,5 @@ abstract class UniminedExtension(val project: Project) {
 
     abstract fun cleanroomRepos()
     abstract fun outlandsMaven()
+    abstract fun fox2codeMaven()
 }

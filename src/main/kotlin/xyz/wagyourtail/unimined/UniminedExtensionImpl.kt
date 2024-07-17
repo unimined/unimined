@@ -272,6 +272,17 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding outlands maven: $outlandsMaven")
     }
 
+    val fox2codeMaven by lazy {
+        project.repositories.maven {
+            it.name = "Fox2Code"
+            it.url = URI.create("https://cdn.fox2code.com/maven")
+        }
+    }
+
+    override fun fox2codeMaven() {
+        project.logger.info("[Unimined] adding Fox2Code maven: $fox2codeMaven")
+    }
+
     init {
         project.repositories.mavenCentral { repo ->
             repo.content {
