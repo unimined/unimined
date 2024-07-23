@@ -5,6 +5,7 @@ import groovy.lang.DelegatesTo
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.jetbrains.annotations.ApiStatus
+import xyz.wagyourtail.unimined.mapping.Namespace
 
 abstract class MinecraftRemapConfig {
 
@@ -32,7 +33,7 @@ abstract class MinecraftRemapConfig {
 
     abstract var replaceJSRWithJetbrains: Boolean
     @ApiStatus.Experimental
-    abstract fun addResourceRemapper(remapper: () -> OutputConsumerPath.ResourceRemapper)
+    abstract fun addResourceRemapper(remapper: (Namespace, Namespace) -> OutputConsumerPath.ResourceRemapper)
 
     @ApiStatus.Experimental
     abstract fun addExtension(extension: () -> TinyRemapper.Extension)

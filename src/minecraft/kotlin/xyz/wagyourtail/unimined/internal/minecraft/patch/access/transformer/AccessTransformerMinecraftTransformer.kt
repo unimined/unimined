@@ -14,6 +14,12 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.AccessConvertImpl
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor.shouldShowVerboseStderr
+import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor.shouldShowVerboseStdout
+import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
+import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
+import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATReader
+import xyz.wagyourtail.unimined.mapping.util.CharReader
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.getShortSha1
 import xyz.wagyourtail.unimined.util.openZipFileSystem
@@ -32,6 +38,8 @@ open class AccessTransformerMinecraftTransformer(
     provider,
     providerName
 ), AccessTransformerPatcher, AccessConvert by AccessConvertImpl(project, provider) {
+
+    override var legacyATFormat: Boolean by FinalizeOnRead(false)
 
     override var accessTransformer: File? by FinalizeOnRead(null)
 
@@ -93,6 +101,17 @@ open class AccessTransformerMinecraftTransformer(
         val temp = output.resolveSibling(baseMinecraft.nameWithoutExtension + "-mergedATs.cfg")
         temp.parent.createDirectories()
         temp.deleteIfExists()
+
+        val list = mutableListOf<ATReader.ATData>()
+        for (at in accessTransformers) {
+            // ensure at's are in modern format, and on disk not a virtual fs, so that processor can read them
+            if (legacyATFormat) {
+                list.addAll(LegacyATReader.readData(CharReader(at.readText())))
+            } else {
+                list.addAll(ATReader.readData(CharReader(at.readText())))
+            }
+        }
+
         // merge at's
         temp.bufferedWriter(
             StandardCharsets.UTF_8,
@@ -100,13 +119,7 @@ open class AccessTransformerMinecraftTransformer(
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING
         ).use {
-            for (at in accessTransformers) {
-                // ensure at's are in modern format, and on disk not a virtual fs, so that processor can read them
-                AccessTransformerApplier.toModern(at.bufferedReader()).use { reader ->
-                    reader.copyTo(it)
-                    it.write("\n")
-                }
-            }
+            ATWriter.writeData(list, it::append)
         }
         try {
             project.javaexec { spec ->
@@ -125,12 +138,12 @@ open class AccessTransformerMinecraftTransformer(
                     "--atFile",
                     temp.absolutePathString()
                 )
-                if (AccessTransformerApplier.shouldShowVerboseStdout(project)) {
+                if (shouldShowVerboseStdout(project)) {
                     spec.standardOutput = System.out
                 } else {
                     spec.standardOutput = NullOutputStream.NULL_OUTPUT_STREAM
                 }
-                if (AccessTransformerApplier.shouldShowVerboseStderr(project)) {
+                if (shouldShowVerboseStderr(project)) {
                     spec.errorOutput = System.err
                 } else {
                     spec.errorOutput = NullOutputStream.NULL_OUTPUT_STREAM

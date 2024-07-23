@@ -1,9 +1,8 @@
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URI
 
 plugins {
-    kotlin("jvm") version "1.8.21"
+    kotlin("jvm") version "1.9.22"
     `java-gradle-plugin`
     `maven-publish`
 }
@@ -18,10 +17,19 @@ base {
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
+
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
+kotlin {
+    jvmToolchain(8)
 }
 
 repositories {
     mavenCentral()
+    maven("https://maven.wagyourtail.xyz/snapshots/")
     maven {
         url = URI.create("https://maven.neoforged.net/releases")
     }
@@ -152,9 +160,12 @@ dependencies {
     }
 
     // mappings
-    implementation("net.fabricmc:mapping-io:0.3.0") {
-        exclude(group = "org.ow2.asm")
-    }
+    implementation("xyz.wagyourtail.unimined.mapping:unimined-mapping-library-jvm:1.0.0-SNAPSHOT")
+    implementation("io.github.oshai:kotlin-logging:6.0.1")
+    implementation("com.squareup.okio:okio:3.7.0")
+    implementation("com.sschr15.annotations:jb-annotations-kmp:24.1.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0-RC2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
     // jetbrains annotations
     implementation("org.jetbrains:annotations-java5:24.1.0")
@@ -171,20 +182,10 @@ dependencies {
     // aw
     implementation("net.fabricmc:access-widener:2.1.0")
 
-    // at
-    implementation("net.neoforged:accesstransformers:9.0.3") {
-        exclude(group = "org.apache.logging.log4j")
-        exclude(group = "org.ow2.asm")
-    }
-
     implementation("org.eclipse.jgit:org.eclipse.jgit:5.13.2.202306221912-r")
 
     implementation("com.github.javakeyring:java-keyring:1.0.2")
     implementation("net.raphimc:MinecraftAuth:4.0.2")
-
-    compileOnly("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.4.2") {
-        isTransitive = false
-    }
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -244,21 +245,6 @@ tasks.test {
         events.add(TestLogEvent.SKIPPED)
         events.add(TestLogEvent.FAILED)
     }
-}
-
-tasks.withType<JavaCompile> {
-    val targetVersion = 8
-    if (JavaVersion.current().isJava9Compatible) {
-        options.release.set(targetVersion)
-    }
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
-
-//    compilerOptions {
-//        freeCompilerArgs.add("-Xjvm-default=all")
-//    }
 }
 
 gradlePlugin {

@@ -22,8 +22,6 @@ abstract class MigrateMappingsTask : ConventionTask() {
     @get:Optional
     abstract val outputDir: Property<File>
 
-    @get:Input
-    abstract val commonNamespace: Property<String>
     init {
         project.unimined.wagYourMaven("snapshots")
     }

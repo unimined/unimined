@@ -3,11 +3,11 @@ package xyz.wagyourtail.unimined.internal.mods
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.mod.ModRemapConfig
 import xyz.wagyourtail.unimined.api.mod.ModsConfig
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.getField
@@ -90,12 +90,12 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         return remapConfigsResolved.keys.flatMap { it.resolve() }.toSet()
     }
 
-    override fun getClasspathAs(namespace: MappingNamespaceTree.Namespace, fallbackNamespace: MappingNamespaceTree.Namespace, classpath: Set<File>): Set<File> {
+    override fun getClasspathAs(namespace: Namespace, classpath: Set<File>): Set<File> {
         val remapCp = classpath.associateWith { file ->
             remapConfigsResolved.values.firstNotNullOfOrNull { conf -> conf.getConfigForFile(file)?.let { conf to it } }
         }
         val nonRemap = remapCp.mapNotNull { if (it.value == null) it.key else null }
-        project.logger.info("[Unimined/ModRemapper] getting classpath as $namespace/$fallbackNamespace")
+        project.logger.info("[Unimined/ModRemapper] getting classpath as $namespace")
         val remap = remapCp.values.filterNotNull()
         val map = defaultedMapOf<ModRemapProvider, MutableSet<Configuration>> { mutableSetOf() }
         for ((m, c) in remap) {
@@ -104,7 +104,7 @@ class ModsProvider(val project: Project, val minecraft: MinecraftConfig) : ModsC
         val remapOutputs = mutableSetOf<Configuration>()
         for (m in map.keys) {
             val def = defaultedMapOf<Configuration, Configuration> { project.configurations.detachedConfiguration() }
-            m.doRemap(namespace, fallbackNamespace, def)
+            m.doRemap(namespace, def)
             remapOutputs.addAll(def.values)
         }
         val files = remapOutputs.flatMap { it.resolve() }

@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.internal.mods
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
+import kotlinx.coroutines.runBlocking
 import net.fabricmc.loom.util.kotlin.KotlinClasspathService
 import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader
 import net.fabricmc.tinyremapper.InputTag
@@ -13,7 +14,6 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ResolvedArtifact
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
@@ -22,6 +22,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerApplier
 import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.*
 import java.io.*
 import java.nio.file.Files
@@ -36,22 +37,14 @@ import kotlin.io.path.name
 
 class ModRemapProvider(config: Set<Configuration>, val project: Project, val provider: MinecraftConfig) : ModRemapConfig(config) {
 
-    override var namespace: MappingNamespaceTree.Namespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
-
-    override var fallbackNamespace: MappingNamespaceTree.Namespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
+    override var namespace: Namespace by FinalizeOnRead(LazyMutable { provider.mcPatcher.prodNamespace })
 
     private var catchAWNs by FinalizeOnRead(false)
 
     override fun namespace(ns: String) {
         // kotlin reflection is weird
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = ModRemapProvider::class.getField("namespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
-        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(ns) })
-    }
-
-    override fun fallbackNamespace(ns: String) {
-        // kotlin reflection is weird
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = ModRemapProvider::class.getField("fallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
-        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(ns) })
+        val delegate: FinalizeOnRead<Namespace> = ModRemapProvider::class.getField("namespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
+        delegate.setValueIntl(LazyMutable { Namespace(ns) })
     }
 
     override fun catchAWNamespaceAssertion() {
@@ -108,24 +101,24 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         resolved
     }
 
-    fun getConfigForFile(file: File): Configuration? {
-        val name = file.nameWithoutExtension.substringBefore("-mapped-${provider.mappings.combinedNames}")
+    fun getConfigForFile(file: File): Configuration? = runBlocking {
+        val name = file.nameWithoutExtension.substringBefore("-mapped-${provider.mappings.combinedNames()}")
         for ((c, artifacts) in originalDepsFiles) {
             for (r in artifacts.values) {
                 if (r.nameWithoutExtension == name) {
                     project.logger.debug("[Unimined/ModRemapper] $file is an output of $c")
-                    return c
+                    return@runBlocking c
                 }
             }
         }
-        return null
+        null
     }
 
     private fun constructRemapper(
-        fromNs: MappingNamespaceTree.Namespace,
-        toNs: MappingNamespaceTree.Namespace,
+        fromNs: Namespace,
+        toNs: Namespace,
         mc: Path
-    ): CompletableFuture<Pair<TinyRemapper, MixinRemapExtension>> {
+    ): CompletableFuture<Pair<TinyRemapper, MixinRemapExtension>> = runBlocking {
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(
                 provider.mappings.getTRMappings(
@@ -154,7 +147,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 *(provider.minecraftLibraries.files.map { it.toPath() } + listOf(mc))
                     .toTypedArray()
             )
-        return future.thenApply { remapper to mixinExtension }
+        future.thenApply { remapper to mixinExtension }
     }
 
     override fun remapper(remapperBuilder: TinyRemapper.Builder.() -> Unit) {
@@ -162,82 +155,57 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
     }
 
     fun doRemap(
-        devNamespace: MappingNamespaceTree.Namespace = provider.mappings.devNamespace,
-        devFallbackNamespace: MappingNamespaceTree.Namespace = provider.mappings.devFallbackNamespace,
+        devNamespace: Namespace = provider.mappings.devNamespace,
         targetConfigurations: Map<Configuration, Configuration> = defaultedMapOf { it }
-    ) {
-        val path = provider.mappings.getRemapPath(
-            namespace,
-            fallbackNamespace,
-            devFallbackNamespace,
-            devNamespace
-        )
-        if (path.isNotEmpty()) {
-            project.logger.lifecycle("[Unimined/ModRemapper] Remapping mods from $namespace/$fallbackNamespace to $devNamespace/$devFallbackNamespace")
+    ) = runBlocking {
+        if (namespace != devNamespace) {
+            project.logger.lifecycle("[Unimined/ModRemapper] Remapping mods from $namespace to $devNamespace")
 
             // resolve original dep files
             val count = configurations.sumOf { originalDepsFiles[it].size }
             if (count == 0) {
                 project.logger.lifecycle("[Unimined/ModRemapper] No mods found for remapping")
-                return
+                return@runBlocking
             }
             project.logger.lifecycle("[Unimined/ModRemapper] Found $count mods for remapping")
             project.logger.info("[Unimined/ModRemapper] remapAtToLegacy: $remapAtToLegacy")
             project.logger.info("[Unimined/ModRemapper] mixinRemap: $mixinRemap")
-            project.logger.info(
-                "[Unimined/ModRemapper] Remap path $namespace -> ${
-                    path.joinToString(" -> ")
-                }"
-            )
+
             val mods = mutableMapOf<ResolvedArtifact, File>()
             for (map in originalDepsFiles.values) {
                 mods.putAll(map)
             }
-            var prevNamespace = namespace
-            var prevPrevNamespace = fallbackNamespace
-            for (i in path.indices) {
-                val step = path[i]
-                val mcNamespace = prevNamespace
-                val mcFallbackNamespace = prevPrevNamespace
-                val mc = provider.getMinecraft(
-                    mcNamespace,
-                    mcFallbackNamespace
-                )
-                val namespaceKey = "${step}-${prevNamespace}"
-                val forceReload = project.unimined.forceReload
-                val targets = mods.mapValues {
-                    it.value to (provider.mods as ModsProvider).modTransformFolder()
-                        .resolve("${it.key.file.nameWithoutExtension}-mapped-${provider.mappings.combinedNames}-${namespaceKey}.${it.key.file.extension}")
-                        .let { it to (it.exists() && !forceReload) }
-                }
-                project.logger.info("[Unimined/ModRemapper] Remapping Mods $step: ")
-                if (targets.values.none { !it.second.second }) {
-                    project.logger.info("[Unimined/ModRemapper]    Skipping remap step $step as all mods are already remapped")
-                    mods.clear()
-                    mods.putAll(targets.mapValues { it.value.second.first.toFile() })
-                    prevNamespace = step
-                    prevPrevNamespace = mcNamespace
-                    continue
-                }
+            val mc = provider.getMinecraft(namespace)
+            val forceReload = project.unimined.forceReload
+            val targets = mods.mapValues { mod ->
+                mod.value to (provider.mods as ModsProvider).modTransformFolder()
+                    .resolve("${mod.key.file.nameWithoutExtension}-mapped-${devNamespace}.${mod.key.file.extension}")
+                    .let { it to (it.exists() && !forceReload) }
+            }
+            project.logger.info("[Unimined/ModRemapper] Remapping Mods: ")
+            if (targets.values.none { !it.second.second }) {
+                project.logger.info("[Unimined/ModRemapper]    Skipping remap as all mods are already remapped")
+                mods.clear()
+                mods.putAll(targets.mapValues { it.value.second.first.toFile() })
+            } else {
                 for (mod in targets) {
-                    project.logger.info("[Unimined/ModRemapper]  ${if (mod.value.second.second) "skipping" else "        " } ${mod.value.first} -> ${mod.value.second.first}")
+                    project.logger.info("[Unimined/ModRemapper]  ${if (mod.value.second.second) "skipping" else "        "} ${mod.value.first} -> ${mod.value.second.first}")
                 }
-                val remapper = constructRemapper(prevNamespace, step, mc)
+                val remapper = constructRemapper(namespace, devNamespace, mc)
                 val tags = preRemapInternal(remapper, targets)
                 mods.clear()
                 mods.putAll(
                     remapInternal(
                         remapper.join(),
                         tags.join().nonNullValues(),
-                        prevNamespace to step
+                        devNamespace
                     )
                 )
                 mods.putAll(
                     tags.join().filterValues { it == null }.mapValues { targets[it.key]!!.second.first.toFile() }
                 )
-                prevNamespace = step
-                prevPrevNamespace = mcNamespace
             }
+
             // supply back to proper configs
             for (c in configurations) {
                 val outConf = targetConfigurations[c]
@@ -246,7 +214,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 for (artifact in originalDepsFiles[c].keys) {
                     if (artifact.extension == "pom") continue
                     val classifier = artifact.classifier?.let { "$it-" } ?: ""
-                    val output = "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${provider.mappings.combinedNames}-${devNamespace}-${devFallbackNamespace}@${artifact.extension ?: "jar"}"
+                    val output = "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${devNamespace}-@${artifact.extension ?: "jar"}"
                     outConf.dependencies.add(
                         project.dependencies.create(
                             output
@@ -299,18 +267,18 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
     private fun remapInternal(
         remapper: Pair<TinyRemapper, MixinRemapExtension>,
         deps: Map<ResolvedArtifact, Pair<InputTag, Pair<File, Path>>>,
-        remap: Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>
+        targetNs: Namespace
     ): Map<ResolvedArtifact, File> {
         val output = mutableMapOf<ResolvedArtifact, File>()
-        project.logger.info("[Unimined/ModRemapper] Remapping mods to ${remap.first}/${remap.second}")
+        project.logger.info("[Unimined/ModRemapper] Remapping mods to $targetNs")
         for ((artifact, tag) in deps) {
             try {
-                remapModInternal(remapper, artifact, tag, remap)
+                remapModInternal(remapper, artifact, tag, targetNs)
             } catch (e: Exception) {
                 // delete output
                 tag.second.second.deleteIfExists()
 
-                throw IllegalStateException("Failed to remap ${artifact.stringify()} to ${remap.first}/${remap.second}", e)
+                throw IllegalStateException("Failed to remap ${artifact.stringify()} to $targetNs", e)
             }
             output[artifact] = tag.second.second.toFile()
         }
@@ -322,12 +290,12 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
         remapper: Pair<TinyRemapper, MixinRemapExtension>,
         dep: ResolvedArtifact,
         input: Pair<InputTag, Pair<File, Path>>,
-        remap: Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>,
-    ) {
+        toNs: Namespace
+    ) = runBlocking {
         val inpFile = input.second.first
         val targetFile = input.second.second
         val manifest = (JarFile(inpFile).use { it.manifest }?.mainAttributes?.getValue("FMLAT") as String?)?.split(" ") ?: emptyList()
-        project.logger.info("[Unimined/ModRemapper] Remapping mod from $inpFile -> $targetFile with mapping target ${remap.first}/${remap.second}")
+        project.logger.info("[Unimined/ModRemapper] Remapping mod from $inpFile -> $targetFile with mapping target $toNs")
         try {
             OutputConsumerPath.Builder(targetFile).build().use {
                 it.addNonClassFiles(
@@ -335,13 +303,13 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                     remapper.first,
                     listOf(
                         AccessWidenerApplier.AwRemapper(
-                            if (remap.first.named) "named" else remap.first.name,
-                            if (remap.second.named) "named" else remap.second.name,
+                            AccessWidenerApplier.nsName(provider.mappings, namespace),
+                            AccessWidenerApplier.nsName(provider.mappings, toNs),
                             catchAWNs,
                             project.logger
                         ),
                         innerJarStripper,
-                        AccessTransformerApplier.AtRemapper(project.logger, remapAtToLegacy, manifest)
+                        AccessTransformerApplier.AtRemapper(project.logger, namespace, toNs, remapAtToLegacy, manifest, provider.mappings.resolve())
                     ) + NonClassCopyMode.FIX_META_INF.remappers
                 )
                 remapper.first.apply(it, input.first)

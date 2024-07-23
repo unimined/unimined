@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft
 
+import kotlinx.coroutines.runBlocking
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
@@ -8,12 +9,8 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
-import org.gradle.jvm.toolchain.JavaLanguageVersion
-import org.gradle.jvm.toolchain.JavaToolchainService
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.*
@@ -55,6 +52,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.task.RemapJarTaskImpl
 import xyz.wagyourtail.unimined.internal.mods.ModsProvider
 import xyz.wagyourtail.unimined.internal.runs.RunsProvider
 import xyz.wagyourtail.unimined.internal.source.SourceProvider
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.IOException
@@ -154,9 +153,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    private val minecraftFiles: Map<Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>, MinecraftJar> = defaultedMapOf {
+    private val minecraftFiles: Map<Namespace, MinecraftJar> = defaultedMapOf {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Providing minecraft files for $it")
-        val mc = if (side == EnvType.COMBINED) {
+        val mc = if (side == EnvType.JOINED) {
             val client = minecraftData.minecraftClient
             if (!client.path.exists()) throw IOException("minecraft path $client does not exist")
             val server = minecraftData.minecraftServer
@@ -165,15 +164,15 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             minecraftData.getMinecraft(side)
         }
         val path = (mcPatcher as AbstractMinecraftTransformer).afterRemap(
-            minecraftRemapper.provide((mcPatcher as AbstractMinecraftTransformer).transform(mc), it.first, it.second)
+            minecraftRemapper.provide((mcPatcher as AbstractMinecraftTransformer).transform(mc), it)
         )
         if (!path.path.exists()) throw IOException("minecraft path $path does not exist")
         path
     }
 
-    override fun getMinecraft(namespace: MappingNamespaceTree.Namespace, fallbackNamespace: MappingNamespaceTree.Namespace): Path {
+    override fun getMinecraft(namespace: Namespace): Path {
         synchronized(this) {
-            return minecraftFiles[namespace to fallbackNamespace]?.path
+            return minecraftFiles[namespace]?.path
                 ?: error("minecraft file not found for $namespace")
         }
     }
@@ -217,7 +216,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         project.logger.info("[Unimined] resolved $mojmapIvys")
     }
 
-    override fun mappings(action: MappingsConfig.() -> Unit) {
+    override fun mappings(action: MappingsConfig<*>.() -> Unit) {
         createMojmapIvy()
         if (lateActionsRunning) {
             mappings.action()
@@ -415,7 +414,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
             EnvType.SERVER -> {
                 provideRunServerTask("server", project.file("run/server"))
             }
-            EnvType.COMBINED -> {
+            EnvType.JOINED -> {
                 provideRunClientTask("client", project.file("run/client"))
                 provideRunServerTask("server", project.file("run/server"))
             }
@@ -441,7 +440,9 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         (mcPatcher as AbstractMinecraftTransformer).beforeMappingsResolve()
 
         // finalize mapping deps
-        project.logger.info("[Unimined/MappingProvider ${project.path}:${sourceSet.name}] $sourceSet mappings: ${mappings.getNamespaces()}")
+        runBlocking {
+            project.logger.info("[Unimined/MappingProvider ${project.path}:${sourceSet.name}] $sourceSet mappings: ${mappings.resolve().namespaces}")
+        }
 
         // late actions done
 
@@ -579,7 +580,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     fun getMcDevFile(): Path {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Providing minecraft dev file to $sourceSet")
-        return getMinecraft(mappings.devNamespace, mappings.devFallbackNamespace).also {
+        return getMinecraft(mappings.devNamespace).also {
             project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Provided minecraft dev file $it")
         }
     }
@@ -608,7 +609,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     override fun isMinecraftJar(path: Path) =
         minecraftFiles.values.any { it.path == path } ||
             when (side) {
-                EnvType.COMBINED -> {
+                EnvType.JOINED -> {
                     path == minecraftData.minecraftClientFile.toPath() ||
                     path == minecraftData.minecraftServerFile.toPath() ||
                     path == mergedOfficialMinecraftFile?.toPath()
@@ -616,7 +617,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
                 EnvType.CLIENT -> {
                     path == minecraftData.minecraftClientFile.toPath()
                 }
-                EnvType.SERVER, EnvType.DATAGEN -> {
+                EnvType.SERVER -> {
                     path == minecraftData.minecraftServerFile.toPath()
                 }
             }

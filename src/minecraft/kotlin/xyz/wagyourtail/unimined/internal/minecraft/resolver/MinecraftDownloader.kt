@@ -5,20 +5,19 @@ import com.google.gson.JsonParser
 import org.apache.commons.compress.archivers.zip.ZipFile
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.resolver.MinecraftData
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.InputStreamReader
-import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
 import kotlin.time.Duration.Companion.seconds
@@ -152,8 +151,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
             EnvType.CLIENT,
             version,
             listOf(),
-            provider.mappings.OFFICIAL,
-            provider.mappings.OFFICIAL,
+            Namespace("official"),
             null,
             "jar",
             clientPath
@@ -234,8 +232,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
             EnvType.SERVER,
             version,
             listOf(),
-            provider.mappings.OFFICIAL,
-            provider.mappings.OFFICIAL,
+            Namespace("official"),
             null,
             "jar",
             serverPath
@@ -285,33 +282,25 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     fun getMinecraft(envType: EnvType): MinecraftJar {
         return when (envType) {
             EnvType.CLIENT -> minecraftClient
-            EnvType.SERVER, EnvType.DATAGEN -> minecraftServer
-            EnvType.COMBINED -> throw IllegalStateException("This should be handled at mcprovider by calling transformer merge")
+            EnvType.SERVER -> minecraftServer
+            EnvType.JOINED -> throw IllegalStateException("This should be handled at mcprovider by calling transformer merge")
         }
     }
 
     fun getMappings(envType: EnvType): File {
         return when (envType) {
-            EnvType.CLIENT, EnvType.COMBINED -> officialClientMappingsFile
-            EnvType.SERVER, EnvType.DATAGEN -> officialServerMappingsFile
+            EnvType.CLIENT, EnvType.JOINED -> officialClientMappingsFile
+            EnvType.SERVER -> officialServerMappingsFile
         }
     }
 
     fun extract(dependency: Dependency, extract: Extract, path: Path) {
-        val resolved = provider.minecraftLibraries.resolvedConfiguration
-        resolved.getFiles { it == dependency }.forEach { file ->
-            ZipFile(file).use {
-                for (entry in it.entries) {
-                    if (entry.isDirectory) {
-                        continue
-                    }
-                    if (extract.exclude.any { entry.name.startsWith(it) }) {
-                        continue
-                    }
-                    val outPath = path.resolve(entry.name)
-                    outPath.parent.createDirectories()
-                    Files.copy(it.getInputStream(entry), outPath, StandardCopyOption.REPLACE_EXISTING)
-                }
+        val resolved = provider.minecraftLibraries
+        resolved.getFiles(dependency).forEach { file ->
+            file.toPath().forEachInZip { f, s ->
+                val outPath = path.resolve(f)
+                outPath.parent.createDirectories()
+                Files.copy(s, outPath, StandardCopyOption.REPLACE_EXISTING)
             }
         }
     }

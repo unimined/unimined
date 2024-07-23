@@ -5,11 +5,11 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.mapping.EnvType
 import java.io.InputStreamReader
 import java.nio.file.Files
 
@@ -87,9 +87,6 @@ open class QuiltMinecraftTransformer(
 
     override fun applyExtraLaunches() {
         super.applyExtraLaunches()
-        if (provider.side == EnvType.DATAGEN) {
-            TODO("DATAGEN not supported yet")
-        }
     }
 
     override fun applyClientRunTransform(config: RunConfig) {

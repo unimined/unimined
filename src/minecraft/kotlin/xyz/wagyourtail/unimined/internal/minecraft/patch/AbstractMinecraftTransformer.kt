@@ -10,8 +10,6 @@ import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.tree.ClassNode
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
@@ -23,6 +21,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixParamAnnotations
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.util.*
 import java.nio.file.FileSystem
 import java.nio.file.Files
@@ -38,7 +37,9 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     open val merger: ClassMerger = ClassMerger()
 
-    override val prodNamespace: MappingNamespaceTree.Namespace = provider.mappings.OFFICIAL
+    override val prodNamespace by lazy {
+        provider.mappings.checkedNs("official")
+    }
 
     override val addVanillaLibraries: Boolean by FinalizeOnRead(true)
 
@@ -58,7 +59,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     open fun mergedJar(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         return MinecraftJar(
             clientjar,
-            envType = EnvType.COMBINED,
+            envType = EnvType.JOINED,
             patches = listOf("$providerName-merged") + clientjar.patches + serverjar.patches
         )
     }
@@ -67,7 +68,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, ignoreFallback: Boolean): MinecraftJar {
         if (!canCombine) throw UnsupportedOperationException("Merging is not supported for this version")
-        if (clientjar.mappingNamespace != serverjar.mappingNamespace ||(!ignoreFallback && clientjar.fallbackNamespace != serverjar.fallbackNamespace)) {
+        if (clientjar.mappingNamespace != serverjar.mappingNamespace) {
             throw IllegalArgumentException("client and server jars must have the same mapping namespace")
         }
         val merged = mergedJar(clientjar, serverjar)
@@ -280,10 +281,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
         // get current mappings
         if (project.unimined.footgunChecks) {
             for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
-                if (provider.mappings.devNamespace != minecraftConfig.mappings.devNamespace ||
-                    provider.mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace
-                ) {
-                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${provider.sourceSet} on ${provider.mappings.devNamespace}/${provider.mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
+                if (provider.mappings.devNamespace != minecraftConfig.mappings.devNamespace) {
+                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${provider.sourceSet} on ${provider.mappings.devNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}")
                 }
                 if (provider.version != minecraftConfig.version) {
                     throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${provider.sourceSet} on ${provider.version} and $sourceSet on ${minecraftConfig.version}")

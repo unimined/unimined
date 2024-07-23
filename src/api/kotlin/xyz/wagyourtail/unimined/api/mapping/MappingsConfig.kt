@@ -2,56 +2,53 @@ package xyz.wagyourtail.unimined.api.mapping
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import kotlinx.coroutines.runBlocking
 import net.fabricmc.tinyremapper.IMappingProvider
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Dependency
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.api.mapping.dsl.MappingDSL
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.resolver.MappingResolver
+import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
+import xyz.wagyourtail.unimined.util.LazyMutable
+import xyz.wagyourtail.unimined.util.MavenCoords
+import java.io.File
 
 /**
  * @since 1.0.0
  */
 @Suppress("OVERLOADS_ABSTRACT", "UNUSED")
-abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConfig) : MappingNamespaceTree() {
+abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val minecraft: MinecraftConfig, subKey: String? = null) :
+    MappingResolver<T>(buildString {
+        append(project.path)
+        append(minecraft.sourceSet.name)
+        if (subKey != null) {
+            append("-$subKey")
+        }
+    }) {
 
     @set:ApiStatus.Internal
     @get:ApiStatus.Internal
-    abstract var devNamespace: Namespace
+    var devNamespace: Namespace by FinalizeOnRead(LazyMutable {
+        runBlocking {
+            resolve()
+        }
+        namespaces.entries.first { it.value }.key
+    })
 
-    @set:ApiStatus.Internal
-    @get:ApiStatus.Internal
-    abstract var devFallbackNamespace: Namespace
-
-    @get:ApiStatus.Internal
-    abstract val mappingsDeps: MutableMap<String, MappingDepConfig>
-
-    abstract var side: EnvType
-
-    abstract val hasStubs: Boolean
-
-    protected val legacyFabricMappingsVersionFinalize = FinalizeOnRead(1)
-    var legacyFabricMappingsVersion by legacyFabricMappingsVersionFinalize
-
-    abstract fun devNamespace(namespace: String)
-
-    abstract fun devFallbackNamespace(namespace: String)
-
-    fun isEmpty(): Boolean {
-        return mappingsDeps.isEmpty()
+    fun devNamespace(namespace: String) {
+        devNamespace = Namespace(namespace)
     }
 
-    @ApiStatus.Experimental
-    abstract fun removeKey(key: String)
-
     @JvmOverloads
-    abstract fun intermediary(key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
+    abstract fun intermediary(key: String = "intermediary", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     fun intermediary(
         key: String = "intermediary",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         intermediary(key) {
@@ -62,12 +59,12 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-    abstract fun calamus(key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
+    abstract fun calamus(key: String = "calamus", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     fun calamus(
-        key: String = "intermediary",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "calamus",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         calamus(key) {
@@ -78,21 +75,15 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-    abstract fun legacyIntermediary(revision: Int = 1, key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
-
-    @JvmOverloads
-    fun legacyIntermediary(revision: String, key: String = "intermediary", action: MappingDepConfig.() -> Unit = {}) {
-        legacyIntermediary(revision.toInt(), key, action)
-    }
+    abstract fun legacyIntermediary(key: String = "legacyIntermediary", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     fun legacyIntermediary(
-        revision: Int = 1,
-        key: String = "intermediary",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "legacy-intermediary",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        legacyIntermediary(revision, key) {
+        legacyIntermediary(key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -100,22 +91,12 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-    fun legacyIntermediary(
-        revision: String,
-        key: String = "intermediary",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        legacyIntermediary(revision.toInt(), key, action)
-    }
-
-    @JvmOverloads
-    abstract fun babricIntermediary(key: String = "intermediary", action: MappingDepConfig.() -> Unit = {})
+    abstract fun babricIntermediary(key: String = "babricIntermediary", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     fun babricIntermediary(
         key: String = "intermediary",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         babricIntermediary(key) {
@@ -126,30 +107,13 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-    abstract fun officialMappingsFromJar(key: String = "official", action: MappingDepConfig.() -> Unit = {})
-
-    @JvmOverloads
-    fun officialMappingsFromJar(
-        key: String = "official",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        officialMappingsFromJar(key) {
-            action.delegate = this
-            action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
-        }
-    }
-
-
-    @JvmOverloads
-    abstract fun searge(version: String = minecraft.version, key: String = "searge", action: MappingDepConfig.() -> Unit = {})
+    abstract fun searge(version: String = minecraft.version, key: String = "searge", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     fun searge(
         version: String = minecraft.version,
         key: String = "searge",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         searge(version, key) {
@@ -160,28 +124,12 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-    abstract fun hashed(key: String = "hashed", action: MappingDepConfig.() -> Unit = {})
-
-    @JvmOverloads
-    fun hashed(
-        key: String = "hashed",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        hashed(key) {
-            action.delegate = this
-            action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
-        }
-    }
-
-    @JvmOverloads
-    abstract fun mojmap(key: String = "mojmap", action: MappingDepConfig.() -> Unit = {})
+    abstract fun mojmap(key: String = "mojmap", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     fun mojmap(
         key: String = "mojmap",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         mojmap(key) {
@@ -192,14 +140,14 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-    abstract fun mcp(channel: String, version: String, key: String = "mcp", action: MappingDepConfig.() -> Unit = {})
+    abstract fun mcp(channel: String, version: String, key: String = "mcp", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     fun mcp(
         channel: String,
         version: String,
         key: String = "mcp",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         mcp(channel, version, key) {
@@ -210,13 +158,13 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-    abstract fun retroMCP(version: String = minecraft.version, key: String = "mcp", action: MappingDepConfig.() -> Unit = {})
+    abstract fun retroMCP(version: String = minecraft.version, key: String = "retroMCP", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     fun retroMCP(
         version: String = minecraft.version,
-        key: String = "mcp",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "retroMCP",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         retroMCP(version, key) {
@@ -227,10 +175,10 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-    abstract fun yarn(build: Int, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+    abstract fun yarn(build: Int, key: String = "yarn", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
-    fun yarn(build: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+    fun yarn(build: String, key: String = "yarn", action: MappingEntry.() -> Unit = {}) {
         yarn(build.toInt(), key, action)
     }
 
@@ -238,7 +186,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     fun yarn(
         build: Int,
         key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         yarn(build, key) {
@@ -252,7 +200,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     fun yarn(
         build: String,
         key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         yarn(build.toInt(), key, action)
@@ -261,18 +209,18 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
 
 
     @JvmOverloads
-    abstract fun yarnv1(build: Int, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+    abstract fun yarnv1(build: Int, key: String = "yarnv1", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
-    fun yarnv1(build: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+    fun yarnv1(build: String, key: String = "yarnv1", action: MappingEntry.() -> Unit = {}) {
         yarnv1(build.toInt(), key, action)
     }
 
     @JvmOverloads
     fun yarnv1(
         build: Int,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "yarnv1",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         yarnv1(build, key) {
@@ -285,26 +233,26 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     @JvmOverloads
     fun yarnv1(
         build: String,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "yarnv1",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         yarn(build.toInt(), key, action)
     }
 
     @JvmOverloads
-    abstract fun feather(build: Int, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+    abstract fun feather(build: Int, key: String = "feather", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
-    fun feather(build: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+    fun feather(build: String, key: String = "feather", action: MappingEntry.() -> Unit = {}) {
         feather(build.toInt(), key, action)
     }
 
     @JvmOverloads
     fun feather(
         build: Int,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "feather",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         feather(build, key) {
@@ -317,40 +265,29 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     @JvmOverloads
     fun feather(
         build: String,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "feather",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         feather(build.toInt(), key, action)
     }
 
     @JvmOverloads
-    abstract fun legacyYarn(build: Int, revision: Int = 1, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+    abstract fun legacyYarn(build: Int, key: String = "legacyYarn", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
-    fun legacyYarn(build: String, revision: Int = 1, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
-        legacyYarn(build.toInt(), revision, key, action)
-    }
-
-    @JvmOverloads
-    fun legacyYarn(build: Int, revision: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
-        legacyYarn(build, revision.toInt(), key, action)
-    }
-
-    @JvmOverloads
-    fun legacyYarn(build: String, revision: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
-        legacyYarn(build.toInt(), revision.toInt(), key, action)
+    fun legacyYarn(build: String, key: String = "legacyYarn", action: MappingEntry.() -> Unit = {}) {
+        legacyYarn(build.toInt(), key, action)
     }
 
     @JvmOverloads
     fun legacyYarn(
         build: Int,
-        revision: Int = 1,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "legacy-yarn",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        legacyYarn(build, revision, key) {
+        legacyYarn(build, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -358,51 +295,18 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     }
 
     @JvmOverloads
-    fun legacyYarn(
-        build: String,
-        revision: Int = 1,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        legacyYarn(build.toInt(), revision, key, action)
-    }
+    abstract fun barn(build: Int, key: String = "barn", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
-    fun legacyYarn(
-        build: Int,
-        revision: String,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        legacyYarn(build, revision.toInt(), key, action)
-    }
-
-    @JvmOverloads
-    fun legacyYarn(
-        build: String,
-        revision: String,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        legacyYarn(build.toInt(), revision.toInt(), key, action)
-    }
-
-    @JvmOverloads
-    abstract fun barn(build: Int, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
-
-    @JvmOverloads
-    fun barn(build: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {}) {
+    fun barn(build: String, key: String = "barn", action: MappingEntry.() -> Unit = {}) {
         barn(build.toInt(), key, action)
     }
 
     @JvmOverloads
     fun barn(
         build: Int,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "barn",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         barn(build, key) {
@@ -415,21 +319,21 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     @JvmOverloads
     fun barn(
         build: String,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "barn",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         barn(build.toInt(), key, action)
     }
 
     @JvmOverloads
-    abstract fun biny(commitName: String, key: String = "yarn", action: MappingDepConfig.() -> Unit = {})
+    abstract fun biny(commitName: String, key: String = "biny", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     fun biny(
         commitName: String,
-        key: String = "yarn",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "biny",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         biny(commitName, key) {
@@ -441,22 +345,21 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
 
 
     @JvmOverloads
-    abstract fun quilt(build: Int, classifier: String = "intermediary-v2", key: String = "quilt", action: MappingDepConfig.() -> Unit = {})
+    abstract fun quilt(build: Int, key: String = "quilt", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
-    fun quilt(build: String, classifier: String = "intermediary-v2", key: String = "quilt", action: MappingDepConfig.() -> Unit = {}) {
-        quilt(build.toInt(), classifier, key, action)
+    fun quilt(build: String, key: String = "quilt", action: MappingEntry.() -> Unit = {}) {
+        quilt(build.toInt(), key, action)
     }
 
     @JvmOverloads
     fun quilt(
         build: Int,
-        classifier: String = "intermediary-v2",
         key: String = "quilt",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        quilt(build, classifier, key) {
+        quilt(build, key) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
@@ -466,22 +369,21 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     @JvmOverloads
     fun quilt(
         build: String,
-        classifier: String = "intermediary-v2",
         key: String = "quilt",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
-        quilt(build.toInt(), classifier, key, action)
+        quilt(build.toInt(), key, action)
     }
 
     @JvmOverloads
-    abstract fun forgeBuiltinMCP(version: String, key: String = "mcp", action: MappingDepConfig.() -> Unit = {})
+    abstract fun forgeBuiltinMCP(version: String, key: String = "forgeBuiltinMCP", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     fun forgeBuiltinMCP(
         version: String,
-        key: String = "mcp",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "forgeBuiltinMCP",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         forgeBuiltinMCP(version, key) {
@@ -497,7 +399,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         version: String,
         checked: Boolean = false,
         key: String = "parchment",
-        action: MappingDepConfig.() -> Unit = {}
+        action: MappingEntry.() -> Unit = {}
     )
 
     @JvmOverloads
@@ -506,7 +408,7 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         version: String,
         checked: Boolean = false,
         key: String = "parchment",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         parchment(mcVersion, version, checked, key) {
@@ -519,15 +421,15 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
     @JvmOverloads
     abstract fun spigotDev(
         mcVersion: String = minecraft.version,
-        key: String = "spigot_dev",
-        action: MappingDepConfig.() -> Unit = {}
+        key: String = "spigotDev",
+        action: MappingEntry.() -> Unit = {}
     )
 
     @JvmOverloads
     fun spigotDev(
         mcVersion: String = minecraft.version,
-        key: String = "spigot_dev",
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        key: String = "spigotDev",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         spigotDev(mcVersion, key) {
@@ -537,38 +439,20 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    @JvmOverloads
     @ApiStatus.Experimental
-    abstract fun postProcess(key: String, mappings: MappingsConfig.() -> Unit, merger: MappingDepConfig.() -> Unit)
-
-    @ApiStatus.Experimental
-    fun postProcess(
-        key: String,
-        @DelegatesTo(value = MappingsConfig::class, strategy = Closure.DELEGATE_FIRST)
-        mappings: Closure<*>,
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
-        merger: Closure<*>
-    ) {
-        postProcess(key, {
-            mappings.delegate = this
-            mappings.resolveStrategy = Closure.DELEGATE_FIRST
-            mappings.call()
-        }) {
-            merger.delegate = this
-            merger.resolveStrategy = Closure.DELEGATE_FIRST
-            merger.call()
-        }
-    }
+    abstract fun mapping(dependency: String, key: String = MavenCoords(dependency).artifact, action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     @ApiStatus.Experimental
-    abstract fun mapping(dependency: Any, key: String = if (dependency is Dependency) dependency.name else dependency.toString(), action: MappingDepConfig.() -> Unit = {})
+    abstract fun mapping(dependency: File, key: String = dependency.nameWithoutExtension, action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
     @ApiStatus.Experimental
     fun mapping(
-        dependency: Any,
-        key: String = dependency.toString(),
-        @DelegatesTo(value = MappingDepConfig::class, strategy = Closure.DELEGATE_FIRST)
+        dependency: String,
+        key: String = MavenCoords(dependency).artifact,
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         mapping(dependency, key) {
@@ -578,13 +462,30 @@ abstract class MappingsConfig(val project: Project, val minecraft: MinecraftConf
         }
     }
 
+    abstract fun hasStubs(): Boolean
+
+    abstract fun stubs(vararg namespaces: String, apply: MappingDSL.() -> Unit)
+
+    fun stubs(
+        namespaces: List<String>,
+        @DelegatesTo(value = MappingDSL::class, strategy = Closure.DELEGATE_FIRST)
+        apply: Closure<*>
+    ) {
+        stubs(*namespaces.toTypedArray()) {
+            apply.delegate = this
+            apply.resolveStrategy = Closure.DELEGATE_FIRST
+            apply.call()
+        }
+    }
+
+    override suspend fun resolve(): MemoryMappingTree {
+        return super.resolve()
+    }
+
     @ApiStatus.Internal
-    abstract fun getTRMappings(
+    abstract suspend fun getTRMappings(
         remap: Pair<Namespace, Namespace>,
         remapLocals: Boolean = false
     ): (IMappingProvider.MappingAcceptor) -> Unit
 
-    @get:ApiStatus.Internal
-    abstract val combinedNames: String
-    abstract val stub: MemoryMapping
 }

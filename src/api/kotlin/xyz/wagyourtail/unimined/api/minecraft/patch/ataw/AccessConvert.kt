@@ -1,6 +1,6 @@
 package xyz.wagyourtail.unimined.api.minecraft.patch.ataw
 
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.mapping.Namespace
 import java.io.File
 
 /**
@@ -57,7 +57,7 @@ interface AccessConvert {
     /*
      * merge access wideners to an output file
      */
-    fun mergeAws(namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File
+    fun mergeAws(namespace: Namespace, inputs: List<File>): File
 
     /*
      * merge access wideners to an output file
@@ -67,17 +67,17 @@ interface AccessConvert {
     /*
      * merge access wideners to an output file
      */
-    fun mergeAws(output: File, namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File
+    fun mergeAws(output: File, namespace: Namespace, inputs: List<File>): File
 
     /**
      * convert access transformer to access widener.
      */
-    fun at2aw(input: String, output: String, namespace: MappingNamespaceTree.Namespace): File
+    fun at2aw(input: String, output: String, namespace: Namespace): File
 
     /**
      * convert access transformer to access widener.
      */
-    fun at2aw(input: String, namespace: MappingNamespaceTree.Namespace): File
+    fun at2aw(input: String, namespace: Namespace): File
 
     /**
      * convert access transformer to access widener.
@@ -97,7 +97,7 @@ interface AccessConvert {
     /**
      * convert access transformer to access widener.
      */
-    fun at2aw(input: File, namespace: MappingNamespaceTree.Namespace): File
+    fun at2aw(input: File, namespace: Namespace): File
 
     /**
      * convert access transformer to access widener.
@@ -107,5 +107,5 @@ interface AccessConvert {
     /**
      * convert access transformer to access widener.
      */
-    fun at2aw(input: File, output: File, namespace: MappingNamespaceTree.Namespace): File
+    fun at2aw(input: File, output: File, namespace: Namespace): File
 }

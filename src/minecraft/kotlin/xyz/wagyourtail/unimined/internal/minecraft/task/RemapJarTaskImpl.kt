@@ -1,12 +1,12 @@
 package xyz.wagyourtail.unimined.internal.minecraft.task
 
+import kotlinx.coroutines.runBlocking
 import net.fabricmc.loom.util.kotlin.KotlinClasspathService
 import net.fabricmc.loom.util.kotlin.KotlinRemapperClassloader
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
@@ -14,6 +14,7 @@ import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerApplier
 import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.*
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -25,18 +26,13 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     private var mixinRemapOptions: MixinRemapOptions.() -> Unit by FinalizeOnRead {}
 
     override fun devNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
-        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
-    }
-
-    override fun devFallbackNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("devFallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
-        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
+        val delegate: FinalizeOnRead<Namespace> = RemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
+        delegate.setValueIntl(LazyMutable { Namespace(namespace) })
     }
 
     override fun prodNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
-        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
+        val delegate: FinalizeOnRead<Namespace> = RemapJarTask::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
+        delegate.setValueIntl(LazyMutable { Namespace(namespace) })
     }
 
     override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
@@ -55,59 +51,37 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     fun run() {
         val prodNs = prodNamespace ?: provider.mcPatcher.prodNamespace!!
         val devNs = devNamespace ?: provider.mappings.devNamespace!!
-        val devFNs = devFallbackNamespace ?: provider.mappings.devFallbackNamespace!!
-
-        val path = provider.mappings.getRemapPath(
-            devNs,
-            devFNs,
-            prodNs,
-            prodNs
-        )
 
         val inputFile = provider.mcPatcher.beforeRemapJarTask(this, inputFile.get().asFile.toPath())
 
-        if (path.isEmpty()) {
+        if (devNs == prodNs) {
             project.logger.lifecycle("[Unimined/RemapJar ${this.path}] detected empty remap path, jumping to after remap tasks")
             provider.mcPatcher.afterRemapJarTask(this, inputFile)
             afterRemap(inputFile)
             return
         }
 
-        project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.name} from $devNs/$devFNs to $prodNs")
-        project.logger.info("[Unimined/RemapJar ${this.path}]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
-        var prevTarget = inputFile
-        var prevNamespace = devNs
-        var prevPrevNamespace = devFNs
-        for (i in path.indices) {
-            val step = path[i]
-            project.logger.info("[Unimined/RemapJar ${this.path}]    $step")
-            val nextTarget = temporaryDir.toPath().resolve("${inputFile.nameWithoutExtension}-temp-${step.name}.jar")
-            nextTarget.deleteIfExists()
+        project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.name} from $devNs to $prodNs")
+        val prodMapped = temporaryDir.toPath().resolve("${inputFile.nameWithoutExtension}-temp-${prodNs}.jar")
+        prodMapped.deleteIfExists()
 
-            val mc = provider.getMinecraft(
-                prevNamespace,
-                prevPrevNamespace
-            )
-            val classpath = provider.mods.getClasspathAs(
-                prevNamespace,
-                prevPrevNamespace,
-                provider.sourceSet.compileClasspath.files
-            ).map { it.toPath() }.filter { it.exists() && !provider.isMinecraftJar(it) }
+        val mc = provider.getMinecraft(devNs)
 
-            project.logger.debug("[Unimined/RemapJar ${path}] classpath: ")
-            classpath.forEach {
-                project.logger.debug("[Unimined/RemapJar ${path}]    $it")
-            }
+        val classpath = provider.mods.getClasspathAs(
+            devNs,
+            provider.sourceSet.compileClasspath.files
+        ).map { it.toPath() }.filter { it.exists() && !provider.isMinecraftJar(it) }
 
-            remapToInternal(prevTarget, nextTarget, prevNamespace, step, (classpath + listOf(mc)).toTypedArray())
-
-            prevTarget = nextTarget
-            prevPrevNamespace = prevNamespace
-            prevNamespace = step
+        project.logger.debug("[Unimined/RemapJar ${path}] classpath: ")
+        classpath.forEach {
+            project.logger.debug("[Unimined/RemapJar ${path}]    $it")
         }
+
+        remapToInternal(inputFile, prodMapped, devNs, prodNs, (classpath + listOf(mc)).toTypedArray())
+
         project.logger.info("[Unimined/RemapJar ${path}] after remap tasks started ${System.currentTimeMillis()}")
-        provider.mcPatcher.afterRemapJarTask(this, prevTarget)
-        afterRemap(prevTarget)
+        provider.mcPatcher.afterRemapJarTask(this, prodMapped)
+        afterRemap(prodMapped)
         project.logger.info("[Unimined/RemapJar ${path}] after remap tasks finished ${System.currentTimeMillis()}")
     }
 
@@ -132,10 +106,10 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     protected fun remapToInternal(
         from: Path,
         target: Path,
-        fromNs: MappingNamespaceTree.Namespace,
-        toNs: MappingNamespaceTree.Namespace,
+        fromNs: Namespace,
+        toNs: Namespace,
         classpathList: Array<Path>
-    ) {
+    ) = runBlocking {
         project.logger.info("[Unimined/RemapJar ${path}] remapping $fromNs -> $toNs (start time: ${System.currentTimeMillis()})")
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(
@@ -169,22 +143,27 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
             project.logger.info("[Unimined/RemapJar ${path}] writing output: $target (time: ${System.currentTimeMillis()})")
             target.parent.createDirectories()
             try {
-                OutputConsumerPath.Builder(target).build().use {
-                    it.addNonClassFiles(
-                        from,
-                        remapper,
-                        listOf(
-                            AccessWidenerApplier.AwRemapper(
-                                if (fromNs.named) "named" else fromNs.name,
-                                if (toNs.named) "named" else toNs.name
-                            ),
-                            AccessTransformerApplier.AtRemapper(
-                                project.logger,
-                                remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher<*>)?.remapAtToLegacy == true)!!
-                            ),
+                runBlocking {
+                    OutputConsumerPath.Builder(target).build().use {
+                        it.addNonClassFiles(
+                            from,
+                            remapper,
+                            listOf(
+                                AccessWidenerApplier.AwRemapper(
+                                    AccessWidenerApplier.nsName(provider.mappings, fromNs),
+                                    AccessWidenerApplier.nsName(provider.mappings, toNs),
+                                ),
+                                AccessTransformerApplier.AtRemapper(
+                                    project.logger,
+                                    fromNs,
+                                    toNs,
+                                    isLegacy = remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher<*>)?.remapAtToLegacy == true)!!,
+                                    mappings = provider.mappings.resolve()
+                                ),
+                            )
                         )
-                    )
-                    remapper.apply(it, tag)
+                        remapper.apply(it, tag)
+                    }
                 }
             } catch (e: Exception) {
                 target.deleteIfExists()

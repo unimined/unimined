@@ -5,8 +5,8 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.file.FileCollection
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.mapping.Namespace
 import java.nio.file.FileSystem
 import java.nio.file.Path
 
@@ -28,7 +28,7 @@ interface MinecraftPatcher {
      * the namespace to use for the production jar.
      */
     @get:ApiStatus.Internal
-    val prodNamespace: MappingNamespaceTree.Namespace
+    val prodNamespace: Namespace
 
     /**
      * @since 0.4.2

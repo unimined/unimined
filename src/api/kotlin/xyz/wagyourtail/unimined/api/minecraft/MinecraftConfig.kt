@@ -9,7 +9,6 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
@@ -20,6 +19,8 @@ import xyz.wagyourtail.unimined.api.runs.RunsConfig
 import xyz.wagyourtail.unimined.api.source.SourceConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.MustSet
@@ -72,7 +73,7 @@ import java.nio.file.Path
 abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) : PatchProviders {
 
     @set:ApiStatus.Internal
-    var side by FinalizeOnRead(LazyMutable { if (!mcPatcher.canCombine) error("must set \"side\" for minecraft to either \"client\" or \"server\"") else EnvType.COMBINED })
+    var side by FinalizeOnRead(LazyMutable { if (!mcPatcher.canCombine) error("must set \"side\" for minecraft to either \"client\" or \"server\"") else EnvType.JOINED })
 
     /**
      * sets the side for minecraft (client, server, combined, or datagen)
@@ -103,7 +104,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     @set:ApiStatus.Internal
     abstract var mcPatcher: MinecraftPatcher
 
-    abstract val mappings: MappingsConfig
+    abstract val mappings: MappingsConfig<*>
     abstract val mods: ModsConfig
     abstract val runs: RunsConfig
     abstract val minecraftData: MinecraftData
@@ -188,7 +189,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         this.version = version
     }
 
-    abstract fun mappings(action: MappingsConfig.() -> Unit)
+    abstract fun mappings(action: MappingsConfig<*>.() -> Unit)
 
     fun mappings(
         @DelegatesTo(value = MappingsConfig::class, strategy = Closure.DELEGATE_FIRST)
@@ -302,8 +303,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
 
     @ApiStatus.Internal
     abstract fun getMinecraft(
-        namespace: MappingNamespaceTree.Namespace,
-        fallbackNamespace: MappingNamespaceTree.Namespace
+        namespace: Namespace,
     ): Path
 
     @get:ApiStatus.Internal

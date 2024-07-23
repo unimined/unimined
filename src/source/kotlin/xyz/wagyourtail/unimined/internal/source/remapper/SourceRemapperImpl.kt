@@ -1,15 +1,17 @@
 package xyz.wagyourtail.unimined.internal.source.remapper
 
+import kotlinx.coroutines.runBlocking
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.FileCollection
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.source.remapper.SourceRemapper
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.source.SourceProvider
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.formats.srg.SrgWriter
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.nio.file.Path
@@ -40,59 +42,22 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
     val tempDir = project.unimined.getLocalCache().resolve("source-remap-cache")
 
 
-    override fun remap(inputOutput: Map<Path, Path>, classpath: FileCollection, source: MappingNamespaceTree.Namespace, sourceFallback: MappingNamespaceTree.Namespace, targetFallback: MappingNamespaceTree.Namespace, target: MappingNamespaceTree.Namespace) {
-        val path = provider.minecraft.mappings.getRemapPath(
-            source,
-            sourceFallback,
-            targetFallback,
-            target
+    override fun remap(inputOutput: Map<Path, Path>, classpath: FileCollection, source: Namespace, target: Namespace) {
+
+        val mc = provider.minecraft.getMinecraft(
+            source
         )
 
-        if (path.isEmpty()) {
-            project.logger.info("[Unimined/SourceRemapper] detected empty remap path, jumping to after remap tasks")
-            // copy input to output
-            inputOutput.forEach { (input, output) ->
-                if (input.exists()) {
-                    output.parent.createDirectories()
-                    input.copyTo(output, overwrite = true)
-                }
-            }
-        }
-
-        // create temp files for remap
-        val inputs = inputOutput.keys.toList()
-        var prevOutputs = inputs
-        var prevNamespace = source
-        var prevPrevNamespace = sourceFallback
-        for (i in path.indices) {
-            val step = path[i]
-            project.logger.info("[Unimined/SourceRemapper]    $step")
-            val targets = if (step == target) {
-                inputs.map { inputOutput.getValue(it) }
-            } else {
-                inputs.map { tempDir.resolve("input-remapped-${it}-${step.name}") }
-            }
-
-            val mc = provider.minecraft.getMinecraft(
-                prevNamespace,
-                prevPrevNamespace
-            )
-
-            remapIntl(
-                prevOutputs.zip(targets).toMap(),
-                classpath,
-                mc,
-                prevNamespace,
-                step
-            )
-
-            prevOutputs = targets
-            prevPrevNamespace = prevNamespace
-            prevNamespace = step
-        }
+        remapIntl(
+            inputOutput,
+            classpath,
+            mc,
+            source,
+            target
+        )
     }
 
-    private fun remapIntl(inputOutput: Map<Path, Path>, classpath: FileCollection, minecraft: Path, source: MappingNamespaceTree.Namespace, target: MappingNamespaceTree.Namespace) {
+    private fun remapIntl(inputOutput: Map<Path, Path>, classpath: FileCollection, minecraft: Path, source: Namespace, target: Namespace) = runBlocking {
         if (sourceRemapper.dependencies.isEmpty()) {
             remapper("1.0.3-SNAPSHOT")
         }
@@ -102,12 +67,12 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
         // export mappings
         val export = ExportMappingsTaskImpl.ExportImpl(provider.minecraft.mappings as MappingsProvider).apply {
             location = mappingFile.toFile()
-            type = ExportMappingsTask.MappingExportTypes.SRG
+            type = SrgWriter
             sourceNamespace = source
             targetNamespace = setOf(target)
         }
         export.validate()
-        export.exportFunc((provider.minecraft.mappings as MappingsProvider).mappingTree)
+        export.exportFunc((provider.minecraft.mappings as MappingsProvider).resolve())
 
         val roots = inputOutput.filter { it.key.exists() }.map { sourceDir ->
             sourceDir.key to inputOutput.getValue(sourceDir.key)

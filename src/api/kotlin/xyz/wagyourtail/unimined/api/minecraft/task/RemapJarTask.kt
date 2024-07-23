@@ -2,8 +2,6 @@ package xyz.wagyourtail.unimined.api.minecraft.task
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import groovy.transform.stc.ClosureParams
-import groovy.transform.stc.SimpleType
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -12,8 +10,8 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 
 /**
@@ -28,15 +26,11 @@ abstract class RemapJarTask : Jar() {
 
     @get:Internal
     @set:Internal
-    var devNamespace: MappingNamespaceTree.Namespace? by FinalizeOnRead(null)
+    var devNamespace: Namespace? by FinalizeOnRead(null)
 
     @get:Internal
     @set:Internal
-    var devFallbackNamespace: MappingNamespaceTree.Namespace? by FinalizeOnRead(null)
-
-    @get:Internal
-    @set:Internal
-    var prodNamespace: MappingNamespaceTree.Namespace? by FinalizeOnRead(null)
+    var prodNamespace: Namespace? by FinalizeOnRead(null)
 
     /**
      * whether to remap AccessTransformers to the legacy format (<=1.7.10)

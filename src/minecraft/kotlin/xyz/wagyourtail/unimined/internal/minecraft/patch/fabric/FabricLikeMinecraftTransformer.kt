@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.fabric
 
 import com.google.gson.*
+import kotlinx.coroutines.runBlocking
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
@@ -8,12 +9,9 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
-import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
@@ -26,6 +24,10 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWi
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseLibrary
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.formats.tiny.v2.TinyV2Writer
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.InputStreamReader
@@ -73,21 +75,21 @@ abstract class FabricLikeMinecraftTransformer(
 
     override val merger: ClassMerger = ClassMerger(
         { node, env ->
-            if (env == EnvType.COMBINED) return@ClassMerger
+            if (env == EnvType.JOINED) return@ClassMerger
             if (isAnonClass(node)) return@ClassMerger
             val visitor = node.visitAnnotation(ENVIRONMENT, true)
             visitor.visitEnum("value", ENV_TYPE, env.name)
             visitor.visitEnd()
         },
         { node, env ->
-            if (env != EnvType.COMBINED) {
+            if (env != EnvType.JOINED) {
                 val visitor = node.visitAnnotation(ENVIRONMENT, true)
                 visitor.visitEnum("value", ENV_TYPE, env.name)
                 visitor.visitEnd()
             }
         },
         { node, env ->
-            if (env != EnvType.COMBINED) {
+            if (env != EnvType.JOINED) {
                 val visitor = node.visitAnnotation(ENVIRONMENT, true)
                 visitor.visitEnum("value", ENV_TYPE, env.name)
                 visitor.visitEnd()
@@ -95,7 +97,7 @@ abstract class FabricLikeMinecraftTransformer(
         }
     )
 
-    override var prodNamespace by FinalizeOnRead(LazyMutable { provider.mappings.getNamespace("intermediary") })
+    override var prodNamespace by FinalizeOnRead(LazyMutable { provider.mappings.checkedNs("intermediary") })
 
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
@@ -105,15 +107,23 @@ abstract class FabricLikeMinecraftTransformer(
             .createDirectories()
             .resolve("intermediary2named.jar")
             .apply {
+                val file = resolveSibling("mappings.tiny").toFile()
                 val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
-                    location = toFile()
-                    type = ExportMappingsTask.MappingExportTypes.TINY_V2
+                    location = file
+                    type = TinyV2Writer
                     sourceNamespace = prodNamespace
                     targetNamespace = setOf(provider.mappings.devNamespace)
                     renameNs[provider.mappings.devNamespace] = "named"
                 }
                 export.validate()
-                export.exportFunc(provider.mappings.mappingTree)
+                runBlocking {
+                    export.exportFunc(provider.mappings.resolve())
+                }
+                ZipArchiveOutputStream(outputStream()).use {
+                    it.putArchiveEntry(ZipArchiveEntry("mappings/mappings.tiny"))
+                    it.write(file.readBytes())
+                    it.closeArchiveEntry()
+                }
             }
     })
 
@@ -122,8 +132,8 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     override fun prodNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = FabricLikeMinecraftTransformer::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
-        delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
+        val delegate: FinalizeOnRead<Namespace> = FabricLikeMinecraftTransformer::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
+        delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })
     }
 
     @Deprecated("", replaceWith = ReplaceWith("prodNamespace(namespace)"))
@@ -157,8 +167,8 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     override fun apply() {
-        val client = provider.side == EnvType.CLIENT || provider.side == EnvType.COMBINED
-        val server = provider.side == EnvType.SERVER || provider.side == EnvType.COMBINED
+        val client = provider.side == EnvType.CLIENT || provider.side == EnvType.JOINED
+        val server = provider.side == EnvType.SERVER || provider.side == EnvType.JOINED
 
         var artifactString = ""
         if (fabricDep.group != null) {
@@ -209,9 +219,7 @@ abstract class FabricLikeMinecraftTransformer(
         mainClass = json.get("mainClass")?.asJsonObject
 
         if (devMappings != null) {
-            provider.minecraftLibraries.dependencies.add(
-                project.dependencies.create(project.files(devMappings))
-            )
+            provider.sourceSet.runtimeClasspath += project.files(devMappings!!)
         }
 
         // mixins get remapped at runtime, so we don't need to on fabric
@@ -266,7 +274,7 @@ abstract class FabricLikeMinecraftTransformer(
     }
 
     abstract fun collectInterfaceInjections(baseMinecraft: MinecraftJar, injections: HashMap<String, List<String>>)
-    fun collectInterfaceInjections(baseMinecraft: MinecraftJar, injections: HashMap<String, List<String>>, interfaces: JsonObject) {
+    fun collectInterfaceInjections(baseMinecraft: MinecraftJar, injections: HashMap<String, List<String>>, interfaces: JsonObject) = runBlocking {
         injections.putAll(interfaces.entrySet()
             .filterNotNull()
             .filter { it.key != null && it.value != null && it.value.isJsonArray }
@@ -280,20 +288,16 @@ abstract class FabricLikeMinecraftTransformer(
             .map {
                 var target = it.first
 
-                val clazz = provider.mappings.mappingTree.getClass(
-                    target,
-                    provider.mappings.mappingTree.getNamespaceId(prodNamespace.name)
+                val clazz = provider.mappings.resolve().getClass(
+                    prodNamespace,
+                    InternalName.read(target),
                 )
 
                 if (clazz != null) {
-                    var newTarget = clazz.getName(provider.mappings.mappingTree.getNamespaceId(baseMinecraft.mappingNamespace.name))
-
-                    if (newTarget == null) {
-                        newTarget = clazz.getName(provider.mappings.mappingTree.getNamespaceId(baseMinecraft.fallbackNamespace.name))
-                    }
+                    var newTarget = clazz.getName(baseMinecraft.mappingNamespace)
 
                     if (newTarget != null) {
-                        target = newTarget
+                        target = newTarget.value
                     }
                 }
 
@@ -309,9 +313,8 @@ abstract class FabricLikeMinecraftTransformer(
         // resolve intermediary classpath
         val classpath = (provider.mods.getClasspathAs(
             prodNamespace,
-            prodNamespace,
             provider.sourceSet.runtimeClasspath.filter { !provider.isMinecraftJar(it.toPath()) }.toSet()
-        ) + provider.getMinecraft(prodNamespace, prodNamespace).toFile()).filter { it.exists() && !it.isDirectory && (it.extension == "jar" || it.extension == "zip") }
+        ) + provider.getMinecraft(prodNamespace).toFile()).filter { it.exists() && !it.isDirectory && (it.extension == "jar" || it.extension == "zip") }
         // write to file
         intermediaryClasspath.writeText(classpath.joinToString(File.pathSeparator), options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
     }

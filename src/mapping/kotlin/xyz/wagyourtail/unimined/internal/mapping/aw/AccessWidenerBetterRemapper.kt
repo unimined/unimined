@@ -1,11 +1,12 @@
 package xyz.wagyourtail.unimined.internal.mapping.aw
 
+import kotlinx.coroutines.runBlocking
 import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor
 import net.fabricmc.tinyremapper.TinyRemapper
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-
+import xyz.wagyourtail.unimined.mapping.Namespace
 
 /**
  * @param delegate      The visitor to forward the remapped information to.
@@ -13,18 +14,18 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
  */
 class AccessWidenerBetterRemapper(
     private val delegate: AccessWidenerVisitor,
-    private val mappingsProvider: MappingsConfig,
+    private val mappingsProvider: MappingsConfig<*>,
     private val toNamespace: String,
     private val mcProvider: MinecraftConfig
 ): AccessWidenerVisitor {
     private var remapper: TinyRemapper? = null
 
-    override fun visitHeader(namespace: String) {
+    override fun visitHeader(namespace: String) = runBlocking {
         if (namespace != toNamespace) {
             remapper = TinyRemapper.newRemapper()
                 .withMappings(
                     mappingsProvider.getTRMappings(
-                        mcProvider.mappings.getNamespace(namespace) to mcProvider.mappings.getNamespace(toNamespace),
+                        Namespace(namespace) to Namespace(toNamespace),
                         false
                     )
                 ).build()
@@ -32,8 +33,7 @@ class AccessWidenerBetterRemapper(
             remapper?.readClassPathAsync(*mcProvider.minecraftLibraries.resolve().map { it.toPath() }.toTypedArray())
             remapper?.readClassPathAsync(
                 mcProvider.getMinecraft(
-                    mcProvider.mappings.getNamespace(namespace),
-                    mcProvider.mappings.getNamespace(namespace)
+                    Namespace(namespace)
                 )
             )
         }

@@ -13,8 +13,6 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.LogLevel
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.VisibleForTesting
-import xyz.wagyourtail.unimined.*
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
@@ -27,9 +25,9 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.Mcp
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.IOException
@@ -55,7 +53,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG3 transformer")
-        parent.provider.minecraftRemapper.addResourceRemapper { JsCoreModRemapper(project.logger) }
+        parent.provider.minecraftRemapper.addResourceRemapper { a, b -> JsCoreModRemapper(project.logger) }
         val forgeHardcodedNames = setOf("net/minecraftforge/registries/ObjectHolderRegistry", "net/neoforged/neoforge/registries/ObjectHolderRegistry")
         parent.provider.minecraftRemapper.addExtension { StringClassNameRemapExtension(project.gradle.startParameter.logLevel) {
 //            it.matches(Regex("^net/minecraftforge/.*"))
@@ -74,9 +72,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     override val prodNamespace by lazy {
         if (userdevCfg["mcp"].asString.contains("neoform") || provider.minecraftData.mcVersionCompare(provider.version, "1.20.5") >= 0) {
-            provider.mappings.getNamespace("mojmap")
+            provider.mappings.checkedNs("mojmap")
         } else {
-            provider.mappings.getNamespace("searge")
+            provider.mappings.checkedNs("searge")
         }
     }
 
@@ -153,12 +151,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             if (obfNamespace == "mojmap") {
                 mojmap()
             } else {
-                val mcpConfigUserSpecified = mappingsDeps.entries.firstOrNull { it.value.dep.group == "de.oceanlabs.mcp" && it.value.dep.name == "mcp_config" }
-                if (mcpConfigUserSpecified != null && !parent.customSearge) {
-                    if (mcpConfigUserSpecified.value.dep.version != mcpConfig.version) {
-                        project.logger.warn("[Unimined/ForgeTransformer] FG3 does not support custom mcp_config (searge) version specification. Using ${mcpConfig.version} from userdev.")
-                    }
-                    mappingsDeps.remove(mcpConfigUserSpecified.key)
+                val mcpConfigUserSpecified = entries.keys.contains("searge")
+                if (entries.keys.contains("searge") && !parent.customSearge) {
+                    project.logger.warn("[Unimined/ForgeTransformer] FG3 does not support custom mcp_config (searge) version specification. Using ${mcpConfig.version} from userdev.")
                 }
                 if (!parent.customSearge) searge(mcpConfig.version!!)
             }
@@ -223,8 +218,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         val type = when (envType) {
             EnvType.CLIENT -> "client"
             EnvType.SERVER -> "server"
-            EnvType.COMBINED -> "joined"
-            EnvType.DATAGEN -> "server"
+            EnvType.JOINED -> "joined"
         }
         val steps: List<McpConfigStep> = mcpConfigData.steps[type]!!
         val executor = McpExecutor(
@@ -243,9 +237,8 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             clientjar,
             parentPath = provider.minecraftData.mcVersionFolder
                 .resolve(providerName),
-            envType = EnvType.COMBINED,
-            mappingNamespace = provider.mappings.getNamespace(obfNamespace),
-            fallbackNamespace = provider.mappings.OFFICIAL
+            envType = EnvType.JOINED,
+            mappingNamespace = provider.mappings.checkedNs(obfNamespace),
         )
     }
 
@@ -257,9 +250,9 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             return output
         }
         if (userdevCfg["notchObf"]?.asBoolean == true) {
-            executeMcp("merge", output.path, EnvType.COMBINED)
+            executeMcp("merge", output.path, EnvType.JOINED)
         } else {
-            executeMcp("rename", output.path, EnvType.COMBINED)
+            executeMcp("rename", output.path, EnvType.JOINED)
         }
         return output
     }
@@ -313,7 +306,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
         val outFolder = minecraft.path.parent.resolve(providerName).resolve(forgeUniversal.version!!).createDirectories()
 
-        val inputMC = if (minecraft.envType != EnvType.COMBINED) {
+        val inputMC = if (minecraft.envType != EnvType.JOINED) {
             // if userdev cfg says notch
             if (userdevCfg["notchObf"]?.asBoolean == true) {
                 throw IllegalStateException("Forge userdev3 (legacy fg3, aka 1.12.2) is not supported for non-combined environments currently.")
@@ -324,8 +317,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                 minecraft,
                 parentPath = provider.minecraftData.mcVersionFolder
                     .resolve(providerName),
-                mappingNamespace = provider.mappings.getNamespace(obfNamespace),
-                fallbackNamespace = provider.mappings.OFFICIAL,
+                mappingNamespace = provider.mappings.checkedNs(obfNamespace),
                 patches = minecraft.patches + "mcp_config"
             )
             if (minecraft.envType == EnvType.CLIENT) {
@@ -348,7 +340,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
 
         //  extract binpatches
-        val binPatchFile = this.binpatchFile ?: if (patchedMC.envType == EnvType.COMBINED) {
+        val binPatchFile = this.binpatchFile ?: if (patchedMC.envType == EnvType.JOINED) {
             forgeUd.toPath().readZipInputStreamFor(userdevCfg["binpatches"].asString) {
                 outFolder.resolve("binpatches-joined.lzma").apply {
                     writeBytes(
@@ -400,7 +392,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         //   shade in forge jar
         val shadedForge = super.transform(patchedMC)
         return if (userdevCfg["notchObf"]?.asBoolean == true) {
-            provider.minecraftRemapper.provide(shadedForge, provider.mappings.getNamespace("searge"), provider.mappings.OFFICIAL)
+            provider.minecraftRemapper.provide(shadedForge, provider.mappings.checkedNs("searge"))
         } else {
             shadedForge
         }
@@ -537,9 +529,6 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     override fun applyExtraLaunches() {
         super.applyExtraLaunches()
-        if (provider.side == EnvType.DATAGEN) {
-            TODO("DATAGEN not supported yet")
-        }
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {
@@ -596,7 +585,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.OFFICIAL) {
+        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.checkedNs("official")) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",

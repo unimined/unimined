@@ -39,8 +39,6 @@ unimined.minecraft() {
     mappings {
         calamus()
         feather(20)
-
-        devFallbackNamespace "intermediary"
     }
 
     minecraftRemapper.config {
@@ -65,6 +63,8 @@ unimined.minecraft(sourceSets.fabric) {
     }
 
     fabric {
+        customIntermediaries = true
+        prodNamespace("calamus")
         loader '0.14.24'
     }
 
@@ -85,6 +85,8 @@ unimined.minecraft(sourceSets.quilt) {
     }
 
     quilt {
+        customIntermediaries = true
+        prodNamespace("calamus")
         loader '0.21.2'
     }
 

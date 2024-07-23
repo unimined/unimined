@@ -5,11 +5,11 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.util.SemVerUtils
 import java.io.InputStreamReader
 import java.nio.file.Files
@@ -36,16 +36,16 @@ abstract class FabricMinecraftTransformer(
         if (canCombine) {
             return super.merge(clientjar, serverjar)
         } else if (this is BabricMinecraftTransformer || SemVerUtils.matches(fabricDep.version!!, ">=0.16.0")) {
-            val INTERMEDIARY = provider.mappings.getNamespace("intermediary")
+            val INTERMEDIARY = prodNamespace
             val CLIENT = if (this is BabricMinecraftTransformer) {
-                provider.mappings.findNamespace("clientOfficial") ?: provider.mappings.getNamespace("client")
+                provider.mappings.checkedNsOrNull("clientOfficial") ?: provider.mappings.checkedNs("client")
             } else {
-                provider.mappings.getNamespace("clientOfficial")
+                provider.mappings.checkedNs("clientOfficial")
             }
             val SERVER = if (this is BabricMinecraftTransformer) {
-                provider.mappings.findNamespace("serverOfficial") ?: provider.mappings.getNamespace("server")
+                provider.mappings.checkedNsOrNull("serverOfficial") ?: provider.mappings.checkedNs("server")
             } else {
-                provider.mappings.getNamespace("serverOfficial")
+                provider.mappings.checkedNs("serverOfficial")
             }
             val clientJarFixed = MinecraftJar(
                 clientjar.parentPath,
@@ -53,7 +53,6 @@ abstract class FabricMinecraftTransformer(
                 clientjar.envType,
                 clientjar.version,
                 clientjar.patches,
-                CLIENT,
                 CLIENT,
                 clientjar.awOrAt,
                 clientjar.extension,
@@ -66,13 +65,12 @@ abstract class FabricMinecraftTransformer(
                 serverjar.version,
                 serverjar.patches,
                 SERVER,
-                SERVER,
                 serverjar.awOrAt,
                 serverjar.extension,
                 serverjar.path
             )
-            val intermediaryClientJar = provider.minecraftRemapper.provide(clientJarFixed, INTERMEDIARY, CLIENT)
-            val intermediaryServerJar = provider.minecraftRemapper.provide(serverJarFixed, INTERMEDIARY, SERVER)
+            val intermediaryClientJar = provider.minecraftRemapper.provide(clientJarFixed, INTERMEDIARY)
+            val intermediaryServerJar = provider.minecraftRemapper.provide(serverJarFixed, INTERMEDIARY)
             return super.merge(intermediaryClientJar, intermediaryServerJar, true)
         }
         throw UnsupportedOperationException("Merging is not supported for this version")
@@ -92,9 +90,6 @@ abstract class FabricMinecraftTransformer(
 
     override fun applyExtraLaunches() {
         super.applyExtraLaunches()
-        if (provider.side == EnvType.DATAGEN) {
-            TODO("DATAGEN not supported yet")
-        }
     }
 
     override fun applyClientRunTransform(config: RunConfig) {

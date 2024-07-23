@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import kotlinx.coroutines.runBlocking
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -11,28 +12,30 @@ import org.gradle.jvm.tasks.Jar
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.tree.ClassNode
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
-import xyz.wagyourtail.unimined.api.runs.RunConfig
-import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
+import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6FieldWriter
+import xyz.wagyourtail.unimined.mapping.formats.mcp.v6.MCPv6MethodWriter
+import xyz.wagyourtail.unimined.mapping.formats.mcpzip.MCPZipWriter
+import xyz.wagyourtail.unimined.mapping.formats.srg.SrgWriter
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.InputStreamReader
-import java.nio.file.FileSystem
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 
@@ -73,11 +76,23 @@ abstract class ForgeLikeMinecraftTransformer(
             forgeTransformer.unprotectRuntime = value
         }
 
+    override var legacyATFormat: Boolean = provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") < 0
+
     protected abstract fun addMavens()
 
     init {
         addMavens()
-        provider.minecraftRemapper.addResourceRemapper { AccessTransformerApplier.AtRemapper(project.logger) }
+        provider.minecraftRemapper.addResourceRemapper { from, to ->
+            runBlocking {
+                AccessTransformerApplier.AtRemapper(
+                    project.logger,
+                    from,
+                    to,
+                    mappings = provider.mappings.resolve(),
+                    isLegacy = legacyATFormat
+                )
+            }
+        }
     }
 
     fun transforms(transform: String) {
@@ -94,7 +109,7 @@ abstract class ForgeLikeMinecraftTransformer(
         (forgeTransformer as JarModAgentMinecraftTransformer).transforms(transforms)
     }
 
-    override val prodNamespace: MappingNamespaceTree.Namespace
+    override val prodNamespace: Namespace
         get() = forgeTransformer.prodNamespace
 
     override var deleteMetaInf: Boolean
@@ -162,7 +177,7 @@ abstract class ForgeLikeMinecraftTransformer(
 
     override val merger: ClassMerger = ClassMerger(
         { node, env ->
-            if (env == EnvType.COMBINED) return@ClassMerger
+            if (env == EnvType.JOINED) return@ClassMerger
             if (actualSideMarker == null) return@ClassMerger
             // already has
             if (node.visibleAnnotations?.any { it.desc == "L${actualSideMarker!!.first};" } == true) return@ClassMerger
@@ -172,14 +187,14 @@ abstract class ForgeLikeMinecraftTransformer(
             applyAnnotationVisitor(visitor, env)
         },
         { node, env ->
-            if (env == EnvType.COMBINED) return@ClassMerger
+            if (env == EnvType.JOINED) return@ClassMerger
             if (actualSideMarker == null) return@ClassMerger
             if (node.visibleAnnotations?.any { it.desc == "L${actualSideMarker!!.first};" } == true) return@ClassMerger
             val visitor = node.visitAnnotation("L${actualSideMarker!!.first};", true)
             applyAnnotationVisitor(visitor, env)
         },
         { node, env ->
-            if (env == EnvType.COMBINED) return@ClassMerger
+            if (env == EnvType.JOINED) return@ClassMerger
             if (actualSideMarker == null) return@ClassMerger
             if (node.visibleAnnotations?.any { it.desc == "L${actualSideMarker!!.first};" } == true) return@ClassMerger
             val visitor = node.visitAnnotation("L${actualSideMarker!!.first};", true)
@@ -200,32 +215,40 @@ abstract class ForgeLikeMinecraftTransformer(
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
     var srgToMCPAsSRG: Path by FinalizeOnRead(LazyMutable {
-        provider.localCache.resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.srg").apply {
+        provider.localCache.resolve("mappings").createDirectories().resolve("srg2mcp.srg").apply {
             val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
                 location = toFile()
-                type = ExportMappingsTask.MappingExportTypes.SRG
-                sourceNamespace = provider.mappings.getNamespace("searge")
+                type = SrgWriter
+                sourceNamespace = provider.mappings.checkedNs("searge")
                 targetNamespace = setOf(provider.mappings.devNamespace)
             }
             export.validate()
-            export.exportFunc(provider.mappings.mappingTree)
+            runBlocking {
+                export.exportFunc(provider.mappings.resolve())
+            }
         }
     })
 
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
     var srgToMCPAsMCP: Path by FinalizeOnRead(LazyMutable {
-        provider.localCache.resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.jar").apply {
+        provider.localCache.resolve("mappings").createDirectories().resolve("srg2mcp.jar").apply {
+            MCPv6FieldWriter.writeComments = false
+            MCPv6MethodWriter.writeComments = false
             val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
                 location = toFile()
-                type = ExportMappingsTask.MappingExportTypes.MCP
-                sourceNamespace = provider.mappings.getNamespace("searge")
+                type = MCPZipWriter
+                sourceNamespace = provider.mappings.checkedNs("searge")
                 skipComments = true // the reader forge uses now is too dumb...
                 targetNamespace = setOf(provider.mappings.devNamespace)
-                envType = provider.side
+                envType = xyz.wagyourtail.unimined.mapping.EnvType.JOINED
             }
             export.validate()
-            export.exportFunc(provider.mappings.mappingTree)
+            runBlocking {
+                export.exportFunc(provider.mappings.resolve())
+            }
+            MCPv6FieldWriter.writeComments = true
+            MCPv6MethodWriter.writeComments = true
         }
     })
 

@@ -41,7 +41,7 @@ open class AccessWidenerMinecraftTransformer(
             if (!output.path.exists() || project.unimined.forceReload) {
                 if (AccessWidenerApplier.transform(
                         accessWidener!!.toPath(),
-                        if (baseMinecraft.mappingNamespace.named) "named" else baseMinecraft.mappingNamespace.name,
+                        AccessWidenerApplier.nsName(provider.mappings, baseMinecraft.mappingNamespace),
                         baseMinecraft.path,
                         output.path,
                         false,

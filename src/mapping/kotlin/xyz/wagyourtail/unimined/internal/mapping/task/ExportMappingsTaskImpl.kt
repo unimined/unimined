@@ -1,16 +1,20 @@
 package xyz.wagyourtail.unimined.internal.mapping.task
 
-import net.fabricmc.mappingio.MappedElementKind
-import net.fabricmc.mappingio.MappingWriter
-import net.fabricmc.mappingio.adapter.MappingNsRenamer
-import net.fabricmc.mappingio.adapter.MappingSourceNsSwitch
-import net.fabricmc.mappingio.format.*
-import net.fabricmc.mappingio.tree.MappingTreeView
+import kotlinx.coroutines.runBlocking
+import okio.buffer
+import okio.sink
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.impldep.org.eclipse.jgit.lib.ObjectChecker
 import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.tree.AbstractMappingTree
+import xyz.wagyourtail.unimined.mapping.visitor.JavadocParentNode
+import xyz.wagyourtail.unimined.mapping.visitor.JavadocVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.delegate.Delegator
+import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.StandardOpenOption
@@ -36,7 +40,9 @@ open class ExportMappingsTaskImpl @Inject constructor(@get:Internal val mappings
                     )
                 }]"
             )
-            export.exportFunc(mappings.mappingTree)
+            runBlocking {
+                export.exportFunc(mappings.resolve())
+            }
         }
     }
 
@@ -49,57 +55,39 @@ open class ExportMappingsTaskImpl @Inject constructor(@get:Internal val mappings
 
     class ExportImpl(val mappings: MappingsProvider) : Export() {
 
-        override var exportFunc: (MappingTreeView) -> Unit = ::export
+        override var exportFunc: (AbstractMappingTree) -> Unit = ::export
         override fun setSourceNamespace(namespace: String) {
-            sourceNamespace = mappings.getNamespace(namespace)
+            sourceNamespace = Namespace(namespace)
         }
 
         override fun setTargetNamespaces(namespace: List<String>) {
-            targetNamespace = namespace.map { mappings.getNamespace(it) }.toSet()
+            targetNamespace = namespace.map { Namespace(it) }.toSet()
         }
 
-        private fun export(mappingTree: MappingTreeView) {
+        private fun export(mappingTree: AbstractMappingTree) {
             location!!.parentFile.mkdirs()
             location!!.toPath()
                 .outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
                 .use { os ->
-                    var visitor = when (type) {
-                        MappingExportTypes.MCP -> MCPWriter(os, envType!!.mcp)
-                        MappingExportTypes.TINY_V2 -> {
-                            val stream = if (location!!.extension == "jar" || location!!.extension == "zip") {
-                                ZipOutputStream(os).apply {
-                                    putNextEntry(ZipEntry("mappings/mappings.tiny"))
+                    os.sink().buffer().use { sink ->
+                        var write = type!!.write(sink, envType ?: EnvType.JOINED)
+                        if (skipComments) {
+                            write = write.delegator(object : Delegator() {
+                                override fun visitJavadoc(
+                                    delegate: JavadocParentNode<*>,
+                                    value: String,
+                                    baseNs: Namespace,
+                                    namespaces: Set<Namespace>
+                                ): JavadocVisitor? {
+                                    return null
                                 }
-                            } else os
-                            Tiny2Writer2(
-                                OutputStreamWriter(stream, StandardCharsets.UTF_8),
-                                false
-                            )
+                            })
                         }
-
-                        MappingExportTypes.SRG -> SrgWriter(OutputStreamWriter(os, StandardCharsets.UTF_8))
-                        MappingExportTypes.TSRG_V1 -> TsrgV1Writer(OutputStreamWriter(os, StandardCharsets.UTF_8))
-                        else -> throw RuntimeException("Unknown export type ${ObjectChecker.type}")
+                        mappingTree.accept(
+                            write,
+                            listOf(sourceNamespace!!, *targetNamespace!!.toTypedArray())
+                        )
                     }
-                    if (skipComments) {
-                        visitor = object: MappingWriter by visitor {
-                            override fun visitComment(targetKind: MappedElementKind?, comment: String?) {}
-                        }
-                    }
-                    mappingTree.accept(
-                        MappingSourceNsSwitch(
-                            MappingDstNsFilter(
-                                MappingNsRenamer(
-                                    visitor,
-                                    renameNs.mapKeys { it.key.name }
-                                ),
-                                targetNamespace?.map { it.name }?.toSet() ?: mappingTree.dstNamespaces.toSet()
-                            ),
-                            sourceNamespace?.name ?: mappingTree.srcNamespace
-                        ),
-                    )
-                    os.flush()
-                    visitor.close()
                 }
         }
     }

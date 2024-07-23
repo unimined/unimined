@@ -4,9 +4,9 @@ import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.artifacts.Dependency
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
+import xyz.wagyourtail.unimined.mapping.Namespace
 import java.nio.file.Path
 
 /**
@@ -32,7 +32,7 @@ interface FabricLikePatcher: MinecraftPatcher, AccessWidenerPatcher {
      * @since 0.2.3
      */
     @get:ApiStatus.Internal
-    override var prodNamespace: MappingNamespaceTree.Namespace
+    override var prodNamespace: Namespace
 
     /**
      * @since 1.0.0

@@ -59,9 +59,9 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         val mc = patchers.first().merge(clientjar, serverjar)
-        if (mc.mappingNamespace != provider.mappings.OFFICIAL) {
+        if (mc.mappingNamespace != provider.mappings.checkedNs("official")) {
             // remap back to official
-            return provider.minecraftRemapper.provide(mc, provider.mappings.OFFICIAL, provider.mappings.OFFICIAL)
+            return provider.minecraftRemapper.provide(mc, provider.mappings.checkedNs("official"))
         }
         return mc
     }
@@ -114,11 +114,11 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     @Deprecated("use prodNamespace instead", replaceWith = ReplaceWith("prodNamespace"))
     override fun setProdNamespace(namespace: String) {
-        prodNamespace = provider.mappings.getNamespace(namespace)
+        prodNamespace = provider.mappings.checkedNs(namespace)
     }
 
     override fun prodNamespace(namespace: String) {
-        prodNamespace = provider.mappings.getNamespace(namespace)
+        prodNamespace = provider.mappings.checkedNs(namespace)
     }
 
     override fun fabric(action: FabricLikePatcher.() -> Unit) {

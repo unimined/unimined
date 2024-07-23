@@ -1,11 +1,20 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.access
 
+import kotlinx.coroutines.runBlocking
+import net.fabricmc.accesswidener.AccessWidenerReader
+import okio.buffer
+import okio.sink
+import okio.source
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessConvert
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerApplier
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
+import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATWriter
+import xyz.wagyourtail.unimined.mapping.formats.aw.AWReader
+import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 
@@ -20,8 +29,12 @@ class AccessConvertImpl(val project: Project, val provider: MinecraftProvider) :
         provider.sourceSet.resources.srcDirs.first().resolve("META-INF/accesstransformer.cfg")
     )
 
-    override fun aw2at(input: File, output: File): File {
-        return AccessTransformerApplier.aw2at(input.toPath(), output.toPath()).toFile()
+    override fun aw2at(input: File, output: File): File  = runBlocking {
+        val mappings = AWReader.read(input.source().buffer())
+        output.bufferedWriter().use {
+            mappings.accept(ATWriter.write(it))
+        }
+        output
     }
 
     override fun aw2atLegacy(input: String): File = aw2atLegacy(File(input))
@@ -33,32 +46,39 @@ class AccessConvertImpl(val project: Project, val provider: MinecraftProvider) :
         provider.sourceSet.resources.srcDirs.first().resolve("META-INF/accesstransformer.cfg")
     )
 
-    override fun aw2atLegacy(input: File, output: File): File {
-        return AccessTransformerApplier.aw2at(input.toPath(), output.toPath(), true).toFile()
+    override fun aw2atLegacy(input: File, output: File): File = runBlocking {
+        val mappings = AWReader.read(input.source().buffer())
+        output.bufferedWriter().use {
+            mappings.accept(LegacyATWriter.write(it))
+        }
+        output
     }
 
-    override fun at2aw(input: String, output: String, namespace: MappingNamespaceTree.Namespace) =
+    override fun at2aw(input: String, output: String, namespace: Namespace) =
         at2aw(File(input), File(output), namespace)
 
-    override fun at2aw(input: String, namespace: MappingNamespaceTree.Namespace) = at2aw(File(input), namespace)
+    override fun at2aw(input: String, namespace: Namespace) = at2aw(File(input), namespace)
     override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
     override fun at2aw(input: String) = at2aw(File(input))
     override fun at2aw(input: File) = at2aw(input, provider.mappings.devNamespace)
-    override fun at2aw(input: File, namespace: MappingNamespaceTree.Namespace) = at2aw(
+    override fun at2aw(input: File, namespace: Namespace) = at2aw(
         input,
         provider.sourceSet.resources.srcDirs.first().resolve("${project.name.withSourceSet(provider.sourceSet)}.accesswidener"),
         namespace
     )
 
     override fun at2aw(input: File, output: File) = at2aw(input, output, provider.mappings.devNamespace)
-    override fun at2aw(input: File, output: File, namespace: MappingNamespaceTree.Namespace): File {
-        return AccessTransformerApplier.at2aw(
-            input.toPath(),
-            output.toPath(),
-            namespace.name,
-            provider.mappings.mappingTree,
-            project.logger
-        ).toFile()
+    override fun at2aw(input: File, output: File, namespace: Namespace): File {
+        return runBlocking {
+            AccessTransformerApplier.at2aw(
+                input.toPath(),
+                output.toPath(),
+                namespace.name,
+                provider.mappings.resolve(),
+                false,
+                project.logger
+            ).toFile()
+        }
     }
 
     override fun mergeAws(inputs: List<File>): File {
@@ -68,7 +88,7 @@ class AccessConvertImpl(val project: Project, val provider: MinecraftProvider) :
         )
     }
 
-    override fun mergeAws(namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File {
+    override fun mergeAws(namespace: Namespace, inputs: List<File>): File {
         return mergeAws(
             provider.sourceSet.resources.srcDirs.first().resolve("${project.name.withSourceSet(provider.sourceSet)}.accesswidener"),
             namespace,
@@ -80,7 +100,7 @@ class AccessConvertImpl(val project: Project, val provider: MinecraftProvider) :
         return mergeAws(output, provider.mappings.devNamespace, inputs)
     }
 
-    override fun mergeAws(output: File, namespace: MappingNamespaceTree.Namespace, inputs: List<File>): File {
+    override fun mergeAws(output: File, namespace: Namespace, inputs: List<File>): File {
         return AccessWidenerApplier.mergeAws(
             inputs.map { it.toPath() },
             output.toPath(),

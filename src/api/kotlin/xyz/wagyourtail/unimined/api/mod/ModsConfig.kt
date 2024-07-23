@@ -3,7 +3,7 @@ package xyz.wagyourtail.unimined.api.mod
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.artifacts.Configuration
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.mapping.Namespace
 import java.io.File
 
 abstract class ModsConfig {
@@ -75,8 +75,7 @@ abstract class ModsConfig {
     }
 
     abstract fun getClasspathAs(
-        namespace: MappingNamespaceTree.Namespace,
-        fallbackNamespace: MappingNamespaceTree.Namespace,
+        namespace: Namespace,
         classpath: Set<File>
     ): Set<File>
 

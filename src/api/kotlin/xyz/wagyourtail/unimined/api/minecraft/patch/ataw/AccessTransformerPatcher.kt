@@ -31,6 +31,12 @@ interface AccessTransformerPatcher : MinecraftPatcher, AccessConvert {
     var dependency: Dependency
 
     /**
+     * whether to use the legacy access transformer format.
+     * @since 1.4.0
+     */
+    var legacyATFormat: Boolean
+
+    /**
      * set the access transformer file to apply to the minecraft jar.
      */
     @Deprecated(message = "", replaceWith = ReplaceWith("accessTransformer(file)"))

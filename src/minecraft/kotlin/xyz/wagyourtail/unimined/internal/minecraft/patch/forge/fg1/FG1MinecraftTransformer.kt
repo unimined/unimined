@@ -6,7 +6,6 @@ import org.gradle.api.artifacts.Dependency
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
@@ -14,6 +13,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.openZipFileSystem
 import xyz.wagyourtail.unimined.util.readZipInputStreamFor
@@ -35,8 +35,9 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         parent.accessTransformerTransformer.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
     }
 
-    override val prodNamespace: MappingNamespaceTree.Namespace
-        get() = provider.mappings.OFFICIAL
+    override val prodNamespace: Namespace by lazy {
+        provider.mappings.checkedNs("official")
+    }
 
     var resolvedForgeDeps = false
 
@@ -45,8 +46,8 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     override fun beforeMappingsResolve() {
         val forge = parent.forge.dependencies.first()
-        provider.mappings.mappingsDeps.apply {
-            if (isEmpty() && !parent.customSearge)
+        provider.mappings.apply {
+            if (!parent.customSearge)
                 provider.mappings {
                     forgeBuiltinMCP(forge.version!!.substringAfter("${provider.version}-"))
                 }
@@ -235,10 +236,6 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
                                 deleteRecursively()
                             }
                         }
-                    }
-                    val ats = listOf(out.getPath("forge_at.cfg"), out.getPath("fml_at.cfg")).filter { Files.exists(it) }
-                    for (at in ats) {
-                        AccessTransformerApplier.toModern(at)
                     }
                 }
             } catch (e: Throwable) {

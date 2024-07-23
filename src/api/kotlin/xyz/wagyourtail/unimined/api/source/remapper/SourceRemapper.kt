@@ -5,7 +5,7 @@ import groovy.lang.DelegatesTo
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.FileCollection
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.mapping.Namespace
 import java.nio.file.Path
 
 /**
@@ -43,9 +43,7 @@ interface SourceRemapper {
     fun remap(
         inputOutput: Map<Path, Path>,
         classpath: FileCollection,
-        source: MappingNamespaceTree.Namespace,
-        sourceFallback: MappingNamespaceTree.Namespace,
-        targetFallback: MappingNamespaceTree.Namespace,
-        target: MappingNamespaceTree.Namespace
+        source: Namespace,
+        target: Namespace
     )
 }

@@ -9,11 +9,11 @@ import org.gradle.api.logging.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
+import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.forEachInZip
-import xyz.wagyourtail.unimined.util.openZipFileSystem
 import java.io.BufferedReader
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -61,6 +61,15 @@ object AccessWidenerApplier {
             }
         }
     }
+
+    fun nsName(config: MappingsConfig<*>, namespace: Namespace) =
+        if (config.isOfficial(namespace.name)) {
+            "official"
+        } else if (config.isIntermediary(namespace.name)) {
+            "intermediary"
+        } else {
+            "named"
+        }
 
     fun transform(
         accessWidener: Path,
@@ -130,7 +139,7 @@ object AccessWidenerApplier {
     fun mergeAws(
         inputs: List<Path>,
         output: Path,
-        targetNamespace: MappingNamespaceTree.Namespace,
+        targetNamespace: Namespace,
         mappingsProvider: MappingsProvider,
         mcProvider: MinecraftConfig
     ): Path {

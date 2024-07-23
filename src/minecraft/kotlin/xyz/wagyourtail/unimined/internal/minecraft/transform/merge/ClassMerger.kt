@@ -3,7 +3,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.transform.merge
 import org.objectweb.asm.Attribute
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.*
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.mapping.EnvType
 
 class ClassMerger(
     val toMergedClass: (ClassNode, EnvType) -> Unit = { _, _ -> },
@@ -118,7 +118,7 @@ class ClassMerger(
                 if (areFieldNodesEqual(f.first, field)) {
                     fields.remove(f)
                     field.access = selectWeakerAccess(f.first.access, field.access)
-                    fields.add(field to EnvType.COMBINED)
+                    fields.add(field to EnvType.JOINED)
                     continue@outer
                 }
             }
@@ -137,7 +137,7 @@ class ClassMerger(
                 if (areMethodNodesEqual(m.first, method)) {
                     methods.remove(m)
                     method.access = selectWeakerAccess(m.first.access, method.access)
-                    methods.add(method to EnvType.COMBINED)
+                    methods.add(method to EnvType.JOINED)
                     continue@outer
                 }
             }
@@ -148,7 +148,7 @@ class ClassMerger(
         for (m in methods) {
             merged.methods.add(m.first)
         }
-        toMergedClass(merged, EnvType.COMBINED)
+        toMergedClass(merged, EnvType.JOINED)
         return merged
     }
 

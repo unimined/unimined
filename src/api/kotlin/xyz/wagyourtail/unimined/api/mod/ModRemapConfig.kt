@@ -5,22 +5,15 @@ import groovy.lang.DelegatesTo
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.artifacts.Configuration
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.LazyMutable
+import xyz.wagyourtail.unimined.mapping.Namespace
 
 abstract class ModRemapConfig(val configurations: Set<Configuration>) {
 
     @set:ApiStatus.Internal
-    abstract var namespace: MappingNamespaceTree.Namespace
-
-    @set:ApiStatus.Internal
-    abstract var fallbackNamespace: MappingNamespaceTree.Namespace
+    abstract var namespace: Namespace
 
     abstract fun namespace(ns: String)
-
-    abstract fun fallbackNamespace(ns: String)
 
     abstract fun catchAWNamespaceAssertion()
 

@@ -1,7 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2
 
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
@@ -9,8 +8,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraf
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremods
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
-import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading.fixResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
+import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.util.*
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.readZipContents
@@ -31,7 +30,9 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         parent.accessTransformerTransformer.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
     }
 
-    override val prodNamespace by lazy { provider.mappings.getNamespace("searge") }
+    override val prodNamespace by lazy {
+        provider.mappings.checkedNs("searge")
+    }
 
     override val merger: ClassMerger
         get() = parent.merger
@@ -46,18 +47,11 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         // get and add forge-src to mappings
         val forgeDep = parent.forge.dependencies.last()
         provider.mappings {
-            val empty = mappingsDeps.isEmpty()
-            if (empty) {
-                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1 && !parent.customSearge) {
-                    searge()
-                }
-                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7") == -1 && !parent.customSearge) {
-                    forgeBuiltinMCP(forgeDep.version!!.substringAfter("${provider.version}-"))
-                }
-            } else {
-                if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1 && !parent.customSearge) {
-                    searge()
-                }
+            if (provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") != -1 && !parent.customSearge) {
+                searge()
+            }
+            if (provider.minecraftData.mcVersionCompare(provider.version, "1.7") == -1 && !parent.customSearge) {
+                forgeBuiltinMCP(forgeDep.version!!.substringAfter("${provider.version}-"))
             }
         }
     }
@@ -76,11 +70,11 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         project.logger.info("minecraft: $minecraft")
 
         val shadedForge = super.transform(
-            if (minecraft.envType == EnvType.COMBINED) minecraft else transformIntern(
+            if (minecraft.envType == EnvType.JOINED) minecraft else transformIntern(
                 minecraft
             )
         )
-        return provider.minecraftRemapper.provide(shadedForge, provider.mappings.getNamespace("searge"), provider.mappings.OFFICIAL)
+        return provider.minecraftRemapper.provide(shadedForge, provider.mappings.checkedNs("searge"))
     }
 
     private fun transformIntern(minecraft: MinecraftJar): MinecraftJar {
@@ -196,7 +190,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     }
 
     private fun fixForge(baseMinecraft: MinecraftJar): MinecraftJar {
-        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.OFFICIAL) {
+        if (!baseMinecraft.patches.contains("fixForge") && baseMinecraft.mappingNamespace != provider.mappings.checkedNs("official")) {
             val target = MinecraftJar(
                 baseMinecraft,
                 patches = baseMinecraft.patches + "fixForge",

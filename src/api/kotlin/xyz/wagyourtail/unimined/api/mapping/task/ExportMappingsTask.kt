@@ -2,11 +2,13 @@ package xyz.wagyourtail.unimined.api.mapping.task
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
-import net.fabricmc.mappingio.tree.MappingTreeView
 import org.gradle.api.internal.ConventionTask
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.formats.FormatRegistry
+import xyz.wagyourtail.unimined.mapping.formats.FormatWriter
+import xyz.wagyourtail.unimined.mapping.tree.AbstractMappingTree
 import java.io.File
 
 /**
@@ -72,7 +74,7 @@ abstract class ExportMappingsTask : ConventionTask() {
         }
 
         @set:ApiStatus.Internal
-        var type: MappingExportTypes? = null
+        var type: FormatWriter? = null
 
         /**
          * the file location to export to.
@@ -84,14 +86,14 @@ abstract class ExportMappingsTask : ConventionTask() {
          * @since 0.2.3
          */
         @set:ApiStatus.Internal
-        var sourceNamespace: MappingNamespaceTree.Namespace? = null
+        var sourceNamespace: Namespace? = null
 
         /**
          * the namespace(s) to export to.
          * @since 0.2.3
          */
         @set:ApiStatus.Internal
-        var targetNamespace: Set<MappingNamespaceTree.Namespace>? = null
+        var targetNamespace: Set<Namespace>? = null
 
         /**
          * should the export skip comments?
@@ -104,19 +106,19 @@ abstract class ExportMappingsTask : ConventionTask() {
          * @since 0.3.4
          */
         @set:ApiStatus.Experimental
-        abstract var exportFunc: (MappingTreeView) -> Unit
+        abstract var exportFunc: (AbstractMappingTree) -> Unit
 
         /**
          * rename a namespace in the exported format, if supported.
          * @since 0.3.9
          */
-        val renameNs: MutableMap<MappingNamespaceTree.Namespace, String> = mutableMapOf()
+        val renameNs: MutableMap<Namespace, String> = mutableMapOf()
 
         /**
          * the format to export to. (SRG, TINY_V2, MCP)
          */
         fun setType(type: String) {
-            this.type = MappingExportTypes.valueOf(type)
+            this.type = FormatRegistry.byName[type]
         }
 
         /**
@@ -144,20 +146,8 @@ abstract class ExportMappingsTask : ConventionTask() {
             if (targetNamespace == null || targetNamespace!!.isEmpty()) {
                 throw IllegalArgumentException("Mapping export target namespace must be set.")
             }
-            if (type == MappingExportTypes.MCP || type == MappingExportTypes.SRG || type == MappingExportTypes.TSRG_V1) {
-                if (targetNamespace!!.size != 1) {
-                    throw IllegalArgumentException("Mapping export target namespace must be a single namespace for ${type!!.name} exports.")
-                }
-            }
-            if (type == MappingExportTypes.MCP && envType == null) {
-                throw IllegalArgumentException("Mapping export env type must be set for MCP exports.")
-            }
             return true
         }
-    }
-
-    enum class MappingExportTypes {
-        TINY_V2, TSRG_V1, SRG, MCP
     }
 
 }

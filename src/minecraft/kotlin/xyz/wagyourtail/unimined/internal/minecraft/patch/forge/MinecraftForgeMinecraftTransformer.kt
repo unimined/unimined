@@ -3,7 +3,6 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 import com.google.gson.JsonObject
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
@@ -13,11 +12,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.FinalizeOnWrite
-import xyz.wagyourtail.unimined.util.MustSet
-import xyz.wagyourtail.unimined.util.forEachInZip
-import xyz.wagyourtail.unimined.util.getFiles
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.util.*
 import java.io.File
 
 open class MinecraftForgeMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "MinecraftForge"),
@@ -40,7 +36,7 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         forge.dependencies.add(if (dep is String && !dep.contains(":")) {
             if (!canCombine) {
-                if (provider.side == EnvType.COMBINED) throw IllegalStateException("Cannot use forge dependency pre 1.3 without specifying non-combined side")
+                if (provider.side == EnvType.JOINED) throw IllegalStateException("Cannot use forge dependency pre 1.3 without specifying non-combined side")
                 project.dependencies.create("net.minecraftforge:forge:${provider.version}-${dep}:${provider.side.classifier}@zip")
             } else {
                 val zip = provider.minecraftData.mcVersionCompare(provider.version, "1.6") < 0

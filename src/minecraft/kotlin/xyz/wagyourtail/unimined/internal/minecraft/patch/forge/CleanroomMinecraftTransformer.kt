@@ -1,30 +1,25 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.forge
 
 import com.google.gson.JsonObject
+import kotlinx.coroutines.runBlocking
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
-import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.CleanroomPatcher
-import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.mapping.task.ExportMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg1.FG1MinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg2.FG2MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.FG3MinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseAllLibraries
+import xyz.wagyourtail.unimined.mapping.formats.tsrg.TsrgV1Writer
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
-import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
 
 open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftProvider) : ForgeLikeMinecraftTransformer(project, provider, "Cleanroom"),
@@ -40,15 +35,17 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
     var srgToMCPAsTSRG: Path by FinalizeOnRead(LazyMutable {
-        provider.localCache.resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.tsrg").apply {
+        provider.localCache.resolve("mappings").createDirectories().resolve("srg2mcp.tsrg").apply {
             val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
                 location = toFile()
-                type = ExportMappingsTask.MappingExportTypes.TSRG_V1
-                sourceNamespace = provider.mappings.getNamespace("searge")
+                type = TsrgV1Writer
+                sourceNamespace = prodNamespace
                 targetNamespace = setOf(provider.mappings.devNamespace)
             }
             export.validate()
-            export.exportFunc(provider.mappings.mappingTree)
+            runBlocking {
+                export.exportFunc(provider.mappings.resolve())
+            }
         }
     })
 

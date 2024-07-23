@@ -1,8 +1,9 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch
 
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.util.LazyMutable
 
 class NoTransformMinecraftTransformer(project: Project, provider: MinecraftProvider): AbstractMinecraftTransformer(
     project,
@@ -10,6 +11,8 @@ class NoTransformMinecraftTransformer(project: Project, provider: MinecraftProvi
     "none"
 ) {
 
-    override var prodNamespace: MappingNamespaceTree.Namespace = provider.mappings.OFFICIAL
+    override var prodNamespace: Namespace by LazyMutable {
+        Namespace("official")
+    }
 
 }

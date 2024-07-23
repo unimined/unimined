@@ -1,18 +1,18 @@
 package xyz.wagyourtail.unimined.internal.minecraft
 
+import kotlinx.coroutines.runBlocking
 import net.fabricmc.tinyremapper.NonClassCopyMode
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.OutputConsumerPath.ResourceRemapper
 import net.fabricmc.tinyremapper.TinyRemapper
 import org.gradle.api.Project
 import org.jetbrains.annotations.ApiStatus
-import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.remap.MinecraftRemapConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.consumerApply
 import xyz.wagyourtail.unimined.util.getField
 import java.nio.file.Path
 import kotlin.io.path.*
@@ -35,15 +35,15 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
         tinyRemapperConf = remapperBuilder
     }
 
-    var extraResourceRemappers by FinalizeOnRead { listOf<ResourceRemapper>() }
+    var extraResourceRemappers: (Namespace, Namespace) -> List<ResourceRemapper> by FinalizeOnRead { from, to -> listOf<ResourceRemapper>() }
 
     var extraExtensions by FinalizeOnRead { listOf<TinyRemapper.Extension>() }
 
     @Suppress("UNCHECKED_CAST")
-    override fun addResourceRemapper(remapper: () -> ResourceRemapper) {
-        val prev: FinalizeOnRead<() -> List<ResourceRemapper>> = MinecraftRemapper::class.getField("extraResourceRemappers")!!.getDelegate(this) as FinalizeOnRead<() -> List<ResourceRemapper>>
-        val value = prev.value as () -> List<ResourceRemapper>
-        extraResourceRemappers = { value() + remapper() }
+    override fun addResourceRemapper(remapper: (Namespace, Namespace) -> ResourceRemapper) {
+        val prev: FinalizeOnRead<(Namespace, Namespace) -> List<ResourceRemapper>> = MinecraftRemapper::class.getField("extraResourceRemappers")!!.getDelegate(this) as FinalizeOnRead<(Namespace, Namespace) -> List<ResourceRemapper>>
+        val value = prev.value as (Namespace, Namespace) -> List<ResourceRemapper>
+        extraResourceRemappers = { from, to -> value(from, to) + remapper(from, to) }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -54,68 +54,39 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
     }
 
     @ApiStatus.Internal
-    fun provide(minecraft: MinecraftJar, remapTo: MappingNamespaceTree.Namespace, remapFallback: MappingNamespaceTree.Namespace): MinecraftJar {
-        if (remapTo == minecraft.mappingNamespace && remapFallback == minecraft.fallbackNamespace) return minecraft
-        return minecraft.let(consumerApply {
-            val mappingsId = provider.mappings.combinedNames
-            val parent = if (provider.mappings.hasStubs) {
-                provider.localCache.resolve("minecraft").resolve(mappingsId).createDirectories()
+    fun provide(minecraft: MinecraftJar, remapTo: Namespace): MinecraftJar = runBlocking {
+        if (remapTo == minecraft.mappingNamespace) return@runBlocking minecraft
+        val mappingsId = provider.mappings.combinedNames()
+        val parent = if (provider.mappings.hasStubs()) {
+            provider.localCache.resolve("minecraft").resolve(mappingsId).createDirectories()
+        } else {
+            if (minecraft.parentPath.name != mappingsId) {
+                minecraft.parentPath.resolve(mappingsId).createDirectories()
             } else {
-                if (parentPath.name != mappingsId) {
-                    parentPath.resolve(mappingsId).createDirectories()
-                } else {
-                    parentPath
-                }
+                minecraft.parentPath
             }
-            val target = MinecraftJar(
-                minecraft,
-                parentPath = parent,
-                mappingNamespace = remapTo,
-                fallbackNamespace = remapFallback
-            )
+        }
+        val target = MinecraftJar(
+            minecraft,
+            parentPath = parent,
+            mappingNamespace = remapTo,
+        )
 
-            if (target.path.exists() && !project.unimined.forceReload) {
-                return@consumerApply target
-            }
+        if (target.path.exists() && !project.unimined.forceReload) {
+            return@runBlocking target
+        }
 
-            val path = provider.mappings.getRemapPath(
-                mappingNamespace,
-                fallbackNamespace,
-                remapFallback,
-                remapTo
-            )
-            if (path.isEmpty()) {
-                if (minecraft.path != target.path) {
-                    minecraft.path.copyTo(target.path, overwrite = true)
-                }
-                return@consumerApply target
-            }
-            val last = path.last()
-            project.logger.lifecycle("[Unimined/McRemapper] Remapping minecraft $envType to $remapTo")
-            var prevTarget = minecraft.path
-            var prevNamespace = minecraft.mappingNamespace
-            for (step in path) {
-                project.logger.info("[Unimined/McRemapper] $prevNamespace -> $step")
-                val targetFile = if (step == last) {
-                    target.path
-                } else {
-                    MinecraftJar(
-                        minecraft,
-                        parentPath = parent,
-                        mappingNamespace = step,
-                        fallbackNamespace = prevNamespace
-                    ).path
-                }
-                remapToInternal(prevTarget, targetFile, envType, prevNamespace, step)
-                prevTarget = targetFile
-                prevNamespace = step
-                project.logger.info("[Unimined/McRemapper]    $targetFile")
-            }
-            target
-        })
+        project.logger.lifecycle("[Unimined/McRemapper] Remapping minecraft ${minecraft.envType} to $remapTo")
+        var prevTarget = minecraft.path
+        var prevNamespace = minecraft.mappingNamespace
+        project.logger.info("[Unimined/McRemapper] $prevNamespace -> $remapTo")
+        runBlocking {
+            remapToInternal(prevTarget, target.path, minecraft.envType, prevNamespace, remapTo)
+        }
+        target
     }
 
-    fun remapToInternal(from: Path, target: Path, envType: EnvType, fromNs: MappingNamespaceTree.Namespace, toNs: MappingNamespaceTree.Namespace) {
+    suspend fun remapToInternal(from: Path, target: Path, envType: EnvType, fromNs: Namespace, toNs: Namespace) {
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(
                 provider.mappings.getTRMappings(
@@ -145,7 +116,7 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
                 it.addNonClassFiles(
                     from,
                     remapper,
-                    extraResourceRemappers() + NonClassCopyMode.FIX_META_INF.remappers
+                    extraResourceRemappers(fromNs, toNs) + NonClassCopyMode.FIX_META_INF.remappers
                 )
                 remapper.apply(it)
             }

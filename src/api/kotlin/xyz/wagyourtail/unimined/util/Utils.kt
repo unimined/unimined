@@ -17,6 +17,7 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.mapping.EnvType
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -36,6 +37,15 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+
+val EnvType.classifier: String?
+    get() {
+        return when (this) {
+            EnvType.CLIENT -> "client"
+            EnvType.SERVER -> "server"
+            EnvType.JOINED -> null
+        }
+    }
 
 val Project.sourceSets
     get() = extensions.findByType(SourceSetContainer::class.java)!!
