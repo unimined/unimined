@@ -33,7 +33,7 @@ abstract class FabricMinecraftTransformer(
     }
 
     override fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
-        if (canCombine) {
+        if (provider.minecraftData.mcVersionCompare(provider.version, "1.3") > -1) {
             return super.merge(clientjar, serverjar)
         } else if (this is BabricMinecraftTransformer || SemVerUtils.matches(fabricDep.version!!, ">=0.16.0")) {
             val INTERMEDIARY = prodNamespace

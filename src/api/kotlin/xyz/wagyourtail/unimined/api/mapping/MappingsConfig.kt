@@ -35,7 +35,7 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
         runBlocking {
             resolve()
         }
-        namespaces.entries.first { it.value }.key
+        namespaces.entries.firstOrNull { it.value }?.key ?: error("No \"Named\" namespace found for devNamespace")
     })
 
     fun devNamespace(namespace: String) {

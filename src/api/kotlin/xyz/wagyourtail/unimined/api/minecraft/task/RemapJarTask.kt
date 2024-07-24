@@ -46,8 +46,6 @@ abstract class RemapJarTask : Jar() {
 
     abstract fun devNamespace(namespace: String)
 
-    abstract fun devFallbackNamespace(namespace: String)
-
     abstract fun prodNamespace(namespace: String)
 
     abstract fun mixinRemap(action: MixinRemapOptions.() -> Unit)

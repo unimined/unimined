@@ -18,6 +18,7 @@ import xyz.wagyourtail.unimined.mapping.formats.mcp.v3.MCPv3FieldReader
 import xyz.wagyourtail.unimined.mapping.formats.mcp.v3.MCPv3MethodReader
 import xyz.wagyourtail.unimined.mapping.formats.rgs.RetroguardReader
 import xyz.wagyourtail.unimined.mapping.formats.srg.SrgReader
+import xyz.wagyourtail.unimined.mapping.formats.umf.UMFWriter
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
@@ -33,6 +34,7 @@ import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.MavenCoords
 import xyz.wagyourtail.unimined.util.getFiles
 import java.io.File
+import kotlin.io.path.bufferedWriter
 
 class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: String? = null) : MappingsConfig<MappingsProvider>(project, minecraft, subKey) {
     val unimined: UniminedExtension = project.unimined
@@ -65,6 +67,12 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     }
 
     override fun propogator(tree: MemoryMappingTree) {
+        // write pre-propagation to file
+        val mappingFile = unimined.getLocalCache().resolve("mappings-${minecraft.version}-pre-propagation.umf")
+        mappingFile.bufferedWriter().use {
+            tree.accept(UMFWriter.write(it))
+        }
+        // propagate
         if (splitUnmapped && envType == EnvType.JOINED) {
             Propagator(Namespace("clientOfficial"), tree, setOf(minecraft.minecraftData.minecraftClientFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("serverOfficial"))
             Propagator(Namespace("serverOfficial"), tree, setOf(minecraft.minecraftData.minecraftServerFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("clientOfficial"))
@@ -156,7 +164,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     override fun babricIntermediary(key: String, action: MappingEntry.() -> Unit) {
         unimined.glassLauncherMaven("babric")
         addDependency(key, MappingEntry(getDependency(MavenCoords("babric", "intermediary", minecraft.version, "v2")), key).apply {
-            provides("babric-intermediary" to false)
+            provides("babricIntermediary" to false)
             when (envType) {
                 EnvType.CLIENT -> {
                     mapNamespace("client", "official")
@@ -169,6 +177,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 EnvType.JOINED -> {
                     mapNamespace("client", "clientOfficial")
                     mapNamespace("server", "serverOfficial")
+                    requires("clientOfficial")
                 }
             }
             mapNamespace("intermediary", "babricIntermediary")
@@ -419,12 +428,10 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         })
     }
 
-    
     override fun biny(commitName: String, key: String, action: MappingEntry.() -> Unit) {
         unimined.glassLauncherMaven("releases")
         addDependency(key, MappingEntry(getDependency(
-            MavenCoords("net.glasslauncher", "biny",
-            "${minecraft.version}+$commitName", "v2")
+            MavenCoords("net.glasslauncher", "biny", "${minecraft.version}+$commitName", "v2")
         ), "$key-$commitName").apply {
             requires("babricIntermediary")
             provides("biny" to true)
@@ -543,6 +550,16 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         }
     }
 
+    override suspend fun resolve(): MemoryMappingTree {
+        val mappings = super.resolve()
+        // write to temp file
+        val mappingFile = unimined.getLocalCache().resolve("mappings-${minecraft.version}.umf")
+        mappingFile.bufferedWriter().use {
+            mappings.accept(UMFWriter.write(it))
+        }
+        return mappings
+    }
+
     override suspend fun getTRMappings(
         remap: Pair<Namespace, Namespace>,
         remapLocals: Boolean,
@@ -582,8 +599,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 ): MethodVisitor? {
                     if (srcName in names && dstName in names) {
                         val fromMethodName = names[srcName]!!.first
+                        val fromMethodDesc = names[srcName]!!.second
                         val toMethodName = names[dstName]!!.first
-                        val method = memberOf(fromClassName, fromMethodName, names[srcName]!!.second!!.toString())
+                        val method = memberOf(fromClassName, fromMethodName, fromMethodDesc!!.toString())
                         acceptor.acceptMethod(method, toMethodName)
                     }
                     return if (remapLocals) {
