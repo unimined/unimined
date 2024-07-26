@@ -61,7 +61,7 @@ abstract class UniminedExtension(val project: Project) {
     }
 
     @get:ApiStatus.Internal
-    abstract val minecrafts: DefaultMap<SourceSet, MinecraftConfig>
+    abstract val minecrafts: MutableMap<SourceSet, MinecraftConfig>
 
     @get:ApiStatus.Internal
     abstract val minecraftConfiguration: Map<SourceSet, MinecraftConfig.() -> Unit>
@@ -119,6 +119,62 @@ abstract class UniminedExtension(val project: Project) {
     ) {
         for (sourceSet in sourceSets) {
             minecraft(sourceSet, lateApply, action)
+        }
+    }
+
+    /**
+     * @since 1.4.0
+     */
+    @JvmOverloads
+    abstract fun reIndev(
+        sourceSet: SourceSet = sourceSets.getByName("main"),
+        lateApply: Boolean = false,
+        action: MinecraftConfig.() -> Unit
+    )
+
+    /**
+     * @since 1.4.0
+     */
+    @JvmOverloads
+    fun reIndev(
+        vararg sourceSets: SourceSet,
+        lateApply: Boolean = false,
+        action: MinecraftConfig.() -> Unit
+    ) {
+        for (sourceSet in sourceSets) {
+            reIndev(sourceSet, lateApply, action)
+        }
+    }
+
+    /**
+     * @since 1.4.0
+     */
+    @JvmOverloads
+    fun reIndev(
+        sourceSet: SourceSet = sourceSets.getByName("main"),
+        lateApply: Boolean = false,
+        @DelegatesTo(value = MinecraftConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        reIndev(sourceSet, lateApply) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * @since 1.4.0
+     */
+    @JvmOverloads
+    fun reIndev(
+        sourceSets: List<SourceSet>,
+        lateApply: Boolean = false,
+        @DelegatesTo(value = MinecraftConfig::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        for (sourceSet in sourceSets) {
+            reIndev(sourceSet, lateApply, action)
         }
     }
 

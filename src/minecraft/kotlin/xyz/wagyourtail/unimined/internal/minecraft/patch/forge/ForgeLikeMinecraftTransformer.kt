@@ -334,7 +334,7 @@ abstract class ForgeLikeMinecraftTransformer(
         val groups = sortProjectSourceSets().mapValues { it.value.toMutableSet() }.toMutableMap()
         // detect non-forge groups
         for ((proj, sourceSet) in groups.keys.toSet()) {
-            if (proj.uniminedMaybe?.minecrafts?.map?.get(sourceSet)?.mcPatcher !is ForgeLikePatcher<*>) {
+            if (proj.uniminedMaybe?.minecrafts?.get(sourceSet)?.mcPatcher !is ForgeLikePatcher<*>) {
                 // merge with current
                 proj.logger.warn("[Unimined/ForgeLike] Non-forge ${(proj to sourceSet).toPath()} found in forge classpath groups, merging with current (${(project to provider.sourceSet).toPath()}), this should've been manually specified with `combineWith`")
                 groups[this.project to this.provider.sourceSet]!! += groups[proj to sourceSet]!!

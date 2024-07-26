@@ -274,7 +274,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
     protected fun sortProjectSourceSets(): Map<Pair<Project, SourceSet>, Set<Pair<Project, SourceSet>>> {
         val minecraftConfigs = mutableMapOf<Pair<Project, SourceSet>, MinecraftConfig?>()
         for ((project, sourceSet) in detectProjectSourceSets()) {
-            minecraftConfigs[project to sourceSet] = project.uniminedMaybe?.minecrafts?.map?.get(sourceSet)
+            minecraftConfigs[project to sourceSet] = project.uniminedMaybe?.minecrafts?.get(sourceSet)
         }
         // ensure all minecraft ones on same mappings
         // get current mappings

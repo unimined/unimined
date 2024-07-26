@@ -181,7 +181,7 @@ open class CraftbukkitMinecraftTransformer(
         val groups = sortProjectSourceSets().mapValues { it.value.toMutableSet() }.toMutableMap()
         // detect non-fabric groups
         for ((proj, sourceSet) in groups.keys.toSet()) {
-            if (proj.uniminedMaybe?.minecrafts?.map?.get(sourceSet)?.mcPatcher !is CraftbukkitPatcher) {
+            if (proj.uniminedMaybe?.minecrafts?.get(sourceSet)?.mcPatcher !is CraftbukkitPatcher) {
                 // merge with current
                 proj.logger.warn("[Unimined/FabricLike] Non-fabric ${(proj to sourceSet).toPath()} found in fabric classpath groups, merging with current (${(project to provider.sourceSet).toPath()}), this should've been manually specified with `combineWith`")
                 groups[this.project to this.provider.sourceSet]!! += groups[proj to sourceSet]!!
