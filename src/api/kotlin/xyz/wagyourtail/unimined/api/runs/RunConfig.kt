@@ -80,6 +80,7 @@ abstract class RunConfig @Inject constructor(
     @TaskAction
     override fun exec() {
         applyAll()
+        workingDir.mkdirs()
         super.exec()
     }
 
