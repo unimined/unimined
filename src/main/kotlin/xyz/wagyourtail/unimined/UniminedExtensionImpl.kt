@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.mapping.task.MigrateMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.net.URI
@@ -16,15 +17,17 @@ import java.nio.file.Path
 
 open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) {
 
-    override val minecrafts = defaultedMapOf<SourceSet, MinecraftConfig> {
-        MinecraftProvider(project, it)
-    }
+    override val minecrafts = mutableMapOf<SourceSet, MinecraftConfig>()
     override val minecraftConfiguration = mutableMapOf<SourceSet, MinecraftConfig.() -> Unit>()
     override fun minecraft(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
-        if (minecrafts.containsKey(sourceSet) && (minecrafts[sourceSet] as MinecraftProvider).applied) {
-            throw IllegalStateException("minecraft config for ${sourceSet.name} already applied, cannot configure further!")
-        } else if (!minecrafts.containsKey(sourceSet)) {
-            project.logger.info("[Unimined] registering minecraft config for ${sourceSet.name}")
+        if (minecrafts.containsKey(sourceSet)) {
+            if ((minecrafts[sourceSet] as MinecraftProvider).applied) {
+                throw IllegalStateException("minecraft config for ${sourceSet.name} already applied, cannot configure further!")
+            } else {
+                project.logger.info("[Unimined] registering minecraft config for ${sourceSet.name}")
+            }
+        } else {
+            minecrafts[sourceSet] = MinecraftProvider(project, sourceSet)
         }
         minecraftConfiguration.compute(sourceSet) { _, old ->
             if (old != null) {
@@ -36,8 +39,31 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
                 action
             }
         }
-        minecrafts[sourceSet].action()
+        minecrafts[sourceSet]?.action()
         if (!lateApply) (minecrafts[sourceSet] as MinecraftProvider).apply()
+    }
+    override fun reIndev(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
+        if (minecrafts.containsKey(sourceSet)) {
+            if ((minecrafts[sourceSet] as ReIndevProvider).applied) {
+                throw IllegalStateException("minecraft config for ${sourceSet.name} already applied, cannot configure further!")
+            } else {
+                project.logger.info("[Unimined] registering reIndev config for ${sourceSet.name}")
+            }
+        } else {
+            minecrafts[sourceSet] = ReIndevProvider(project, sourceSet)
+        }
+        minecraftConfiguration.compute(sourceSet) { _, old ->
+            if (old != null) {
+                {
+                    old()
+                    action()
+                }
+            } else {
+                action
+            }
+        }
+        minecrafts[sourceSet]?.action()
+        if (!lateApply) (minecrafts[sourceSet] as ReIndevProvider).apply()
     }
 
     override fun migrateMappings(sourceSet: SourceSet, action: MigrateMappingsTask.() -> Unit) {
@@ -270,6 +296,17 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     override fun outlandsMaven() {
         project.logger.info("[Unimined] adding outlands maven: $outlandsMaven")
+    }
+
+    val fox2codeMaven by lazy {
+        project.repositories.maven {
+            it.name = "Fox2Code"
+            it.url = URI.create("https://cdn.fox2code.com/maven")
+        }
+    }
+
+    override fun fox2codeMaven() {
+        project.logger.info("[Unimined] adding Fox2Code maven: $fox2codeMaven")
     }
 
     init {

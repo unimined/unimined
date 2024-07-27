@@ -45,6 +45,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMin
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.merged.MergedMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.NoTransformReIndevTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.rift.RiftMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Extract
@@ -68,8 +69,10 @@ import java.util.*
 import kotlin.collections.ArrayDeque
 import kotlin.io.path.*
 
-class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
+open class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
     override val minecraftData = MinecraftDownloader(project, this)
+
+    override val obfuscated = true
 
     override val mappings = MappingsProvider(project, this)
 
@@ -154,7 +157,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         }
     }
 
-    private val minecraftFiles: Map<Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>, MinecraftJar> = defaultedMapOf {
+    protected open val minecraftFiles: Map<Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>, MinecraftJar> = defaultedMapOf {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Providing minecraft files for $it")
         val mc = if (side == EnvType.COMBINED) {
             val client = minecraftData.minecraftClient
@@ -380,7 +383,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         } as ModuleDependency
     }
 
-    private val extractDependencies: MutableMap<Dependency, Extract> = mutableMapOf()
+    protected val extractDependencies: MutableMap<Dependency, Extract> = mutableMapOf()
 
     fun addLibraries(libraries: List<Library>) {
         for (library in libraries) {
@@ -624,7 +627,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
 
     @ApiStatus.Internal
-    fun provideRunClientTask(name: String, defaultWorkingDir: File) {
+    open fun provideRunClientTask(name: String, defaultWorkingDir: File) {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] client config, $name")
 
         runs.preLaunch(name) {
