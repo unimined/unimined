@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
 import xyz.wagyourtail.unimined.util.SemVerUtils
 import java.io.InputStreamReader
 import java.nio.file.Files
@@ -98,6 +99,9 @@ abstract class FabricMinecraftTransformer(
             "-Dfabric.remapClasspathFile=${intermediaryClasspath}",
             "-Dfabric.classPathGroups=${groups}"
         )
+        if (provider is ReIndevProvider) {
+            config.jvmArgs("-Dfabric.gameVersion=b1.7.3")
+        }
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
@@ -107,6 +111,9 @@ abstract class FabricMinecraftTransformer(
             "-Dfabric.remapClasspathFile=${intermediaryClasspath}",
             "-Dfabric.classPathGroups=${groups}"
         )
+        if (provider is ReIndevProvider) {
+            config.jvmArgs("-Dfabric.gameVersion=b1.7.3")
+        }
     }
 
     override fun collectInterfaceInjections(baseMinecraft: MinecraftJar, injections: HashMap<String, List<String>>) {

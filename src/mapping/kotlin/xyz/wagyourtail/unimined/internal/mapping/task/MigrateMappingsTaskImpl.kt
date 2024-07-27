@@ -8,8 +8,6 @@ import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.util.sourceSets
 import xyz.wagyourtail.unimined.util.withSourceSet
-import java.io.File
-import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import javax.inject.Inject
 import kotlin.io.path.*
@@ -30,8 +28,8 @@ abstract class MigrateMappingsTaskImpl @Inject constructor(@get:Internal val sou
     @OptIn(ExperimentalPathApi::class)
     @TaskAction
     fun run() {
-        val inputMinecraft = project.unimined.minecrafts.map[sourceSet]!!
-        val outputMinecraft = project.unimined.minecrafts.map[migrateSourceSet]!!
+        val inputMinecraft = project.unimined.minecrafts[sourceSet]!!
+        val outputMinecraft = project.unimined.minecrafts[migrateSourceSet]!!
 
         val inputCommon = sourceSet.allSource.sourceDirectories.files.associate {
             it.toPath() to temporaryDir.toPath().resolve("input-remapped-${it.name}").createDirectories()

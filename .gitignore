@@ -29,7 +29,7 @@ hs_err_pid*
 
 !src/main/resources/fmllibs/*
 
-testing/*/.gradle
-testing/*/build
-testing/*/.idea
-testing/*/run
+testing/**/.gradle
+testing/**/build
+testing/**/.idea
+testing/**/run

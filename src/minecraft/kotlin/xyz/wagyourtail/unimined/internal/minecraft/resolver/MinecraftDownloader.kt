@@ -22,7 +22,7 @@ import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
 import kotlin.time.Duration.Companion.seconds
 
-class MinecraftDownloader(val project: Project, val provider: MinecraftProvider) : MinecraftData() {
+open class MinecraftDownloader(val project: Project, val provider: MinecraftProvider) : MinecraftData() {
 
     val version
         get() = provider.version
@@ -78,7 +78,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         versionsList.getAsJsonArray("versions") ?: throw Exception("Failed to get metadata, no versions")
     }
 
-    private fun getVersionFromLauncherMeta(versionId: String): JsonObject {
+    protected fun getVersionFromLauncherMeta(versionId: String): JsonObject {
         for (version in launcherMeta) {
             val versionObject = version.asJsonObject
             val id = versionObject.get("id").asString
@@ -130,7 +130,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         )
     }
 
-    val minecraftClient: MinecraftJar by lazy {
+    open val minecraftClient: MinecraftJar by lazy {
         project.logger.info("[Unimined/MinecraftDownloader] retrieving minecraft client jar")
         val clientPath = mcVersionFolder.resolve("minecraft-$version-client.jar")
         if (!clientPath.exists() || project.unimined.forceReload) {
@@ -184,7 +184,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
         versionOverrides.getOrDefault(version, version)
     })
 
-    val minecraftServer: MinecraftJar by lazy {
+    open val minecraftServer: MinecraftJar by lazy {
         project.logger.info("[Unimined/MinecraftDownloader] retrieving minecraft server jar")
         var serverPath = mcVersionFolder.resolve("minecraft-$version-server.jar")
         if (!serverPath.exists() || project.unimined.forceReload) {
