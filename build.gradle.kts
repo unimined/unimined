@@ -240,7 +240,7 @@ tasks.build {
 
 tasks.test {
     javaLauncher = javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion.set(JavaLanguageVersion.of(8))
     }
 
     useJUnitPlatform()

@@ -10,6 +10,16 @@ base {
     archivesName = "UniminedExampleMod"
 }
 
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
 
@@ -39,10 +49,4 @@ processResources {
     filesMatching("flintmodule.json") {
         expand "version": project.version
     }
-}
-
-java {
-    withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
 }

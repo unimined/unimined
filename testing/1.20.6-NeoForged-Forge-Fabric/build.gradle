@@ -10,6 +10,12 @@ base {
     archivesName = "UniminedExampleMod"
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 // this is just here so we can test the outputs easier and clean between tests
 unimined.useGlobalCache = false
 
