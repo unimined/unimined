@@ -29,14 +29,17 @@ class MappingDSL(val visitor: MappingVisitor) {
         }
     }
 
+    @JvmOverloads
     fun c(
         names: List<String?>,
         @DelegatesTo(ClassDSL::class, strategy = Closure.DELEGATE_FIRST)
-        block: Closure<*>
+        block: Closure<*>? = null
     ) {
         c(*names.toTypedArray()) {
-            block.delegate = this
-            block.call()
+            if (block != null) {
+                block.delegate = this
+                block.call()
+            }
         }
     }
 
@@ -57,14 +60,17 @@ class MappingDSL(val visitor: MappingVisitor) {
             }
         }
 
+        @JvmOverloads
         fun f(
             names: List<String?>,
             @DelegatesTo(FieldDSL::class, strategy = Closure.DELEGATE_FIRST)
-            block: Closure<*>
+            block: Closure<*>? = null
         ) {
             f(*names.toTypedArray()) {
-                block.delegate = this
-                block.call()
+                if (block != null) {
+                    block.delegate = this
+                    block.call()
+                }
             }
         }
 
@@ -82,14 +88,17 @@ class MappingDSL(val visitor: MappingVisitor) {
             }
         }
 
+        @JvmOverloads
         fun m(
             names: List<String?>,
             @DelegatesTo(MethodDSL::class, strategy = Closure.DELEGATE_FIRST)
-            block: Closure<*>
+            block: Closure<*>? = null
         ) {
             m(*names.toTypedArray()) {
-                block.delegate = this
-                block.call()
+                if (block != null) {
+                    block.delegate = this
+                    block.call()
+                }
             }
         }
 

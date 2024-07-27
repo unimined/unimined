@@ -40,9 +40,9 @@ unimined.minecraft {
         intermediary()
         yarn(1)
 
-        stub(["intermediary", "yarn"]) {
+        stubs(["intermediary", "yarn"]) {
             c(["net/minecraft/class_1927"]) {
-                m(["method_55109()Lnet/minecraft/class_243;", "getPos"])
+                m(["method_55109;()Lnet/minecraft/class_243;", "getPos"])
             }
         }
     }
