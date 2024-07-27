@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.deleteRecursively
@@ -47,10 +48,19 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     override fun beforeMappingsResolve() {
         val forge = parent.forge.dependencies.first()
         provider.mappings.apply {
-            if (!parent.customSearge)
+            if (!parent.customSearge && canCombine)
                 provider.mappings {
                     forgeBuiltinMCP(forge.version!!.substringAfter("${provider.version}-"))
                 }
+        }
+    }
+
+    val dynLibs: Set<String>? by lazy {
+        val forge = parent.forge.resolve().first().toPath()
+
+        // resolve dyn libs
+        forge.readZipInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", false) {
+            getDynLibs(it)
         }
     }
 
@@ -58,11 +68,8 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         // get and add forge-src to mappings
         parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
 
-        val forge = parent.forge.resolve().first().toPath()
-
-        // resolve dyn libs
-        forge.readZipInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", false) {
-            resolveDynLibs(provider.localCache.resolve("fmllibs").toFile(), getDynLibs(it))
+        if (dynLibs != null) {
+            resolveDynLibs(provider.localCache.resolve("fmllibs").toFile(), dynLibs!!)
         }
 
         super.apply()
@@ -72,12 +79,18 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         provider.minecraftLibraries.extendsFrom(it)
     }
 
-    lateinit var deps: List<Pair<Pair<String, String>, Dependency>>
+
+    override fun libraryFilter(library: Library): Boolean {
+        if (library.name.startsWith("org.ow2.asm") && dynLibs?.contains("asm-all-4.0.jar") == true) {
+            return false
+        }
+        return super.libraryFilter(library)
+    }
 
     fun resolveDynLibs(workingDirectory: File, wanted: Set<String>) {
         val path = workingDirectory.toPath().createDirectories()
 
-        deps = listOf(
+        val deps = listOf(
             Pair(
                 Pair("guava-12.0.1.jar", "guava-12.0.1.jar"), project.dependencies.create(
                     "com.google.guava:guava:12.0.1"
@@ -195,7 +208,7 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             }
         }
 
-        config.jvmArgs("-Dminecraft.applet.TargetDirectory=\"${config.workingDir.absolutePath}\"")
+        config.jvmArgs("-Dminecraft.applet.TargetDirectory=${config.workingDir.absolutePath}")
         if (parent.mainClass != null) config.mainClass.set(parent.mainClass!!)
     }
 

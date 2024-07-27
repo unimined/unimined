@@ -28,6 +28,7 @@ kotlin {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven("https://maven.wagyourtail.xyz/snapshots/")
     maven {
@@ -238,6 +239,10 @@ tasks.build {
 }
 
 tasks.test {
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+
     useJUnitPlatform()
 
     testLogging {

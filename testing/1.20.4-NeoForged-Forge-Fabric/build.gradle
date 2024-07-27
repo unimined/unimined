@@ -40,11 +40,9 @@ unimined.minecraft {
         intermediary()
         yarn(1)
 
-        devFallbackNamespace "intermediary"
-
-        stub.withMappings("intermediary", ["yarn"]) {
-            c("net/minecraft/class_1927", []) {
-                m("method_55109", "()Lnet/minecraft/class_243;", ["getPos"])
+        stub(["intermediary", "yarn"]) {
+            c(["net/minecraft/class_1927"]) {
+                m(["method_55109()Lnet/minecraft/class_243;", "getPos"])
             }
         }
     }

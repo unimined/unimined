@@ -100,6 +100,7 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
     }
 
     override fun libraryFilter(library: Library): Boolean {
+        if (!forgeTransformer.libraryFilter(library)) return false
         if (library.name.startsWith("oshi-project:")) {
             return false
         }

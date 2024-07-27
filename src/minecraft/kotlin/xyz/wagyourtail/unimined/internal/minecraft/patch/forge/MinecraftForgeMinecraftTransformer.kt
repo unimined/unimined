@@ -117,6 +117,7 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
     }
 
     override fun libraryFilter(library: Library): Boolean {
+        if (!forgeTransformer.libraryFilter(library)) return false
         return !library.name.startsWith("net.minecraftforge:minecraftforge:") && !library.name.startsWith("net.minecraftforge:forge:")
     }
 

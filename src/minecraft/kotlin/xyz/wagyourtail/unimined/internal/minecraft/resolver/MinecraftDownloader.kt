@@ -27,7 +27,7 @@ class MinecraftDownloader(val project: Project, val provider: MinecraftProvider)
     val version
         get() = provider.version
 
-    val mcVersionFolder: Path by lazy {
+    override val mcVersionFolder: Path by lazy {
         project.unimined.getGlobalCache()
             .resolve("net")
             .resolve("minecraft")

@@ -35,7 +35,7 @@ class FabricInterfaceInjectionTest {
             throw Exception("build failed", e)
         }
 
-        val fs = openZipFileSystem(projectName, ".gradle/unimined/local/fabric/fabric/minecraft-1.14.4-fabric-merged+fixed-mojmap+intermediary-ii+49c3b85.jar")
+        val fs = openZipFileSystem(projectName, ".gradle/unimined/local/fabric/fabric/minecraft-1.14.4-fabric-merged+fixed-mojmap-ii+49c3b85.jar")
 
         assertNotNull(fs, "Couldn't find the interface injected jar!")
 

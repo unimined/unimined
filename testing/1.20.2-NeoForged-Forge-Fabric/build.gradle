@@ -34,8 +34,6 @@ unimined.minecraft {
         intermediary()
         mojmap()
         parchment("1.20.2", "2023.12.10")
-
-        devFallbackNamespace "intermediary"
     }
 
     defaultRemapJar = false

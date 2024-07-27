@@ -32,8 +32,10 @@ unimined.minecraft {
     mappings {
         intermediary()
         yarn(project.mapping_version)
+    }
 
-        devFallbackNamespace "intermediary"
+    runs.config("client") {
+        javaVersion = JavaVersion.VERSION_17
     }
 
     defaultRemapJar = false

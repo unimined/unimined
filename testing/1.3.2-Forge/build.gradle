@@ -25,15 +25,15 @@ unimined.minecraft {
     version "1.3.2"
 
     mappings {
-        stub.withMappings(["searge", "mcp"]) {
-            c("ModLoader", "net/minecraft/src/ModLoader", "net/minecraft/src/ModLoader")
-            c("BaseMod", "net/minecraft/src/BaseMod", "net/minecraft/src/BaseMod")
+        stubs(["official", "searge"]) {
+            c("ModLoader", "net/minecraft/src/ModLoader")
+            c("BaseMod", "net/minecraft/src/BaseMod")
         }
     }
 
     minecraftForge {
         loader "4.3.5.318"
-        forgeTransformer.transforms("exampleModId.transform")
+//        forgeTransformer.transforms("exampleModId.transform")
     }
 
     minecraftRemapper.config {
@@ -42,7 +42,7 @@ unimined.minecraft {
 
     runs {
         config("client") {
-            jvmArgs.add("-Djma.debug=true")
+            jvmArgs("-Djma.debug=true")
         }
     }
 }

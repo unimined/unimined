@@ -30,6 +30,9 @@ sourceSets {
 repositories {
     mavenCentral()
     maven {
+        url = "https://maven.wagyourtail.xyz/snapshots"
+    }
+    maven {
         name = "sponge"
         url = "https://repo.spongepowered.org/maven"
     }
@@ -41,8 +44,6 @@ unimined.minecraft {
     mappings {
         intermediary()
         yarn(project.mapping_version)
-
-        devFallbackNamespace "intermediary"
     }
 
     defaultRemapJar = false

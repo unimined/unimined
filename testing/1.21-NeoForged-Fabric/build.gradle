@@ -43,8 +43,6 @@ unimined.minecraft {
 
     mappings {
         mojmap()
-
-        devFallbackNamespace "official"
     }
 
     defaultRemapJar = false

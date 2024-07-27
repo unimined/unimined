@@ -28,8 +28,6 @@ this is an extension of the multi-sourcesets concept, but with different modload
 unimined.minecraft {
     mappings {
        mojmap()
-       
-       devFallbackNamespace "official" // ensure the same fallback namespace
     }
     
     accessWidener {

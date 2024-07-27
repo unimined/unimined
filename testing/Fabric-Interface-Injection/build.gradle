@@ -37,8 +37,6 @@ unimined.minecraft {
     mappings {
         intermediary()
         mojmap()
-
-        devFallbackNamespace "intermediary"
     }
 
     defaultRemapJar = false

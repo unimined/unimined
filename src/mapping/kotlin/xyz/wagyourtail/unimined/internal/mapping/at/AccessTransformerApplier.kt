@@ -7,11 +7,11 @@ import okio.buffer
 import okio.sink
 import okio.use
 import org.gradle.api.logging.Logger
-import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
 import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
 import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATReader
+import xyz.wagyourtail.unimined.mapping.formats.at.LegacyATWriter
 import xyz.wagyourtail.unimined.mapping.formats.aw.AWWriter
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
@@ -104,7 +104,11 @@ object AccessTransformerApplier {
             }
             val remapped = ATWriter.remapMappings(data, temp, fromNamespace, toNamespace)
             output.outputStream().bufferedWriter().use {
-                ATWriter.writeData(remapped, it::append)
+                if (isLegacy) {
+                    LegacyATWriter.writeData(remapped, it::append)
+                } else {
+                    ATWriter.writeData(remapped, it::append)
+                }
             }
 
         }

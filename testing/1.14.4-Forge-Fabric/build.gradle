@@ -41,8 +41,6 @@ unimined.minecraft {
     mappings {
         intermediary()
         mojmap()
-
-        devFallbackNamespace "intermediary"
     }
 
     defaultRemapJar = false
@@ -63,11 +61,7 @@ unimined.minecraft(sourceSets.forge) {
 
     mappings {
         intermediary()
-        mojmap() {
-            skipIfNotIn("intermediary")
-        }
-
-        devFallbackNamespace "intermediary"
+        mojmap()
     }
 
     minecraftForge {

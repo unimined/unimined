@@ -41,8 +41,6 @@ unimined.minecraft {
     mappings {
         intermediary()
         yarn(project.mapping_version)
-
-        devFallbackNamespace "intermediary"
     }
 
     defaultRemapJar = false

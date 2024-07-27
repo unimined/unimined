@@ -54,9 +54,9 @@ unimined.minecraft(sourceSets.forge) {
 
     mappings {
         mcp("legacy", "6.2-1.2.5")
-        stub.withMappings(["searge", "mcp"]) {
-            c("ModLoader", "net/minecraft/src/ModLoader", "net/minecraft/src/ModLoader")
-            c("BaseMod", "net/minecraft/src/BaseMod", "net/minecraft/src/BaseMod")
+        stubs(["official", "searge"]) {
+            c("ModLoader", "net/minecraft/src/ModLoader")
+            c("BaseMod", "net/minecraft/src/BaseMod")
         }
     }
 
@@ -71,7 +71,7 @@ unimined.minecraft(sourceSets.forge) {
 
     runs {
         config("client") {
-            jvmArgs.add("-Djma.debug=true")
+            jvmArgs("-Djma.debug=true")
         }
     }
 }
@@ -82,9 +82,9 @@ unimined.minecraft(sourceSets.modloader) {
 
     mappings {
         mcp("legacy", "6.2-1.2.5")
-        stub.withMappings(["searge", "mcp"]) {
-            c("ModLoader", "net/minecraft/src/ModLoader", "net/minecraft/src/ModLoader")
-            c("BaseMod", "net/minecraft/src/BaseMod", "net/minecraft/src/BaseMod")
+        stubs(["official", "searge"]) {
+            c("ModLoader", "net/minecraft/src/ModLoader")
+            c("BaseMod", "net/minecraft/src/BaseMod")
         }
     }
 

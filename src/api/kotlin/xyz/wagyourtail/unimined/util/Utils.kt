@@ -246,7 +246,14 @@ fun <K, V> HashMap<K, V>.getSha1(): String {
 
 fun <K, V> HashMap<K, V>.getShortSha1(): String = getSha1().substring(0, 7)
 
+fun String.getSha1(): String {
+    val digestSha1 = MessageDigest.getInstance("SHA-1")
+    digestSha1.update(toByteArray())
+    val hashBytes = digestSha1.digest()
+    return hashBytes.joinToString("") { String.format("%02x", it)}
+}
 
+fun String.getShortSha1() = getSha1().substring(0, 7)
 
 //fun runJarInSubprocess(
 //    jar: Path,

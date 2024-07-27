@@ -44,7 +44,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
     override fun namespace(ns: String) {
         // kotlin reflection is weird
         val delegate: FinalizeOnRead<Namespace> = ModRemapProvider::class.getField("namespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
-        delegate.setValueIntl(LazyMutable { Namespace(ns) })
+        delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(ns) })
     }
 
     override fun catchAWNamespaceAssertion() {
@@ -214,7 +214,7 @@ class ModRemapProvider(config: Set<Configuration>, val project: Project, val pro
                 for (artifact in originalDepsFiles[c].keys) {
                     if (artifact.extension == "pom") continue
                     val classifier = artifact.classifier?.let { "$it-" } ?: ""
-                    val output = "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${devNamespace}-@${artifact.extension ?: "jar"}"
+                    val output = "remapped_${artifact.moduleVersion.id.group}:${artifact.name}:${artifact.moduleVersion.id.version}:${classifier}mapped-${devNamespace}@${artifact.extension ?: "jar"}"
                     outConf.dependencies.add(
                         project.dependencies.create(
                             output

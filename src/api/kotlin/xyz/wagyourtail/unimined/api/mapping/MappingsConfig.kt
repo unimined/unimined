@@ -14,6 +14,7 @@ import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.MavenCoords
+import xyz.wagyourtail.unimined.util.getField
 import java.io.File
 
 /**
@@ -39,7 +40,8 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
     })
 
     fun devNamespace(namespace: String) {
-        devNamespace = Namespace(namespace)
+        val delegate = MappingsConfig::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
+        delegate.setValueIntl(LazyMutable { checkedNs(namespace) })
     }
 
     @JvmOverloads

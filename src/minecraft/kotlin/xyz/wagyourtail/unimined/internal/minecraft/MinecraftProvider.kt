@@ -83,7 +83,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
     override val sourceProvider = SourceProvider(project, this)
 
     private val patcherActions = ArrayDeque<() -> Unit>()
-    private var lateActionsRunning by FinalizeOnWrite(false)
 
     override val combinedWithList = mutableSetOf<Pair<Project, SourceSet>>()
 
@@ -218,13 +217,7 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
 
     override fun mappings(action: MappingsConfig<*>.() -> Unit) {
         createMojmapIvy()
-        if (lateActionsRunning) {
-            mappings.action()
-        } else {
-            patcherActions.addLast {
-                mappings.action()
-            }
-        }
+        mappings.action()
     }
 
     override fun merged(action: MergedPatcher.() -> Unit) {
@@ -427,8 +420,6 @@ class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfi
         if (applied) return
         applied = true
         project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Applying minecraft config for $sourceSet")
-
-        lateActionsRunning = true
 
         while (patcherActions.isNotEmpty()) {
             patcherActions.removeFirst().invoke()

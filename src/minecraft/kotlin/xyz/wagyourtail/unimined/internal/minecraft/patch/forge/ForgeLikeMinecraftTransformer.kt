@@ -26,6 +26,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransf
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
@@ -76,12 +77,12 @@ abstract class ForgeLikeMinecraftTransformer(
             forgeTransformer.unprotectRuntime = value
         }
 
-    override var legacyATFormat: Boolean = provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") < 0
 
     protected abstract fun addMavens()
 
     init {
         addMavens()
+        legacyATFormat = provider.minecraftData.mcVersionCompare(provider.version, "1.7.10") < 0
         provider.minecraftRemapper.addResourceRemapper { from, to ->
             runBlocking {
                 AccessTransformerApplier.AtRemapper(
@@ -293,6 +294,10 @@ abstract class ForgeLikeMinecraftTransformer(
 
     override fun transform(minecraft: MinecraftJar): MinecraftJar {
         return forgeTransformer.transform(minecraft)
+    }
+
+    override fun libraryFilter(library: Library): Boolean {
+        return forgeTransformer.libraryFilter(library)
     }
 
     enum class ForgeFiles(val path: String) {

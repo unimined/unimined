@@ -3,8 +3,12 @@ package xyz.wagyourtail.unimined.api.minecraft.resolver
 import org.jetbrains.annotations.ApiStatus
 import java.io.File
 import java.net.URI
+import java.nio.file.Path
 
 abstract class MinecraftData {
+
+    @get:ApiStatus.Internal
+    abstract val mcVersionFolder: Path
 
     @set:ApiStatus.Experimental
     abstract var launcherMetaUrl: URI?
@@ -22,5 +26,6 @@ abstract class MinecraftData {
 
     abstract val minecraftClientFile: File
     abstract val minecraftServerFile: File
+
     abstract val hasMappings: Boolean
 }

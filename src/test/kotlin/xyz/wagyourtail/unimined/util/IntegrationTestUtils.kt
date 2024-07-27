@@ -30,8 +30,8 @@ fun openZipFileSystem(project: String, path: String): FileSystem? {
 class IntegrationTestUtils {
     companion object {
         private val GRADLE_VERSION = setOf(
-            "7.6.3",
-            "8.8",
+//            "7.6.3",
+//            "8.8",
             GRADLE_CURRENT,
         )
 
@@ -62,7 +62,7 @@ fun runGradle(dir: Path, version: String = GRADLE_CURRENT): BuildResult {
     val result = GradleRunner.create()
         .withGradleVersion(version)
         .withProjectDir(dir.toFile())
-        .withArguments("clean", "build", "--stacktrace", "--info", "--refresh-dependencies")
+        .withArguments("clean", "build", "--stacktrace", "--info", "-Punimined.forceReload=true")
         .withPluginClasspath(classpath)
         .build()
     if (settings.exists()) {

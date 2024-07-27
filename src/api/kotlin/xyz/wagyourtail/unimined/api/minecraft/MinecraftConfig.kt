@@ -73,7 +73,7 @@ import java.nio.file.Path
 abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) : PatchProviders {
 
     @set:ApiStatus.Internal
-    var side by FinalizeOnRead(LazyMutable { if (!mcPatcher.canCombine) error("must set \"side\" for minecraft to either \"client\" or \"server\"") else EnvType.JOINED })
+    var side by FinalizeOnRead(EnvType.JOINED)
 
     /**
      * sets the side for minecraft (client, server, combined, or datagen)

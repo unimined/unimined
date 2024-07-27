@@ -27,12 +27,12 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
 
     override fun devNamespace(namespace: String) {
         val delegate: FinalizeOnRead<Namespace> = RemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
-        delegate.setValueIntl(LazyMutable { Namespace(namespace) })
+        delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })
     }
 
     override fun prodNamespace(namespace: String) {
         val delegate: FinalizeOnRead<Namespace> = RemapJarTask::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
-        delegate.setValueIntl(LazyMutable { Namespace(namespace) })
+        delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })
     }
 
     override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {

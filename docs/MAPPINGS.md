@@ -122,7 +122,6 @@ unimined.minecraft {
     mappings {
         ...
         devNamespace("mojmap") // sets the dev namespace to mojmap
-        devFallbackNamespace("intermediary") // sets the fallback namespace to intermediary
     }
 }
 ```
