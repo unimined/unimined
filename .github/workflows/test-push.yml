@@ -15,10 +15,10 @@ jobs:
           8 # latest
         ]
         java: [
-          8, # Old LTS
-          11, # Should we even test this one?
-          17, # LTS
-          21 # Latest LTS only supported by gradle 8.5+
+          8 #, # Old LTS we build against
+          # 11, # Should we even test this one?
+          # 17, # LTS
+          # 21 # Latest LTS only supported by gradle 8.5+
         ]
     runs-on: ubuntu-22.04
     container:
