@@ -155,7 +155,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    protected open val minecraftFiles: Map<Pair<MappingNamespaceTree.Namespace, MappingNamespaceTree.Namespace>, MinecraftJar> = defaultedMapOf {
+    protected open val minecraftFiles: Map<Namespace, MinecraftJar> = defaultedMapOf {
         project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Providing minecraft files for $it")
         val mc = if (side == EnvType.JOINED) {
             val client = minecraftData.minecraftClient
