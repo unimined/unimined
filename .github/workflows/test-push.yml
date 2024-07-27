@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [17]
+        java: [8]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: ubuntu-22.04
@@ -87,7 +87,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [21]
+        java: [8]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: windows-2022
