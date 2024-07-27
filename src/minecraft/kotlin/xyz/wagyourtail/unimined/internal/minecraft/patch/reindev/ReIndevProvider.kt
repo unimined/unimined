@@ -43,10 +43,12 @@ class ReIndevProvider(project: Project, sourceSet: SourceSet) : MinecraftProvide
         if (!client.path.exists()) throw IOException("ReIndev path $client does not exist")
         val server = minecraftData.minecraftServer
         val noTransform = NoTransformReIndevTransformer(project, this)
-        if (noTransform.canCombine) {
-            noTransform.merge(client, server).path.toFile()
-        } else {
-            null
-        }
+        if (noTransform.canCombine) noTransform.merge(client, server).path.toFile() else null
+    }
+
+    override val mavenGroup: String = "net.silveros"
+
+    override val minecraftDepName: String = project.path.replace(":", "_").let { projectPath ->
+        "reindev${if (projectPath == "_") "" else projectPath}${if (sourceSet.name == "main") "" else "+"+sourceSet.name}"
     }
 }
