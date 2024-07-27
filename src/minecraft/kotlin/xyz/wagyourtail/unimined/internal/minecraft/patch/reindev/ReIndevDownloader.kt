@@ -1,11 +1,12 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.reindev
 
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.MinecraftDownloader
+import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.cachingDownload
@@ -50,8 +51,7 @@ class ReIndevDownloader(project: Project, provider: MinecraftProvider) : Minecra
             EnvType.CLIENT,
             version,
             listOf(),
-            provider.mappings.OFFICIAL,
-            provider.mappings.OFFICIAL,
+            Namespace("official"),
             null,
             "jar",
             clientPath
@@ -75,8 +75,7 @@ class ReIndevDownloader(project: Project, provider: MinecraftProvider) : Minecra
             EnvType.SERVER,
             version,
             listOf(),
-            provider.mappings.OFFICIAL,
-            provider.mappings.OFFICIAL,
+            Namespace("official"),
             null,
             "jar",
             serverPath

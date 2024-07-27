@@ -34,8 +34,7 @@ class ReIndevProvider(project: Project, sourceSet: SourceSet) : MinecraftProvide
             }
         }
 
-        mappings.devNamespace = mappings.OFFICIAL
-        mappings.devFallbackNamespace = mappings.OFFICIAL
+        mappings.devNamespace = mappings.checkedNs("official")
     }
 
     override val mergedOfficialMinecraftFile: File? by lazy {

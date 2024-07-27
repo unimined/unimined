@@ -13,7 +13,7 @@ abstract class AbstractReIndevTransformer(
     providerName: String
 ) : AbstractMinecraftTransformer(project, provider, providerName) {
 
-    override var canCombine: Boolean = SemVerUtils.matches(provider.version.replace("_", "."), ">2.9")
+    override var canCombine: Boolean = SemVerUtils.matches(provider.version.replace("_", ""), ">2.9")
 
     init {
         addMavens()

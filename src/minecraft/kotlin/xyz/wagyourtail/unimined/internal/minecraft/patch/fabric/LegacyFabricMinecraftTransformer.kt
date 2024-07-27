@@ -21,7 +21,9 @@ open class LegacyFabricMinecraftTransformer(
         }
     }
 
-    override var prodNamespace: Namespace by FinalizeOnRead(LazyMutable { provider.mappings.checkedNs("legacyIntermediary") })
+    override var prodNamespace: Namespace by FinalizeOnRead(LazyMutable {
+        provider.mappings.checkedNs("legacyIntermediary")
+    })
 
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         fabric.dependencies.add(
