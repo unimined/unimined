@@ -11,7 +11,9 @@ import kotlin.io.path.exists
 
 class ReIndevProvider(project: Project, sourceSet: SourceSet) : MinecraftProvider(project, sourceSet) {
 
-    override val minecraftData: MinecraftDownloader = ReIndevDownloader(project, this)
+    override val obfuscated = false
+
+    override val minecraftData = ReIndevDownloader(project, this)
 
     init {
         // Required for the following [2.9.4+legacyfabric.8,) dependency

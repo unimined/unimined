@@ -103,6 +103,10 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     @set:ApiStatus.Internal
     abstract var mcPatcher: MinecraftPatcher
 
+    /**
+     * Whether the provided jars are generally obfuscated when downloaded
+     */
+    abstract val obfuscated: Boolean
     abstract val mappings: MappingsConfig
     abstract val mods: ModsConfig
     abstract val runs: RunsConfig

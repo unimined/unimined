@@ -72,6 +72,8 @@ import kotlin.io.path.*
 open class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
     override val minecraftData = MinecraftDownloader(project, this)
 
+    override val obfuscated = true
+
     override val mappings = MappingsProvider(project, this)
 
     override var mcPatcher: MinecraftPatcher by FinalizeOnRead(FinalizeOnWrite(NoTransformMinecraftTransformer(project, this)))

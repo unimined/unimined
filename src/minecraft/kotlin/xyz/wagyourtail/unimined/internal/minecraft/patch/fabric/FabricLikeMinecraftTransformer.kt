@@ -65,7 +65,7 @@ abstract class FabricLikeMinecraftTransformer(
 
     private val include: Configuration = project.configurations.maybeCreate("include".withSourceSet(provider.sourceSet))
 
-    override var customIntermediaries: Boolean by FinalizeOnRead(provider is ReIndevProvider)
+    override var customIntermediaries: Boolean by FinalizeOnRead(!provider.obfuscated)
 
     override var skipInsertAw: Boolean by FinalizeOnRead(false)
 
@@ -97,14 +97,14 @@ abstract class FabricLikeMinecraftTransformer(
     )
 
     override var prodNamespace by FinalizeOnRead(LazyMutable {
-        if (provider is ReIndevProvider) return@LazyMutable provider.mappings.OFFICIAL
+        if (!provider.obfuscated) return@LazyMutable provider.mappings.OFFICIAL
         provider.mappings.getNamespace("intermediary")
     })
 
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
     override var devMappings: Path? by FinalizeOnRead(LazyMutable {
-        if (provider is ReIndevProvider) return@LazyMutable null
+        if (!provider.obfuscated) return@LazyMutable null
         provider.localCache
             .resolve("mappings")
             .createDirectories()
