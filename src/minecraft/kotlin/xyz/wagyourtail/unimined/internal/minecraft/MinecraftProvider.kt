@@ -86,7 +86,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     override val sourceProvider = SourceProvider(project, this)
 
-    private val patcherActions = ArrayDeque<() -> Unit>()
+    protected val patcherActions = ArrayDeque<() -> Unit>()
     private var lateActionsRunning by FinalizeOnWrite(false)
 
     override val combinedWithList = mutableSetOf<Pair<Project, SourceSet>>()

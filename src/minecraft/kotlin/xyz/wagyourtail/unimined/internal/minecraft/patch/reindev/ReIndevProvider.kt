@@ -2,9 +2,9 @@ package xyz.wagyourtail.unimined.internal.minecraft.patch.reindev
 
 import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSet
+import xyz.wagyourtail.unimined.api.minecraft.patch.reindev.FoxLoaderPatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
-import xyz.wagyourtail.unimined.internal.minecraft.resolver.MinecraftDownloader
 import java.io.File
 import java.io.IOException
 import kotlin.io.path.exists
@@ -44,6 +44,14 @@ class ReIndevProvider(project: Project, sourceSet: SourceSet) : MinecraftProvide
         val server = minecraftData.minecraftServer
         val noTransform = NoTransformReIndevTransformer(project, this)
         if (noTransform.canCombine) noTransform.merge(client, server).path.toFile() else null
+    }
+
+    override fun foxLoader(action: FoxLoaderPatcher.() -> Unit) {
+        mcPatcher = FoxLoaderMinecraftTransformer(project, this).also {
+            patcherActions.addFirst {
+                action(it)
+            }
+        }
     }
 
     override val mavenGroup: String = "net.silveros"

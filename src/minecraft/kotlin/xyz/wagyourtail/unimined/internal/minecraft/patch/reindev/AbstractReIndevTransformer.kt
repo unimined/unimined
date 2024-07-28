@@ -13,13 +13,13 @@ abstract class AbstractReIndevTransformer(
     providerName: String
 ) : AbstractMinecraftTransformer(project, provider, providerName) {
 
-    override var canCombine: Boolean = SemVerUtils.matches(provider.version.replace("_", ""), ">2.9")
-
     init {
-        addMavens()
-    }
-
-    fun addMavens() {
         project.unimined.fox2codeMaven()
     }
+
+    /**
+     * Strips the revision number before comparing the version. Technically only the major and minor is needed.
+     */
+    override var canCombine: Boolean = SemVerUtils.matches(provider.version.replace(Regex("_[0-9]*$"), ""), ">=2.9")
+
 }
