@@ -4,8 +4,7 @@ import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
-import xyz.wagyourtail.unimined.util.SemVerUtils
+import xyz.wagyourtail.unimined.util.compareFlexVer
 
 abstract class AbstractReIndevTransformer(
     project: Project,
@@ -17,9 +16,6 @@ abstract class AbstractReIndevTransformer(
         project.unimined.fox2codeMaven()
     }
 
-    /**
-     * Strips the revision number before comparing the version. Technically only the major and minor is needed.
-     */
-    override var canCombine: Boolean = SemVerUtils.matches(provider.version.replace(Regex("_[0-9]*$"), ""), ">=2.9")
+    override var canCombine: Boolean = provider.version.compareFlexVer("2.9") >= 0
 
 }
