@@ -27,17 +27,12 @@ fun openZipFileSystem(project: String, path: String): FileSystem? {
 
     return fullPath.openZipFileSystem(mapOf("mutable" to false))
 }
-class IntegrationTestUtils {
-    companion object {
-        private val GRADLE_VERSION = setOf(
-            "7.6.3",
-            "8.8",
-            GRADLE_CURRENT,
-        )
 
-        @JvmStatic
-        fun versions() = GRADLE_VERSION.toTypedArray()
-    }
+object IntegrationTestUtils {
+    private val GRADLE_VERSION = setOf("8.8", GRADLE_CURRENT)
+
+    @JvmStatic
+    fun versions() = GRADLE_VERSION.toTypedArray()
 }
 
 fun runGradle(dir: Path, version: String = GRADLE_CURRENT): BuildResult {
