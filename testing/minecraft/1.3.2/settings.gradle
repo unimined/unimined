@@ -1,0 +1,23 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal() {
+            content {
+                excludeGroup('org.apache.logging.log4j')
+            }
+        }
+        maven {
+            name = 'WagYourMaven Releases'
+            url = 'https://maven.wagyourtail.xyz/releases'
+        }
+        maven {
+            name = 'WagYourMaven Snapshots'
+            url = 'https://maven.wagyourtail.xyz/snapshots'
+        }
+    }
+}
+
+// so we can use the unimined directly provided by the super project
+includeBuild('../../../')
+
+rootProject.name = 'Minecraft-1.3.2'
