@@ -102,9 +102,9 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
         tweakClassClient = args.split("--tweakClass")[1].trim()
     }
 
-    override fun libraryFilter(library: Library): Boolean {
+    override fun libraryFilter(library: Library): Library? {
         if (library.name.startsWith("oshi-project:")) {
-            return false
+            return null
         }
         return super.libraryFilter(library)
     }

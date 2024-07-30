@@ -8,8 +8,7 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
-import org.gradle.jvm.toolchain.JavaLanguageVersion
-import org.gradle.jvm.toolchain.JavaToolchainService
+import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
@@ -45,7 +44,6 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.MinecraftForgeMin
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.NeoForgedMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.merged.MergedMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.NoTransformReIndevTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.rift.RiftMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Extract
@@ -90,6 +88,8 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
     private var lateActionsRunning by FinalizeOnWrite(false)
 
     override val combinedWithList = mutableSetOf<Pair<Project, SourceSet>>()
+
+    val libraryReplaceMap = mutableListOf<(String) -> Pair<Boolean, String?>>()
 
     var applied: Boolean by FinalizeOnWrite(false)
         private set
@@ -385,22 +385,39 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     protected val extractDependencies: MutableMap<Dependency, Extract> = mutableMapOf()
 
+    fun filterLibrary(lib: Library): Library? {
+        val lib2 = (mcPatcher as AbstractMinecraftTransformer).libraryFilter(lib)
+        if (lib2 != null) {
+            for (filter in libraryReplaceMap) {
+                val (replace, newLib) = filter(lib2.name)
+                if (replace) {
+                    if (newLib == null) {
+                        return null
+                    }
+                    return lib2.copy(name = newLib)
+                }
+            }
+        }
+        return lib2
+    }
+
     fun addLibraries(libraries: List<Library>) {
-        for (library in libraries) {
-            if (library.rules.all { it.testRule() }) {
-                project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Added dependency ${library.name}")
-                if (!(mcPatcher as AbstractMinecraftTransformer).libraryFilter(library)) {
-                    project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Excluding dependency ${library.name} as it is filtered by the patcher")
+        for (candidate in libraries) {
+            if (candidate.rules.all { it.testRule() }) {
+                project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Added dependency ${candidate.name}")
+                val library = filterLibrary(candidate)
+                if (library == null) {
+                    project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Excluding dependency ${candidate.name} as it is filtered by the patcher")
                     continue
                 }
                 val native = library.natives[OSUtils.oSId]
-                if (library.url != null || library.downloads?.artifact != null || native == null) {
+                if (candidate.url != null || library.downloads?.artifact != null || native == null) {
                     val dep = project.dependencies.create(library.name)
                     minecraftLibraries.dependencies.add(dep)
                     library.extract?.let { extractDependencies[dep] = it }
                 }
                 if (native != null) {
-                    project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Added native dependency ${library.name}:$native")
+                    project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Added native dependency ${candidate.name}:$native")
                     val nativeDep = project.dependencies.create("${library.name}:$native")
                     minecraftLibraries.dependencies.add(nativeDep)
                     library.extract?.let { extractDependencies[nativeDep] = it }
@@ -424,6 +441,45 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             }
             else -> {
             }
+        }
+    }
+
+    override fun replaceLibraryVersion(
+        @Language("regex")
+        group: String,
+        @Language("regex")
+        name: String,
+        @Language("regex")
+        classifier: String,
+        version: (String) -> String?
+    ) {
+        if (applied) throw IllegalStateException("minecraft config already applied for $sourceSet")
+        libraryReplaceMap.add { dep ->
+            val match = dep.split(":")
+            if (match.size == 3) {
+                val (g, n, v) = match
+                if (g.matches(group.toRegex()) && n.matches(name.toRegex())) {
+                    true to version(v)?.let { "$g:$n:$it" }
+                } else {
+                    false to null
+                }
+            } else if (match.size == 4) {
+                val (g, n, v, c) = match
+                if (g.matches(group.toRegex()) && n.matches(name.toRegex()) && c.matches(classifier.toRegex())) {
+                    true to version(v)?.let { "$g:$n:$c:$it" }
+                } else {
+                    false to null
+                }
+            } else {
+                false to null
+            }
+        }
+    }
+
+    override fun libraryFilter(filter: (String) -> String?) {
+        if (applied) throw IllegalStateException("minecraft config already applied for $sourceSet")
+        libraryReplaceMap.addFirst { dep ->
+            true to filter(dep)
         }
     }
 
