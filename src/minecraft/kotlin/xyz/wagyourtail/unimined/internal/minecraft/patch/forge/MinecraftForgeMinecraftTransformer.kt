@@ -116,9 +116,11 @@ open class MinecraftForgeMinecraftTransformer(project: Project, provider: Minecr
         tweakClassClient = args.split("--tweakClass")[1].trim()
     }
 
-    override fun libraryFilter(library: Library): Boolean {
-        if (!forgeTransformer.libraryFilter(library)) return false
-        return !library.name.startsWith("net.minecraftforge:minecraftforge:") && !library.name.startsWith("net.minecraftforge:forge:")
+    override fun libraryFilter(library: Library): Library? {
+        if(library.name.startsWith("net.minecraftforge:minecraftforge:") || library.name.startsWith("net.minecraftforge:forge:")) {
+            return null
+        }
+        return super.libraryFilter(library)
     }
 
 }

@@ -448,9 +448,12 @@ abstract class FabricLikeMinecraftTransformer(
         }
     }
 
-    override fun libraryFilter(library: Library): Boolean {
+    override fun libraryFilter(library: Library): Library? {
         // fabric provides its own asm, exclude asm-all from vanilla minecraftLibraries
-        return !library.name.startsWith("org.ow2.asm:asm-all")
+        if (library.name.startsWith("org.ow2.asm:asm-all")) {
+            return null
+        }
+        return super.libraryFilter(library)
     }
 
     fun getModJsonPath(): File? {

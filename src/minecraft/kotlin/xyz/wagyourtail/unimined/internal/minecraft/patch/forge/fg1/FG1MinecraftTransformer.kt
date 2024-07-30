@@ -79,6 +79,12 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         provider.minecraftLibraries.extendsFrom(it)
     }
 
+    override fun libraryFilter(library: Library): Library? {
+        if (library.name.startsWith("org.ow2.asm") && dynLibs?.contains("asm-all-4.0.jar") == true) {
+            return null
+        }
+        return super.libraryFilter(library)
+    }
 
     override fun libraryFilter(library: Library): Boolean {
         if (library.name.startsWith("org.ow2.asm") && dynLibs?.contains("asm-all-4.0.jar") == true) {

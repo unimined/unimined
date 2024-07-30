@@ -2,12 +2,15 @@ package xyz.wagyourtail.unimined.api.minecraft
 
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.configurationcache.extensions.capitalized
+import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
@@ -70,6 +73,7 @@ import java.nio.file.Path
  * @see PatchProviders
  * @since 1.0.0
  */
+@Suppress("OVERLOADS_ABSTRACT", "UNUSED")
 abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) : PatchProviders {
 
     @set:ApiStatus.Internal
@@ -303,6 +307,79 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
         }
+    }
+
+    /**
+     * null to exclude dependency completely
+     * @since 1.3.5
+     */
+    @JvmOverloads
+    abstract fun replaceLibraryVersion(
+        @Language("regex")
+        group: String = ".*",
+        @Language("regex")
+        name: String = ".*",
+        @Language("regex")
+        classifier: String = ".*",
+        version: (String) -> String?
+    )
+
+    /**
+     * @since 1.3.5
+     */
+    @JvmOverloads
+    fun replaceLibraryVersion(
+        @Language("regex")
+        group: String = ".*",
+        @Language("regex")
+        name: String = ".*",
+        @Language("regex")
+        classifier: String = ".*",
+        version: String?
+    ) {
+        replaceLibraryVersion(group, name, classifier) { version }
+    }
+
+    /**
+     * @since 1.3.5
+     */
+    @JvmOverloads
+    fun replaceLibraryVersion(
+        @Language("regex")
+        group: String = ".*",
+        @Language("regex")
+        name: String = ".*",
+        @Language("regex")
+        classifier: String = ".*",
+        @ClosureParams(
+            value = SimpleType::class,
+            options = [
+                "java.lang.String"
+            ]
+        )
+        version: Closure<String?>
+    ) {
+        replaceLibraryVersion(group, name, classifier) { version.call(it) }
+    }
+
+    /**
+     * filter libraries by "name", null to exclude, changed string to replace
+     * @since 1.3.5
+     */
+    @ApiStatus.Experimental
+    abstract fun libraryFilter(filter: (String) -> String?)
+
+    @ApiStatus.Experimental
+    fun libraryFilter(
+        @ClosureParams(
+            value = SimpleType::class,
+            options = [
+                "java.lang.String"
+            ]
+        )
+        action: Closure<String?>
+    ) {
+        libraryFilter { action.call(it) }
     }
 
     @ApiStatus.Internal

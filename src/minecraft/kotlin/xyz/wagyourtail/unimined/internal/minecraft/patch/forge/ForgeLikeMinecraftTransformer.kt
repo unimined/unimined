@@ -319,6 +319,10 @@ abstract class ForgeLikeMinecraftTransformer(
         }
     }
 
+    override fun libraryFilter(library: Library): Library? {
+        return forgeTransformer.libraryFilter(library)
+    }
+
     enum class ForgeVersion(
         val accept: Set<ForgeFiles> = setOf(),
         val deny: Set<ForgeFiles> = setOf(),

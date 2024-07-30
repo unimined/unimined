@@ -14,32 +14,17 @@ import xyz.wagyourtail.unimined.mapping.Namespace
 interface MergedPatcher: MinecraftPatcher, PatchProviders {
     override var prodNamespace: Namespace
 
-    /**
-     * @since 1.0.2
-     * whether librarys need to match any, or all, of the rules of the patchers
-     */
-    @set:ApiStatus.Internal
-    var libraryFilter: LibraryFilter
-
     @Deprecated("use prodNamespace instead", ReplaceWith("prodNamespace"))
     fun setProdNamespace(namespace: String)
 
     fun prodNamespace(namespace: String)
-
-
-    /**
-     * @since 1.0.2
-     */
-    fun libraryFilter(filter: String) {
-        libraryFilter = LibraryFilter.valueOf(filter.uppercase())
-    }
 
     /**
      * set which vanilla libraries to include in minecraftLibraries
      * @since 1.0.2
      */
     @ApiStatus.Experimental
-    fun customLibraryFilter(filter: (String) -> Boolean)
+    fun customLibraryFilter(filter: (String) -> String?)
 
     /**
      * @since 1.0.2
@@ -52,14 +37,9 @@ interface MergedPatcher: MinecraftPatcher, PatchProviders {
                 "java.lang.String"
             ]
         )
-        filter: Closure<Boolean>
+        filter: Closure<String?>
     ) {
         customLibraryFilter(filter::call)
     }
 
-    enum class LibraryFilter {
-        ANY,
-        ALL,
-        CUSTOM
-    }
 }

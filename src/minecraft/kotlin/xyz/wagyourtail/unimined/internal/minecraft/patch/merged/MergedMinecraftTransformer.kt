@@ -20,6 +20,7 @@ import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.LegacyFabricPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.CleanroomPatcher
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
@@ -41,9 +42,7 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     val patchers = mutableListOf<AbstractMinecraftTransformer>()
 
-    var customLibraryFilter: (Library) -> Boolean by FinalizeOnRead(MustSet())
-
-    override var libraryFilter: MergedPatcher.LibraryFilter by FinalizeOnRead(MergedPatcher.LibraryFilter.ALL)
+    var customLibraryFilter: ((Library) -> Library?)? by FinalizeOnRead(null)
 
     override var onMergeFail: (clientNode: ClassNode, serverNode: ClassNode, fs: ZipArchiveOutputStream, exception: Exception) -> Unit
         get() = patchers.first().onMergeFail
@@ -127,7 +126,7 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         patchers.add(fabric)
     }
 
-    override fun legacyFabric(action: FabricLikePatcher.() -> Unit) {
+    override fun legacyFabric(action: LegacyFabricPatcher.() -> Unit) {
         val fabric = LegacyFabricMinecraftTransformer(project, provider)
         fabric.action()
         patchers.add(fabric)
@@ -216,16 +215,15 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         patchers.add(mcPatcher as AbstractMinecraftTransformer)
     }
 
-    override fun customLibraryFilter(filter: (String) -> Boolean) {
-        libraryFilter = MergedPatcher.LibraryFilter.CUSTOM
-        customLibraryFilter = { filter(it.name) }
+    override fun customLibraryFilter(filter: (String) -> String?) {
+        customLibraryFilter = { l -> filter(l.name)?.let { l.copy(name = it) } }
     }
 
-    override fun libraryFilter(library: Library): Boolean {
-        return when (libraryFilter) {
-            MergedPatcher.LibraryFilter.ANY -> patchers.any { it.libraryFilter(library) }
-            MergedPatcher.LibraryFilter.ALL -> patchers.all { it.libraryFilter(library) }
-            MergedPatcher.LibraryFilter.CUSTOM -> customLibraryFilter(library)
+    override fun libraryFilter(library: Library): Library? {
+        return if (customLibraryFilter != null) {
+            customLibraryFilter!!(library)
+        } else {
+            patchers.fold<AbstractMinecraftTransformer, Library?>(library) { acc, patcher -> if (acc != null) patcher.libraryFilter(acc) else null }
         }
     }
 

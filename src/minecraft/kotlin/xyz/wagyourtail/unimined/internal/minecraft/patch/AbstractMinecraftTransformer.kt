@@ -251,8 +251,8 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     open fun afterEvaluate() {}
 
-    open fun libraryFilter(library: Library): Boolean {
-        return true
+    open fun libraryFilter(library: Library): Library? {
+        return library
     }
 
     protected fun detectProjectSourceSets(): Set<Pair<Project, SourceSet>> {
