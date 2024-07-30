@@ -86,13 +86,6 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         return super.libraryFilter(library)
     }
 
-    override fun libraryFilter(library: Library): Boolean {
-        if (library.name.startsWith("org.ow2.asm") && dynLibs?.contains("asm-all-4.0.jar") == true) {
-            return false
-        }
-        return super.libraryFilter(library)
-    }
-
     fun resolveDynLibs(workingDirectory: File, wanted: Set<String>) {
         val path = workingDirectory.toPath().createDirectories()
 
