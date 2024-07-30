@@ -13,6 +13,7 @@ import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.ForgeLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.openZipFileSystem
@@ -53,15 +54,22 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
     }
 
-    override fun apply() {
-        // get and add forge-src to mappings
-        parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
-
+    val dynLibs: Set<String>? by lazy {
         val forge = parent.forge.resolve().first().toPath()
 
         // resolve dyn libs
         forge.readZipInputStreamFor("cpw/mods/fml/relauncher/CoreFMLLibraries.class", false) {
-            resolveDynLibs(provider.localCache.resolve("fmllibs").toFile(), getDynLibs(it))
+            getDynLibs(it)
+        }
+    }
+
+    override fun apply() {
+        // get and add forge-src to mappings
+        parent.forge.dependencies.forEach(jarModConfiguration.dependencies::add)
+
+        // resolve dyn libs
+        if (dynLibs != null) {
+            resolveDynLibs(provider.localCache.resolve("fmllibs").toFile(), dynLibs!!)
         }
 
         super.apply()
@@ -71,12 +79,17 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         provider.minecraftLibraries.extendsFrom(it)
     }
 
-    lateinit var deps: List<Pair<Pair<String, String>, Dependency>>
+    override fun libraryFilter(library: Library): Library? {
+        if (library.name.startsWith("org.ow2.asm") && dynLibs?.contains("asm-all-4.0.jar") == true) {
+            return null
+        }
+        return super.libraryFilter(library)
+    }
 
     fun resolveDynLibs(workingDirectory: File, wanted: Set<String>) {
         val path = workingDirectory.toPath().createDirectories()
 
-        deps = listOf(
+        val deps = listOf(
             Pair(
                 Pair("guava-12.0.1.jar", "guava-12.0.1.jar"), project.dependencies.create(
                     "com.google.guava:guava:12.0.1"

@@ -28,6 +28,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
+import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -289,6 +290,10 @@ abstract class ForgeLikeMinecraftTransformer(
                 }
             }
         }
+    }
+
+    override fun libraryFilter(library: Library): Library? {
+        return forgeTransformer.libraryFilter(library)
     }
 
     enum class ForgeVersion(
