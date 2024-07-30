@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.SpigotPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.LegacyFabricPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.CleanroomPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
@@ -61,10 +62,10 @@ interface PatchProviders {
     /**
      * enables the fabric patcher with additional tweaks for LegacyFabric.
      * @param action the action to perform on the patcher.
-     * @see FabricLikePatcher
+     * @see LegacyFabricPatcher
      * @since 0.4.2
      */
-    fun legacyFabric(action: FabricLikePatcher.() -> Unit)
+    fun legacyFabric(action: LegacyFabricPatcher.() -> Unit)
 
     /**
      * enables the fabric patcher with additional tweaks for LegacyFabric.
@@ -73,7 +74,7 @@ interface PatchProviders {
      */
     fun legacyFabric(
         @DelegatesTo(
-            value = FabricLikePatcher::class,
+            value = LegacyFabricPatcher::class,
             strategy = Closure.DELEGATE_FIRST
         ) action: Closure<*>
     ) {
