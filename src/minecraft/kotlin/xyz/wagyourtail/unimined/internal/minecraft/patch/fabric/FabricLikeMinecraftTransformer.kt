@@ -114,6 +114,7 @@ abstract class FabricLikeMinecraftTransformer(
                     type = TinyV2Writer
                     sourceNamespace = prodNamespace
                     targetNamespace = setOf(provider.mappings.devNamespace)
+                    renameNs[prodNamespace] = "intermediary"
                     renameNs[provider.mappings.devNamespace] = "named"
                 }
                 export.validate()

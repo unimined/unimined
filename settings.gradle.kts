@@ -1,7 +1,7 @@
 pluginManagement {
     repositories {
         mavenCentral()
-        gradlePluginPortal() {
+        gradlePluginPortal {
             content {
                 excludeGroup("org.apache.logging.log4j")
             }
