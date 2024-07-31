@@ -6,6 +6,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
 import org.intellij.lang.annotations.Language
@@ -635,6 +636,26 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
         // run patcher after evaluate
         (mcPatcher as AbstractMinecraftTransformer).afterEvaluate()
+
+
+        // ensure all combineWith's on same mappings/version
+        // get current mappings
+        if (project.unimined.footgunChecks) {
+            val minecraftConfigs = mutableMapOf<Pair<Project, SourceSet>, MinecraftConfig?>()
+            for ((project, sourceSet) in detectCombineWithSourceSets()) {
+                minecraftConfigs[project to sourceSet] = project.uniminedMaybe?.minecrafts?.get(sourceSet)
+            }
+
+            for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
+                if (mappings.devNamespace != minecraftConfig.mappings.devNamespace || mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace) {
+                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${sourceSet} on ${mappings.devNamespace}/${mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
+                }
+                if (version != minecraftConfig.version) {
+                    throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${sourceSet} on ${version} and $sourceSet on ${minecraftConfig.version}")
+                }
+            }
+        }
+
     }
 
     fun getMcDevFile(): Path {
@@ -808,5 +829,19 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
             (mcPatcher as AbstractMinecraftTransformer).applyServerRunTransform(this)
         }
+    }
+
+    fun detectCombineWithSourceSets(): Set<Pair<Project, SourceSet>> {
+        val sourceSets = mutableSetOf<Pair<Project, SourceSet>>()
+        val projects = project.rootProject.allprojects
+        for (project in projects) {
+            for (sourceSet in project.extensions.findByType(SourceSetContainer::class.java)?.asMap?.values
+                ?: listOf()) {
+                if (sourceSet.output.files.intersect(sourceSet.runtimeClasspath.files).isNotEmpty()) {
+                    sourceSets.add(project to sourceSet)
+                }
+            }
+        }
+        return sourceSets
     }
 }

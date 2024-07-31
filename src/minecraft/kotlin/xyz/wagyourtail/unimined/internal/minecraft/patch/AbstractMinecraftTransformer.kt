@@ -5,7 +5,6 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.Project
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
@@ -254,41 +253,13 @@ abstract class AbstractMinecraftTransformer protected constructor(
         return library
     }
 
-    protected fun detectProjectSourceSets(): Set<Pair<Project, SourceSet>> {
-        val sourceSets = mutableSetOf<Pair<Project, SourceSet>>()
-        val projects = project.rootProject.allprojects
-        for (project in projects) {
-            for (sourceSet in project.extensions.findByType(SourceSetContainer::class.java)?.asMap?.values
-                ?: listOf()) {
-                if (sourceSet.output.files.intersect(provider.sourceSet.runtimeClasspath.files).isNotEmpty()) {
-                    sourceSets.add(project to sourceSet)
-                }
-            }
-        }
-        return sourceSets
-    }
-
     /**
      * this function organizes sourceSets based on their combinedWith sourceSets
      */
     protected fun sortProjectSourceSets(): Map<Pair<Project, SourceSet>, Set<Pair<Project, SourceSet>>> {
         val minecraftConfigs = mutableMapOf<Pair<Project, SourceSet>, MinecraftConfig?>()
-        for ((project, sourceSet) in detectProjectSourceSets()) {
+        for ((project, sourceSet) in provider.detectCombineWithSourceSets()) {
             minecraftConfigs[project to sourceSet] = project.uniminedMaybe?.minecrafts?.get(sourceSet)
-        }
-        // ensure all minecraft ones on same mappings
-        // get current mappings
-        if (project.unimined.footgunChecks) {
-            for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
-                if (provider.mappings.devNamespace != minecraftConfig.mappings.devNamespace ||
-                    provider.mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace
-                ) {
-                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${provider.sourceSet} on ${provider.mappings.devNamespace}/${provider.mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
-                }
-                if (provider.version != minecraftConfig.version) {
-                    throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${provider.sourceSet} on ${provider.version} and $sourceSet on ${minecraftConfig.version}")
-                }
-            }
         }
 
         // squash all combinedWith
