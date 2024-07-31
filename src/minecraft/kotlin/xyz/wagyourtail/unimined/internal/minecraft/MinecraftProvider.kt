@@ -480,7 +480,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     override fun libraryFilter(filter: (String) -> String?) {
         if (applied) throw IllegalStateException("minecraft config already applied for $sourceSet")
-        libraryReplaceMap.addFirst { dep ->
+        libraryReplaceMap.add(0) { dep ->
             true to filter(dep)
         }
     }
