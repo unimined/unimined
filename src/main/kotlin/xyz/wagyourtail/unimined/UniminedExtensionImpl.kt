@@ -7,10 +7,13 @@ import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.task.MigrateMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
 import xyz.wagyourtail.unimined.util.defaultedMapOf
+import xyz.wagyourtail.unimined.util.nonNullValues
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.net.URI
 import java.nio.file.Path
@@ -448,6 +451,31 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
             val mcFiles = sourceSet.runtimeClasspath.files.mapNotNull { getSourceSetFromMinecraft(it.toPath()) }
             if (mcFiles.size > 1) {
                 throw IllegalStateException("multiple minecraft jars in runtime classpath of $sourceSet, from $mcFiles")
+            }
+        }
+
+
+        for ((sourceSet, mc) in minecrafts) {
+            // ensure all combineWith's on same mappings/version
+            // get current mappings
+            if (project.unimined.footgunChecks) {
+                val minecraftConfigs = mutableMapOf<Pair<Project, SourceSet>, MinecraftConfig?>()
+                for ((project, sourceSet) in (mc as MinecraftProvider).detectCombineWithSourceSets()) {
+                    if (project == this.project) {
+                        minecraftConfigs[project to sourceSet] = minecrafts[sourceSet]
+                    } else {
+                        minecraftConfigs[project to sourceSet] = project.uniminedMaybe?.minecrafts?.get(sourceSet)
+                    }
+                }
+
+                for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
+                    if (mc.mappings.devNamespace != minecraftConfig.mappings.devNamespace || mc.mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace) {
+                        throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found $sourceSet on ${mc.mappings.devNamespace}/${mc.mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
+                    }
+                    if (mc.version != minecraftConfig.version) {
+                        throw IllegalArgumentException("All combined minecraft configs must be on the same version, found $sourceSet on ${mc.version} and $sourceSet on ${minecraftConfig.version}")
+                    }
+                }
             }
         }
     }
