@@ -118,10 +118,14 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
 
     override fun calamus(key: String, action: MappingEntry.() -> Unit) {
         unimined.ornitheMaven()
-        val environment = when (envType) {
-            EnvType.CLIENT -> "-client"
-            EnvType.SERVER -> "-server"
-            EnvType.JOINED -> ""
+        val environment = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.3") < 0) {
+            when (envType) {
+                EnvType.CLIENT -> "-client"
+                EnvType.SERVER -> "-server"
+                else -> throw IllegalStateException("Cannot use calamus with side COMBINED")
+            }
+        } else {
+            ""
         }
         addDependency(key, MappingEntry(
             contentOf(ornitheGenRevisionTransform(
