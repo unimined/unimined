@@ -590,14 +590,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         })
 
         // add export mappings task
-        project.tasks.create("exportMappings".withSourceSet(sourceSet), ExportMappingsTaskImpl::class.java, this.mappings).apply {
+        project.tasks.register("exportMappings".withSourceSet(sourceSet), ExportMappingsTaskImpl::class.java, this.mappings).configure(consumerApply {
             group = "unimined"
             description = "Exports mappings for $sourceSet's minecraft jar"
-        }
-    }
-
-    fun afterEvaluate() {
-        if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
+        })
 
         // if refresh dependencies, remove sources jars
         if (project.gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) {
@@ -609,7 +605,6 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             val sources = mc.parent.resolve("${mc.nameWithoutExtension}-sources.jar")
             sources.deleteIfExists()
         }
-
 
         // create ivy repo for mc dev file / mc dev source file
         val repo = project.repositories.ivy { ivy ->
@@ -630,12 +625,34 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         minecraft.dependencies.add(minecraftDependency)
 
         project.logger.info("[Unimined/MinecraftProvider ${project.path}:${sourceSet.name}] minecraft file: $minecraftFileDev")
+    }
 
+    fun afterEvaluate() {
+        if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
         // remap mods
         mods.afterEvaluate()
 
         // run patcher after evaluate
         (mcPatcher as AbstractMinecraftTransformer).afterEvaluate()
+
+
+        // ensure all combineWith's on same mappings/version
+        // get current mappings
+        if (project.unimined.footgunChecks) {
+            val minecraftConfigs = mutableMapOf<Pair<Project, SourceSet>, MinecraftConfig?>()
+            for ((project, sourceSet) in detectCombineWithSourceSets()) {
+                minecraftConfigs[project to sourceSet] = project.uniminedMaybe?.minecrafts?.get(sourceSet)
+            }
+
+            for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
+                if (mappings.devNamespace != minecraftConfig.mappings.devNamespace || mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace) {
+                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${sourceSet} on ${mappings.devNamespace}/${mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
+                }
+                if (version != minecraftConfig.version) {
+                    throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${sourceSet} on ${version} and $sourceSet on ${minecraftConfig.version}")
+                }
+            }
+        }
 
     }
 

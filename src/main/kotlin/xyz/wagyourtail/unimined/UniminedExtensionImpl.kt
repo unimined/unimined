@@ -453,30 +453,5 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
                 throw IllegalStateException("multiple minecraft jars in runtime classpath of $sourceSet, from $mcFiles")
             }
         }
-
-
-        for ((sourceSet, mc) in minecrafts) {
-            // ensure all combineWith's on same mappings/version
-            // get current mappings
-            if (project.unimined.footgunChecks) {
-                val minecraftConfigs = mutableMapOf<Pair<Project, SourceSet>, MinecraftConfig?>()
-                for ((project, sourceSet) in (mc as MinecraftProvider).detectCombineWithSourceSets()) {
-                    if (project == this.project) {
-                        minecraftConfigs[project to sourceSet] = minecrafts[sourceSet]
-                    } else {
-                        minecraftConfigs[project to sourceSet] = project.uniminedMaybe?.minecrafts?.get(sourceSet)
-                    }
-                }
-
-                for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
-                    if (mc.mappings.devNamespace != minecraftConfig.mappings.devNamespace || mc.mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace) {
-                        throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found $sourceSet on ${mc.mappings.devNamespace}/${mc.mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
-                    }
-                    if (mc.version != minecraftConfig.version) {
-                        throw IllegalArgumentException("All combined minecraft configs must be on the same version, found $sourceSet on ${mc.version} and $sourceSet on ${minecraftConfig.version}")
-                    }
-                }
-            }
-        }
     }
 }
