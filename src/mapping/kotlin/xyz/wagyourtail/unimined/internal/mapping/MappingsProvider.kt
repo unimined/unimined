@@ -74,7 +74,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
             when (side) {
                 EnvType.CLIENT -> "-client"
                 EnvType.SERVER -> "-server"
-                else -> throw IllegalStateException("Cannot use calamus with side COMBINED")
+                else -> throw IllegalStateException("Cannot use Calamus on Minecraft ${minecraft.version} with side COMBINED")
             }
         } else {
             ""
