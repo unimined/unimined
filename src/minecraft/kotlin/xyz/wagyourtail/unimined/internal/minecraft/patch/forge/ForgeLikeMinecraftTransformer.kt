@@ -296,10 +296,6 @@ abstract class ForgeLikeMinecraftTransformer(
         return forgeTransformer.transform(minecraft)
     }
 
-    override fun libraryFilter(library: Library): Boolean {
-        return forgeTransformer.libraryFilter(library)
-    }
-
     enum class ForgeFiles(val path: String) {
         FORGE_AT("META-INF/accesstransformer.cfg"),
         OLD_FORGE_AT("forge_at.cfg"),
