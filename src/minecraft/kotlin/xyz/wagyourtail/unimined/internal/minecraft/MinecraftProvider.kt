@@ -828,7 +828,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
             for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
                 if (mappings.devNamespace != minecraftConfig.mappings.devNamespace) {
-                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${sourceSet} on ${mappings.devNamespace}/${mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
+                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${sourceSet} on ${mappings.devNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}")
                 }
                 if (version != minecraftConfig.version) {
                     throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${sourceSet} on ${version} and $sourceSet on ${minecraftConfig.version}")
