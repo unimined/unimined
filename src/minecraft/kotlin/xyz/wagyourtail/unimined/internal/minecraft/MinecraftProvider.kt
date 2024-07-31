@@ -595,6 +595,11 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             description = "Exports mappings for $sourceSet's minecraft jar"
         })
 
+    }
+
+    fun afterEvaluate() {
+        if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
+
         // if refresh dependencies, remove sources jars
         if (project.gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) {
             project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Refreshing minecraft dependencies")
@@ -621,38 +626,16 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             }
         }
 
+        // remap mods
+        mods.afterEvaluate()
+
         // add minecraft dep
         minecraft.dependencies.add(minecraftDependency)
 
         project.logger.info("[Unimined/MinecraftProvider ${project.path}:${sourceSet.name}] minecraft file: $minecraftFileDev")
-    }
-
-    fun afterEvaluate() {
-        if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
-        // remap mods
-        mods.afterEvaluate()
 
         // run patcher after evaluate
         (mcPatcher as AbstractMinecraftTransformer).afterEvaluate()
-
-
-        // ensure all combineWith's on same mappings/version
-        // get current mappings
-        if (project.unimined.footgunChecks) {
-            val minecraftConfigs = mutableMapOf<Pair<Project, SourceSet>, MinecraftConfig?>()
-            for ((project, sourceSet) in detectCombineWithSourceSets()) {
-                minecraftConfigs[project to sourceSet] = project.uniminedMaybe?.minecrafts?.get(sourceSet)
-            }
-
-            for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
-                if (mappings.devNamespace != minecraftConfig.mappings.devNamespace || mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace) {
-                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${sourceSet} on ${mappings.devNamespace}/${mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
-                }
-                if (version != minecraftConfig.version) {
-                    throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${sourceSet} on ${version} and $sourceSet on ${minecraftConfig.version}")
-                }
-            }
-        }
 
     }
 
@@ -840,6 +823,25 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
                 }
             }
         }
+
+        // ensure all combineWith's on same mappings/version
+        // get current mappings
+        if (project.unimined.footgunChecks) {
+            val minecraftConfigs = mutableMapOf<Pair<Project, SourceSet>, MinecraftConfig?>()
+            for ((project, sourceSet) in sourceSets) {
+                minecraftConfigs[project to sourceSet] = project.uniminedMaybe?.minecrafts?.get(sourceSet)
+            }
+
+            for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
+                if (mappings.devNamespace != minecraftConfig.mappings.devNamespace || mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace) {
+                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${sourceSet} on ${mappings.devNamespace}/${mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
+                }
+                if (version != minecraftConfig.version) {
+                    throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${sourceSet} on ${version} and $sourceSet on ${minecraftConfig.version}")
+                }
+            }
+        }
+
         return sourceSets
     }
 }
