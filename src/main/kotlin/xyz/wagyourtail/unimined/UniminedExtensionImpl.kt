@@ -309,6 +309,103 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Fox2Code maven: $fox2codeMaven")
     }
 
+    val modrinthMaven by lazy {
+        project.repositories.exclusiveContent {
+            it.forRepository {
+                project.repositories.maven {
+                    it.name = "modrinth"
+                    it.url = URI.create("https://api.modrinth.com/maven")
+                }
+            }
+
+            it.filter {
+                it.includeGroup("maven.modrinth")
+            }
+        }
+    }
+
+    val backupModrinthMaven by lazy {
+        project.repositories.maven {
+            it.name = "modrinth"
+            it.url = URI.create("https://api.modrinth.com/maven")
+            it.content {
+                it.includeGroup("maven.modrinth")
+            }
+        }
+    }
+
+    override fun modrinthMaven() {
+        try {
+            project.logger.info("[Unimined] adding Modrinth maven: $modrinthMaven")
+        } catch (e: Throwable) {
+            project.logger.warn("[Unimined] failed to add Modrinth maven, falling back to backup")
+            project.logger.warn(e.stackTraceToString())
+            project.logger.info("[Unimined] adding Modrinth maven: $backupModrinthMaven")
+        }
+    }
+
+    val curseMaven by lazy {
+        project.repositories.exclusiveContent {
+            it.forRepository {
+                project.repositories.maven {
+                    it.name = "cursemaven"
+                    it.url = URI.create("https://cursemaven.com")
+                }
+            }
+
+            it.filter {
+                it.includeGroup("curse.maven")
+            }
+        }
+    }
+
+    val backupCurseMaven by lazy {
+        project.repositories.maven {
+            it.name = "cursemaven"
+            it.url = URI.create("https://cursemaven.com")
+
+            it.content {
+                it.includeGroup("curse.maven")
+            }
+        }
+    }
+
+    val betaCurseMaven by lazy {
+        project.repositories.exclusiveContent {
+            it.forRepository {
+                project.repositories.maven {
+                    it.name = "beta-cursemaven"
+                    it.url = URI.create("https://beta.cursemaven.com")
+                }
+            }
+
+            it.filter {
+                it.includeGroup("curse.maven")
+            }
+        }
+    }
+
+    val backupBetaCurseMaven by lazy {
+        project.repositories.maven {
+            it.name = "beta-cursemaven"
+            it.url = URI.create("https://beta.cursemaven.com")
+
+            it.content {
+                it.includeGroup("curse.maven")
+            }
+        }
+    }
+
+    override fun curseMaven(beta: Boolean /* = false */) {
+        try {
+            project.logger.info("[Unimined] adding Curse maven: ${if (beta) betaCurseMaven else curseMaven}")
+        } catch (e: Throwable) {
+            project.logger.warn("[Unimined] failed to add Curse maven, falling back to backup")
+            project.logger.warn(e.stackTraceToString())
+            project.logger.info("[Unimined] adding Curse maven: ${if (beta) backupBetaCurseMaven else backupCurseMaven}")
+        }
+    }
+
     init {
         project.repositories.mavenCentral { repo ->
             repo.content {
