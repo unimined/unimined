@@ -54,21 +54,21 @@ class AccessConvertImpl(val project: Project, val provider: MinecraftProvider) :
         output
     }
 
-    override fun at2aw(input: String, output: String, namespace: Namespace) =
+    override fun at2aw(input: String, output: String, namespace: String) =
         at2aw(File(input), File(output), namespace)
 
-    override fun at2aw(input: String, namespace: Namespace) = at2aw(File(input), namespace)
     override fun at2aw(input: String, output: String) = at2aw(File(input), File(output))
     override fun at2aw(input: String) = at2aw(File(input))
-    override fun at2aw(input: File) = at2aw(input, provider.mappings.devNamespace)
-    override fun at2aw(input: File, namespace: Namespace) = at2aw(
+    override fun at2aw(input: File) = at2aw(input, provider.mappings.devNamespace.name)
+    override fun at2aw(input: File, namespace: String) = at2aw(
         input,
         provider.sourceSet.resources.srcDirs.first().resolve("${project.name.withSourceSet(provider.sourceSet)}.accesswidener"),
         namespace
     )
 
     override fun at2aw(input: File, output: File) = at2aw(input, output, provider.mappings.devNamespace)
-    override fun at2aw(input: File, output: File, namespace: Namespace): File {
+    override fun at2aw(input: File, output: File, namespace: String): File = at2aw(input, output, Namespace(namespace))
+    private fun at2aw(input: File, output: File, namespace: Namespace): File {
         return runBlocking {
             AccessTransformerApplier.at2aw(
                 input.toPath(),
@@ -83,16 +83,16 @@ class AccessConvertImpl(val project: Project, val provider: MinecraftProvider) :
 
     override fun mergeAws(inputs: List<File>): File {
         return mergeAws(
-            provider.mappings.devNamespace,
-            inputs
+            inputs,
+            provider.mappings.devNamespace.name
         )
     }
 
-    override fun mergeAws(namespace: Namespace, inputs: List<File>): File {
+    override fun mergeAws(inputs: List<File>, namespace: String): File {
         return mergeAws(
             provider.sourceSet.resources.srcDirs.first().resolve("${project.name.withSourceSet(provider.sourceSet)}.accesswidener"),
-            namespace,
-            inputs
+            inputs,
+            namespace
         )
     }
 
@@ -100,7 +100,11 @@ class AccessConvertImpl(val project: Project, val provider: MinecraftProvider) :
         return mergeAws(output, provider.mappings.devNamespace, inputs)
     }
 
-    override fun mergeAws(output: File, namespace: Namespace, inputs: List<File>): File {
+    override fun mergeAws(output: File, inputs: List<File>, namespace: String): File {
+        return mergeAws(output, Namespace(namespace), inputs)
+    }
+
+    private fun mergeAws(output: File, namespace: Namespace, inputs: List<File>): File {
         return AccessWidenerApplier.mergeAws(
             inputs.map { it.toPath() },
             output.toPath(),
