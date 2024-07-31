@@ -181,6 +181,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 EnvType.JOINED -> {
                     mapNamespace("client", "clientOfficial")
                     mapNamespace("server", "serverOfficial")
+                    provides("serverOfficial" to false)
                     requires("clientOfficial")
                 }
             }
@@ -307,6 +308,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                     EnvType.JOINED -> {
                         mapNamespace("client", "clientOfficial")
                         mapNamespace("server", "serverOfficial")
+                        requires("clientOfficial")
+                        provides("serverOfficial" to false)
                     }
                 }
             }
