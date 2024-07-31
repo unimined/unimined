@@ -360,6 +360,8 @@ abstract class ForgeLikeMinecraftTransformer(
 
     val groups: String by lazy {
         val groups = sortProjectSourceSets().mapValues { it.value.toMutableSet() }.toMutableMap()
+        groups.putIfAbsent(this.project to this.provider.sourceSet, mutableSetOf())
+
         // detect non-forge groups
         for ((proj, sourceSet) in groups.keys.toSet()) {
             if (proj.uniminedMaybe?.minecrafts?.get(sourceSet)?.mcPatcher !is ForgeLikePatcher<*>) {

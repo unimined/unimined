@@ -584,14 +584,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         })
 
         // add export mappings task
-        project.tasks.create("exportMappings".withSourceSet(sourceSet), ExportMappingsTaskImpl::class.java, this.mappings).apply {
+        project.tasks.register("exportMappings".withSourceSet(sourceSet), ExportMappingsTaskImpl::class.java, this.mappings).configure(consumerApply {
             group = "unimined"
             description = "Exports mappings for $sourceSet's minecraft jar"
-        }
-    }
-
-    fun afterEvaluate() {
-        if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
+        })
 
         // if refresh dependencies, remove sources jars
         if (project.gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) {
@@ -603,7 +599,6 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             val sources = mc.parent.resolve("${mc.nameWithoutExtension}-sources.jar")
             sources.deleteIfExists()
         }
-
 
         // create ivy repo for mc dev file / mc dev source file
         val repo = project.repositories.ivy { ivy ->
@@ -624,7 +619,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         minecraft.dependencies.add(minecraftDependency)
 
         project.logger.info("[Unimined/MinecraftProvider ${project.path}:${sourceSet.name}] minecraft file: $minecraftFileDev")
+    }
 
+    fun afterEvaluate() {
+        if (!applied) throw IllegalStateException("minecraft config never applied for $sourceSet")
         // remap mods
         mods.afterEvaluate()
 
