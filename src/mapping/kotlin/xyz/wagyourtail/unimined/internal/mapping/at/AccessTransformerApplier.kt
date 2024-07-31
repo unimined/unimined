@@ -7,6 +7,7 @@ import okio.buffer
 import okio.sink
 import okio.use
 import org.gradle.api.logging.Logger
+import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.mapping.formats.at.ATReader
 import xyz.wagyourtail.unimined.mapping.formats.at.ATWriter
@@ -60,9 +61,9 @@ object AccessTransformerApplier {
         val temp = noAccessMappings(mappings)
         runBlocking {
             if (isLegacy) {
-                LegacyATReader.read(at.readText(), temp)
+                LegacyATReader.read(at.readText(), temp, envType = EnvType.JOINED, mapOf("source" to namespace))
             } else {
-                ATReader.read(at.readText(), temp)
+                ATReader.read(at.readText(), temp, envType = EnvType.JOINED, mapOf("source" to namespace))
             }
         }
         output.sink().buffer().use {
