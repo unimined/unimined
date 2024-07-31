@@ -25,17 +25,10 @@ sourceSets {
 }
 
 repositories {
-    mavenCentral()
-    maven {
-        url = "https://files.minecraftforge.net/maven"
-    }
-    maven {
-        name = "sponge"
-        url = "https://repo.spongepowered.org/maven"
-    }
-    maven {
-        url = "https://maven.wagyourtail.xyz/releases"
-    }
+    unimined.neoForgedMaven()
+    unimined.spongeMaven()
+    unimined.wagYourMaven("releases")
+    unimined.modrinthMaven()
 }
 
 unimined.minecraft {
@@ -86,6 +79,8 @@ configurations {
 dependencies {
     // we need this in main where it isn't by default
     implementation "org.spongepowered:mixin:0.8.5-SNAPSHOT"
+
+    fabricModImplementation("maven.modrinth:lazydfu:0.1.3")
 }
 
 jar {
