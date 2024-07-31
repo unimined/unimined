@@ -1,0 +1,118 @@
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined' // version '1.3.4'
+}
+
+group 'com.example'
+base.archivesName = 'UniminedExampleMod'
+version '1.0.0'
+
+// this is just here so we can test the outputs easier and clean between tests
+unimined.useGlobalCache = false
+
+sourceSets {
+    mcpMain
+    forge
+    cleanroom
+    mcpFabric
+    mcpQuilt
+
+    legacyMain
+    legacyFabric
+    legacyQuilt
+}
+
+// MCP - Forge, Cleanroom, Fabric, Quilt
+
+unimined.minecraft(sourceSets.mcpMain) {
+    combineWith(sourceSets.main)
+    version project.minecraft_version
+
+    mappings {
+        searge()
+        mcp('stable', '39-1.12')
+    }
+
+    defaultRemapJar = false
+}
+
+unimined.minecraft(sourceSets.forge) {
+    combineWith(sourceSets.mcpMain)
+
+    minecraftForge {
+        loader project.forge_version
+        mixinConfig 'modid.mixins.json'
+    }
+}
+
+unimined.minecraft(sourceSets.cleanroom) {
+    combineWith(sourceSets.forge)
+
+    cleanroom {
+        loader project.cleanroom_version
+    }
+}
+
+unimined.minecraft(sourceSets.mcpFabric) {
+    combineWith(sourceSets.mcpMain)
+
+    fabric {
+        loader project.fabric_version
+        customIntermediaries = true
+        prodNamespace 'searge'
+    }
+}
+
+unimined.minecraft(sourceSets.mcpQuilt) {
+    combineWith(sourceSets.mcpFabric)
+
+    quilt {
+        loader project.quilt_version
+        customIntermediaries = true
+        prodNamespace 'searge'
+    }
+}
+
+// Legacy Yarn - Fabric, Quilt
+
+unimined.minecraft(sourceSets.legacyMain) {
+    combineWith(sourceSets.main)
+    version project.minecraft_version
+
+    mappings {
+        legacyIntermediary()
+        legacyYarn(541)
+    }
+
+    defaultRemapJar = false
+}
+
+unimined.minecraft(sourceSets.legacyFabric) {
+    combineWith(sourceSets.legacyMain)
+
+    fabric {
+        loader project.fabric_version
+    }
+}
+
+unimined.minecraft(sourceSets.legacyQuilt) {
+    combineWith(sourceSets.legacyFabric)
+
+    quilt {
+        loader project.quilt_version
+    }
+}
+
+java {
+    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+tasks.withType(ProcessResources).configureEach {
+    inputs.property 'version', project.version
+    filesMatching('mcmod.info') {
+        expand 'version': project.version
+    }
+    filesMatching('*.mod.json') {
+        expand 'version': project.version
+    }
+}

@@ -1,0 +1,106 @@
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined' // version '1.0.0'
+}
+
+group 'com.example'
+base.archivesName = 'UniminedExampleMod'
+version '1.0.0'
+
+// this is just here so we can test the outputs easier and clean between tests
+unimined.useGlobalCache = false
+
+sourceSets {
+    mcpMain
+    forge
+    mcpFabric
+
+    binyFabric
+}
+
+repositories {
+    unimined.wagYourMaven('releases')
+}
+
+// MCP - ModLoader + Minecraft Forge, Fabric
+
+unimined.minecraft(sourceSets.mcpMain) {
+    combineWith(sourceSets.main)
+    version project.minecraft_version
+    side 'client'
+
+    mappings {
+        retroMCP('b1.7')
+        stub.withMappings(['searge', 'mcp']) {
+            c('ModLoader', 'net/minecraft/src/ModLoader', 'net/minecraft/src/ModLoader')
+            c('BaseMod', 'net/minecraft/src/BaseMod', 'net/minecraft/src/BaseMod')
+            c('MLProp', 'net/minecraft/src/MLProp', 'net/minecraft/src/MLProp')
+        }
+    }
+
+    minecraftRemapper.config {
+        ignoreConflicts true
+    }
+
+    defaultRemapJar = false
+}
+
+unimined.minecraft(sourceSets.forge) {
+    combineWith(sourceSets.mcpMain)
+
+    jarMod {
+        transforms('exampleMod.transform')
+    }
+}
+
+dependencies {
+    forgeJarMod "risugami:modloader:${project.minecraft_version}"
+    forgeJarMod "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}:client@zip"
+}
+
+unimined.minecraft(sourceSets.mcpFabric) {
+    combineWith(sourceSets.mcpMain)
+
+    fabric {
+        loader project.fabric_version
+        customIntermediaries = true
+        prodNamespace 'official'
+    }
+}
+
+// biny - Fabric
+
+unimined.minecraft(sourceSets.binyFabric) {
+    combineWith(sourceSets.main)
+    version project.minecraft_version
+    side 'client'
+
+    mappings {
+        babricIntermediary()
+        biny('fbae0ec')
+    }
+
+    minecraftRemapper.config {
+        ignoreConflicts true
+    }
+
+    defaultRemapJar = false
+
+    fabric {
+        loader project.fabric_version
+    }
+}
+
+tasks.withType(ProcessResources).configureEach {
+    inputs.property 'version', project.version
+    filesMatching('exampleMod.properties') {
+        expand 'version': project.version
+    }
+    filesMatching('*.mod.json') {
+        expand 'version': project.version
+    }
+}
+
+java {
+    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_1_8
+}

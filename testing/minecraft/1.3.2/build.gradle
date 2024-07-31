@@ -1,0 +1,114 @@
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined' // version '1.0.0'
+}
+
+group 'com.example'
+base.archivesName = 'UniminedExampleMod'
+version '1.0.0'
+
+// this is just here so we can test the outputs easier and clean between tests
+unimined.useGlobalCache = false
+
+sourceSets {
+    mcpMain
+    forge
+    mcpFabric
+    mcpQuilt
+
+    legacyMain
+    legacyFabric
+    legacyQuilt
+}
+
+unimined {
+    // MCP - Forge, Fabric, Quilt
+
+    minecraft(sourceSets.mcpMain) {
+        combineWith sourceSets.main
+        version project.minecraft_version
+        mappings {
+            forgeBuiltinMCP project.forge_version
+            stub.withMappings(['searge', 'mcp']) {
+                c('ModLoader', 'net/minecraft/src/ModLoader', 'net/minecraft/src/ModLoader')
+                c('BaseMod', 'net/minecraft/src/BaseMod', 'net/minecraft/src/BaseMod')
+                c('MLProp', "net/minecraft/src/MLProp", "net/minecraft/src/MLProp")
+            }
+        }
+        minecraftRemapper.config {
+            ignoreConflicts true
+        }
+    }
+
+    minecraft(sourceSets.forge) {
+        combineWith sourceSets.mcpMain
+        minecraftForge {
+            loader project.forge_version
+        }
+        runs {
+            config('client') {
+                jvmArgs('-Djma.debug=true')
+            }
+        }
+    }
+
+    minecraft(sourceSets.mcpFabric) {
+        combineWith sourceSets.mcpMain
+        fabric {
+            loader project.fabric_version
+            customIntermediaries = true
+            prodNamespace 'official'
+        }
+    }
+
+    minecraft(sourceSets.mcpQuilt) {
+        combineWith sourceSets.mcpFabric
+        quilt {
+            loader project.quilt_version
+            customIntermediaries = true
+            prodNamespace 'official'
+        }
+    }
+
+    // Legacy Yarn - Fabric, Quilt
+
+    minecraft(sourceSets.legacyMain) {
+        combineWith sourceSets.main
+        version project.minecraft_version
+        mappings {
+            legacyIntermediary()
+            legacyYarn project.yarn_version
+        }
+        minecraftRemapper.config {
+            ignoreConflicts true
+        }
+    }
+
+    minecraft(sourceSets.legacyFabric) {
+        combineWith sourceSets.legacyMain
+        fabric {
+            loader project.fabric_version
+        }
+    }
+
+    minecraft(sourceSets.legacyQuilt) {
+        combineWith sourceSets.legacyFabric
+        quilt {
+            loader project.quilt_version
+        }
+    }
+}
+
+tasks.withType(ProcessResources).configureEach {
+    inputs.property 'version', project.version
+    filesMatching('META-INF/mods.toml') {
+        expand 'version': project.version
+    }
+    filesMatching('mcmod.info') {
+        expand 'version': project.version
+    }
+}
+
+java {
+    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_1_8
+}

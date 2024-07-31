@@ -140,7 +140,7 @@ unimined.minecraft {
     runs {
         off = true // disable all run configurations
         config("client") {
-           disabled = true // disable the runClient task
+           enabled = false // disable the runClient task
            args += "--my-arg" // add an argument to the runClient task
         }
     }
