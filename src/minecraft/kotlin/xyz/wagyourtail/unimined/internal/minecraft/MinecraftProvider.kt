@@ -86,7 +86,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     override val sourceProvider = SourceProvider(project, this)
 
-    private val patcherActions = ArrayDeque<() -> Unit>()
+    protected val patcherActions = ArrayDeque<() -> Unit>()
     private var lateActionsRunning by FinalizeOnWrite(false)
 
     override val combinedWithList = mutableSetOf<Pair<Project, SourceSet>>()
@@ -196,7 +196,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
                     sources.artifact()
                 }
                 ivy.content {
-                    it.includeVersion("net.minecraft", "client-mappings", version)
+                    it.includeVersion(mavenGroup, "client-mappings", version)
                 }
             }
 
@@ -367,13 +367,21 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    val minecraftDepName: String = project.path.replace(":", "_").let { projectPath ->
+    /**
+     * The Maven group which the Minecraft dependency belongs to
+     */
+    open val mavenGroup: String = "net.minecraft"
+
+    /**
+     * The name for the Minecraft dependency
+     */
+    open val minecraftDepName: String = project.path.replace(":", "_").let { projectPath ->
         "minecraft${if (projectPath == "_") "" else projectPath}${if (sourceSet.name == "main") "" else "+"+sourceSet.name}"
     }
 
     override val minecraftDependency: ModuleDependency by lazy {
         project.dependencies.create(buildString {
-            append("net.minecraft:$minecraftDepName:$version")
+            append("$mavenGroup:$minecraftDepName:$version")
             if (minecraftFileDev.name.endsWith("-linemapped.jar")) {
                 append(":linemapped")
             }
@@ -612,7 +620,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
 
         // create ivy repo for mc dev file / mc dev source file
-        val repo = project.repositories.ivy { ivy ->
+        project.repositories.ivy { ivy ->
             ivy.name = "Minecraft Provider ${project.path}:${sourceSet.name}"
             ivy.patternLayout {
                 it.artifact(getMcDevFile().nameWithoutExtension + "(-[classifier])(.[ext])")
@@ -622,7 +630,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
                 sources.artifact()
             }
             ivy.content {
-                it.includeVersion("net.minecraft", minecraftDepName, version)
+                it.includeVersion(mavenGroup, minecraftDepName, version)
             }
         }
 

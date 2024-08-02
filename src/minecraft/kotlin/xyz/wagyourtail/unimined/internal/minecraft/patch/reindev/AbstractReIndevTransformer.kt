@@ -4,8 +4,7 @@ import org.gradle.api.Project
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
-import xyz.wagyourtail.unimined.util.SemVerUtils
+import xyz.wagyourtail.unimined.util.compareFlexVer
 
 abstract class AbstractReIndevTransformer(
     project: Project,
@@ -13,13 +12,10 @@ abstract class AbstractReIndevTransformer(
     providerName: String
 ) : AbstractMinecraftTransformer(project, provider, providerName) {
 
-    override var canCombine: Boolean = SemVerUtils.matches(provider.version.replace("_", ""), ">2.9")
-
     init {
-        addMavens()
-    }
-
-    fun addMavens() {
         project.unimined.fox2codeMaven()
     }
+
+    override var canCombine: Boolean = provider.version.compareFlexVer("2.9") >= 0
+
 }

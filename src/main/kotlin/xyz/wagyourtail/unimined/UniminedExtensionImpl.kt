@@ -7,13 +7,10 @@ import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.task.MigrateMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
 import xyz.wagyourtail.unimined.util.defaultedMapOf
-import xyz.wagyourtail.unimined.util.nonNullValues
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.net.URI
 import java.nio.file.Path
@@ -313,16 +310,16 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     }
 
     val modrinthMaven by lazy {
-        project.repositories.exclusiveContent {
-            it.forRepository {
+        project.repositories.exclusiveContent { repository ->
+            repository.forRepository {
                 project.repositories.maven {
                     it.name = "modrinth"
                     it.url = URI.create("https://api.modrinth.com/maven")
                 }
             }
 
-            it.filter {
-                it.includeGroup("maven.modrinth")
+            repository.filter { descriptor ->
+                descriptor.includeGroup("maven.modrinth")
             }
         }
     }

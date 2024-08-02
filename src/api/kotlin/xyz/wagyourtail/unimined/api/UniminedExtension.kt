@@ -9,7 +9,6 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikeApiExtension
-import xyz.wagyourtail.unimined.util.DefaultMap
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.sourceSets
 import java.nio.file.Path
@@ -123,7 +122,7 @@ abstract class UniminedExtension(val project: Project) {
     }
 
     /**
-     * @since 1.4.0
+     * @since 1.3.5
      */
     @JvmOverloads
     abstract fun reIndev(
@@ -133,7 +132,7 @@ abstract class UniminedExtension(val project: Project) {
     )
 
     /**
-     * @since 1.4.0
+     * @since 1.3.5
      */
     @JvmOverloads
     fun reIndev(
@@ -147,7 +146,7 @@ abstract class UniminedExtension(val project: Project) {
     }
 
     /**
-     * @since 1.4.0
+     * @since 1.3.5
      */
     @JvmOverloads
     fun reIndev(
@@ -164,7 +163,7 @@ abstract class UniminedExtension(val project: Project) {
     }
 
     /**
-     * @since 1.4.0
+     * @since 1.3.5
      */
     @JvmOverloads
     fun reIndev(
