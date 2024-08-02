@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.internal.minecraft.patch.reindev
 
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -9,18 +11,25 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.reindev.FoxLoaderPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.MustSet
-import xyz.wagyourtail.unimined.util.withSourceSet
+import xyz.wagyourtail.unimined.util.*
+import java.io.InputStreamReader
 import kotlin.io.path.Path
-import kotlin.io.path.absolute
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.inputStream
 
 class FoxLoaderMinecraftTransformer(
     project: Project,
     provider: ReIndevProvider,
     providerName: String = "FoxLoader"
-): AbstractReIndevTransformer(project, provider, providerName), FoxLoaderPatcher {
+) : AbstractReIndevTransformer(project, provider, providerName), FoxLoaderPatcher {
+
+    val foxLoaderVersions: Map<String, String> by lazy {
+        project.cachingDownload("https://cdn.fox2code.com/maven/foxloader-version-map.json").inputStream().use {
+            Gson().fromJson(InputStreamReader(it), JsonObject::class.java).asMap().map { entry ->
+                entry.key to entry.value.asString
+            }.toMap()
+        }
+    }
 
     init {
         project.unimined.modrinthMaven()
@@ -44,11 +53,31 @@ class FoxLoaderMinecraftTransformer(
         project.configurations.maybeCreate("foxLoaderInvoker")
     }
 
+    val foxLoaderCompatibleVersion by lazy {
+        provider.version.replaceFirst(Regex("_0*"), "_")
+    }
+
+    override fun loader() {
+        foxLoaderVersions.filter {
+            it.value == foxLoaderCompatibleVersion
+        }.keys.reduce { prev, curr ->
+            if (curr.compareFlexVer(prev) > 0) curr else prev
+        }.also { version ->
+            loader(version)
+        }
+    }
+
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         foxLoaderInvoker.dependencies.add(project.dependencies.create("com.fox2code:FoxLoaderInvoker:1.1.0"))
 
+        if (!foxLoaderVersions.containsValue(foxLoaderCompatibleVersion)) {
+            project.logger.error("Incompatible FoxLoader $dep for ReIndev $foxLoaderCompatibleVersion")
+            project.logger.error("FoxLoader valid version pairs: $foxLoaderVersions")
+            throw RuntimeException(IllegalArgumentException("FoxLoader version is not compatible with ReIndev version"))
+        }
+
         val foxLoaderDeps: List<Dependency>
-        if  (!canCombine) {
+        if (!canCombine) {
             if (provider.side == EnvType.COMBINED) throw IllegalStateException("Cannot use FoxLoader pre-2.9 without specifying non-combined side")
             foxLoaderDeps = listOf(
                 project.dependencies.create("com.fox2code.FoxLoader:common:${dep}"),

@@ -138,6 +138,10 @@ object OSUtils {
     const val UNKNOWN = "unknown"
 }
 
+fun Project.cachingDownload(url: String): Path {
+    return cachingDownload(uri(url))
+}
+
 fun Project.cachingDownload(
     url: URI,
     size: Long = -1L,

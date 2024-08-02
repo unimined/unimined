@@ -70,11 +70,11 @@ unimined {
         combineWith(sourceSets.client)
 
         foxLoader {
-            loader project.fox_loader_version
+            loader()
             modId = "example-mod"
             modName = "Example Mod"
+            modVersion = project.version
             modDescription = "An example mod for FoxLoader!"
-            commonMod = "com.example.example.mod.FoxLoaderExampleMod"
             clientMod = "com.example.example.mod.ClientExampleMod"
             serverMod = "com.example.example.mod.ServerExampleMod"
         }
@@ -92,11 +92,11 @@ unimined {
         combineWith(sourceSets.server)
 
         foxLoader {
-            loader project.fox_loader_version
+            loader()
             modId = "example-mod"
             modName = "Example Mod"
+            modVersion = project.version
             modDescription = "An example mod for FoxLoader!"
-            commonMod = "com.example.example.mod.FoxLoaderExampleMod"
             clientMod = "com.example.example.mod.ClientExampleMod"
             serverMod = "com.example.example.mod.ServerExampleMod"
         }

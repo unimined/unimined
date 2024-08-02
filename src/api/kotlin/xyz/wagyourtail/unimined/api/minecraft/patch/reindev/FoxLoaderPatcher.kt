@@ -11,9 +11,9 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
  * usage:
  * ```groovy
  * foxLoader {
- *     loader "1.2.49"
- *     modId = "my-mod-id"
- *     clientMod = "com. example. example. mod. ExampleClient"
+ *     loader()
+ *     modId = "example-mod"
+ *     clientMod = "com.example.example.mod.ExampleClient"
  * }
  * ```
  * @see loader
@@ -24,6 +24,14 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
  * @since 1.4.0
  */
 interface FoxLoaderPatcher : MinecraftPatcher {
+
+    /**
+     * Picks the version of the loader automatically, based on the ReIndev version.
+     *
+     * @since 1.4.0
+     */
+    fun loader()
+
     /**
      * @since 1.4.0
      */

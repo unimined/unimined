@@ -6,6 +6,6 @@ import com.fox2code.foxloader.loader.ServerMod;
 public class ServerExampleMod extends Mod implements ServerMod {
 	@Override
 	public void onInit() {
-		ExampleMod.LOGGER.info("Hello FoxLoader client world!");
+		ExampleMod.LOGGER.info("Hello FoxLoader server world!");
 	}
 }
