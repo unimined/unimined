@@ -339,7 +339,7 @@ interface PatchProviders {
 
     /**
      * enables the FoxLoader patcher.
-     * @since 1.4.0
+     * @since 1.3.5
      */
     fun foxLoader() {
         foxLoader {}
@@ -348,7 +348,7 @@ interface PatchProviders {
     /**
      * enables the FoxLoader patcher.
      * @param action the action to configure the patcher.
-     * @since 1.4.0
+     * @since 1.3.5
      */
     fun foxLoader(action: FoxLoaderPatcher.() -> Unit) {
         throw UnsupportedOperationException("Only ReIndev is supported by FoxLoader.")
@@ -357,7 +357,7 @@ interface PatchProviders {
     /**
      * enables the FoxLoader patcher.
      * @param action the action to configure the patcher.
-     * @since 1.4.0
+     * @since 1.3.5
      */
     fun foxLoader(
         @DelegatesTo(
