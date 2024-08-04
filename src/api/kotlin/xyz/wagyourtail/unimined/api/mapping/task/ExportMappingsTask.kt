@@ -118,7 +118,7 @@ abstract class ExportMappingsTask : ConventionTask() {
          * the format to export to. (SRG, TINY_V2, MCP)
          */
         fun setType(type: String) {
-            this.type = FormatRegistry.byName[type]
+            this.type = FormatRegistry.byName[type.lowercase()]
         }
 
         /**

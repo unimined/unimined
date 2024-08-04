@@ -44,6 +44,9 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
         delegate.setValueIntl(LazyMutable { checkedNs(namespace) })
     }
 
+    @Deprecated("No longer needed", ReplaceWith(""))
+    fun devFallbackNamespace(namespace: String) {}
+
     @JvmOverloads
     abstract fun intermediary(key: String = "intermediary", action: MappingEntry.() -> Unit = {})
 
