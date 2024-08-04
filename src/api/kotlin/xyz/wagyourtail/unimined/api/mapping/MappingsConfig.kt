@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.api.mapping
 
+import MemoryMapping
 import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import kotlinx.coroutines.runBlocking
@@ -36,7 +37,7 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
         runBlocking {
             resolve()
         }
-        namespaces.entries.firstOrNull { it.value }?.key ?: error("No \"Named\" namespace found for devNamespace")
+        namespaces.entries.firstOrNull { it.value }?.key ?: error("No \"Named\" namespace found for devNamespace, if this is correct, set devNamespace explicitly")
     })
 
     fun devNamespace(namespace: String) {
@@ -468,6 +469,9 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
     }
 
     abstract fun hasStubs(): Boolean
+
+    @Deprecated("Use stubs instead", ReplaceWith("stubs(*namespaces, apply = apply)"))
+    abstract val stub: MemoryMapping
 
     abstract fun stubs(vararg namespaces: String, apply: MappingDSL.() -> Unit)
 

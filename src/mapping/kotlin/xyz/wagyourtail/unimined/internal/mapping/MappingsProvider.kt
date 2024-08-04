@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
+import MemoryMapping
 import net.fabricmc.tinyremapper.IMappingProvider
 import okio.BufferedSource
 import okio.buffer
@@ -577,6 +578,15 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             append(buildString { stubMappings!!.accept(UMFWriter.write(::append)) }.getShortSha1())
         }
     }
+
+    @Deprecated("Use stubs instead", replaceWith = ReplaceWith("stubs(*namespaces, apply = apply)"))
+    override val stub: MemoryMapping
+        get() {
+            if (stubMappings == null) {
+                stubMappings = MemoryMappingTree()
+            }
+            return MemoryMapping(stubMappings!!)
+        }
 
     override fun stubs(vararg namespaces: String, apply: MappingDSL.() -> Unit) {
         if (finalized) {
