@@ -6,11 +6,11 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.jvm.tasks.Jar
-import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.reindev.FoxLoaderPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
+import xyz.wagyourtail.unimined.mapping.EnvType
 import xyz.wagyourtail.unimined.util.*
 import java.io.InputStreamReader
 import kotlin.io.path.Path
@@ -37,10 +37,10 @@ class FoxLoaderMinecraftTransformer(
     }
 
     private val isClient by lazy {
-        provider.side == EnvType.CLIENT || provider.side == EnvType.COMBINED
+        provider.side == EnvType.CLIENT || provider.side == EnvType.JOINED
     }
     private val isServer by lazy {
-        provider.side == EnvType.SERVER || provider.side == EnvType.COMBINED
+        provider.side == EnvType.SERVER || provider.side == EnvType.JOINED
     }
 
     private val foxLoader: Configuration by lazy {
@@ -78,7 +78,7 @@ class FoxLoaderMinecraftTransformer(
 
         val foxLoaderDeps: List<Dependency>
         if (!canCombine) {
-            if (provider.side == EnvType.COMBINED) throw IllegalStateException("Cannot use FoxLoader pre-2.9 without specifying non-combined side")
+            if (provider.side == EnvType.JOINED) throw IllegalStateException("Cannot use FoxLoader pre-2.9 without specifying non-joined side")
             foxLoaderDeps = listOf(
                 project.dependencies.create("com.fox2code.FoxLoader:common:${dep}"),
                 project.dependencies.create("com.fox2code.FoxLoader:${provider.side.classifier}:${dep}")
@@ -86,7 +86,7 @@ class FoxLoaderMinecraftTransformer(
             foxLoader.dependencies.addAll(foxLoaderDeps)
             foxLoaderInvoker.dependencies.addAll(foxLoaderDeps)
         } else {
-            if (provider.side != EnvType.COMBINED) throw IllegalStateException("Cannot use FoxLoader post-2.9 on non-combined side")
+            if (provider.side != EnvType.JOINED) throw IllegalStateException("Cannot use FoxLoader post-2.9 on non-joined side")
             foxLoaderDeps = listOf(project.dependencies.create("com.fox2code.FoxLoader:loader:${dep}"))
         }
 
