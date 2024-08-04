@@ -15,7 +15,9 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.reindev.FoxLoaderPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
+import java.lang.UnsupportedOperationException
 
 /**
  * usage:
@@ -329,6 +331,41 @@ interface PatchProviders {
         ) action: Closure<*>
     ) {
         cleanroom {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the FoxLoader patcher.
+     * @since 1.3.5
+     */
+    fun foxLoader() {
+        foxLoader {}
+    }
+
+    /**
+     * enables the FoxLoader patcher.
+     * @param action the action to configure the patcher.
+     * @since 1.3.5
+     */
+    fun foxLoader(action: FoxLoaderPatcher.() -> Unit) {
+        throw UnsupportedOperationException("Only ReIndev is supported by FoxLoader.")
+    }
+
+    /**
+     * enables the FoxLoader patcher.
+     * @param action the action to configure the patcher.
+     * @since 1.3.5
+     */
+    fun foxLoader(
+        @DelegatesTo(
+            value = FoxLoaderPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        foxLoader {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()
