@@ -129,6 +129,39 @@ interface PatchProviders {
     }
 
     /**
+     * enables the fabric patcher with additional tweaks for Ornithe.
+     * @param action the action to perform on the patcher.
+     * @since 1.4.0
+     */
+    fun ornitheFabric(action: LegacyFabricPatcher.() -> Unit)
+
+    /**
+     * enables the fabric patcher with additional tweaks for Ornithe.
+     * @param action the action to perform on the patcher.
+     * @since 1.4.0
+     */
+    fun ornitheFabric(
+        @DelegatesTo(
+            value = LegacyFabricPatcher::class,
+            strategy = Closure.DELEGATE_FIRST
+        ) action: Closure<*>
+    ) {
+        ornitheFabric {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    /**
+     * enables the fabric patcher with additional tweaks for Ornithe.
+     * @since 1.4.0
+     */
+    fun ornitheFabric() {
+        ornitheFabric {}
+    }
+
+    /**
      * enables the quilt patcher.
      * @param action the action to configure the patcher.
      * @see FabricLikePatcher

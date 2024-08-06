@@ -259,6 +259,14 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
+    override fun ornitheFabric(action: LegacyFabricPatcher.() -> Unit) {
+        mcPatcher = OrnitheFabricMinecraftTransformer(project, this).also {
+            patcherActions.addFirst {
+                action(it)
+            }
+        }
+    }
+
     override fun quilt(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = QuiltMinecraftTransformer(project, this).also {
             patcherActions.addFirst {

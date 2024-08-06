@@ -5,6 +5,4 @@ package xyz.wagyourtail.unimined.api.minecraft.patch.fabric
  */
 interface LegacyFabricPatcher : FabricLikePatcher {
 
-    var replaceLwjglVersion: String?
-
 }

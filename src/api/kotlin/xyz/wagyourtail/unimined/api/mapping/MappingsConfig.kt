@@ -41,7 +41,7 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
     })
 
     fun devNamespace(namespace: String) {
-        val delegate = MappingsConfig::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
+        val delegate = MappingsConfig::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
         delegate.setValueIntl(LazyMutable { checkedNs(namespace) })
     }
 

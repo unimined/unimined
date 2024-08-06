@@ -138,6 +138,12 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         patchers.add(fabric)
     }
 
+    override fun ornitheFabric(action: LegacyFabricPatcher.() -> Unit) {
+        val fabric = OrnitheFabricMinecraftTransformer(project, provider)
+        fabric.action()
+        patchers.add(fabric)
+    }
+
     override fun quilt(action: FabricLikePatcher.() -> Unit) {
         val fabric = QuiltMinecraftTransformer(project, provider)
         fabric.action()
