@@ -349,6 +349,38 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
         }
     }
 
+    @JvmOverloads
+    fun nostalgia(
+        build: String,
+        key: String = "nostalgia",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        nostalgia(build.toInt(), key, action)
+    }
+
+    @JvmOverloads
+    abstract fun nostalgia(build: Int, key: String = "nostalgia", action: MappingEntry.() -> Unit = {})
+
+    @JvmOverloads
+    fun nostalgia(build: String, key: String = "nostalgia", action: MappingEntry.() -> Unit = {}) {
+        nostalgia(build.toInt(), key, action)
+    }
+
+    @JvmOverloads
+    fun nostalgia(
+        build: Int,
+        key: String = "nostalgia",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        nostalgia(build, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
 
     @JvmOverloads
     abstract fun quilt(build: Int, key: String = "quilt", action: MappingEntry.() -> Unit = {})

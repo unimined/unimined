@@ -461,7 +461,25 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         }
     }
 
-    
+    override fun nostalgia(build: Int, key: String, action: MappingEntry.() -> Unit) {
+        unimined.wispForestMaven()
+        val entry = MappingEntry(contentOf(
+            MavenCoords(
+                "me.alphamode",
+                "nostalgia",
+                "${minecraft.version}+build.$build",
+            )), "$key-$build"
+        ).apply {
+            requires("babricIntermediary")
+            provides("nostalgia" to true)
+            action()
+        }
+        addDependency(key, entry)
+        afterLoad.add {
+            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
+        }
+    }
+
     override fun quilt(build: Int, key: String, action: MappingEntry.() -> Unit) {
         unimined.quiltMaven()
         val entry = MappingEntry(contentOf(
