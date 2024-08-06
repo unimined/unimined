@@ -5,6 +5,7 @@ import org.gradle.api.tasks.SourceSet
 import xyz.wagyourtail.unimined.api.minecraft.patch.reindev.FoxLoaderPatcher
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.mapping.Namespace
 import java.io.File
 import java.io.IOException
 import kotlin.io.path.exists
@@ -34,7 +35,7 @@ class ReIndevProvider(project: Project, sourceSet: SourceSet) : MinecraftProvide
             }
         }
 
-        mappings.devNamespace = mappings.unmappedNs.first()
+        mappings.devNamespace = Namespace("official")
     }
 
     override val mergedOfficialMinecraftFile: File? by lazy {
