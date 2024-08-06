@@ -292,7 +292,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     
     override fun retroMCP(version: String, key: String, action: MappingEntry.() -> Unit) {
         unimined.mcphackersIvy()
-        addDependency(key, MappingEntry(contentOf(MavenCoords("io.github.mcphackers", "mcp", version, "zip")), "$key-$version").apply {
+        addDependency(key, MappingEntry(contentOf(MavenCoords("io.github.mcphackers", "mcp", version, extension = "zip")), "$key-$version").apply {
             mapNamespace("named" to "retroMCP")
             if (splitUnmapped) {
                 when (envType) {
