@@ -255,6 +255,7 @@ abstract class UniminedExtension(val project: Project) {
     @Deprecated("Use glassLauncherMaven(\"babric\") instead", ReplaceWith("glassLauncherMaven(\"babric\")"))
     abstract fun babricMaven()
     abstract fun glassLauncherMaven(name: String)
+    abstract fun wispForestMaven(name: String = "releases")
     abstract fun parchmentMaven()
 
     abstract fun neoForgedMaven()

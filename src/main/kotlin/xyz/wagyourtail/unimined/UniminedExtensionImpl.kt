@@ -174,6 +174,17 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Glass Launcher maven: ${glassLauncherMaven[name]}")
     }
 
+    val wispForestMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
+        project.repositories.maven {
+            it.name = "Wisp Forest"
+            it.url = URI.create("https://maven.wispforest.io/$name")
+        }
+    }
+
+    override fun wispForestMaven(name: String) {
+        project.logger.info("[Unimined] adding Wisp Forest maven: ${wispForestMaven[name]}")
+    }
+
     val wagYourMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
         project.repositories.maven {
             it.name = "WagYourTail (${name.capitalized()})"
