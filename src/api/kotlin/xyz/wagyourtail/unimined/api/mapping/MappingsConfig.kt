@@ -85,7 +85,7 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
 
     @JvmOverloads
     fun legacyIntermediary(
-        key: String = "legacy-intermediary",
+        key: String = "legacyIntermediary",
         @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
@@ -101,7 +101,7 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
 
     @JvmOverloads
     fun babricIntermediary(
-        key: String = "intermediary",
+        key: String = "babricIntermediary",
         @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
@@ -289,7 +289,7 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
     @JvmOverloads
     fun legacyYarn(
         build: Int,
-        key: String = "legacy-yarn",
+        key: String = "legacyYarn",
         @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
