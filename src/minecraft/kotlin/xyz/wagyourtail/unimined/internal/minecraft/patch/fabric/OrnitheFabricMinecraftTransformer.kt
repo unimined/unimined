@@ -11,14 +11,12 @@ open class OrnitheFabricMinecraftTransformer(
     provider: MinecraftProvider
 ): LegacyFabricMinecraftTransformer(project, provider) {
 
+    override val defaultProdNamespace: String = "calamus"
+
     override fun addIntermediaryMappings() {
         provider.mappings {
             calamus()
         }
     }
-
-    override var prodNamespace: Namespace by FinalizeOnRead(LazyMutable {
-        provider.mappings.checkedNs("calamus")
-    })
 
 }

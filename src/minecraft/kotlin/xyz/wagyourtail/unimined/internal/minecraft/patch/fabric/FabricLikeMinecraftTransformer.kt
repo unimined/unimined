@@ -94,9 +94,12 @@ abstract class FabricLikeMinecraftTransformer(
         }
     )
 
+    abstract val defaultProdNamespace: String
+
     override var prodNamespace by FinalizeOnRead(LazyMutable {
         if (!provider.obfuscated) return@LazyMutable provider.mappings.checkedNs("official")
-        provider.mappings.checkedNs("intermediary")
+        if (customIntermediaries) throw IllegalStateException("Custom intermediaries are enabled, but prodNamespace is not overriden")
+        provider.mappings.checkedNs(defaultProdNamespace)
     })
 
     @get:ApiStatus.Internal

@@ -19,15 +19,13 @@ open class LegacyFabricMinecraftTransformer(
 
     override var replaceLwjglVersion: String? by FinalizeOnRead("2.9.4+legacyfabric.8")
 
+    override val defaultProdNamespace: String = "legacyIntermediary"
+
     override fun addIntermediaryMappings() {
         provider.mappings {
             legacyIntermediary()
         }
     }
-
-    override var prodNamespace: Namespace by FinalizeOnRead(LazyMutable {
-        provider.mappings.checkedNs("legacyIntermediary")
-    })
 
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         fabric.dependencies.add(

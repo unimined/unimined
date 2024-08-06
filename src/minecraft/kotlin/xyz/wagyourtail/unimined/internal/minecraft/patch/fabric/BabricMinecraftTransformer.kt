@@ -14,9 +14,7 @@ open class BabricMinecraftTransformer(project: Project, provider: MinecraftProvi
 
     override var canCombine: Boolean by FinalizeOnRead(true)
 
-    override var prodNamespace: Namespace by LazyMutable {
-        provider.mappings.checkedNs("babricIntermediary")
-    }
+    override val defaultProdNamespace: String = "babricIntermediary"
 
     override fun addIntermediaryMappings() {
         provider.mappings {
