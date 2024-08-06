@@ -406,7 +406,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         val entry = MappingEntry(
             contentOf(legacyFabricRevisionTransform(
                 MavenCoords(
-                "net.leagcyfabric",
+                "net.legacyfabric",
                 "yarn",
                 "${minecraft.version}+build.$build",
                 "v2"
