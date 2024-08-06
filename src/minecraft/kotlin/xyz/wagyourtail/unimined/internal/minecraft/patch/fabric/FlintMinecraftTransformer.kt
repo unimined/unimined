@@ -37,6 +37,8 @@ open class FlintMinecraftTransformer(
         provider.side = EnvType.CLIENT
     }
 
+    override val defaultProdNamespace: String = "intermediary"
+
     override fun addIntermediaryMappings() {
         provider.mappings {
             intermediary()

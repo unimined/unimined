@@ -27,6 +27,8 @@ open class QuiltMinecraftTransformer(
     override val ENVIRONMENT: String = "Lnet/fabricmc/api/Environment;"
     override val ENV_TYPE: String = "Lnet/fabricmc/api/EnvType;"
 
+    override val defaultProdNamespace: String = "intermediary"
+
     override fun addIntermediaryMappings() {
         provider.mappings {
             intermediary()

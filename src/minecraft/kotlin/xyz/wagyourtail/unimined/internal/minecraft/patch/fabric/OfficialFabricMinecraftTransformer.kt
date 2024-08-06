@@ -12,6 +12,8 @@ open class OfficialFabricMinecraftTransformer(
     provider: MinecraftProvider
 ) : FabricMinecraftTransformer(project, provider) {
 
+    override val defaultProdNamespace: String = "intermediary"
+
     override fun addIntermediaryMappings() {
         provider.mappings {
             intermediary()
