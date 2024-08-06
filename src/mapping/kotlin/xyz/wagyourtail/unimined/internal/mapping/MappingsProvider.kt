@@ -472,6 +472,10 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         ).apply {
             requires("babricIntermediary")
             provides("nostalgia" to true)
+            mapNamespace("intermediary" to "babricIntermediary", "named" to "nostalgia")
+            afterLoad.add {
+                renest(requires.name, *provides.map { it.first.name }.toTypedArray())
+            }
             action()
         }
         addDependency(key, entry)
