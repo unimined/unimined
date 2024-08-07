@@ -63,10 +63,12 @@ abstract class AbstractMinecraftTransformer protected constructor(
         )
     }
 
-    open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar = merge(clientjar, serverjar, false)
-
-    fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar, ignoreFallback: Boolean): MinecraftJar {
+    open fun merge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         if (!canCombine) throw UnsupportedOperationException("Merging is not supported for this version")
+        return internalMerge(clientjar, serverjar)
+    }
+
+    fun internalMerge(clientjar: MinecraftJar, serverjar: MinecraftJar): MinecraftJar {
         if (clientjar.mappingNamespace != serverjar.mappingNamespace) {
             throw IllegalArgumentException("client and server jars must have the same mapping namespace")
         }

@@ -71,7 +71,7 @@ abstract class FabricMinecraftTransformer(
             )
             val intermediaryClientJar = provider.minecraftRemapper.provide(clientJarFixed, INTERMEDIARY)
             val intermediaryServerJar = provider.minecraftRemapper.provide(serverJarFixed, INTERMEDIARY)
-            return super.merge(intermediaryClientJar, intermediaryServerJar, true)
+            return super.internalMerge(intermediaryClientJar, intermediaryServerJar)
         }
         throw UnsupportedOperationException("Merging is not supported for this version")
     }
