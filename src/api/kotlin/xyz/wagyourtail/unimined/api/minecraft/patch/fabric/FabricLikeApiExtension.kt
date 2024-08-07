@@ -26,25 +26,28 @@ open class FabricLikeApiExtension(val project: Project) {
 
         abstract fun getUrl(version: String): String
         abstract fun full(version: String): String
-        abstract fun getArtifactName(moduleName: String, version: String?): String
 
         open fun module(moduleName: String, version: String): String? {
             val elements = xmlDoc[version].getElementsByTagName("dependency")
             for (i in 0 until elements.length) {
                 val element = elements.item(i)
                 var correct = false
+                var group: String? = null
                 var vers: String? = null
                 for (j in 0 until element.childNodes.length) {
                     val child = element.childNodes.item(j)
                     if (child.nodeName == "artifactId" && child.textContent == moduleName) {
                         correct = true
                     }
+                    if (child.nodeName == "groupId") {
+                        group = child.textContent
+                    }
                     if (child.nodeName == "version") {
                         vers = child.textContent
                     }
                 }
                 if (correct) {
-                    return getArtifactName(moduleName, vers)
+                    return "$group:$moduleName:$vers"
                 }
             }
             return null
@@ -60,42 +63,6 @@ open class FabricLikeApiExtension(val project: Project) {
         override fun full(version: String): String {
             return "net.modificationstation:StationAPI:$version"
         }
-
-        override fun getArtifactName(moduleName: String, version: String?): String {
-            TODO("Not yet implemented")
-        }
-
-        fun getArtifactName(moduleName: String, mainVersion: String, version: String?): String {
-            return "net.modificationstation.StationAPI.$mainVersion:$moduleName:$version"
-        }
-
-        override fun module(moduleName: String, version: String): String? {
-            val elements = xmlDoc[version].getElementsByTagName("dependency")
-
-            for (i in 0 until elements.length) {
-                val element = elements.item(i)
-                var correct = false
-                var vers: String? = null
-
-                for (j in 0 until element.childNodes.length) {
-                    val child = element.childNodes.item(j)
-
-                    if (child.nodeName == "artifactId" && child.textContent == moduleName) {
-                        correct = true
-                    }
-
-                    if (child.nodeName == "version") {
-                        vers = child.textContent
-                    }
-                }
-
-                if (correct) {
-                    return getArtifactName(moduleName, version, vers)
-                }
-            }
-
-            return null
-        }
     }
 
     val locations = mapOf<String, APILocations>(
@@ -107,10 +74,6 @@ open class FabricLikeApiExtension(val project: Project) {
             override fun full(version: String): String {
                 return "net.fabricmc.fabric-api:fabric-api:$version"
             }
-
-            override fun getArtifactName(moduleName: String, version: String?): String {
-                return "net.fabricmc.fabric-api:$moduleName:$version"
-            }
         },
         "legacyFabric" to object : APILocations(project) {
             override fun getUrl(version: String): String {
@@ -119,10 +82,6 @@ open class FabricLikeApiExtension(val project: Project) {
 
             override fun full(version: String): String {
                 return "net.legacyfabric.legacy-fabric-api:legacy-fabric-api:$version"
-            }
-
-            override fun getArtifactName(moduleName: String, version: String?): String {
-                return "net.legacyfabric.legacy-fabric-api:$moduleName:$version"
             }
         },
         "quilt" to object : APILocations(project) {
@@ -133,10 +92,6 @@ open class FabricLikeApiExtension(val project: Project) {
             override fun full(version: String): String {
                 return "org.quiltmc.quilted-fabric-api:quilted-fabric-api:$version"
             }
-
-            override fun getArtifactName(moduleName: String, version: String?): String {
-                return "org.quiltmc.quilted-fabric-api:$moduleName:$version"
-            } 
         },
         "qsl" to object : APILocations(project) {
             override fun getUrl(version: String): String {
@@ -146,10 +101,6 @@ open class FabricLikeApiExtension(val project: Project) {
             override fun full(version: String): String {
                 return "org.quiltmc:qsl:$version"
             }
-
-            override fun getArtifactName(moduleName: String, version: String?): String {
-                return "org.quiltmc.qsl:$moduleName:$version"
-            } 
         },
         "station_snapshots" to object : StAPILocation(project, "snapshots") {},
         "station_releases" to object : StAPILocation(project, "releases") {}
