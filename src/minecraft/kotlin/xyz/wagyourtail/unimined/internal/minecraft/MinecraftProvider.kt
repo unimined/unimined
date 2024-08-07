@@ -224,7 +224,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     override fun mappings(action: MappingsConfig<*>.() -> Unit) {
         createMojmapIvy()
-        mappings.action()
+        mappings.configure(action)
     }
 
     override fun merged(action: MergedPatcher.() -> Unit) {

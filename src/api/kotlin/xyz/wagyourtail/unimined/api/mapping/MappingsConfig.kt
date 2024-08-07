@@ -519,6 +519,8 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
         }
     }
 
+    abstract fun configure(action: MappingsConfig<*>.() -> Unit)
+
     override suspend fun resolve(): MemoryMappingTree {
         return super.resolve()
     }

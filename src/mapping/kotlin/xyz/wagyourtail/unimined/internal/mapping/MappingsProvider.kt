@@ -8,6 +8,7 @@ import okio.source
 import okio.use
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.internal.provider.MappingProvider
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.mapping.dsl.MappingDSL
@@ -56,6 +57,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     var splitUnmapped by FinalizeOnRead(LazyMutable {
         minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.3") <= 0
     })
+
+    var lazyConfigure: MappingsConfig<*>.() -> Unit = {}
 
     override var envType: EnvType by LazyMutable {
         minecraft.side
@@ -640,6 +643,24 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         mappingFile.bufferedWriter().use {
             tree.accept(UMFWriter.write(it::append))
         }
+    }
+
+    override fun configure(action: MappingsConfig<*>.() -> Unit) {
+        if (finalized) {
+            throw UnsupportedOperationException("Cannot configure mappings after finalization")
+        }
+        val old = lazyConfigure
+        lazyConfigure = {
+            old()
+            action()
+        }
+    }
+
+    override suspend fun finalize() {
+        if (!finalized) {
+            lazyConfigure()
+        }
+        super.finalize()
     }
 
     override suspend fun getTRMappings(
