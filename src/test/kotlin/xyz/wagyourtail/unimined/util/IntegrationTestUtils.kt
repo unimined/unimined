@@ -1,5 +1,7 @@
 package xyz.wagyourtail.unimined.util
 
+import org.gradle.api.Project
+import org.gradle.testfixtures.ProjectBuilder
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.util.GradleVersion
@@ -70,4 +72,10 @@ fun runGradle(dir: Path, version: String = GRADLE_CURRENT): BuildResult {
         }
     }
     return result
+}
+
+fun createFakeProject(): Project {
+    val project = ProjectBuilder.builder().build()
+    project.getPluginManager().apply("xyz.wagyourtail.unimined")
+    return project
 }
