@@ -300,7 +300,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     val arcseekersMaven by lazy {
         project.repositories.maven {
-            it.name = "outlands"
+            it.name = "arcseekers"
             it.url = URI.create("https://maven.arcseekers.com/releases")
         }
     }
