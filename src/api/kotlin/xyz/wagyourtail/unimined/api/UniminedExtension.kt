@@ -6,6 +6,8 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.tasks.SourceSet
 import org.jetbrains.annotations.ApiStatus
+import org.jetbrains.annotations.ApiStatus.ScheduledForRemoval
+import org.w3c.dom.events.MutationEvent.REMOVAL
 import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikeApiExtension
@@ -252,8 +254,6 @@ abstract class UniminedExtension(val project: Project) {
     abstract fun wagYourMaven(name: String)
     abstract fun mcphackersIvy()
     abstract fun quiltMaven()
-    @Deprecated("Use glassLauncherMaven(\"babric\") instead", ReplaceWith("glassLauncherMaven(\"babric\")"))
-    abstract fun babricMaven()
     abstract fun glassLauncherMaven(name: String)
     abstract fun wispForestMaven(name: String = "releases")
     abstract fun parchmentMaven()
@@ -273,4 +273,12 @@ abstract class UniminedExtension(val project: Project) {
     abstract fun fox2codeMaven()
     abstract fun modrinthMaven()
     abstract fun curseMaven(beta: Boolean = false)
+
+    @ScheduledForRemoval
+    @Deprecated("Use glassLauncherMaven(\"babric\") instead", ReplaceWith("glassLauncherMaven(\"babric\")"))
+    fun babricMaven() = glassLauncherMaven("babric")
+
+    @ScheduledForRemoval
+    @Deprecated("use arcseekersMaven() instead", ReplaceWith("arcseekersMaven()"))
+    fun outlandsMaven() = arcseekersMaven()
 }

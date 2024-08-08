@@ -158,11 +158,6 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Quilt maven: $quiltMaven")
     }
 
-    @Deprecated("Use glassLauncherMaven(\"babric\") instead", ReplaceWith("glassLauncherMaven(\"babric\")"))
-    override fun babricMaven() {
-        glassLauncherMaven("babric")
-    }
-
     val glassLauncherMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
         project.repositories.maven {
             it.name = "Glass (${name.capitalized()})"
