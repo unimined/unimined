@@ -51,7 +51,7 @@ open class CleanroomMinecraftTransformer(project: Project, provider: MinecraftPr
 
     override fun addMavens() {
         project.unimined.cleanroomRepos()
-        project.unimined.outlandsMaven()
+        project.unimined.arcseekersMaven()
         project.unimined.minecraftForgeMaven()
     }
 
