@@ -7,10 +7,9 @@ import org.gradle.api.artifacts.repositories.FlatDirectoryArtifactRepository
 import org.gradle.api.tasks.SourceSet
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.ApiStatus.ScheduledForRemoval
-import org.w3c.dom.events.MutationEvent.REMOVAL
-import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikeApiExtension
+import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.sourceSets
 import java.nio.file.Path
@@ -247,32 +246,31 @@ abstract class UniminedExtension(val project: Project) {
     }
 
     abstract val modsRemapRepo: FlatDirectoryArtifactRepository
+
+    abstract fun wagYourMaven(name: String)
     abstract fun minecraftForgeMaven()
+    abstract fun neoForgedMaven()
+    abstract fun cleanroomRepos()
     abstract fun fabricMaven()
+    abstract fun quiltMaven()
     abstract fun legacyFabricMaven()
     abstract fun ornitheMaven()
-    abstract fun wagYourMaven(name: String)
-    abstract fun mcphackersIvy()
-    abstract fun quiltMaven()
     abstract fun glassLauncherMaven(name: String)
-    abstract fun wispForestMaven(name: String = "releases")
-    abstract fun parchmentMaven()
-
-    abstract fun neoForgedMaven()
-    abstract fun sonatypeStaging()
+    abstract fun fox2codeMaven()
+    abstract fun flintMaven(name: String)
+    abstract fun spigot()
     abstract fun spongeMaven()
 
-    abstract fun jitpack()
-
-    abstract fun spigot()
-
-    abstract fun flintMaven(name: String)
-
-    abstract fun cleanroomRepos()
     abstract fun arcseekersMaven()
-    abstract fun fox2codeMaven()
+    abstract fun parchmentMaven()
+    abstract fun mcphackersIvy()
+    abstract fun wispForestMaven(name: String = "releases")
+    abstract fun sleepingTownMaven()
+
     abstract fun modrinthMaven()
     abstract fun curseMaven(beta: Boolean = false)
+    abstract fun sonatypeStaging()
+    abstract fun jitpack()
 
     @ScheduledForRemoval
     @Deprecated("Use glassLauncherMaven(\"babric\") instead", ReplaceWith("glassLauncherMaven(\"babric\")"))
