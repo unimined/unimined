@@ -241,7 +241,7 @@ class ClassMapping(val visitor: ClassVisitor, val sourceNamespace: String) {
     fun m(srcName: String, srcDesc: String, vararg targets: Pair<String, String>) {
         val map = mutableMapOf<Namespace, Pair<String, MethodDescriptor?>>()
         for (target in targets) {
-            map[Namespace(target.first)] = target.second to MethodDescriptor.read(srcDesc)
+            map[Namespace(target.first)] = target.second to null
         }
         map[Namespace(sourceNamespace)] = srcName to MethodDescriptor.read(srcDesc)
         visitor.visitMethod(map)?.visitEnd()
@@ -263,7 +263,7 @@ class ClassMapping(val visitor: ClassVisitor, val sourceNamespace: String) {
     ) {
         val map = mutableMapOf<Namespace, Pair<String, MethodDescriptor?>>()
         for (target in targets) {
-            map[Namespace(target.first)] = target.second to MethodDescriptor.read(srcDesc)
+            map[Namespace(target.first)] = target.second to null
         }
         map[Namespace(sourceNamespace)] = srcName to MethodDescriptor.read(srcDesc)
         visitor.visitMethod(map)?.use {
@@ -281,7 +281,7 @@ class ClassMapping(val visitor: ClassVisitor, val sourceNamespace: String) {
     fun m(srcName: String, srcDesc: String, targets: Map<String, String>) {
         val map = mutableMapOf<Namespace, Pair<String, MethodDescriptor?>>()
         for ((key, value) in targets) {
-            map[Namespace(key)] = value to MethodDescriptor.read(srcDesc)
+            map[Namespace(key)] = value to null
         }
         map[Namespace(sourceNamespace)] = srcName to MethodDescriptor.read(srcDesc)
         visitor.visitMethod(map)?.visitEnd()
@@ -298,7 +298,7 @@ class ClassMapping(val visitor: ClassVisitor, val sourceNamespace: String) {
     fun m(srcName: String, srcDesc: String, targets: Map<String, String>, action: MethodMapping.() -> Unit = {}) {
         val map = mutableMapOf<Namespace, Pair<String, MethodDescriptor?>>()
         for ((key, value) in targets) {
-            map[Namespace(key)] = value to MethodDescriptor.read(srcDesc)
+            map[Namespace(key)] = value to null
         }
         map[Namespace(sourceNamespace)] = srcName to MethodDescriptor.read(srcDesc)
         visitor.visitMethod(map)?.use {
