@@ -42,7 +42,12 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
 
     fun devNamespace(namespace: String) {
         val delegate = MappingsConfig::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
-        delegate.setValueIntl(LazyMutable { checkedNs(namespace) })
+        delegate.setValueIntl(LazyMutable {
+            runBlocking {
+                resolve()
+            }
+            checkedNs(namespace)
+        })
     }
 
     @Deprecated("No longer needed", ReplaceWith(""))
