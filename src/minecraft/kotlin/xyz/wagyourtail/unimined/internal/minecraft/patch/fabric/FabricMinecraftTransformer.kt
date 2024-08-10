@@ -104,7 +104,7 @@ abstract class FabricMinecraftTransformer(
         config.jvmArgs(
             "-Dfabric.development=true",
             "-Dfabric.remapClasspathFile=\${intermediaryClasspath}",
-            "-Dfabric.classPathGroups=\${classpath_groups}"
+            "-Dfabric.classPathGroups=\${classPathGroups}"
         )
         if (provider is ReIndevProvider) {
             config.jvmArgs("-Dfabric.gameVersion=b1.7.3")
@@ -122,7 +122,7 @@ abstract class FabricMinecraftTransformer(
         config.jvmArgs(
             "-Dfabric.development=true",
             "-Dfabric.remapClasspathFile=\${intermediaryClasspath}",
-            "-Dfabric.classPathGroups=\${classpath_groups}"
+            "-Dfabric.classPathGroups=\${classPathGroups}"
         )
         if (provider is ReIndevProvider) {
             config.jvmArgs("-Dfabric.gameVersion=b1.7.3")
