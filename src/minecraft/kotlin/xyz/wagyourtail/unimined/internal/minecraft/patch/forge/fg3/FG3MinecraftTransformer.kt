@@ -398,7 +398,15 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
     }
 
-    val legacyClasspath = provider.localCache.createDirectories().resolve("legacy_classpath.txt")
+    val legacyClasspath by lazy {
+        val lcp = provider.localCache.createDirectories().resolve("legacy_classpath.txt")
+        lcp.writeText(
+            (provider.minecraftLibraries.files + provider.minecraftFileDev + clientExtra.resolve()).joinToString(
+                "\n"
+            ) { it.toString() }, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
+        )
+        lcp
+    }
 
     private fun addProperties(config: RunConfig) {
         config.properties.putAll(mapOf(
@@ -420,9 +428,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     private fun getArgValue(arg: String): String {
         return if (arg.startsWith("{")) {
             when (arg) {
-                "{minecraft_classpath_file}" -> legacyClasspath.toString()
                 "{asset_index}" -> provider.minecraftData.metadata.assetIndex?.id ?: ""
-                "{source_roots}" -> parent.groups
                 "{mcp_mappings}" -> "unimined.stub"
                 "{natives}" -> "\${natives_directory}"
                 else -> "\$$arg"
@@ -432,20 +438,14 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
     }
 
-    open fun createLegacyClasspath() {
-//        val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-//        val source = sourceSets.findByName("client") ?: sourceSets.getByName("main")
-
-        legacyClasspath.writeText(
-            (provider.minecraftLibraries.files + provider.minecraftFileDev + clientExtra.resolve()).joinToString(
-                "\n"
-            ) { it.toString() }, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
-        )
-    }
-
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
-        createLegacyClasspath()
+        config.properties["minecraft_classpath_file"] = {
+            legacyClasspath.absolutePathString()
+        }
+        config.properties["source_roots"] = {
+            parent.groups
+        }
         userdevCfg.get("runs").asJsonObject.get("client").asJsonObject.apply {
             val mainClass = if (useUnionRelauncher) {
                 config.jvmArgs("-DunionRelauncher.mainClass=${get("main").asString}")
@@ -491,6 +491,12 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
 
     override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
+        config.properties["minecraft_classpath_file"] = {
+            legacyClasspath.absolutePathString()
+        }
+        config.properties["source_roots"] = {
+            parent.groups
+        }
         userdevCfg.get("runs").asJsonObject.get("server").asJsonObject.apply {
             val mainClass = get("main").asString
             parent.tweakClassServer = get("env")?.asJsonObject?.get("tweakClass")?.asString

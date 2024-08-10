@@ -121,6 +121,10 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
 
+        config.properties["source_roots"] = {
+            parent.groups
+        }
+
         val forgeUniversal = parent.forge.dependencies.last()
         val forgeJar = parent.forge.getFiles(forgeUniversal) { it.extension == "zip" || it.extension == "jar" }.singleFile
 
@@ -148,11 +152,15 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             "-Dfml.deobfuscatedEnvironment=true",
             "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
         )
-        config.environment["MOD_CLASSES"] = parent.groups
+        config.environment["MOD_CLASSES"] = "\${source_roots}"
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
+
+        config.properties["source_roots"] = {
+            parent.groups
+        }
 
         val forgeUniversal = parent.forge.dependencies.last()
         val forgeJar = parent.forge.getFiles(forgeUniversal) { it.extension == "zip" || it.extension == "jar" }.singleFile
@@ -182,7 +190,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             "-Dfml.deobfuscatedEnvironment=true",
             "-Dnet.minecraftforge.gradle.GradleStart.srg.srg-mcp=${parent.srgToMCPAsSRG}"
         )
-        config.environment["MOD_CLASSES"] = parent.groups
+        config.environment["MOD_CLASSES"] = "\${source_roots}"
     }
 
     override fun afterRemap(baseMinecraft: MinecraftJar): MinecraftJar {

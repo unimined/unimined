@@ -311,9 +311,8 @@ abstract class FabricLikeMinecraftTransformer(
         )
     }
 
-    val intermediaryClasspath: Path = provider.localCache.resolve("remapClasspath.txt".withSourceSet(provider.sourceSet))
-
-    override fun afterEvaluate() {
+    val intermediaryClasspath: Path by lazy {
+        val icp = provider.localCache.resolve("remapClasspath.txt".withSourceSet(provider.sourceSet))
         project.logger.lifecycle("[Unimined/Fabric] Generating intermediary classpath.")
         // resolve intermediary classpath
         val classpath = (provider.mods.getClasspathAs(
@@ -321,7 +320,8 @@ abstract class FabricLikeMinecraftTransformer(
             provider.sourceSet.runtimeClasspath.filter { !provider.isMinecraftJar(it.toPath()) }.toSet()
         ) + provider.getMinecraft(prodNamespace).toFile()).filter { it.exists() && !it.isDirectory && (it.extension == "jar" || it.extension == "zip") }
         // write to file
-        intermediaryClasspath.writeText(classpath.joinToString(File.pathSeparator), options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
+        icp.writeText(classpath.joinToString(File.pathSeparator), options = arrayOf(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
+        icp
     }
 
     override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {

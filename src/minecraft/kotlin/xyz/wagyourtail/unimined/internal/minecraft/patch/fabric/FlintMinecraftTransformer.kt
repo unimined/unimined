@@ -15,6 +15,7 @@ import java.io.InputStreamReader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
 
 open class FlintMinecraftTransformer(
@@ -85,10 +86,16 @@ open class FlintMinecraftTransformer(
 
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
+        config.properties["intermediaryClasspath"] = {
+            intermediaryClasspath.absolutePathString()
+        }
+        config.properties["classPathGroups"] = {
+            groups
+        }
         config.jvmArgs(
             "-Dflint.development=true",
-            "-Dflint.remapClasspathFile=${intermediaryClasspath}",
-            "-Dflint.classPathGroups=${groups}"
+            "-Dflint.remapClasspathFile=\${intermediaryClasspath}",
+            "-Dflint.classPathGroups=\${classPathGroups}"
         )
     }
 
