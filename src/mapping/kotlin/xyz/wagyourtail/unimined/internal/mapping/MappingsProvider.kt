@@ -606,6 +606,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         get() {
             if (stubMappings == null) {
                 stubMappings = MemoryMappingTree()
+                afterLoad.add {
+                    stubMappings!!.accept(this)
+                }
             }
             return MemoryMapping(stubMappings!!)
         }
