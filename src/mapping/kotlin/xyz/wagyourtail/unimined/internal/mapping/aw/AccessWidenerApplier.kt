@@ -1,8 +1,12 @@
 package xyz.wagyourtail.unimined.internal.mapping.aw
 
+import kotlinx.coroutines.runBlocking
 import net.fabricmc.accesswidener.*
 import net.fabricmc.tinyremapper.OutputConsumerPath
 import net.fabricmc.tinyremapper.TinyRemapper
+import okio.buffer
+import okio.sink
+import okio.use
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.logging.Logger
@@ -12,7 +16,22 @@ import org.objectweb.asm.Opcodes
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
+import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier.noAccessMappings
 import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.mapping.formats.aw.AWReader
+import xyz.wagyourtail.unimined.mapping.formats.aw.AWWriter
+import xyz.wagyourtail.unimined.mapping.jvms.four.three.three.MethodDescriptor
+import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
+import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
+import xyz.wagyourtail.unimined.mapping.tree.AbstractMappingTree
+import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
+import xyz.wagyourtail.unimined.mapping.util.CharReader
+import xyz.wagyourtail.unimined.mapping.visitor.ClassVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.FieldVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.MappingVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.MethodVisitor
+import xyz.wagyourtail.unimined.mapping.visitor.delegate.NullDelegator
+import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
 import xyz.wagyourtail.unimined.util.forEachInZip
 import java.io.BufferedReader
 import java.io.ByteArrayInputStream
@@ -136,38 +155,38 @@ object AccessWidenerApplier {
         return false
     }
 
-    fun mergeAws(
+    suspend fun mergeAws(
         inputs: List<Path>,
         output: Path,
         targetNamespace: Namespace,
-        mappingsProvider: MappingsProvider,
-        mcProvider: MinecraftConfig
+        mappingsProvider: MappingsProvider
     ): Path {
-        val merger = AccessWidenerMerger(targetNamespace.name)
+        val mappings = noAccessMappings(mappingsProvider.resolve())
 
         inputs.forEach {
-            createVisitors(merger, mappingsProvider, targetNamespace.name, it.inputStream(), mcProvider)
+            runBlocking {
+                var temp = ""
+                val data = AWReader.readData(CharReader(it.readText()))
+
+                if (data.namespace != targetNamespace) {
+                    val remappedData = AWWriter.remapMappings(data, mappingsProvider.resolve(), targetNamespace)
+                    AWWriter.writeData(remappedData) {
+                        temp += it
+                    }
+                } else {
+                    AWWriter.writeData(data) {
+                        temp += it
+                    }
+                }
+
+                if (temp.isNotEmpty()) AWReader.read(temp, mappings)
+            }
         }
 
-        output.bufferedWriter(
-            StandardCharsets.UTF_8,
-            1024,
-            StandardOpenOption.CREATE,
-            StandardOpenOption.TRUNCATE_EXISTING
-        ).write(merger.writeToAccessWidenerWriter().writeString())
+        output.sink().buffer().use {
+            mappings.accept(AWWriter.write(it), listOf(targetNamespace))
+        }
 
         return output
-    }
-
-    private fun createVisitors(
-        awm: AccessWidenerMerger,
-        mappingsProvider: MappingsProvider,
-        target: String,
-        input: InputStream,
-        mcProvider: MinecraftConfig
-    ) {
-        AccessWidenerReader(AccessWidenerBetterRemapper(awm, mappingsProvider, target, mcProvider)).read(
-            BufferedReader(InputStreamReader(input))
-        )
     }
 }
