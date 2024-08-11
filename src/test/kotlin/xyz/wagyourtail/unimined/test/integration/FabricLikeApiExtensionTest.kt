@@ -2,7 +2,9 @@ package xyz.wagyourtail.unimined.test.integration
 
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.MethodSource
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikeApiExtension
 import xyz.wagyourtail.unimined.util.createFakeProject
 import kotlin.test.assertEquals
@@ -16,6 +18,74 @@ class FabricLikeApiExtensionTest {
         fun init() {
             extension = FabricLikeApiExtension(createFakeProject())
         }
+
+        @JvmStatic
+        fun generateOSLModules(): Array<Arguments> = arrayOf(
+            Arguments.of("0.16.0", "1.12.2", setOf(
+                "branding:0.3.2+mc16w05b-mc1.12.2",
+                "config:0.5.2+mc15w40a-mc1.12.2",
+                "core:0.6.0",
+                "entrypoints:0.4.3+mc13w16a-04192037-mc1.14.4",
+                "keybinds:0.1.3+mc17w16a-mc1.12.2",
+                "lifecycle-events:0.5.4+mc13w36a-09051446-mc1.13",
+                "networking:0.8.0+mc14w31a-mc1.13-pre2",
+                "resource-loader:0.5.3+mc16w32a-mc1.12.2"
+            )),
+            Arguments.of("0.16.0", "1.8.9", setOf(
+                "branding:0.3.2+mc14w30a-mc16w05a",
+                "config:0.5.2+mc14w27a-mc15w39c",
+                "core:0.6.0",
+                "entrypoints:0.4.3+mc13w16a-04192037-mc1.14.4",
+                "keybinds:0.1.3+mc13w36a-09051446-mc17w15a",
+                "lifecycle-events:0.5.4+mc13w36a-09051446-mc1.13",
+                "networking:0.8.0+mc14w31a-mc1.13-pre2",
+                "resource-loader:0.5.3+mc13w26a-mc1.10.2"
+            )),
+            Arguments.of("0.16.0", "1.3.2", setOf(
+                "branding:0.3.2+mc1.3-pre-07261249-mc1.5.2",
+                "config:0.5.2+mc1.3-pre-07261249-mc1.5.2",
+                "core:0.6.0",
+                "entrypoints:0.4.3+mc1.3-pre-07261249-mc1.5.2",
+                "keybinds:0.1.3+mc1.3.1-mc1.5.2",
+                "lifecycle-events:0.5.4+mc1.3-pre-07261249-mc1.5.2",
+                "networking:0.8.0+mc1.3-pre-07261249-mc1.5.2",
+                "resource-loader:0.5.3+mc1.3-pre-07261249-mc13w07a"
+            ))
+        )
+
+        @JvmStatic
+        fun generateOSLSidedModules(): Array<Arguments> = arrayOf(
+            Arguments.of("0.16.0", "1.2.5", "client", setOf(
+                "branding:0.3.2+client-mca1.2.2-1624-mc12w17a",
+                "core:0.6.0",
+                "entrypoints:0.4.3+client-mca1.0.6-mc12w30e",
+                "lifecycle-events:0.5.4+client-mcb1.8-pre1-201109081459-mc12w17a",
+                "networking:0.8.0+client-mc11w49a-mc12w17a",
+                "resource-loader:0.5.3+client-mc11w49a-mc1.2.5"
+            )),
+            Arguments.of("0.16.0", "1.2.5", "server", setOf(
+                "core:0.6.0",
+                "entrypoints:0.4.3+server-mcserver-a0.1.0-mc12w30e",
+                "lifecycle-events:0.5.4+server-mc12w01a-mc12w17a",
+                "networking:0.8.0+server-mc11w49a-mc12w16a"
+            )),
+
+            Arguments.of("0.16.0", "b1.7.3", "client", setOf(
+                "branding:0.3.2+client-mca1.2.2-1624-mc12w17a",
+                "config:0.5.2+client-mcb1.3-1750-mcb1.7.3",
+                "core:0.6.0",
+                "entrypoints:0.4.3+client-mca1.0.6-mc12w30e",
+                "lifecycle-events:0.5.4+client-mcb1.3-1750-mcb1.7.3",
+                "networking:0.8.0+client-mcb1.5-mc11w48a",
+                "resource-loader:0.5.3+client-mca1.2.2-1624-mc11w48a"
+            )),
+            Arguments.of("0.16.0", "b1.7.3", "server", setOf(
+                "core:0.6.0",
+                "entrypoints:0.4.3+server-mcserver-a0.1.0-mc12w30e",
+                "lifecycle-events:0.5.4+server-mcb1.4-1507-mc11w50a",
+                "networking:0.8.0+server-mcb1.5-mc11w48a"
+            )),
+        )
     }
 
     @ParameterizedTest(name = "fabric API full {0}")
@@ -132,5 +202,39 @@ class FabricLikeApiExtensionTest {
     fun stationModule(apiVersion: String, branch: String, moduleParent: String, module: String, moduleVersion: String) {
         val result = extension.stationModule(branch, module, apiVersion)
         assertEquals("net.modificationstation.StationAPI.$moduleParent:$module:$moduleVersion", result)
+    }
+
+    @ParameterizedTest(name = "OSL {0} module {2} For MC {1}")
+    @CsvSource(
+        "0.16.0, 1.12.2, entrypoints, 0.4.3+mc13w16a-04192037-mc1.14.4",
+        "0.16.0, 1.3.2, entrypoints, 0.4.3+mc1.3-pre-07261249-mc1.5.2"
+    )
+    fun oslModule(apiVersion: String, mcVersion: String, module: String, moduleVersion: String) {
+        val result = extension.oslModule(mcVersion, module, apiVersion)
+        assertEquals("net.ornithemc.osl:$module:$moduleVersion", result)
+    }
+
+    @ParameterizedTest(name = "OSL {0} module {3} For MC {1}-{2}")
+    @CsvSource(
+        "0.16.0, 1.2.5, client, entrypoints, 0.4.3+client-mca1.0.6-mc12w30e",
+        "0.16.0, 1.2.5, server, entrypoints, 0.4.3+server-mcserver-a0.1.0-mc12w30e"
+    )
+    fun oslSidedModule(apiVersion: String, mcVersion: String, environment: String, module: String, moduleVersion: String) {
+        val result = extension.oslModule(mcVersion, module, apiVersion, environment)
+        assertEquals("net.ornithemc.osl:$module:$moduleVersion", result)
+    }
+
+    @ParameterizedTest(name = "OSL {0} for MC {1}")
+    @MethodSource("generateOSLModules")
+    fun osl(apiVersion: String, mcVersion: String, expectedModules: Set<String>) {
+        val modules = extension.osl(mcVersion, apiVersion)
+        assertEquals(expectedModules.map { "net.ornithemc.osl:$it" }.toSet(), modules)
+    }
+
+    @ParameterizedTest(name = "OSL {0} for MC {1}-{2}")
+    @MethodSource("generateOSLSidedModules")
+    fun oslSided(apiVersion: String, mcVersion: String, environment: String, expectedModules: Set<String>) {
+        val modules = extension.osl(mcVersion, apiVersion, environment)
+        assertEquals(expectedModules.map { "net.ornithemc.osl:$it" }.toSet(), modules)
     }
 }

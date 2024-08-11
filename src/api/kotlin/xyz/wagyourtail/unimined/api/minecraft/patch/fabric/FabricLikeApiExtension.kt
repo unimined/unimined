@@ -1,9 +1,12 @@
 package xyz.wagyourtail.unimined.api.minecraft.patch.fabric
 
+import com.google.gson.JsonArray
+import com.google.gson.JsonParser
 import org.gradle.api.Project
 import org.w3c.dom.Document
 import xyz.wagyourtail.unimined.util.cachingDownload
 import xyz.wagyourtail.unimined.util.defaultedMapOf
+import java.io.InputStreamReader
 import java.net.URI
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.inputStream
@@ -27,7 +30,11 @@ open class FabricLikeApiExtension(val project: Project) {
         abstract fun getUrl(version: String): String
         abstract fun full(version: String): String
 
-        open fun module(moduleName: String, version: String): String? {
+        open fun full(version: String, mcVersion: String, environment: String?): Set<String> {
+            return setOf(full(version))
+        }
+
+        open fun module(moduleName: String, version: String, mcVersion: String = "", environment: String? = null): String? {
             val elements = xmlDoc[version].getElementsByTagName("dependency")
             for (i in 0 until elements.length) {
                 val element = elements.item(i)
@@ -62,6 +69,83 @@ open class FabricLikeApiExtension(val project: Project) {
 
         override fun full(version: String): String {
             return "net.modificationstation:StationAPI:$version"
+        }
+    }
+
+    open class OSLAPILocation(project: Project): APILocations(project) {
+        internal val jsonArray = defaultedMapOf<Triple<String, String, String>, JsonArray> { triple ->
+            project.cachingDownload(
+                URI.create(getAPIUrl(triple.first, triple.second, triple.third))
+            ).inputStream().use {
+                JsonParser.parseReader(InputStreamReader(it)).asJsonArray
+            }
+        }
+
+        override fun getUrl(version: String): String {
+            return "https://maven.ornithemc.net/releases/net/ornithemc/osl/$version/osl-$version.pom"
+        }
+
+        override fun full(version: String): String {
+            TODO("Not applicable")
+        }
+
+        override fun full(version: String, mcVersion: String, environment: String?): Set<String> {
+            val modules = getModuleList(version)
+
+            return modules.map { module -> getModuleVersionForMCVersion(module.key, module.value, mcVersion, environment) }.filterNotNull().toSet()
+        }
+
+        fun getAPIUrl(moduleName: String, version: String, mcVersion: String): String {
+            return "https://meta.ornithemc.net/v3/versions/osl/$moduleName/$mcVersion/$version"
+        }
+
+        fun getModuleList(version: String): Map<String, String> {
+            val elements = xmlDoc[version].getElementsByTagName("dependency")
+
+            val list = mutableMapOf<String, String>()
+
+            for (i in 0 until elements.length) {
+                val element = elements.item(i)
+                var moduleName: String? = null
+                var vers: String? = null
+
+                for (j in 0 until element.childNodes.length) {
+                    val child = element.childNodes.item(j)
+                    if (child.nodeName == "artifactId") {
+                        moduleName = child.textContent
+                    }
+                    if (child.nodeName == "version") {
+                        vers = child.textContent
+                    }
+                }
+
+                list[moduleName!!] = vers!!
+            }
+
+            return list
+        }
+
+        fun getModuleVersionForMCVersion(moduleName: String, version: String, mcVersion: String, environment: String?): String? {
+            val artifactList = jsonArray[Triple(moduleName, version, mcVersion)].asList()
+
+            for (i in 0 until artifactList.size) {
+                val element = artifactList[i].asJsonObject
+
+                val moduleVersion = element.get("version").asString
+                val versionedModule = moduleVersion.contains("client") || moduleVersion.contains("server")
+
+                if (versionedModule && !environment.isNullOrBlank() && !moduleVersion.contains(environment)) continue
+
+                return element.get("maven").asString
+            }
+
+            return null
+        }
+
+        override fun module(moduleName: String, version: String, mcVersion: String, environment: String?): String? {
+            val modules = getModuleList(version)
+
+            return getModuleVersionForMCVersion(moduleName, modules[moduleName]!!, mcVersion, environment)
         }
     }
 
@@ -103,7 +187,8 @@ open class FabricLikeApiExtension(val project: Project) {
             }
         },
         "station_snapshots" to object : StAPILocation(project, "snapshots") {},
-        "station_releases" to object : StAPILocation(project, "releases") {}
+        "station_releases" to object : StAPILocation(project, "releases") {},
+        "osl" to object : OSLAPILocation(project) {}
     )
 
     @Deprecated(message = "use fabricModule or legacyFabricModule instead", replaceWith = ReplaceWith("fabricModule"))
@@ -184,4 +269,19 @@ open class FabricLikeApiExtension(val project: Project) {
         return locations["station_$branch"]!!.full(version)
     }
 
+    /**
+     * @since 1.4.0
+     */
+    @JvmOverloads
+    fun oslModule(mcVersion: String, moduleName: String, version: String, environment: String? = null): String {
+        return locations["osl"]!!.module(moduleName, version, mcVersion, environment) ?: throw IllegalStateException("Could not find module $moduleName:$version for Minecraft version $mcVersion")
+    }
+
+    /**
+     * @since 1.4.0
+     */
+    @JvmOverloads
+    fun osl(mcVersion: String, version: String, environment: String? = null): Set<String> {
+        return locations["osl"]!!.full(version, mcVersion, environment)
+    }
 }
