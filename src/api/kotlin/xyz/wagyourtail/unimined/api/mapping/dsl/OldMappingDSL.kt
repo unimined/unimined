@@ -25,21 +25,12 @@ class MemoryMapping(val visitor: MappingVisitor) {
     /**
      * Add a class mapping.
      * @param srcName The source name of the class.
-     * @param targets namespace -> target name
-     * @since 0.1.0
-     */
-    fun c(srcName: String, vararg targets: Pair<String, String>) {
-        visitor.visitClass(listOf(*targets, srcNamespace to srcName).associate { Namespace(it.first) to InternalName.read(it.second) })?.visitEnd()
-    }
-
-    /**
-     * Add a class mapping.
-     * @param srcName The source name of the class.
      * @param targets namespace -> target name.
      * @param action A closure to add mappings to the class.
      * @since 0.1.0
      */
-    fun c(srcName: String, vararg targets: Pair<String, String>, action: ClassMapping.() -> Unit) {
+    @JvmOverloads
+    fun c(srcName: String, vararg targets: Pair<String, String>, action: ClassMapping.() -> Unit = {}) {
         visitor.visitClass(listOf(*targets, srcNamespace to srcName).associate { Namespace(it.first) to InternalName.read(it.second) })?.use {
             action(ClassMapping(this, this@MemoryMapping.srcNamespace))
         }
@@ -48,23 +39,12 @@ class MemoryMapping(val visitor: MappingVisitor) {
     /**
      * Add a class mapping.
      * @param srcName The source name of the class.
-     * @param targets namespace -> target name
-     * @since 0.1.0
-     */
-    fun c(srcName: String, targets: Map<String, String>) {
-        val map = targets.toMutableMap()
-        map[srcNamespace] = srcName
-        visitor.visitClass(map.entries.associate { Namespace(it.key) to InternalName.read(it.value) })?.visitEnd()
-    }
-
-    /**
-     * Add a class mapping.
-     * @param srcName The source name of the class.
      * @param targets namespace -> target name.
      * @param action A closure to add mappings to the class.
      * @since 0.1.0
      */
-    fun c(srcName: String, targets: Map<String, String>, action: ClassMapping.() -> Unit) {
+    @JvmOverloads
+    fun c(srcName: String, targets: Map<String, String>, action: ClassMapping.() -> Unit = {}) {
         val map = targets.toMutableMap()
         map[srcNamespace] = srcName
         visitor.visitClass(map.entries.associate { Namespace(it.key) to InternalName.read(it.value) })?.use {
@@ -236,22 +216,6 @@ class ClassMapping(val visitor: ClassVisitor, val sourceNamespace: String) {
      * @param srcName The source name of the field.
      * @param srcDesc The source descriptor of the field.
      * @param targets namespace -> target name
-     * @since 0.1.0
-     */
-    fun m(srcName: String, srcDesc: String, vararg targets: Pair<String, String>) {
-        val map = mutableMapOf<Namespace, Pair<String, MethodDescriptor?>>()
-        for (target in targets) {
-            map[Namespace(target.first)] = target.second to null
-        }
-        map[Namespace(sourceNamespace)] = srcName to MethodDescriptor.read(srcDesc)
-        visitor.visitMethod(map)?.visitEnd()
-    }
-
-    /**
-     * Add a method mapping.
-     * @param srcName The source name of the field.
-     * @param srcDesc The source descriptor of the field.
-     * @param targets namespace -> target name
      * @param action A closure to add mappings to the method.
      * @since 0.1.0
      */
@@ -276,25 +240,10 @@ class ClassMapping(val visitor: ClassVisitor, val sourceNamespace: String) {
      * @param srcName The source name of the field.
      * @param srcDesc The source descriptor of the field.
      * @param targets namespace -> target name
-     * @since 0.1.0
-     */
-    fun m(srcName: String, srcDesc: String, targets: Map<String, String>) {
-        val map = mutableMapOf<Namespace, Pair<String, MethodDescriptor?>>()
-        for ((key, value) in targets) {
-            map[Namespace(key)] = value to null
-        }
-        map[Namespace(sourceNamespace)] = srcName to MethodDescriptor.read(srcDesc)
-        visitor.visitMethod(map)?.visitEnd()
-    }
-
-    /**
-     * Add a method mapping.
-     * @param srcName The source name of the field.
-     * @param srcDesc The source descriptor of the field.
-     * @param targets namespace -> target name
      * @param action A closure to add mappings to the method.
      * @since 0.1.0
      */
+    @JvmOverloads
     fun m(srcName: String, srcDesc: String, targets: Map<String, String>, action: MethodMapping.() -> Unit = {}) {
         val map = mutableMapOf<Namespace, Pair<String, MethodDescriptor?>>()
         for ((key, value) in targets) {

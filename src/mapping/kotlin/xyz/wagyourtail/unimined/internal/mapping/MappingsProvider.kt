@@ -28,6 +28,7 @@ import xyz.wagyourtail.unimined.mapping.jvms.four.three.two.FieldDescriptor
 import xyz.wagyourtail.unimined.mapping.jvms.four.two.one.InternalName
 import xyz.wagyourtail.unimined.mapping.propogator.Propagator
 import xyz.wagyourtail.unimined.mapping.resolver.ContentProvider
+import xyz.wagyourtail.unimined.mapping.tree.LazyMappingTree
 import xyz.wagyourtail.unimined.mapping.tree.MemoryMappingTree
 import xyz.wagyourtail.unimined.mapping.visitor.*
 import xyz.wagyourtail.unimined.mapping.visitor.delegate.Delegator
@@ -35,10 +36,7 @@ import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
 import xyz.wagyourtail.unimined.mapping.visitor.fixes.renest
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
-import kotlin.io.path.bufferedWriter
-import kotlin.io.path.createDirectories
-import kotlin.io.path.deleteIfExists
-import kotlin.io.path.exists
+import kotlin.io.path.*
 
 class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: String? = null) : MappingsConfig<MappingsProvider>(project, minecraft, subKey) {
     val unimined: UniminedExtension = project.unimined
@@ -49,7 +47,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
 
     val mappings = project.configurations.detachedConfiguration()
 
-    var stubMappings: MemoryMappingTree? = null
+    var stubMappings: LazyMappingTree? = null
 
     var legacyFabricGenVersion by FinalizeOnRead(1)
     var ornitheGenVersion by FinalizeOnRead(1)
@@ -597,7 +595,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         append(super.combinedNames())
         if (hasStubs()) {
             append("-stubs-")
-            append(buildString { stubMappings!!.accept(UMFWriter.write(::append)) }.getShortSha1())
+            append(buildString { stubMappings!!.lazyAccept(UMFWriter.write(::append)) }.getShortSha1())
         }
     }
 
@@ -605,9 +603,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     override val stub: MemoryMapping
         get() {
             if (stubMappings == null) {
-                stubMappings = MemoryMappingTree()
+                stubMappings = LazyMappingTree()
                 afterLoad.add {
-                    stubMappings!!.accept(this)
+                    stubMappings!!.lazyAccept(this)
                 }
             }
             return MemoryMapping(stubMappings!!)
@@ -618,9 +616,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             throw UnsupportedOperationException("Cannot add stub mappings after finalization")
         }
         if (stubMappings == null) {
-            stubMappings = MemoryMappingTree()
+            stubMappings = LazyMappingTree()
             afterLoad.add {
-                stubMappings!!.accept(this)
+                stubMappings!!.lazyAccept(this)
             }
         }
         MappingDSL(stubMappings!!).apply {
