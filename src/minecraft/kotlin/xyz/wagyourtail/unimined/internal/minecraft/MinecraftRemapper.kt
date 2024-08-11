@@ -1,5 +1,6 @@
 package xyz.wagyourtail.unimined.internal.minecraft
 
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import net.fabricmc.tinyremapper.NonClassCopyMode
 import net.fabricmc.tinyremapper.OutputConsumerPath
@@ -80,9 +81,7 @@ class MinecraftRemapper(val project: Project, val provider: MinecraftProvider): 
         var prevTarget = minecraft.path
         var prevNamespace = minecraft.mappingNamespace
         project.logger.info("[Unimined/McRemapper] $prevNamespace -> $remapTo")
-        runBlocking {
-            remapToInternal(prevTarget, target.path, minecraft.envType, prevNamespace, remapTo)
-        }
+        remapToInternal(prevTarget, target.path, minecraft.envType, prevNamespace, remapTo)
         target
     }
 

@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
 import MemoryMapping
+import kotlinx.coroutines.runBlocking
 import net.fabricmc.tinyremapper.IMappingProvider
 import okio.BufferedSource
 import okio.buffer
@@ -70,22 +71,20 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         }
     }
 
-    override fun propogator(tree: MemoryMappingTree): MemoryMappingTree {
-        // propagate
-        val mappings = MemoryMappingTree()
-        mappings.visitHeader(*tree.namespaces.map { it.name }.toTypedArray())
+    override suspend fun propogator(tree: MemoryMappingTree): MemoryMappingTree {
 
         if (splitUnmapped && envType == EnvType.JOINED) {
-            Propagator(Namespace("clientOfficial"), tree, setOf(minecraft.minecraftData.minecraftClientFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("serverOfficial"), mappings)
-            Propagator(Namespace("serverOfficial"), tree, setOf(minecraft.minecraftData.minecraftServerFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("clientOfficial"), mappings)
+            Propagator(Namespace("clientOfficial"), tree, setOf(minecraft.minecraftData.minecraftClientFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("serverOfficial"))
+            Propagator(Namespace("serverOfficial"), tree, setOf(minecraft.minecraftData.minecraftServerFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("clientOfficial"))
         } else {
             Propagator(Namespace("official"), tree, setOf(when (envType) {
                 EnvType.JOINED -> minecraft.mergedOfficialMinecraftFile
                 EnvType.CLIENT -> minecraft.minecraftData.minecraftClientFile
                 EnvType.SERVER -> minecraft.minecraftData.minecraftServerFile
-            }!!.toPath())).propagate(tree.namespaces.toSet() - Namespace("official"), mappings)
+            }!!.toPath())).propagate(tree.namespaces.toSet() - Namespace("official"))
         }
-        return mappings
+
+        return tree
     }
 
     fun legacyFabricRevisionTransform(mavenCoords: MavenCoords): MavenCoords {
@@ -397,7 +396,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         addDependency(key, entry)
 
         afterLoad.add {
-            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
+//            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
         }
     }
 
@@ -641,9 +640,11 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     override suspend fun writeCache(key: String, tree: MemoryMappingTree) {
         val mappingFile = if (hasStubs()) { unimined.getLocalCache().resolve("mappings") } else { minecraft.minecraftData.mcVersionFolder }.resolve("mappings-${key}.umf")
         mappingFile.parent?.createDirectories()
-        mappingFile.bufferedWriter().use {
+        val tmp = mappingFile.resolveSibling(mappingFile.name + ".tmp")
+        tmp.bufferedWriter().use {
             tree.accept(UMFWriter.write(it::append))
         }
+        tmp.moveTo(mappingFile)
     }
 
     override fun configure(action: MappingsConfig<*>.() -> Unit) {
