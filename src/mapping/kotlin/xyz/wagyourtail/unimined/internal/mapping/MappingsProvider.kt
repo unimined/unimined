@@ -9,7 +9,6 @@ import okio.source
 import okio.use
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
-import org.gradle.api.internal.provider.MappingProvider
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.mapping.dsl.MappingDSL
@@ -289,7 +288,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         })
     }
 
-    
+
     override fun retroMCP(version: String, key: String, action: MappingEntry.() -> Unit) {
         unimined.mcphackersIvy()
         addDependency(key, MappingEntry(contentOf(MavenCoords("io.github.mcphackers", "mcp", version, extension = "zip")), "$key-$version").apply {
@@ -317,6 +316,36 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             provides("retroMCP" to true)
             action()
         })
+    }
+
+    override fun unknownThingy(version: String, format: String, key: String, action: MappingEntry.() -> Unit) {
+        if (!minecraft.version.startsWith("1.4"))
+            throw UnsupportedOperationException("Unknown Thingy is only supported for Minecraft 1.4")
+        unimined.sleepingTownMaven()
+        val entry = MappingEntry(contentOf(
+            when (format.lowercase()) {
+                // TinyV1 were GZip-only
+//                "tiny", "tinyV1" -> MavenCoords("com.unascribed", "unknownthingy", version, extension = "gz")
+                "tinyv2" -> MavenCoords("com.unascribed", "unknownthingy", version, "v2")
+                "tsrg2" -> MavenCoords("com.unascribed", "unknownthingy", version, extension = "tsrg2")
+                else -> MavenCoords("com.unascribed", "unknownthingy", version, extension = "tsrg")
+            }
+        ), "$key-$version").apply {
+            when (format.lowercase()) {
+                "tiny", "tinyv1", "tinyv2" -> mapNamespace("named" to "unknownThingy")
+                "tsrg2" -> mapNamespace("obf" to "official", "srg" to "unknownThingy")
+                else -> mapNamespace("source" to "official", "target" to "unknownThingy")
+
+            }
+
+            provides("unknownThingy" to true)
+            action()
+        }
+        addDependency(key, entry)
+
+        afterLoad.add {
+            renest(entry.requires.name, *entry.provides.map { it.first.name }.toTypedArray())
+        }
     }
 
     
@@ -400,7 +429,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         }
     }
 
-    
+
     override fun legacyYarn(build: Int, key: String, action: MappingEntry.() -> Unit) {
         unimined.legacyFabricMaven()
         val entry = MappingEntry(

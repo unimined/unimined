@@ -186,6 +186,24 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
     }
 
     @JvmOverloads
+    abstract fun unknownThingy(version: String, format: String = "tsrg", key: String = "unknownThingy", action: MappingEntry.() -> Unit = {})
+
+    @JvmOverloads
+    fun unknownThingy(
+        version: String = minecraft.version,
+        key: String = "unknownThingy",
+        format: String = "tsrg",
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        unknownThingy(version, format, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    @JvmOverloads
     abstract fun yarn(build: Int, key: String = "yarn", action: MappingEntry.() -> Unit = {})
 
     @JvmOverloads
