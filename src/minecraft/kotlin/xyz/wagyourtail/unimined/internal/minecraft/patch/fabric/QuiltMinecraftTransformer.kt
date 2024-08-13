@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import java.io.InputStreamReader
 import java.nio.file.Files
+import kotlin.io.path.absolutePathString
 
 open class QuiltMinecraftTransformer(
     project: Project,
@@ -94,19 +95,31 @@ open class QuiltMinecraftTransformer(
 
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
+        config.properties["intermediaryClasspath"] = {
+            intermediaryClasspath.absolutePathString()
+        }
+        config.properties["classPathGroups"] = {
+            groups
+        }
         config.jvmArgs(
             "-Dloader.development=true",
-            "-Dloader.remapClasspathFile=${intermediaryClasspath}",
-            "-Dloader.classPathGroups=${groups}"
+            "-Dloader.remapClasspathFile=\${intermediaryClasspath}",
+            "-Dloader.classPathGroups=\${classPathGroups}"
         )
     }
 
     override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
+        config.properties["intermediaryClasspath"] = {
+            intermediaryClasspath.absolutePathString()
+        }
+        config.properties["classPathGroups"] = {
+            groups
+        }
         config.jvmArgs(
             "-Dloader.development=true",
-            "-Dloader.remapClasspathFile=${intermediaryClasspath}",
-            "-Dloader.classPathGroups=${groups}"
+            "-Dloader.remapClasspathFile=\${intermediaryClasspath}",
+            "-Dloader.classPathGroups=\${classPathGroups}"
         )
     }
 

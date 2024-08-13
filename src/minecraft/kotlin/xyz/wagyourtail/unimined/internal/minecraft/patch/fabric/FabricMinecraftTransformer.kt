@@ -14,6 +14,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
 import xyz.wagyourtail.unimined.util.SemVerUtils
 import java.io.InputStreamReader
 import java.nio.file.Files
+import kotlin.io.path.absolutePathString
 
 abstract class FabricMinecraftTransformer(
     project: Project,
@@ -100,10 +101,16 @@ abstract class FabricMinecraftTransformer(
 
     override fun applyClientRunTransform(config: RunConfig) {
         super.applyClientRunTransform(config)
+        config.properties["intermediaryClasspath"] = {
+            intermediaryClasspath.absolutePathString()
+        }
+        config.properties["classPathGroups"] = {
+            groups
+        }
         config.jvmArgs(
             "-Dfabric.development=true",
-            "-Dfabric.remapClasspathFile=${intermediaryClasspath}",
-            "-Dfabric.classPathGroups=${groups}"
+            "-Dfabric.remapClasspathFile=\${intermediaryClasspath}",
+            "-Dfabric.classPathGroups=\${classpath_groups}"
         )
         if (provider is ReIndevProvider) {
             config.jvmArgs("-Dfabric.gameVersion=b1.7.3")
@@ -112,10 +119,16 @@ abstract class FabricMinecraftTransformer(
 
     override fun applyServerRunTransform(config: RunConfig) {
         super.applyServerRunTransform(config)
+        config.properties["intermediaryClasspath"] = {
+            intermediaryClasspath.absolutePathString()
+        }
+        config.properties["classPathGroups"] = {
+            groups
+        }
         config.jvmArgs(
             "-Dfabric.development=true",
-            "-Dfabric.remapClasspathFile=${intermediaryClasspath}",
-            "-Dfabric.classPathGroups=${groups}"
+            "-Dfabric.remapClasspathFile=\${intermediaryClasspath}",
+            "-Dfabric.classPathGroups=\${classpath_groups}"
         )
         if (provider is ReIndevProvider) {
             config.jvmArgs("-Dfabric.gameVersion=b1.7.3")
