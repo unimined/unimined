@@ -646,7 +646,6 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
         // run patcher after evaluate
         (mcPatcher as AbstractMinecraftTransformer).afterEvaluate()
-
     }
 
     fun getMcDevFile(): Path {
