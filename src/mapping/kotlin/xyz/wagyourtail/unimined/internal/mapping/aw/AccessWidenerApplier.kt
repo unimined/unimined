@@ -156,7 +156,7 @@ object AccessWidenerApplier {
         return false
     }
 
-    suspend fun mergeAws(
+    fun mergeAws(
         inputs: List<Path>,
         output: Path,
         targetNamespace: Namespace,

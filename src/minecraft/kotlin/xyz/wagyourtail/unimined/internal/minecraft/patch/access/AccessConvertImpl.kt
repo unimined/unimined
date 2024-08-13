@@ -105,14 +105,12 @@ class AccessConvertImpl(val project: Project, val provider: MinecraftProvider) :
     }
 
     private fun mergeAws(output: File, namespace: Namespace, inputs: List<File>): File {
-        return runBlocking {
-            AccessWidenerApplier.mergeAws(
-                inputs.map { it.toPath() },
-                output.toPath(),
-                namespace,
-                provider.mappings
-            ).toFile()
-        }
+        AccessWidenerApplier.mergeAws(
+            inputs.map { it.toPath() },
+            output.toPath(),
+            namespace,
+            provider.mappings
+        ).toFile()
     }
 
 }
