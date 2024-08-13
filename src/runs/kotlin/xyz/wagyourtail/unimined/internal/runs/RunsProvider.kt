@@ -1,8 +1,10 @@
 package xyz.wagyourtail.unimined.internal.runs
 
+import org.gradle.TaskExecutionRequest
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.internal.DefaultTaskExecutionRequest
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.runs.RunsConfig
@@ -123,15 +125,21 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
             task
         }
         //TODO: vscode/eclipse support
+        scheduleTaskAfterIDEASync(genIntellijRunsTask.name)
     }
 
-    fun afterEvaluate() {
-        if (System.getProperty("idea.sync.active", "false").lowercase() == "true") {
-            project.afterEvaluate {
-                for (value in runTasks.values) {
-                    value.get().createIdeaRunConfig()
-                }
-            }
-        }
+    private fun scheduleTaskAfterIDEASync(taskName: String) {
+        if (isIdeaSync()) modifyGradleStartParameters(taskName)
+    }
+
+    private fun modifyGradleStartParameters(taskName: String) {
+        val startParameter = project.gradle.startParameter
+        val taskRequests: MutableList<TaskExecutionRequest> = ArrayList(startParameter.taskRequests)
+        taskRequests.add(DefaultTaskExecutionRequest(listOf(taskName)))
+        startParameter.setTaskRequests(taskRequests)
+    }
+
+    private fun isIdeaSync(): Boolean {
+        return System.getProperty("idea.sync.active", "false").toBoolean()
     }
 }
