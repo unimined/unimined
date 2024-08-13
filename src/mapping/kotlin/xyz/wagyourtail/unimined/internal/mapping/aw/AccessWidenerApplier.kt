@@ -32,6 +32,7 @@ import xyz.wagyourtail.unimined.mapping.visitor.MappingVisitor
 import xyz.wagyourtail.unimined.mapping.visitor.MethodVisitor
 import xyz.wagyourtail.unimined.mapping.visitor.delegate.NullDelegator
 import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
+import xyz.wagyourtail.unimined.mapping.visitor.delegate.mapNs
 import xyz.wagyourtail.unimined.util.forEachInZip
 import java.io.BufferedReader
 import java.io.ByteArrayInputStream
@@ -161,30 +162,27 @@ object AccessWidenerApplier {
         targetNamespace: Namespace,
         mappingsProvider: MappingsProvider
     ): Path {
-        val mappings = noAccessMappings(mappingsProvider.resolve())
-
+        val awList = mutableSetOf<AWReader.AWData>()
         inputs.forEach {
             runBlocking {
-                var temp = ""
                 val data = AWReader.readData(CharReader(it.readText()))
 
-                if (data.namespace != targetNamespace) {
+                if (data.namespace.name != nsName(mappingsProvider, targetNamespace)) {
                     val remappedData = AWWriter.remapMappings(data, mappingsProvider.resolve(), targetNamespace)
-                    AWWriter.writeData(remappedData) {
-                        temp += it
-                    }
+                    awList.addAll(remappedData.targets)
                 } else {
-                    AWWriter.writeData(data) {
-                        temp += it
-                    }
+                    awList.addAll(data.targets)
                 }
-
-                if (temp.isNotEmpty()) AWReader.read(temp, mappings)
             }
         }
 
-        output.sink().buffer().use {
-            mappings.accept(AWWriter.write(it), listOf(targetNamespace))
+        val combined = AWReader.AWMappings(
+            Namespace(nsName(mappingsProvider, targetNamespace)),
+            awList
+        )
+
+        output.bufferedWriter().use {
+            AWWriter.writeData(combined, it::append)
         }
 
         return output
