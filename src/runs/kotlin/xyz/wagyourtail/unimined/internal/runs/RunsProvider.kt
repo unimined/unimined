@@ -123,7 +123,9 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
             task
         }
         //TODO: vscode/eclipse support
+    }
 
+    fun afterEvaluate() {
         if (System.getProperty("idea.sync.active", "false").lowercase() == "true") {
             project.afterEvaluate {
                 for (value in runTasks.values) {
