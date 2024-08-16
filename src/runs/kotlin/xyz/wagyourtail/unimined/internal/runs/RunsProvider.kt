@@ -135,7 +135,7 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
     private fun modifyGradleStartParameters(taskName: String) {
         val startParameter = project.gradle.startParameter
         val taskRequests: MutableList<TaskExecutionRequest> = ArrayList(startParameter.taskRequests)
-        taskRequests.add(DefaultTaskExecutionRequest(listOf(taskName)))
+        taskRequests.add(DefaultTaskExecutionRequest(listOf(taskName), project.path, project.rootDir))
         startParameter.setTaskRequests(taskRequests)
     }
 
