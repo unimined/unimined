@@ -181,6 +181,7 @@ object AccessWidenerApplier {
             awList
         )
 
+        output.parent?.createDirectories()
         output.bufferedWriter().use {
             AWWriter.writeData(combined, it::append)
         }
