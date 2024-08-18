@@ -84,7 +84,7 @@ object AccessWidenerApplier {
 
     fun nsName(config: MappingsConfig<*>, namespace: Namespace) =
         if (config.isOfficial(namespace.name)) {
-            "official"
+            "intermediary" // -_-
         } else if (config.isIntermediary(namespace.name)) {
             "intermediary"
         } else {
