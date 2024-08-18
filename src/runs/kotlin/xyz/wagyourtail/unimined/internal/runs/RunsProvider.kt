@@ -92,8 +92,10 @@ class RunsProvider(val project: Project, val minecraft: MinecraftConfig): RunsCo
             it.group = "unimined_internal"
         }
         it.doLast {
-            for (value in runTasks.values) {
-                value.get().createIdeaRunConfig()
+            if (!off) {
+                for (value in runTasks.values) {
+                    value.get().createIdeaRunConfig()
+                }
             }
         }
     }
