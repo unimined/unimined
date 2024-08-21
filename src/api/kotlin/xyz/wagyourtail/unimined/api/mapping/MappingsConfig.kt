@@ -31,25 +31,22 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
         }
     }) {
 
+    private var innerDevNamespace: Namespace by FinalizeOnRead(LazyMutable {
+        namespaces.entries.firstOrNull { it.value }?.key ?: error("No \"Named\" namespace found for devNamespace, if this is correct, set devNamespace explicitly")
+    })
+
     @set:ApiStatus.Internal
     @get:ApiStatus.Internal
     var devNamespace: Namespace by FinalizeOnRead(LazyMutable {
-        if (!finalized) {
-            runBlocking {
-                resolve()
-            }
-            devNamespace
-        } else {
-            namespaces.entries.firstOrNull { it.value }?.key ?: error("No \"Named\" namespace found for devNamespace, if this is correct, set devNamespace explicitly")
+        runBlocking {
+            resolve()
         }
+        innerDevNamespace
     })
 
     fun devNamespace(namespace: String) {
-        val delegate = MappingsConfig::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
+        val delegate = MappingsConfig::class.getField("innerDevNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
         delegate.setValueIntl(LazyMutable {
-            runBlocking {
-                resolve()
-            }
             checkedNs(namespace)
         })
     }
