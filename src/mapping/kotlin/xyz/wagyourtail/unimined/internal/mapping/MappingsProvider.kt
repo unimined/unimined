@@ -497,6 +497,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 "me.alphamode",
                 "nostalgia",
                 "${minecraft.version}+build.$build",
+                "mergedv2"
             )), "$key-$build"
         ).apply {
             requires("babricIntermediary")
