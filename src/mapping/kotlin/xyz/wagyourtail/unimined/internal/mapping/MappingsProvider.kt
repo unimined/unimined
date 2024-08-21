@@ -736,7 +736,11 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                         val fromMethodName = names[srcName]!!.first
                         val fromMethodDesc = names[srcName]!!.second
                         val toMethodName = names[dstName]!!.first
-                        val method = memberOf(fromClassName, fromMethodName, fromMethodDesc!!.toString())
+                        if (fromMethodDesc == null) {
+                            project.logger.info("[Unimined/MappingProvider ${project.path}/${minecraft.sourceSet}] skipping ${fromClassName}.${fromMethodName} as desc is null")
+                            return null
+                        }
+                        val method = memberOf(fromClassName, fromMethodName, fromMethodDesc.toString())
                         acceptor.acceptMethod(method, toMethodName)
                     }
                     return if (remapLocals) {
