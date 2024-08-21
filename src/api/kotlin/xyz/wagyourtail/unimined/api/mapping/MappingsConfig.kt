@@ -34,10 +34,14 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
     @set:ApiStatus.Internal
     @get:ApiStatus.Internal
     var devNamespace: Namespace by FinalizeOnRead(LazyMutable {
-        runBlocking {
-            resolve()
+        if (!finalized) {
+            runBlocking {
+                resolve()
+            }
+            devNamespace
+        } else {
+            namespaces.entries.firstOrNull { it.value }?.key ?: error("No \"Named\" namespace found for devNamespace, if this is correct, set devNamespace explicitly")
         }
-        namespaces.entries.firstOrNull { it.value }?.key ?: error("No \"Named\" namespace found for devNamespace, if this is correct, set devNamespace explicitly")
     })
 
     fun devNamespace(namespace: String) {
