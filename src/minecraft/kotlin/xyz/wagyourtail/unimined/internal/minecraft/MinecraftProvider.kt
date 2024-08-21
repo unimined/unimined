@@ -15,7 +15,8 @@ import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingsConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
-import xyz.wagyourtail.unimined.api.minecraft.patch.*
+import xyz.wagyourtail.unimined.api.minecraft.patch.MergedPatcher
+import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.bukkit.CraftbukkitPatcher
@@ -67,7 +68,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
-import kotlin.collections.ArrayDeque
 import kotlin.io.path.*
 
 open class MinecraftProvider(project: Project, sourceSet: SourceSet) : MinecraftConfig(project, sourceSet) {
@@ -87,7 +87,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     override val sourceProvider = SourceProvider(project, this)
 
-    protected val patcherActions = ArrayDeque<() -> Unit>()
+    protected var patcherAction: (MinecraftPatcher) -> Unit by FinalizeOnRead {}
 
     override val combinedWithList = mutableSetOf<Pair<Project, SourceSet>>()
 
@@ -229,56 +229,56 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     override fun merged(action: MergedPatcher.() -> Unit) {
         mcPatcher = MergedMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as MergedPatcher)
             }
         }
     }
 
     override fun fabric(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = OfficialFabricMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as FabricLikePatcher)
             }
         }
     }
 
     override fun legacyFabric(action: LegacyFabricPatcher.() -> Unit) {
         mcPatcher = LegacyFabricMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as LegacyFabricPatcher)
             }
         }
     }
 
     override fun babric(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = BabricMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as FabricLikePatcher)
             }
         }
     }
 
     override fun ornitheFabric(action: LegacyFabricPatcher.() -> Unit) {
         mcPatcher = OrnitheFabricMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as LegacyFabricPatcher)
             }
         }
     }
 
     override fun quilt(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = QuiltMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as FabricLikePatcher)
             }
         }
     }
 
     override fun flint(action: FabricLikePatcher.() -> Unit) {
         mcPatcher = FlintMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as FabricLikePatcher)
             }
         }
     }
@@ -290,72 +290,72 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     override fun minecraftForge(action: MinecraftForgePatcher<*>.() -> Unit) {
         mcPatcher = MinecraftForgeMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as MinecraftForgePatcher<*>)
             }
         }
     }
 
     override fun neoForge(action: NeoForgedPatcher<*>.() -> Unit) {
         mcPatcher = NeoForgedMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as NeoForgedPatcher<*>)
             }
         }
     }
 
     override fun cleanroom(action: CleanroomPatcher<*>.() -> Unit) {
         mcPatcher = CleanroomMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as CleanroomPatcher<*>)
             }
         }
     }
 
     override fun jarMod(action: JarModAgentPatcher.() -> Unit) {
         mcPatcher = JarModAgentMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as JarModAgentPatcher)
             }
         }
     }
 
     override fun accessWidener(action: AccessWidenerPatcher.() -> Unit) {
         mcPatcher = AccessWidenerMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as AccessWidenerPatcher)
             }
         }
     }
 
     override fun accessTransformer(action: AccessTransformerPatcher.() -> Unit) {
         mcPatcher = AccessTransformerMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as AccessTransformerPatcher)
             }
         }
     }
 
     override fun craftBukkit(action: CraftbukkitPatcher.() -> Unit) {
         mcPatcher = CraftbukkitMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as CraftbukkitPatcher)
             }
         }
     }
 
     override fun spigot(action: SpigotPatcher.() -> Unit) {
         mcPatcher = SpigotMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as SpigotPatcher)
             }
         }
     }
 
     override fun rift(action: RiftPatcher.() -> Unit) {
         mcPatcher = RiftMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as RiftPatcher)
             }
         }
     }
@@ -363,8 +363,8 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
     @ApiStatus.Experimental
     override fun <T: MinecraftPatcher> customPatcher(mcPatcher: T, action: T.() -> Unit) {
         this.mcPatcher = mcPatcher.also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as T)
             }
         }
     }
@@ -500,9 +500,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         applied = true
         project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Applying minecraft config for $sourceSet")
 
-        while (patcherActions.isNotEmpty()) {
-            patcherActions.removeFirst().invoke()
-        }
+        patcherAction(mcPatcher)
 
         createMojmapIvy()
 
