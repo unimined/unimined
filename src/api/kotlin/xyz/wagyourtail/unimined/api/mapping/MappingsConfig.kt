@@ -54,6 +54,16 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
     @Deprecated("No longer needed", ReplaceWith(""))
     fun devFallbackNamespace(namespace: String) {}
 
+    /**
+     * @since 1.4
+     */
+    abstract var legacyFabricGenVersion: Int
+
+    /**
+     * @since 1.4
+     */
+    abstract var ornitheGenVersion: Int
+
     @JvmOverloads
     abstract fun intermediary(key: String = "intermediary", action: MappingEntry.() -> Unit = {})
 
@@ -554,5 +564,4 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
         remap: Pair<Namespace, Namespace>,
         remapLocals: Boolean = false
     ): (IMappingProvider.MappingAcceptor) -> Unit
-
 }

@@ -49,11 +49,11 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
 
     var stubMappings: LazyMappingTree? = null
 
-    var legacyFabricGenVersion by FinalizeOnRead(1)
-    var ornitheGenVersion by FinalizeOnRead(1)
+    override var legacyFabricGenVersion by FinalizeOnRead(1)
+    override var ornitheGenVersion by FinalizeOnRead(1)
 
     var splitUnmapped by FinalizeOnRead(LazyMutable {
-        minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.3") <= 0
+        minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.3") < 0
     })
 
     var lazyConfigure: MappingsConfig<*>.() -> Unit = {}
@@ -86,14 +86,14 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         return tree
     }
 
-    fun legacyFabricRevisionTransform(mavenCoords: MavenCoords): MavenCoords {
+    private fun legacyFabricRevisionTransform(mavenCoords: MavenCoords): MavenCoords {
         if (legacyFabricGenVersion < 2) {
             return mavenCoords
         }
         return MavenCoords("${mavenCoords.group}v${legacyFabricGenVersion}", mavenCoords.artifact, mavenCoords.version, mavenCoords.classifier, mavenCoords.extension)
     }
 
-    fun ornitheGenRevisionTransform(mavenCoords: MavenCoords): MavenCoords {
+    private fun ornitheGenRevisionTransform(mavenCoords: MavenCoords): MavenCoords {
         if (ornitheGenVersion < 2) {
             return mavenCoords
         }
@@ -118,7 +118,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
 
     override fun calamus(key: String, action: MappingEntry.() -> Unit) {
         unimined.ornitheMaven()
-        val environment = if (minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.3") < 0) {
+        val environment = if (splitUnmapped && ornitheGenVersion < 2) {
             when (envType) {
                 EnvType.CLIENT -> "-client"
                 EnvType.SERVER -> "-server"
@@ -140,6 +140,20 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         ).apply {
             provides("calamus" to false)
             mapNamespace("intermediary", "calamus")
+            if (splitUnmapped && ornitheGenVersion > 1) {
+                when (envType) {
+                    EnvType.CLIENT -> {
+                        mapNamespace("clientOfficial", "official")
+                    }
+                    EnvType.SERVER -> {
+                        mapNamespace("serverOfficial", "official")
+                    }
+                    EnvType.JOINED -> {
+                        provides("serverOfficial" to false)
+                        requires("clientOfficial")
+                    }
+                }
+            }
             action()
         })
     }
@@ -266,7 +280,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         } else {
             unimined.minecraftForgeMaven()
         }
-        if (envType == EnvType.JOINED && minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.3") < 0) throw UnsupportedOperationException("MCP mappings are not supported in joined environments before 1.3")
+        if (envType == EnvType.JOINED && splitUnmapped) throw UnsupportedOperationException("MCP mappings are not supported in joined environments before 1.3")
         val mappings = "de.oceanlabs.mcp:mcp_${channel}:${version}@zip"
         addDependency(key, MappingEntry(contentOf(mappings), "$key-$channel-$version").apply {
             subEntry { _, format ->
@@ -378,8 +392,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     
     override fun feather(build: Int, key: String, action: MappingEntry.() -> Unit) {
         unimined.ornitheMaven()
-        val beforeJoined = minecraft.minecraftData.mcVersionCompare(minecraft.version, "1.2.5") <= 0
-        val vers = if (beforeJoined) {
+        val vers = if (splitUnmapped) {
             if (envType == EnvType.JOINED) throw UnsupportedOperationException("Feather mappings are not supported in joined environments before 1.2.5")
             "${minecraft.version}-${envType.name.lowercase()}+build.$build"
         } else {
