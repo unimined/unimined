@@ -37,8 +37,8 @@ class ReIndevProvider(project: Project, sourceSet: SourceSet) : MinecraftProvide
 
     override fun foxLoader(action: FoxLoaderPatcher.() -> Unit) {
         mcPatcher = FoxLoaderMinecraftTransformer(project, this).also {
-            patcherActions.addFirst {
-                action(it)
+            patcherAction = {
+                action(it as FoxLoaderPatcher)
             }
         }
     }
