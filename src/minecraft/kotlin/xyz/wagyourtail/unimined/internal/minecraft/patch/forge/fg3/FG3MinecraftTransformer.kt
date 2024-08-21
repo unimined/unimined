@@ -581,14 +581,25 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             val mod = jarDir.resolve("metadata.json")
 
             jarDir.createDirectories()
+            var errored = false
             for (dep in include.dependencies) {
-                val path = jarDir.resolve("${dep.name}-${dep.version}.jar")
-                if (!path.exists()) {
-                    include.getFiles(dep) { it.extension == "jar" }.singleFile.toPath()
-                        .copyTo(jarDir.resolve("${dep.name}-${dep.version}.jar"), true)
-                }
+                try {
+                    val path = jarDir.resolve("${dep.name}-${dep.version}.jar")
+                    if (!path.exists()) {
+                        val files = include.getFiles(dep) { it.extension == "jar" }
+                        if (files.isEmpty) continue
+                        files.singleFile.toPath()
+                            .copyTo(jarDir.resolve("${dep.name}-${dep.version}.jar"), true)
+                    }
 
-                addIncludeToMetadata(json, dep, "META-INF/jarjar/${dep.name}-${dep.version}.jar")
+                    addIncludeToMetadata(json, dep, "META-INF/jarjar/${dep.name}-${dep.version}.jar")
+                } catch (e: Exception) {
+                    project.logger.error("Failed on $dep", e)
+                    errored = true
+                }
+            }
+            if (errored) {
+                throw IllegalStateException("An error occured resolving includes")
             }
 
             mod.writeBytes(FabricLikeMinecraftTransformer.GSON.toJson(json).toByteArray())
