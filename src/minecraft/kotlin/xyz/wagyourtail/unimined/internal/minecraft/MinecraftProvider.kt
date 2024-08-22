@@ -805,13 +805,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             javaVersion = minecraftData.metadata.javaVersion
             workingDir = defaultWorkingDir
             classpath = sourceSet.runtimeClasspath
-            minecraftData.minecraftServer.path.openZipFileSystem().use {
+            minecraftData.minecraftServer.path.readZipInputStreamFor("META-INF/MANIFEST.MF", false) {
                 val properties = Properties()
-                val metainf = it.getPath("META-INF/MANIFEST.MF")
-                if (metainf.exists()) {
-                    metainf.inputStream().use { properties.load(it) }
-                    mainClass.set(properties.getProperty("Main-Class"))
-                }
+                properties.load(it)
+                mainClass.set(properties.getProperty("Main-Class"))
             }
             args = mutableListOf("nogui")
 
