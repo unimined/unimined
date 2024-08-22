@@ -392,8 +392,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     
     override fun feather(build: Int, key: String, action: MappingEntry.() -> Unit) {
         unimined.ornitheMaven()
-        val vers = if (splitUnmapped) {
-            if (envType == EnvType.JOINED) throw UnsupportedOperationException("Feather mappings are not supported in joined environments before 1.2.5")
+        val vers = if (splitUnmapped && ornitheGenVersion < 2) {
+            if (envType == EnvType.JOINED) throw UnsupportedOperationException("Feather mappings are not supported in joined environments before 1.3")
             "${minecraft.version}-${envType.name.lowercase()}+build.$build"
         } else {
             "${minecraft.version}+build.$build"
