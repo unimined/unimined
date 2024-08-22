@@ -345,55 +345,69 @@ abstract class FabricLikeMinecraftTransformer(
 
             Files.createDirectories(jars)
             Files.createDirectories(includeCache)
+            var errored = false
             for (dep in include.dependencies) {
-                val source = include.getFiles(dep, "jar").singleFile.toPath()
-                val path = jars.resolve("${dep.name}-${dep.version}.jar")
-                if (!source.zipContains(modJsonName)) {
-                    val cachePath = includeCache.resolve("${dep.name}-${dep.version}.jar")
-                    if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
-                        try {
-                            ZipArchiveOutputStream(
-                                cachePath.outputStream(
-                                    StandardOpenOption.CREATE,
-                                    StandardOpenOption.TRUNCATE_EXISTING
-                                )
-                            ).use { out ->
-                                source.forEntryInZip { entry, stream ->
-                                    out.putArchiveEntry(entry)
-                                    stream.copyTo(out)
+                val files = include.getFiles(dep, "jar")
+                if (files.isEmpty) continue
+                try {
+                    val source = files.singleFile.toPath()
+                    val path = jars.resolve("${dep.name}-${dep.version}.jar")
+                    if (!source.zipContains(modJsonName)) {
+                        val cachePath = includeCache.resolve("${dep.name}-${dep.version}.jar")
+                        if (!cachePath.exists() || project.unimined.forceReload || project.gradle.startParameter.isRefreshDependencies) {
+                            try {
+                                ZipArchiveOutputStream(
+                                    cachePath.outputStream(
+                                        StandardOpenOption.CREATE,
+                                        StandardOpenOption.TRUNCATE_EXISTING
+                                    )
+                                ).use { out ->
+                                    source.forEntryInZip { entry, stream ->
+                                        out.putArchiveEntry(entry)
+                                        stream.copyTo(out)
+                                        out.closeArchiveEntry()
+                                    }
+                                    out.putArchiveEntry(ZipArchiveEntry(modJsonName).also { entry ->
+                                        entry.time = CONSTANT_TIME_FOR_ZIP_ENTRIES
+                                    })
+                                    val innerjson = JsonObject()
+                                    innerjson.addProperty("schemaVersion", 1)
+                                    var artifactString = ""
+                                    if (dep.group != null) {
+                                        artifactString += dep.group!!.replace(".", "_") + "_"
+                                    }
+                                    artifactString += dep.name
+                                    innerjson.addProperty("id", artifactString.lowercase())
+                                    innerjson.addProperty("version", dep.version)
+                                    innerjson.addProperty("name", dep.name)
+                                    val custom = JsonObject()
+                                    custom.addProperty("fabric-loom:generated", true)
+                                    custom.addProperty("unimined:generated", true)
+                                    innerjson.add("custom", custom)
+                                    out.write(GSON.toJson(innerjson).toByteArray())
                                     out.closeArchiveEntry()
                                 }
-                                out.putArchiveEntry(ZipArchiveEntry(modJsonName).also { entry ->
-                                    entry.time = CONSTANT_TIME_FOR_ZIP_ENTRIES
-                                })
-                                val innerjson = JsonObject()
-                                innerjson.addProperty("schemaVersion", 1)
-                                var artifactString = ""
-                                if (dep.group != null) {
-                                    artifactString += dep.group!!.replace(".", "_") + "_"
-                                }
-                                artifactString += dep.name
-                                innerjson.addProperty("id", artifactString.lowercase())
-                                innerjson.addProperty("version", dep.version)
-                                innerjson.addProperty("name", dep.name)
-                                val custom = JsonObject()
-                                custom.addProperty("fabric-loom:generated", true)
-                                custom.addProperty("unimined:generated", true)
-                                innerjson.add("custom", custom)
-                                out.write(GSON.toJson(innerjson).toByteArray())
-                                out.closeArchiveEntry()
+                            } catch (e: Exception) {
+                                project.logger.error(
+                                    "[Unimined/Fabric] Failed to create $modJsonName stub for ${source.absolutePathString()}.",
+                                    e
+                                )
+                                throw e
                             }
-                        } catch (e: Exception) {
-                            project.logger.error("[Unimined/Fabric] Failed to create $modJsonName stub for ${source.absolutePathString()}.", e)
-                            throw e
                         }
+                        cachePath.copyTo(path, StandardCopyOption.REPLACE_EXISTING)
+                    } else {
+                        source.copyTo(path, StandardCopyOption.REPLACE_EXISTING)
                     }
-                    cachePath.copyTo(path, StandardCopyOption.REPLACE_EXISTING)
-                } else {
-                    source.copyTo(path, StandardCopyOption.REPLACE_EXISTING)
-                }
 
-                addIncludeToModJson(json, dep, path.toString().removePrefix("/"))
+                    addIncludeToModJson(json, dep, path.toString().removePrefix("/"))
+                } catch (e: Exception) {
+                    project.logger.error("Failed on $dep", e)
+                    errored = true
+                }
+            }
+            if (errored) {
+                throw IllegalStateException("An error occured resolving includes")
             }
             Files.write(mod, GSON.toJson(json).toByteArray(), StandardOpenOption.TRUNCATE_EXISTING)
         }
