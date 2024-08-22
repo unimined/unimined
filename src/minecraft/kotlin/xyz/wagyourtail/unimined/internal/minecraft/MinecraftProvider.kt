@@ -825,7 +825,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         for (project in projects) {
             for (sourceSet in project.extensions.findByType(SourceSetContainer::class.java)?.asMap?.values
                 ?: listOf()) {
-                if (sourceSet.output.files.intersect(sourceSet.runtimeClasspath.files).isNotEmpty()) {
+                if (sourceSet.output.files.intersect(this.sourceSet.runtimeClasspath.files).isNotEmpty()) {
                     sourceSets.add(project to sourceSet)
                 }
             }
@@ -841,10 +841,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
             for ((sourceSet, minecraftConfig) in minecraftConfigs.nonNullValues()) {
                 if (mappings.devNamespace != minecraftConfig.mappings.devNamespace || mappings.devFallbackNamespace != minecraftConfig.mappings.devFallbackNamespace) {
-                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${sourceSet} on ${mappings.devNamespace}/${mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
+                    throw IllegalArgumentException("All combined minecraft configs must be on the same mappings, found ${this.sourceSet} on ${mappings.devNamespace}/${mappings.devFallbackNamespace} and $sourceSet on ${minecraftConfig.mappings.devNamespace}/${minecraftConfig.mappings.devFallbackNamespace}")
                 }
                 if (version != minecraftConfig.version) {
-                    throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${sourceSet} on ${version} and $sourceSet on ${minecraftConfig.version}")
+                    throw IllegalArgumentException("All combined minecraft configs must be on the same version, found ${this.sourceSet} on ${version} and $sourceSet on ${minecraftConfig.version}")
                 }
             }
         }
