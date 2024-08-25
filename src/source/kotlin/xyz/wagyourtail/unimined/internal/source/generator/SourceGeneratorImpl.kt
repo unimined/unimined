@@ -167,7 +167,7 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
                 classReader.accept(classNode, 0)
 
                 val sourceFile = classNode.sourceFile ?:
-                    (classNode.name.substringBeforeLast("$").substringAfterLast("/") + ".java")
+                    (classNode.name.substringAfterLast("/").substringBefore("$") + ".java")
                 val sourceEntry = entry.resolveSibling(sourceFile)
 
                 val source = extras[sourceEntry.toString()]
