@@ -748,7 +748,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             if (!project.gradle.startParameter.isOffline) {
                 //test if betacraft has our version on file
                 val url = URI.create(
-                    "http://files.betacraft.uk/launcher/assets/jsons/${
+                    "https://files.betacraft.uk/launcher/assets/jsons/${
                         URLEncoder.encode(
                             minecraftData.metadata.id,
                             StandardCharsets.UTF_8.name()
