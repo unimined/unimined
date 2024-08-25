@@ -1,6 +1,7 @@
 package xyz.wagyourtail.unimined.internal.source.generator
 
 import org.apache.commons.compress.archivers.zip.ZipFile
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.FileCollection
@@ -60,13 +61,27 @@ class SourceGeneratorImpl(val project: Project, val provider: SourceProvider) : 
         project.javaexec { spec ->
 
             val toolchain = project.extensions.getByType(JavaToolchainService::class.java)
-            spec.executable = toolchain.launcherFor {
-                it.languageVersion.set(JavaLanguageVersion.of(11))
-            }.orElse(
+            spec.executable = try {
                 toolchain.launcherFor {
-                    it.languageVersion.set(JavaLanguageVersion.of(17))
+                    it.languageVersion.set(JavaLanguageVersion.of(11))
+                }.get()
+            } catch (e: GradleException) {
+                try {
+                    toolchain.launcherFor {
+                        it.languageVersion.set(JavaLanguageVersion.of(17))
+                    }.get()
+                } catch (ex: GradleException) {
+                    try {
+                        toolchain.launcherFor {
+                            it.languageVersion.set(JavaLanguageVersion.of(21))
+                        }.get()
+                    } catch (exc: GradleException) {
+                        exc.addSuppressed(e)
+                        exc.addSuppressed(ex)
+                        throw exc
+                    }
                 }
-            ).get().executablePath.asFile.absolutePath
+            }.executablePath.asFile.absolutePath
 
             spec.jvmArgs(jvmArgs)
             spec.classpath(generator)
