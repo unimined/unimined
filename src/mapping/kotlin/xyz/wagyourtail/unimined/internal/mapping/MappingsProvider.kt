@@ -747,12 +747,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 ): MethodVisitor? {
                     if (srcName in names && dstName in names) {
                         val fromMethodName = names[srcName]!!.first
-                        val fromMethodDesc = names[srcName]!!.second
+                        val fromMethodDesc = names[srcName]!!.second ?: return null
                         val toMethodName = names[dstName]!!.first
-                        if (fromMethodDesc == null) {
-                            project.logger.info("[Unimined/MappingProvider ${project.path}/${minecraft.sourceSet}] skipping ${fromClassName}.${fromMethodName} as desc is null")
-                            return null
-                        }
                         val method = memberOf(fromClassName, fromMethodName, fromMethodDesc.toString())
                         acceptor.acceptMethod(method, toMethodName)
                     }
@@ -769,8 +765,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 ): FieldVisitor? {
                     if (srcName in names && dstName in names) {
                         val fromFieldName = names[srcName]!!.first
+                        val fromFieldDesc = names[srcName]!!.second ?: return null
                         val toFieldName = names[dstName]!!.first
-                        acceptor.acceptField(memberOf(fromClassName, fromFieldName, names[srcName]?.second?.toString()), toFieldName)
+                        acceptor.acceptField(memberOf(fromClassName, fromFieldName, fromFieldDesc.toString()), toFieldName)
                     }
                     return null
                 }
