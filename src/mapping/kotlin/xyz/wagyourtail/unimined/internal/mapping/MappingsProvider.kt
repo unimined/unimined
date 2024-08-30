@@ -727,6 +727,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
             mappings.accept(EmptyMappingVisitor().delegator(object : Delegator() {
                 lateinit var fromClassName: String
                 lateinit var toClassName: String
+                lateinit var fromMethod: IMappingProvider.Member
 
                 private fun memberOf(className: String, memberName: String, descriptor: String?): IMappingProvider.Member {
                     return IMappingProvider.Member(className, memberName, descriptor)
@@ -749,8 +750,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                         val fromMethodName = names[srcName]!!.first
                         val fromMethodDesc = names[srcName]!!.second ?: return null
                         val toMethodName = names[dstName]!!.first
-                        val method = memberOf(fromClassName, fromMethodName, fromMethodDesc.toString())
-                        acceptor.acceptMethod(method, toMethodName)
+                        fromMethod = memberOf(fromClassName, fromMethodName, fromMethodDesc.toString())
+                        acceptor.acceptMethod(fromMethod, toMethodName)
                     }
                     return if (remapLocals) {
                         super.visitMethod(delegate, names)
@@ -779,9 +780,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                     names: Map<Namespace, String>
                 ): ParameterVisitor? {
                     if (srcName in names && dstName in names && lvOrd != null) {
-                        val fromArgName = names[srcName]!!
                         val toArgName = names[dstName]!!
-                        acceptor.acceptMethodArg(memberOf(fromClassName, fromArgName, null), lvOrd, toArgName)
+                        acceptor.acceptMethodArg(fromMethod, lvOrd, toArgName)
                     }
                     return null
                 }
@@ -793,9 +793,8 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                     names: Map<Namespace, String>
                 ): LocalVariableVisitor? {
                     if (srcName in names && dstName in names) {
-                        val fromLocalVarName = names[srcName]!!
                         val toLocalVarName = names[dstName]!!
-                        acceptor.acceptMethodVar(memberOf(fromClassName, fromLocalVarName, null), lvOrd, startOp ?: -1, -1, toLocalVarName)
+                        acceptor.acceptMethodVar(fromMethod, lvOrd, startOp ?: -1, -1, toLocalVarName)
                     }
                     return null
                 }
