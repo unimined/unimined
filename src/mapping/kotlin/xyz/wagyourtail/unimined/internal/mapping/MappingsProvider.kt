@@ -90,7 +90,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
         if (legacyFabricGenVersion < 2) {
             return mavenCoords
         }
-        return MavenCoords("${mavenCoords.group}v${legacyFabricGenVersion}", mavenCoords.artifact, mavenCoords.version, mavenCoords.classifier, mavenCoords.extension)
+        return MavenCoords("${mavenCoords.group}.v${legacyFabricGenVersion}", mavenCoords.artifact, mavenCoords.version, mavenCoords.classifier, mavenCoords.extension)
     }
 
     private fun ornitheGenRevisionTransform(mavenCoords: MavenCoords): MavenCoords {
