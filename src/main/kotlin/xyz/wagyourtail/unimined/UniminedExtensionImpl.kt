@@ -19,6 +19,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     override val minecrafts = mutableMapOf<SourceSet, MinecraftConfig>()
     override val minecraftConfiguration = mutableMapOf<SourceSet, MinecraftConfig.() -> Unit>()
+
     override fun minecraft(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
         if (minecrafts.containsKey(sourceSet)) {
             if ((minecrafts[sourceSet] as MinecraftProvider).applied) {
@@ -42,6 +43,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         minecrafts[sourceSet]?.action()
         if (!lateApply) (minecrafts[sourceSet] as MinecraftProvider).apply()
     }
+
     override fun reIndev(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
         if (minecrafts.containsKey(sourceSet)) {
             if ((minecrafts[sourceSet] as ReIndevProvider).applied) {
@@ -86,6 +88,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
+    @delegate:Transient
     val minecraftForgeMaven by lazy {
         project.repositories.maven {
             it.name = "minecraftForge"
@@ -101,6 +104,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Minecraft Forge maven: $minecraftForgeMaven")
     }
 
+    @delegate:Transient
     val neoForgedMaven by lazy {
         project.repositories.maven {
             it.name = "neoForged"
@@ -116,6 +120,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Neo-Forged maven: $neoForgedMaven")
     }
 
+    @delegate:Transient
     val fabricMaven by lazy {
         project.repositories.maven {
             it.name = "fabric"
@@ -127,6 +132,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Fabric maven: $fabricMaven")
     }
 
+    @delegate:Transient
     val ornitheMaven by lazy {
         project.repositories.maven {
             it.name = "ornithe"
@@ -137,6 +143,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Ornithe maven: $ornitheMaven")
     }
 
+    @delegate:Transient
     val legacyFabricMaven by lazy {
         project.repositories.maven {
             it.name = "legacyFabric"
@@ -147,6 +154,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Legacy Fabric maven: $legacyFabricMaven")
     }
 
+    @delegate:Transient
     val quiltMaven by lazy {
         project.repositories.maven {
             it.name = "quilt"
@@ -163,6 +171,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         glassLauncherMaven("babric")
     }
 
+    @field:Transient
     val glassLauncherMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
         project.repositories.maven {
             it.name = "Glass (${name.capitalized()})"
@@ -174,6 +183,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Glass Launcher maven: ${glassLauncherMaven[name]}")
     }
 
+    @field:Transient
     val wagYourMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
         project.repositories.maven {
             it.name = "WagYourTail (${name.capitalized()})"
@@ -189,6 +199,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding WagYourTail maven: ${wagYourMaven[name]}")
     }
 
+    @delegate:Transient
     val mcphackersIvy by lazy {
         project.repositories.ivy { ivy ->
             ivy.name = "mcphackers"
@@ -209,6 +220,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding mcphackers ivy: $mcphackersIvy")
     }
 
+    @delegate:Transient
     val parchmentMaven by lazy {
         project.repositories.maven {
             it.name = "parchment"
@@ -220,6 +232,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding parchment maven: $parchmentMaven")
     }
 
+    @delegate:Transient
     val sonatypeStaging by lazy {
         project.repositories.maven {
             it.name = "sonatypeStaging"
@@ -231,6 +244,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding sonatype staging maven: $sonatypeStaging")
     }
 
+    @delegate:Transient
     val spongeMaven by lazy {
         project.repositories.maven {
             it.name = "Sponge"
@@ -242,6 +256,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding sponge maven: $spongeMaven")
     }
 
+    @delegate:Transient
     val jitpack by lazy {
         project.repositories.maven {
             it.name = "jitpack"
@@ -253,6 +268,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding jitpack maven: $jitpack")
     }
 
+    @delegate:Transient
     val spigot by lazy {
         project.repositories.maven {
             it.name = "spigot"
@@ -264,6 +280,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding spigot maven: $spigot")
     }
 
+    @field:Transient
     val flintMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
         project.repositories.maven {
             it.name = "Flint (${name.capitalized()})"
@@ -275,6 +292,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Flint Loader maven: ${flintMaven[name]}")
     }
 
+    @field:Transient
     val cleanroomMaven = defaultedMapOf<String, MavenArtifactRepository> { name ->
         project.repositories.maven {
             it.name = "cleanroom-$it"
@@ -287,6 +305,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding cleanroom maven: ${cleanroomMaven["releases"]}")
     }
 
+    @delegate:Transient
     val outlandsMaven by lazy {
         project.repositories.maven {
             it.name = "outlands"
@@ -298,6 +317,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding outlands maven: $outlandsMaven")
     }
 
+    @delegate:Transient
     val fox2codeMaven by lazy {
         project.repositories.maven {
             it.name = "Fox2Code"
@@ -309,6 +329,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         project.logger.info("[Unimined] adding Fox2Code maven: $fox2codeMaven")
     }
 
+    @delegate:Transient
     val modrinthMaven by lazy {
         project.repositories.exclusiveContent { repository ->
             repository.forRepository {
@@ -324,6 +345,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
+    @delegate:Transient
     val backupModrinthMaven by lazy {
         project.repositories.maven {
             it.name = "modrinth"
@@ -344,6 +366,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
+    @delegate:Transient
     val curseMaven by lazy {
         project.repositories.exclusiveContent {
             it.forRepository {
@@ -359,6 +382,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
+    @delegate:Transient
     val backupCurseMaven by lazy {
         project.repositories.maven {
             it.name = "cursemaven"
@@ -370,6 +394,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
+    @delegate:Transient
     val betaCurseMaven by lazy {
         project.repositories.exclusiveContent {
             it.forRepository {
@@ -385,6 +410,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         }
     }
 
+    @delegate:Transient
     val backupBetaCurseMaven by lazy {
         project.repositories.maven {
             it.name = "beta-cursemaven"
