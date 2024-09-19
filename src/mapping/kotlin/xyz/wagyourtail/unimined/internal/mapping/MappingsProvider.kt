@@ -1,7 +1,6 @@
 package xyz.wagyourtail.unimined.internal.mapping
 
 import MemoryMapping
-import kotlinx.coroutines.runBlocking
 import net.fabricmc.tinyremapper.IMappingProvider
 import okio.BufferedSource
 import okio.buffer
@@ -73,10 +72,10 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     override suspend fun propogator(tree: MemoryMappingTree): MemoryMappingTree {
 
         if (splitUnmapped && envType == EnvType.JOINED) {
-            Propagator(Namespace("clientOfficial"), tree, setOf(minecraft.minecraftData.minecraftClientFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("serverOfficial"))
-            Propagator(Namespace("serverOfficial"), tree, setOf(minecraft.minecraftData.minecraftServerFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("clientOfficial"))
+            Propagator(tree, Namespace("clientOfficial"), setOf(minecraft.minecraftData.minecraftClientFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("serverOfficial"))
+            Propagator(tree, Namespace("serverOfficial"), setOf(minecraft.minecraftData.minecraftServerFile.toPath())).propagate(tree.namespaces.toSet() - Namespace("clientOfficial"))
         } else {
-            Propagator(Namespace("official"), tree, setOf(when (envType) {
+            Propagator(tree, Namespace("official"), setOf(when (envType) {
                 EnvType.JOINED -> minecraft.mergedOfficialMinecraftFile
                 EnvType.CLIENT -> minecraft.minecraftData.minecraftClientFile
                 EnvType.SERVER -> minecraft.minecraftData.minecraftServerFile
