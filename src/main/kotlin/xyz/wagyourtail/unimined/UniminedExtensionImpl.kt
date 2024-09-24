@@ -19,6 +19,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
 
     override val minecrafts = mutableMapOf<SourceSet, MinecraftConfig>()
     override val minecraftConfiguration = mutableMapOf<SourceSet, MinecraftConfig.() -> Unit>()
+
     override fun minecraft(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
         if (minecrafts.containsKey(sourceSet)) {
             if ((minecrafts[sourceSet] as MinecraftProvider).applied) {
@@ -42,6 +43,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
         minecrafts[sourceSet]?.action()
         if (!lateApply) (minecrafts[sourceSet] as MinecraftProvider).apply()
     }
+
     override fun reIndev(sourceSet: SourceSet, lateApply: Boolean, action: MinecraftConfig.() -> Unit) {
         if (minecrafts.containsKey(sourceSet)) {
             if ((minecrafts[sourceSet] as ReIndevProvider).applied) {

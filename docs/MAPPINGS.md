@@ -63,15 +63,15 @@ unimined.minecraft {
 it is sometimes useful to override specific mappings, such as when using forge with yarn mappings, or when a mod is using yarn
 at dev, but you're using mojmap and it causes an issue.
 
-unimined provides a DSL for inserting said mapping stubs, it's syntax is similar to tinyv2's format.
+unimined provides a DSL for inserting said mapping stubs, it's syntax is similar to umf's format.
 ```gradle
 unimined.minecraft {
 ...
     mappings {
         ...
-        stubs.withMappings("source", ["target1", "target2"]) {
-            c("sourceName", ["target1Name", "target2Name"]) {// can change the target names of a class, or use null/empty list to skip
-                m("sourceMethodName", "(LsourceType;)LreturnType;", ["target1MethodName"]) // can change the target names of a method, or use nulls/empty list to skip
+        stubs(["source", "target1", "target2"]) {
+            c(["sourceName", "target1Name", "target2Name"]) {// can change the target names of a class, or use null/empty list to skip
+                m(["sourceMethodName;(LsourceType;)LreturnType;", "target1MethodName"]) // can change the target names of a method, or use nulls/empty list to skip
             }
         }
     }
@@ -81,12 +81,12 @@ unimined.minecraft {
 
 real example, (1.20.6, neoforge fix for yarn):
 ```gradle
-stub.withMappings("intermediary", ["yarn"]) {
-    c("net/minecraft/class_1496", []) {
-        m("method_56680", "()Lnet/minecraft/class_1263;", ["getInventoryVanilla"])
+stub(["intermediary", "yarn"]) {
+    c(["net/minecraft/class_1496"]) {
+        m(["method_56680;()Lnet/minecraft/class_1263;", "getInventoryVanilla"])
     }
-    c("net/minecraft/class_329", []) {
-        m("method_1759", "(Lnet/minecraft/class_332;F)V", ["renderHotbarVanilla"])
+    c(["net/minecraft/class_329"]) {
+        m(["method_1759;(Lnet/minecraft/class_332;F)V", "renderHotbarVanilla"])
     }
 }
 ```
