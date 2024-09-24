@@ -14,11 +14,8 @@ jobs:
           8.8, # version used by buildscript
           8 # latest
         ]
-        java: [
-          8 #, # Old LTS we build against
-          # 11, # Should we even test this one?
-          # 17, # LTS
-          # 21 # Latest LTS only supported by gradle 8.5+
+        java:
+          17
         ]
     runs-on: ubuntu-22.04
     container:
@@ -55,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [8]
+        java: [17]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: ubuntu-22.04
@@ -87,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [8]
+        java: [17]
         test: ${{ fromJson(needs.prepare_test_matrix.outputs.matrix) }}
 
     runs-on: windows-2022
