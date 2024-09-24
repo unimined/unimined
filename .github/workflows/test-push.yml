@@ -14,7 +14,7 @@ jobs:
           8.8, # version used by buildscript
           8 # latest
         ]
-        java:
+        java: [
           17
         ]
     runs-on: ubuntu-22.04
