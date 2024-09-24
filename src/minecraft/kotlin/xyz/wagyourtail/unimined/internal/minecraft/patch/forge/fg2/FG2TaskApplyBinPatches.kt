@@ -100,14 +100,14 @@ class FG2TaskApplyBinPatches(private val project: Project) {
 
     fun setup(patches: File, side: String) {
         val matcher = Pattern.compile(String.format("binpatch/%s/.*.binpatch", side))
-        val jis: JarInputStream
-        try {
-            val binpatchesDecompressed = LzmaInputStream(FileInputStream(patches), Decoder())
-            val inBytes = ByteArrayInputStream(binpatchesDecompressed.readBytes())
-            val jarBytes = ByteArrayOutputStream()
-            val jos = JarOutputStream(jarBytes)
-            Pack200UnpackerAdapter().unpack(inBytes, jos)
-            jis = JarInputStream(ByteArrayInputStream(jarBytes.toByteArray()))
+        val jis: JarInputStream = try {
+            LzmaInputStream(FileInputStream(patches), Decoder()).use { uncompressed ->
+                val jarBytes = ByteArrayOutputStream()
+                JarOutputStream(jarBytes).use {
+                    Pack200UnpackerAdapter().unpack(uncompressed, it)
+                }
+                JarInputStream(ByteArrayInputStream(jarBytes.toByteArray()))
+            }
         } catch (e: Exception) {
             throw RuntimeException(e)
         }
