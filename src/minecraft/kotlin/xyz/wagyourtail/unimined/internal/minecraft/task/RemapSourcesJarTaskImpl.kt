@@ -1,12 +1,8 @@
 package xyz.wagyourtail.unimined.internal.minecraft.task
 
-import org.gradle.api.Project
-import org.gradle.api.tasks.SourceSet
-import org.gradle.jvm.tasks.Jar
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.util.capitalized
+import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
@@ -22,75 +18,48 @@ abstract class RemapSourcesJarTaskImpl @Inject constructor(provider: MinecraftCo
         toNs: MappingNamespaceTree.Namespace,
         classpathList: Array<Path>
     ) {
-        val inputDir = temporaryDir.toPath().resolve("input").apply {
+        // source-remap seems to be broken when reading/writing from a jar, so copy them to/from temp dirs
+        val output = temporaryDir.resolve(toNs.name).toPath().apply {
+            if(this.exists()) deleteRecursively()
+            createDirectories()
+        }
+
+        val input = temporaryDir.resolve(fromNs.name).toPath().apply {
+            if(this.exists()) deleteRecursively()
+            createDirectories()
+
             project.copy {
-                it.from(project.zipTree(inputFile.get().asFile))
+                it.from(project.zipTree(from))
                 it.into(this)
             }
         }
 
-        val outputDir = temporaryDir.toPath().resolve("output")
-
-        val remapper = provider.sourceProvider.sourceRemapper
-
-        fun Path.isSourceFile() = isRegularFile() && (name.endsWith(".java") || name.endsWith(".kt"))
-
-        remapper.remap(
-            inputDir.walk().filter { it.isSourceFile() }.associateWith {
-                outputDir.resolve(inputDir.relativize(it))
-            },
-            project.files(classpathList),
+        provider.sourceProvider.sourceRemapper.remap(
+            mapOf(input to output),
+            project.files(*classpathList),
             fromNs,
             fromNs,
             toNs,
             toNs,
-            specConfig = { standardOutput = temporaryDir.resolve("remap.log").outputStream() }
+            specConfig = {
+                standardOutput = temporaryDir.resolve("remap-${fromNs}-to-${toNs}.log").outputStream()
+            }
         )
 
-        // copy non-java/kotlin files directly
-        inputDir.walk().filter { it.isRegularFile() && !it.isSourceFile() }.forEach {
-            val relative = inputDir.relativize(it)
-            val output = outputDir.resolve(relative)
-            if (!output.exists()) {
-                it.copyTo(output.apply { parent.createDirectories() })
-            }
+        // copy non-source files directly
+        input.walk().filter { it.extension != "java" && it.extension != "kt" }.forEach { file ->
+            val name = input.relativize(file).toString().replace('\\', '/')
+            val targetFile = output.resolve(name)
+            targetFile.parent.createDirectories()
+            file.copyTo(targetFile, overwrite = true)
         }
 
-        JarOutputStream(target.toFile().outputStream()).use { o ->
-            outputDir.walk().forEach {
-                val relative = outputDir.relativize(it)
-                o.putNextEntry(JarEntry(relative.toString().replace('\\', '/')))
-                it.inputStream().copyTo(o)
-            }
-        }
-    }
-
-    companion object {
-        fun setup(sourceSet: SourceSet, project: Project) {
-            val sourcesJarTaskName = sourceSet.sourcesJarTaskName
-            val sourcesJarTask = project.tasks.findByName(sourcesJarTaskName)
-            if (sourcesJarTask == null) {
-                project.logger.warn("[Unimined/RemapSourcesJar] $sourcesJarTaskName task not found, not remapping sources")
-                return
-            }
-
-            if (sourcesJarTask !is Jar) {
-                project.logger.warn("[Unimined/RemapSourcesJar] $sourcesJarTaskName task is not a Jar task, not remapping it")
-                return
-            }
-
-            val remapTaskName = "remap${sourcesJarTaskName.capitalized()}"
-            val remapTask = project.tasks.register(remapTaskName, RemapSourcesJarTaskImpl::class.java, project.unimined.minecrafts[sourceSet])
-            remapTask.configure {
-                it.inputFile.set(sourcesJarTask.archiveFile)
-                it.dependsOn(sourcesJarTask)
-
-                it.description = "Remaps the sources jar for ${sourceSet.name}"
-                it.group = "unimined"
-
-                val oldClassifier = sourcesJarTask.archiveClassifier.get()
-                it.archiveClassifier.set(oldClassifier)
-                sourcesJarTask.archiveClassifier.set("dev-$oldClassifier")
+        JarOutputStream(target.toFile().outputStream()).use { zos ->
+            output.walk().forEach { file ->
+                val name = output.relativize(file).toString().replace('\\', '/')
+                zos.putNextEntry(JarEntry(name))
+                file.inputStream().use { it.copyTo(zos) }
+                zos.closeEntry()
             }
         }
     }

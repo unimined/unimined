@@ -9,7 +9,6 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
-import org.gradle.configurationcache.extensions.capitalized
 import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
@@ -23,10 +22,7 @@ import xyz.wagyourtail.unimined.api.runs.RunsConfig
 import xyz.wagyourtail.unimined.api.source.SourceConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
-import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.LazyMutable
-import xyz.wagyourtail.unimined.util.MustSet
-import xyz.wagyourtail.unimined.util.sourceSets
+import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.nio.file.Path
 
@@ -186,7 +182,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
             val proj = this.project.project(path)
             combineWith(proj, proj.sourceSets.getByName(name))
         }
-    };
+    }
 
     /**
      * the minecraft version to use
@@ -257,6 +253,45 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         action: Closure<*>
     ) {
         remap(task, name) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun remapSources(task: Task) {
+        remapSources(task) {}
+    }
+
+    fun remapSources(task: Task, action: RemapJarTask.() -> Unit) {
+        remapSources(task, "remap${task.name.capitalized()}", action)
+    }
+
+    fun remapSources(
+        task: Task,
+        @DelegatesTo(value = RemapJarTask::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        remapSources(task) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+    fun remapSources(task: Task, name: String) {
+        remapSources(task, name) {}
+    }
+
+    abstract fun remapSources(task: Task, name: String, action: RemapJarTask.() -> Unit)
+
+    fun remapSources(
+        task: Task,
+        name: String,
+        @DelegatesTo(value = RemapJarTask::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        remapSources(task, name) {
             action.delegate = this
             action.resolveStrategy = Closure.DELEGATE_FIRST
             action.call()

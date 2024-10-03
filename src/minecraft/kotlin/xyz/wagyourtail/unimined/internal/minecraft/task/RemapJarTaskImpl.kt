@@ -76,6 +76,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
 
         project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.name} from $devNs/$devFNs to $prodNs")
         project.logger.info("[Unimined/RemapJar ${this.path}]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
+
         var prevTarget = inputFile
         var prevNamespace = devNs
         var prevPrevNamespace = devFNs

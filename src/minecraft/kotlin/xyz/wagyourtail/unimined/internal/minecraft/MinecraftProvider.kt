@@ -53,6 +53,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.MinecraftDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.task.GenSourcesTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.task.RemapJarTaskImpl
+import xyz.wagyourtail.unimined.internal.minecraft.task.RemapSourcesJarTaskImpl
 import xyz.wagyourtail.unimined.internal.mods.ModsProvider
 import xyz.wagyourtail.unimined.internal.runs.RunsProvider
 import xyz.wagyourtail.unimined.internal.source.SourceProvider
@@ -137,6 +138,18 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit) {
         val remapTask = project.tasks.register(name, RemapJarTaskImpl::class.java, this)
+        remapTask.configure {
+            it.dependsOn(task)
+            if (task is Jar) {
+                it.inputFile.set(task.archiveFile)
+            }
+            it.action()
+            mcPatcher.configureRemapJar(it)
+        }
+    }
+
+    override fun remapSources(task: Task, name: String, action: RemapJarTask.() -> Unit) {
+        val remapTask = project.tasks.register(name, RemapSourcesJarTaskImpl::class.java, this)
         remapTask.configure {
             it.dependsOn(task)
             if (task is Jar) {
@@ -436,6 +449,100 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
+    fun applyDefaultRemapJar() {
+        var task = project.tasks.findByName("jar".withSourceSet(sourceSet))
+        if (task == null && createJarTask) {
+            project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Creating default jar task for $sourceSet")
+            task = project.tasks.create("jar".withSourceSet(sourceSet), Jar::class.java) {
+                it.group = "build"
+                it.from(sourceSet.output)
+                it.archiveClassifier.set(sourceSet.name)
+                for ((_, sourceSet) in combinedWithList) {
+                    it.from(sourceSet.output)
+                }
+            }
+        } else if (task != null) {
+            if (task is Jar) {
+                task.also {
+                    it.from(sourceSet.output)
+                    for ((_, sourceSet) in combinedWithList) {
+                        it.from(sourceSet.output)
+                    }
+                }
+            } else {
+                project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] jar task for $sourceSet is not a Jar task")
+            }
+        }
+
+        if (task != null && task is Jar) {
+            val classifier: String = task.archiveClassifier.getOrElse("")
+            task.apply {
+                if (classifier.isNotEmpty()) {
+                    archiveClassifier.set("$classifier-dev")
+                } else {
+                    archiveClassifier.set("dev")
+                }
+            }
+            remap(task) {
+                group = "unimined"
+                description = "Remaps $task's output jar"
+                archiveClassifier.set(classifier)
+            }
+            project.tasks.getByName("build").dependsOn("remap" + "jar".withSourceSet(sourceSet).capitalized())
+        } else {
+            project.logger.warn(
+                "[Unimined/Minecraft ${project.path}:${sourceSet.name}] Could not find default jar task for $sourceSet. named: ${"jar".withSourceSet(sourceSet)}."
+            )
+            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] add manually with `remap(task)` in the minecraft block for $sourceSet")
+        }
+
+        var sourcesTask = project.tasks.findByName("sourcesJar".withSourceSet(sourceSet))
+        if (sourcesTask == null && createJarTask) {
+            project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Creating default sources jar task for $sourceSet")
+            sourcesTask = project.tasks.create("sourcesJar".withSourceSet(sourceSet), Jar::class.java) {
+                it.group = "build"
+                it.from(sourceSet.allSource)
+                it.archiveClassifier.set("${sourceSet.name}-sources")
+                for ((_, sourceSet) in combinedWithList) {
+                    it.from(sourceSet.allSource)
+                }
+            }
+        } else if (sourcesTask != null) {
+            if (sourcesTask is Jar) {
+                sourcesTask.also {
+                    it.from(sourceSet.allSource)
+                    for ((_, sourceSet) in combinedWithList) {
+                        it.from(sourceSet.allSource)
+                    }
+                }
+            } else {
+                project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] sourcesJar task for $sourceSet is not a Jar task")
+            }
+        }
+
+        if (sourcesTask != null && sourcesTask is Jar) {
+            val classifier: String = sourcesTask.archiveClassifier.getOrElse("")
+            sourcesTask.apply {
+                if (classifier.isNotEmpty()) {
+                    archiveClassifier.set("$classifier-dev")
+                } else {
+                    archiveClassifier.set("dev")
+                }
+            }
+            remapSources(sourcesTask) {
+                group = "unimined"
+                description = "Remaps $sourcesTask's output jar"
+                archiveClassifier.set(classifier)
+            }
+            project.tasks.getByName("build").dependsOn("remap" + "sourcesJar".withSourceSet(sourceSet).capitalized())
+        } else {
+            project.logger.warn(
+                "[Unimined/Minecraft ${project.path}:${sourceSet.name}] Could not find default sources jar task for $sourceSet. named: ${"sourcesJar".withSourceSet(sourceSet)}."
+            )
+            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] add manually with `remapSources(task)` in the minecraft block for $sourceSet")
+        }
+    }
+
     fun applyRunConfigs() {
         project.logger.lifecycle("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Applying run configs")
         when (side) {
@@ -532,52 +639,8 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         // add minecraft libraries
         if (mcPatcher.addVanillaLibraries) addLibraries(minecraftData.metadata.libraries)
 
-        // create remapjar task
         if (defaultRemapJar) {
-            var task = project.tasks.findByName("jar".withSourceSet(sourceSet))
-            if (task == null && createJarTask) {
-                project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Creating default jar task for $sourceSet")
-                task = project.tasks.create("jar".withSourceSet(sourceSet), Jar::class.java) {
-                    it.group = "build"
-                    it.from(sourceSet.output)
-                    it.archiveClassifier.set(sourceSet.name)
-                    for ((_, sourceSet) in combinedWithList) {
-                        it.from(sourceSet.output)
-                    }
-                }
-            } else if (task != null) {
-                (task as Jar).also {
-                    it.from(sourceSet.output)
-                    for ((_, sourceSet) in combinedWithList) {
-                        it.from(sourceSet.output)
-                    }
-                }
-            }
-            if (task != null && task is Jar) {
-                val classifier: String= task.archiveClassifier.getOrElse("")
-                task.apply {
-                    if (classifier.isNotEmpty()) {
-                        archiveClassifier.set("$classifier-dev")
-                    } else {
-                        archiveClassifier.set("dev")
-                    }
-                }
-                remap(task) {
-                    group = "unimined"
-                    description = "Remaps $task's output jar"
-                    archiveClassifier.set(classifier)
-                }
-                project.tasks.getByName("build").dependsOn("remap" + "jar".withSourceSet(sourceSet).capitalized())
-            } else {
-                project.logger.warn(
-                    "[Unimined/Minecraft ${project.path}:${sourceSet.name}] Could not find default jar task for $sourceSet. named: ${
-                        "jar".withSourceSet(
-                            sourceSet
-                        )
-                    }."
-                )
-                project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] add manually with `remap(task)` in the minecraft block for $sourceSet")
-            }
+            applyDefaultRemapJar()
         }
 
         // apply minecraft patcher changes

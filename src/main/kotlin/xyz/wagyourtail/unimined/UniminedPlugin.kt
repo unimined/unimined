@@ -2,8 +2,6 @@ package xyz.wagyourtail.unimined
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import xyz.wagyourtail.unimined.internal.minecraft.task.RemapSourcesJarTaskImpl
-import xyz.wagyourtail.unimined.util.sourceSets
 
 class UniminedPlugin: Plugin<Project> {
 
@@ -43,12 +41,6 @@ class UniminedPlugin: Plugin<Project> {
         )
 
         project.extensions.create("unimined", UniminedExtensionImpl::class.java, project)
-
-        project.afterEvaluate {
-            it.sourceSets.forEach { s ->
-                RemapSourcesJarTaskImpl.setup(s, it)
-            }
-        }
     }
 
 }
