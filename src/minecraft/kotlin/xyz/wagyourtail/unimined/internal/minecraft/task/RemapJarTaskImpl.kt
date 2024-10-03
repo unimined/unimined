@@ -20,6 +20,7 @@ import java.nio.file.StandardOpenOption
 import javax.inject.Inject
 import kotlin.io.path.*
 
+@Suppress("UNCHECKED_CAST")
 abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
 
     private var mixinRemapOptions: MixinRemapOptions.() -> Unit by FinalizeOnRead {}
@@ -129,7 +130,7 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     }
 
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
-    protected fun remapToInternal(
+    protected open fun remapToInternal(
         from: Path,
         target: Path,
         fromNs: MappingNamespaceTree.Namespace,
