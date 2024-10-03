@@ -43,7 +43,8 @@ abstract class RemapSourcesJarTaskImpl @Inject constructor(provider: MinecraftCo
             fromNs,
             fromNs,
             toNs,
-            toNs
+            toNs,
+            specConfig = { standardOutput = temporaryDir.resolve("remap.log").outputStream() }
         )
 
         // copy non-java/kotlin files directly
@@ -62,10 +63,6 @@ abstract class RemapSourcesJarTaskImpl @Inject constructor(provider: MinecraftCo
                 it.inputStream().copyTo(o)
             }
         }
-    }
-
-    init {
-        project.unimined.wagYourMaven("snapshots")
     }
 
     companion object {

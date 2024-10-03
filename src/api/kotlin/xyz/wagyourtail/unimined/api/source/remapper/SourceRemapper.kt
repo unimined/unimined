@@ -4,6 +4,7 @@ import groovy.lang.Closure
 import groovy.lang.DelegatesTo
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.FileCollection
+import org.gradle.process.JavaExecSpec
 import org.jetbrains.annotations.ApiStatus
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import java.nio.file.Path
@@ -46,6 +47,7 @@ interface SourceRemapper {
         source: MappingNamespaceTree.Namespace,
         sourceFallback: MappingNamespaceTree.Namespace,
         targetFallback: MappingNamespaceTree.Namespace,
-        target: MappingNamespaceTree.Namespace
+        target: MappingNamespaceTree.Namespace,
+        specConfig: JavaExecSpec.() -> Unit = {}
     )
 }
