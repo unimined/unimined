@@ -6,6 +6,7 @@ import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
+import java.util.zip.Deflater
 import javax.inject.Inject
 import kotlin.io.path.*
 
@@ -55,6 +56,7 @@ abstract class RemapSourcesJarTaskImpl @Inject constructor(provider: MinecraftCo
         }
 
         JarOutputStream(target.toFile().outputStream()).use { zos ->
+            zos.setLevel(Deflater.NO_COMPRESSION)
             output.walk().forEach { file ->
                 val name = output.relativize(file).toString().replace('\\', '/')
                 zos.putNextEntry(JarEntry(name))
