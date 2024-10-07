@@ -59,7 +59,7 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
 
     private fun remapIntl(inputOutput: Map<Path, Path>, classpath: FileCollection, minecraft: Path, source: Namespace, target: Namespace) = runBlocking {
         if (sourceRemapper.dependencies.isEmpty()) {
-            remapper("1.0.3-SNAPSHOT")
+            remapper("1.0.4-SNAPSHOT")
         }
 
         val mappingFile = tempDir.createDirectories().resolve("${provider.minecraft.sourceSet.name}-${source.name}-${target.name}.srg")

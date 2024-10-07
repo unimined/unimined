@@ -4,7 +4,6 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.gradle.api.JavaVersion
-import xyz.wagyourtail.unimined.api.runs.auth.AuthConfig
 import xyz.wagyourtail.unimined.util.OSUtils
 import xyz.wagyourtail.unimined.util.consumerApply
 import java.io.File

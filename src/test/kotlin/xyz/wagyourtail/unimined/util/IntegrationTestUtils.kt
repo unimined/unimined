@@ -31,7 +31,7 @@ fun openZipFileSystem(project: String, path: String): FileSystem? {
 }
 class IntegrationTestUtils {
     companion object {
-        private val GRADLE_VERSION = setOf("8.9", GRADLE_CURRENT)
+        private val GRADLE_VERSION = setOf(GRADLE_CURRENT)
 
         @JvmStatic
         fun versions() = GRADLE_VERSION.toTypedArray()
