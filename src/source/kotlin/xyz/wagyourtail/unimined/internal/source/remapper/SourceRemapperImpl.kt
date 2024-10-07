@@ -28,7 +28,6 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
             project.dependencies.create(
                 if (dep is String && !dep.contains(":")) {
                     project.unimined.wagYourMaven("snapshots")
-                    project.repositories.mavenLocal()
                     "xyz.wagyourtail.unimined:source-remap:$dep"
                 } else {
                     dep
@@ -113,7 +112,7 @@ class SourceRemapperImpl(val project: Project, val provider: SourceProvider) : S
         specConfig: JavaExecSpec.() -> Unit
     ) {
         if (sourceRemapper.dependencies.isEmpty()) {
-            remapper("1.0.3-SNAPSHOT")
+            remapper("1.0.5-SNAPSHOT")
         }
 
         val mappingFile = tempDir.createDirectories().resolve("${provider.minecraft.sourceSet.name}-${source.name}-${target.name}.srg")
