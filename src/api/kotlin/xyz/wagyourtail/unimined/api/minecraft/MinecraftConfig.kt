@@ -259,14 +259,23 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         }
     }
 
+    /**
+     * @since 1.3.10
+     */
     fun remapSources(task: Task) {
         remapSources(task) {}
     }
 
+    /**
+     * @since 1.3.10
+     */
     fun remapSources(task: Task, action: RemapJarTask.() -> Unit) {
         remapSources(task, "remap${task.name.capitalized()}", action)
     }
 
+    /**
+     * @since 1.3.10
+     */
     fun remapSources(
         task: Task,
         @DelegatesTo(value = RemapJarTask::class, strategy = Closure.DELEGATE_FIRST)
@@ -279,12 +288,21 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         }
     }
 
+    /**
+     * @since 1.3.10
+     */
     fun remapSources(task: Task, name: String) {
         remapSources(task, name) {}
     }
 
+    /**
+     * @since 1.3.10
+     */
     abstract fun remapSources(task: Task, name: String, action: RemapJarTask.() -> Unit)
 
+    /**
+     * @since 1.3.10
+     */
     fun remapSources(
         task: Task,
         name: String,
