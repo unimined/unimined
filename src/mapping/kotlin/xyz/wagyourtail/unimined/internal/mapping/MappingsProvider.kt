@@ -625,7 +625,9 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
     }
 
     fun contentOf(file: File): ContentProvider {
-        return MappingContentProvider(project.dependencies.create(project.files(file)), file.extension)
+        val dep = project.dependencies.create(project.files(file))
+        mappings.dependencies.add(dep)
+        return MappingContentProvider(dep, file.extension)
     }
 
     override fun hasStubs(): Boolean {
