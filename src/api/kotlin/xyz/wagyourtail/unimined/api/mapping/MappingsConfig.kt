@@ -534,6 +534,22 @@ abstract class MappingsConfig<T: MappingResolver<T>>(val project: Project, val m
         }
     }
 
+    @JvmOverloads
+    @ApiStatus.Experimental
+    fun mapping(
+        dependency: File,
+        key: String = dependency.nameWithoutExtension,
+        @DelegatesTo(value = MappingEntry::class, strategy = Closure.DELEGATE_FIRST)
+        action: Closure<*>
+    ) {
+        mapping(dependency, key) {
+            action.delegate = this
+            action.resolveStrategy = Closure.DELEGATE_FIRST
+            action.call()
+        }
+    }
+
+
     abstract fun hasStubs(): Boolean
 
     @Deprecated("Use stubs instead", ReplaceWith("stubs(*namespaces, apply = apply)"))
