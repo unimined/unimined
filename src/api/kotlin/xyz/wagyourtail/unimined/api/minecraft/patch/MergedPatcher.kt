@@ -12,12 +12,11 @@ import xyz.wagyourtail.unimined.mapping.Namespace
  * @see PatchProviders
  */
 interface MergedPatcher: MinecraftPatcher, PatchProviders {
-    override var prodNamespace: Namespace
 
     @Deprecated("use prodNamespace instead", ReplaceWith("prodNamespace"))
     fun setProdNamespace(namespace: String)
 
-    fun prodNamespace(namespace: String)
+    override fun prodNamespace(namespace: String)
 
     /**
      * set which vanilla libraries to include in minecraftLibraries

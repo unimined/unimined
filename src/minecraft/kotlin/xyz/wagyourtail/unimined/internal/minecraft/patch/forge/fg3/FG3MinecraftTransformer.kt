@@ -28,6 +28,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftT
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
 import java.io.IOException
@@ -70,8 +71,8 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
             null
         }
 
-    override val prodNamespace by lazy {
-        if (userdevCfg["mcp"].asString.contains("neoform") || provider.minecraftData.mcVersionCompare(provider.version, "1.20.5") >= 0) {
+    override fun defaultProdNamespace(): Namespace {
+        return if (userdevCfg["mcp"].asString.contains("neoform") || provider.minecraftData.mcVersionCompare(provider.version, "1.20.5") >= 0) {
             provider.mappings.checkedNs("mojmap")
         } else {
             provider.mappings.checkedNs("searge")

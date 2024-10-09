@@ -52,9 +52,7 @@ open class CraftbukkitMinecraftTransformer(
         )
     }
 
-    override val prodNamespace: Namespace by lazy {
-        provider.mappings.checkedNs("spigot_prod")
-    }
+    override fun defaultProdNamespace() = provider.mappings.checkedNs("spigot_prod")
 
     val CPL_GROUPS = "cpl.pluginGroups"
 

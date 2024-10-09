@@ -28,7 +28,13 @@ interface MinecraftPatcher {
      * the namespace to use for the production jar.
      */
     @get:ApiStatus.Internal
-    val prodNamespace: Namespace
+    @set:ApiStatus.Internal
+    var prodNamespace: Namespace
+
+    /**
+     * @since 1.4.0
+     */
+    fun prodNamespace(namespace: String)
 
     /**
      * @since 0.4.2

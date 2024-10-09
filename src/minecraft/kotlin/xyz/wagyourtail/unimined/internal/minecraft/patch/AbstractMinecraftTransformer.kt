@@ -17,10 +17,12 @@ import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
+import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.FabricLikeMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixParamAnnotations
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.*
 import java.nio.file.FileSystem
 import java.nio.file.Files
@@ -36,8 +38,15 @@ abstract class AbstractMinecraftTransformer protected constructor(
 
     open val merger: ClassMerger = ClassMerger()
 
-    override val prodNamespace by lazy {
-        provider.mappings.checkedNs("official")
+    override var prodNamespace by FinalizeOnRead(LazyMutable {
+        defaultProdNamespace()
+    })
+
+    open fun defaultProdNamespace() = provider.mappings.checkedNs("official")
+
+    override fun prodNamespace(namespace: String) {
+        val delegate: FinalizeOnRead<Namespace> = AbstractMinecraftTransformer::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
+        delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })
     }
 
     override val addVanillaLibraries: Boolean by FinalizeOnRead(true)

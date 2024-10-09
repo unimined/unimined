@@ -15,10 +15,8 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinec
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.mapping.Namespace
+import xyz.wagyourtail.unimined.util.*
 import xyz.wagyourtail.unimined.util.deleteRecursively
-import xyz.wagyourtail.unimined.util.openZipFileSystem
-import xyz.wagyourtail.unimined.util.readZipInputStreamFor
-import xyz.wagyourtail.unimined.util.withSourceSet
 import java.io.File
 import java.io.InputStream
 import java.nio.file.Files
@@ -34,10 +32,6 @@ open class FG1MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
     init {
         project.logger.lifecycle("[Unimined/Forge] Using FG1 transformer")
         parent.accessTransformerTransformer.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
-    }
-
-    override val prodNamespace: Namespace by lazy {
-        provider.mappings.checkedNs("official")
     }
 
     var resolvedForgeDeps = false

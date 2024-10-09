@@ -96,11 +96,22 @@ abstract class FabricLikeMinecraftTransformer(
 
     abstract val defaultProdNamespace: String
 
-    override var prodNamespace by FinalizeOnRead(LazyMutable {
-        if (!provider.obfuscated) return@LazyMutable provider.mappings.checkedNs("official")
+    override var prodNamespace: Namespace
+        get() = super.prodNamespace
+        set(value) {
+            super.prodNamespace = value
+        }
+
+    override fun defaultProdNamespace(): Namespace {
+        if (!provider.obfuscated) return provider.mappings.checkedNs("official")
         if (customIntermediaries) throw IllegalStateException("Custom intermediaries are enabled, but prodNamespace is not overriden")
-        provider.mappings.checkedNs(defaultProdNamespace)
-    })
+        return provider.mappings.checkedNs(defaultProdNamespace)
+    }
+
+    override fun prodNamespace(namespace: String) {
+        super.prodNamespace(namespace)
+        accessWidenerTransformer.prodNamespace(namespace)
+    }
 
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
@@ -134,11 +145,6 @@ abstract class FabricLikeMinecraftTransformer(
 
     init {
         addMavens()
-    }
-
-    override fun prodNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<Namespace> = FabricLikeMinecraftTransformer::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
-        delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })
     }
 
     @Deprecated("", replaceWith = ReplaceWith("prodNamespace(namespace)"))

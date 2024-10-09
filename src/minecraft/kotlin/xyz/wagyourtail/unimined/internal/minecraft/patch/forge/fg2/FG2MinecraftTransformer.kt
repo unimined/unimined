@@ -10,6 +10,7 @@ import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2Coremod
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.mapping.EnvType
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.*
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import xyz.wagyourtail.unimined.util.readZipContents
@@ -30,9 +31,7 @@ open class FG2MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         parent.accessTransformerTransformer.accessTransformerPaths = listOf("forge_at.cfg", "fml_at.cfg")
     }
 
-    override val prodNamespace by lazy {
-        provider.mappings.checkedNs("searge")
-    }
+    override fun defaultProdNamespace() = provider.mappings.checkedNs("searge")
 
     override val merger: ClassMerger
         get() = parent.merger

@@ -12,6 +12,7 @@ import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.transformer.AccessTransformerMinecraftTransformer
+import xyz.wagyourtail.unimined.mapping.Namespace
 import xyz.wagyourtail.unimined.util.withSourceSet
 
 open class RiftMinecraftTransformer(
@@ -21,6 +22,18 @@ open class RiftMinecraftTransformer(
 ) : AbstractMinecraftTransformer(project, provider, "Rift"), RiftPatcher, AccessTransformerPatcher by accessTransformerMinecraftTransformer {
 
     private var rift: Dependency? = null
+
+    override var prodNamespace: Namespace
+        get() = super.prodNamespace
+        set(value) {
+            super.prodNamespace = value
+        }
+
+    override fun prodNamespace(namespace: String) {
+        super.prodNamespace(namespace)
+        accessTransformerMinecraftTransformer.prodNamespace(namespace)
+    }
+
     override fun loader(dep: Any, action: Dependency.() -> Unit) {
         rift = (if (dep is String && !dep.contains(":")) {
                 project.dependencies.create("org.dimdev:rift:$dep")

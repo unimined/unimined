@@ -19,8 +19,4 @@ class NoTransformReIndevTransformer(project: Project, provider: ReIndevProvider)
     "ReIndev-none"
 ) {
 
-    override val prodNamespace: Namespace by lazy {
-        provider.mappings.checkedNs("official")
-    }
-
 }

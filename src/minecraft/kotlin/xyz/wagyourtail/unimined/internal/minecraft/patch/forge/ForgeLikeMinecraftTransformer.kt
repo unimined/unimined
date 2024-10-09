@@ -110,8 +110,11 @@ abstract class ForgeLikeMinecraftTransformer(
         (forgeTransformer as JarModAgentMinecraftTransformer).transforms(transforms)
     }
 
-    override val prodNamespace: Namespace
+    override var prodNamespace: Namespace
         get() = forgeTransformer.prodNamespace
+        set(value) {
+            forgeTransformer.prodNamespace = value
+        }
 
     override var deleteMetaInf: Boolean
         get() = forgeTransformer.deleteMetaInf
@@ -260,6 +263,11 @@ abstract class ForgeLikeMinecraftTransformer(
     open val versionJsonJar by lazy {
         val forgeDep = forge.dependencies.first()
         forge.getFiles(forgeDep) { it.extension == "zip" || it.extension == "jar" }.singleFile
+    }
+
+    override fun prodNamespace(namespace: String) {
+        forgeTransformer.prodNamespace(namespace)
+        accessTransformerTransformer.prodNamespace(namespace)
     }
 
     override fun apply() {

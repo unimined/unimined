@@ -11,8 +11,4 @@ class NoTransformMinecraftTransformer(project: Project, provider: MinecraftProvi
     "none"
 ) {
 
-    override var prodNamespace: Namespace by LazyMutable {
-        provider.mappings.checkedNs("official")
-    }
-
 }

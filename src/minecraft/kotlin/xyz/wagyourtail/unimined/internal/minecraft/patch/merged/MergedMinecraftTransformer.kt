@@ -113,11 +113,7 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
 
     @Deprecated("use prodNamespace instead", replaceWith = ReplaceWith("prodNamespace"))
     override fun setProdNamespace(namespace: String) {
-        prodNamespace = provider.mappings.checkedNs(namespace)
-    }
-
-    override fun prodNamespace(namespace: String) {
-        prodNamespace = provider.mappings.checkedNs(namespace)
+        prodNamespace(namespace)
     }
 
     override fun fabric(action: FabricLikePatcher.() -> Unit) {
