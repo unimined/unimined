@@ -24,9 +24,6 @@ abstract class MigrateMappingsTask : ConventionTask() {
 
     @get:Input
     abstract val commonNamespace: Property<String>
-    init {
-        project.unimined.wagYourMaven("snapshots")
-    }
 
     /**
      * set the target version/mappings to migrate to.

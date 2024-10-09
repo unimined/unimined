@@ -14,6 +14,8 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
+
+    withSourcesJar()
 }
 
 // this is just here so we can test the outputs easier and clean between tests
