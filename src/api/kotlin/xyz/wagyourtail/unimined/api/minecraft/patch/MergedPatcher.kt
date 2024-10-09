@@ -16,6 +16,9 @@ interface MergedPatcher: MinecraftPatcher, PatchProviders {
     @Deprecated("use prodNamespace instead", ReplaceWith("prodNamespace"))
     fun setProdNamespace(namespace: String)
 
+    /**
+     * @since 1.0.0
+     */
     override fun prodNamespace(namespace: String)
 
     /**
