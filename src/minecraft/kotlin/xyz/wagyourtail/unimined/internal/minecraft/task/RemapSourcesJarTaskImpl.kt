@@ -10,9 +10,9 @@ import java.util.zip.Deflater
 import javax.inject.Inject
 import kotlin.io.path.*
 
-abstract class RemapSourcesJarTaskImpl @Inject constructor(provider: MinecraftConfig): RemapJarTaskImpl(provider) {
+abstract class RemapSourcesJarTaskImpl @Inject constructor(provider: MinecraftConfig): AbstractRemapJarTask(provider) {
     @OptIn(ExperimentalPathApi::class)
-    override fun remapToInternal(
+    override fun doRemap(
         from: Path,
         target: Path,
         fromNs: MappingNamespaceTree.Namespace,
