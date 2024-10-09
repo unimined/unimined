@@ -35,6 +35,22 @@ unimined.minecraft {
     accessWidener {
         accessWidener "src/main/resources/accessWidenerName.aw"
     }
+    
+    // you may want to set this if you want to include architectury mods in common
+    mods.modImplementation {
+        namespace("intermediary")
+    }
+    
+    // if you don't want to build/remap a "common" jar
+    if (sourceSet == sourceSets.main) {
+        defaultRemapJar = false
+    }
+}
+
+// if not disabling remapJar above, 
+// you may want to set this so the "common" jar is in intermediary to match architectury
+tasks.named("remapJar") {
+    prodNamespace("intermediary")
 }
 
 // forge
@@ -82,6 +98,22 @@ unimined.minecraft {
     accessWidener {
         accessWidener "src/main/resources/accessWidenerName.aw"
     }
+    
+    // you may want to set this if you want to include arch mods in common
+    mods.modImplementation {
+        namespace("intermediary")
+    }
+    
+    // if you don't want to build/remap a "common" jar
+    if (sourceSet == sourceSets.main) {
+        defaultRemapJar = false
+    }
+}
+
+// if not disabling remapJar above, 
+// you may want to set this so the "common" jar is in intermediary to match architectury
+tasks.named("remapJar") {
+    prodNamespace("intermediary")
 }
 ```
 

@@ -99,7 +99,14 @@ configurations {
 unimined.minecraft {
     ...
     mods {
-        remap(configurations.modCompileOnly)
+        remap(configurations.modCompileOnly) {
+        }
+        
+        // this is basically just a shortcut for `remap(configurations.modImplementation)`
+        modImplementation {
+            // you can do this is mods have the wrong access widener mapping, but it may break runs
+            catchAWNamespaceAssertion()
+        }
     }
 }
 
