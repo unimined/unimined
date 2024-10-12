@@ -16,7 +16,7 @@ import org.jetbrains.annotations.VisibleForTesting
 import xyz.wagyourtail.unimined.*
 import xyz.wagyourtail.unimined.api.minecraft.EnvType
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
-import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.patch.fabric.FabricLikeMinecraftTransformer
@@ -27,7 +27,6 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.Mcp
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpConfigStep
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.McpExecutor
 import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.resolver.AssetsDownloader
 import xyz.wagyourtail.unimined.internal.minecraft.transform.fixes.FixFG2ResourceLoading
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
 import xyz.wagyourtail.unimined.util.*
@@ -571,7 +570,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         })
     }
 
-    private fun doJarJar(remapJarTask: RemapJarTask, output: Path) {
+    private fun doJarJar(remapJarTask: AbstractRemapJarTask, output: Path) {
         if (include!!.dependencies.isEmpty()) {
             return
         }
@@ -606,7 +605,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         }
     }
 
-    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
+    override fun afterRemapJarTask(remapJarTask: AbstractRemapJarTask, output: Path) {
         if (provider.minecraftData.mcVersionCompare(provider.version, "1.18") >= 0) {
             doJarJar(remapJarTask, output)
         }

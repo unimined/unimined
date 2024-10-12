@@ -15,7 +15,7 @@ import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.api.minecraft.patch.MinecraftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
-import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
@@ -212,12 +212,12 @@ abstract class AbstractMinecraftTransformer protected constructor(
         return baseMinecraft
     }
 
-    override fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path {
+    override fun beforeRemapJarTask(remapJarTask: AbstractRemapJarTask, input: Path): Path {
         return input
     }
 
     @ApiStatus.Internal
-    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
+    override fun afterRemapJarTask(remapJarTask: AbstractRemapJarTask, output: Path) {
         // do nothing
     }
 
@@ -292,7 +292,7 @@ abstract class AbstractMinecraftTransformer protected constructor(
         output[sourceSet] = out
     }
 
-    override fun configureRemapJar(task: RemapJarTask) {}
+    override fun configureRemapJar(task: AbstractRemapJarTask) {}
 
     override fun createSourcesJar(classpath: FileCollection, patchedJar: Path, outputPath: Path, linemappedPath: Path?) {
         provider.sourceProvider.sourceGenerator.generate(provider.sourceSet.compileClasspath, patchedJar, outputPath, linemappedPath)

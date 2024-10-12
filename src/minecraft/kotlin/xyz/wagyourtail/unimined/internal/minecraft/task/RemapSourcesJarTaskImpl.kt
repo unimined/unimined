@@ -2,6 +2,7 @@ package xyz.wagyourtail.unimined.internal.minecraft.task
 
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapSourcesJarTask
 import xyz.wagyourtail.unimined.util.deleteRecursively
 import java.nio.file.Path
 import java.util.jar.JarEntry
@@ -10,7 +11,8 @@ import java.util.zip.Deflater
 import javax.inject.Inject
 import kotlin.io.path.*
 
-abstract class RemapSourcesJarTaskImpl @Inject constructor(provider: MinecraftConfig): AbstractRemapJarTask(provider) {
+abstract class RemapSourcesJarTaskImpl @Inject constructor(provider: MinecraftConfig):
+    AbstractRemapJarTaskImpl(provider), RemapSourcesJarTask {
     @OptIn(ExperimentalPathApi::class)
     override fun doRemap(
         from: Path,

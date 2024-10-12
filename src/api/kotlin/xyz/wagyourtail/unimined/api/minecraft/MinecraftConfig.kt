@@ -20,7 +20,9 @@ import xyz.wagyourtail.unimined.api.minecraft.resolver.MinecraftData
 import xyz.wagyourtail.unimined.api.mod.ModsConfig
 import xyz.wagyourtail.unimined.api.runs.RunsConfig
 import xyz.wagyourtail.unimined.api.source.SourceConfig
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapSourcesJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.util.*
 import java.io.File
@@ -269,7 +271,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     /**
      * @since 1.3.10
      */
-    fun remapSources(task: Task, action: RemapJarTask.() -> Unit) {
+    fun remapSources(task: Task, action: RemapSourcesJarTask.() -> Unit) {
         remapSources(task, "remap${task.name.capitalized()}", action)
     }
 
@@ -278,7 +280,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
      */
     fun remapSources(
         task: Task,
-        @DelegatesTo(value = RemapJarTask::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = RemapSourcesJarTask::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         remapSources(task) {
@@ -298,7 +300,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     /**
      * @since 1.3.10
      */
-    abstract fun remapSources(task: Task, name: String, action: RemapJarTask.() -> Unit)
+    abstract fun remapSources(task: Task, name: String, action: RemapSourcesJarTask.() -> Unit)
 
     /**
      * @since 1.3.10
@@ -306,7 +308,7 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
     fun remapSources(
         task: Task,
         name: String,
-        @DelegatesTo(value = RemapJarTask::class, strategy = Closure.DELEGATE_FIRST)
+        @DelegatesTo(value = RemapSourcesJarTask::class, strategy = Closure.DELEGATE_FIRST)
         action: Closure<*>
     ) {
         remapSources(task, name) {

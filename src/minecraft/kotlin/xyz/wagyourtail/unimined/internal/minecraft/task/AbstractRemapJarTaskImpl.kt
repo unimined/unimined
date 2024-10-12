@@ -5,7 +5,7 @@ import org.gradle.api.tasks.TaskAction
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.mapping.mixin.MixinRemapOptions
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
-import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
 import xyz.wagyourtail.unimined.util.LazyMutable
 import xyz.wagyourtail.unimined.util.getField
@@ -16,28 +16,28 @@ import javax.inject.Inject
 import kotlin.io.path.*
 
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractRemapJarTask @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
+abstract class AbstractRemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): AbstractRemapJarTask() {
 
     @get:Internal
     protected var mixinRemapOptions: MixinRemapOptions.() -> Unit by FinalizeOnRead {}
 
     override fun devNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = AbstractRemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
 
     override fun devFallbackNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("devFallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = AbstractRemapJarTask::class.getField("devFallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
 
     override fun prodNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = RemapJarTask::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
+        val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = AbstractRemapJarTask::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
 
     override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
-        val delegate: FinalizeOnRead<MixinRemapOptions.() -> Unit> = AbstractRemapJarTask::class.getField("mixinRemapOptions")!!.getDelegate(this) as FinalizeOnRead<MixinRemapOptions.() -> Unit>
+        val delegate: FinalizeOnRead<MixinRemapOptions.() -> Unit> = AbstractRemapJarTaskImpl::class.getField("mixinRemapOptions")!!.getDelegate(this) as FinalizeOnRead<MixinRemapOptions.() -> Unit>
         val old = delegate.value as MixinRemapOptions.() -> Unit
         mixinRemapOptions = {
             old()

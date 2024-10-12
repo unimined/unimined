@@ -7,6 +7,7 @@ import net.fabricmc.tinyremapper.TinyRemapper
 import xyz.wagyourtail.unimined.api.mapping.MappingNamespaceTree
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
 import xyz.wagyourtail.unimined.internal.mapping.aw.AccessWidenerApplier
 import xyz.wagyourtail.unimined.internal.mapping.extension.MixinRemapExtension
@@ -16,7 +17,8 @@ import javax.inject.Inject
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 
-abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig): AbstractRemapJarTask(provider) {
+abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
+    AbstractRemapJarTaskImpl(provider), RemapJarTask {
 
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
     override fun doRemap(

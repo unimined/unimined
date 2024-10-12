@@ -28,7 +28,9 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.MinecraftForgePatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapSourcesJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
@@ -147,7 +149,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    override fun remapSources(task: Task, name: String, action: RemapJarTask.() -> Unit) {
+    override fun remapSources(task: Task, name: String, action: RemapSourcesJarTask.() -> Unit) {
         val remapTask = project.tasks.register(name, RemapSourcesJarTaskImpl::class.java, this)
         remapTask.configure {
             it.dependsOn(task)
@@ -462,11 +464,12 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    private inline fun <reified T: RemapJarTask> applyDefaultRemapJar(
+    private inline fun <reified T> applyDefaultRemapJar(
         inputTaskName: String,
-        remappingFunction: (Task, RemapJarTask.() -> Unit) -> Unit,
+        remappingFunction: (Task, JarInterface<AbstractRemapJarTask>.() -> Unit) -> Unit,
         crossinline defaultTaskConfiguration: Jar.() -> Unit
-    ) {
+    ) where T : AbstractRemapJarTask, T : JarInterface<AbstractRemapJarTask> {
+
         var inputTask = project.tasks.findByName(inputTaskName.withSourceSet(sourceSet))
         if (inputTask == null && createJarTask) {
             project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Creating default $inputTaskName for $sourceSet")
@@ -500,7 +503,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             remappingFunction(inputTask) {
                 group = "unimined"
                 description = "Remaps $inputTask's output jar"
-                archiveClassifier.set(classifier)
+                asJar.archiveClassifier.set(classifier)
             }
             project.tasks.getByName("build").dependsOn("remap" + inputTask.name.capitalized())
         } else {

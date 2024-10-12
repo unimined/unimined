@@ -14,7 +14,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessWidenerPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.fabric.FabricLikePatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
-import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.ii.InterfaceInjectionMinecraftTransformer
@@ -23,7 +23,6 @@ import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
 import xyz.wagyourtail.unimined.internal.minecraft.patch.access.widener.AccessWidenerMinecraftTransformer
-import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.parseLibrary
 import xyz.wagyourtail.unimined.internal.minecraft.transform.merge.ClassMerger
@@ -34,10 +33,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import java.nio.file.attribute.FileTime
-import java.util.concurrent.TimeUnit
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
 
 abstract class FabricLikeMinecraftTransformer(
@@ -321,7 +316,7 @@ abstract class FabricLikeMinecraftTransformer(
         icp
     }
 
-    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
+    override fun afterRemapJarTask(remapJarTask: AbstractRemapJarTask, output: Path) {
         insertIncludes(output)
         insertAW(output)
     }
