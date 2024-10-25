@@ -5,7 +5,6 @@ import okio.buffer
 import okio.sink
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
-import org.gradle.internal.impldep.org.eclipse.jgit.lib.ObjectChecker
 import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
 import xyz.wagyourtail.unimined.internal.mapping.MappingsProvider
 import xyz.wagyourtail.unimined.mapping.EnvType
@@ -15,11 +14,8 @@ import xyz.wagyourtail.unimined.mapping.visitor.JavadocParentNode
 import xyz.wagyourtail.unimined.mapping.visitor.JavadocVisitor
 import xyz.wagyourtail.unimined.mapping.visitor.delegate.Delegator
 import xyz.wagyourtail.unimined.mapping.visitor.delegate.delegator
-import java.io.OutputStreamWriter
-import java.nio.charset.StandardCharsets
+import xyz.wagyourtail.unimined.mapping.visitor.delegate.mapNs
 import java.nio.file.StandardOpenOption
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 import kotlin.io.path.outputStream
 
@@ -71,6 +67,8 @@ open class ExportMappingsTaskImpl @Inject constructor(@get:Internal val mappings
                 .use { os ->
                     os.sink().buffer().use { sink ->
                         var write = type!!.write(sink, envType ?: EnvType.JOINED)
+                            .mapNs(renameNs.mapValues { Namespace(it.value) })
+
                         if (skipComments) {
                             write = write.delegator(object : Delegator() {
                                 override fun visitJavadoc(
@@ -78,7 +76,11 @@ open class ExportMappingsTaskImpl @Inject constructor(@get:Internal val mappings
                                     value: String,
                                     namespaces: Set<Namespace>
                                 ): JavadocVisitor? {
-                                    return null
+                                    return if (skipComments) {
+                                        null
+                                    } else {
+                                        super.visitJavadoc(delegate, value, namespaces)
+                                    }
                                 }
                             })
                         }
