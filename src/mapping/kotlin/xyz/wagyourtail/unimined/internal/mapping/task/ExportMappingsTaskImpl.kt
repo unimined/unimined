@@ -76,7 +76,6 @@ open class ExportMappingsTaskImpl @Inject constructor(@get:Internal val mappings
                                 override fun visitJavadoc(
                                     delegate: JavadocParentNode<*>,
                                     value: String,
-                                    baseNs: Namespace,
                                     namespaces: Set<Namespace>
                                 ): JavadocVisitor? {
                                     return null
