@@ -780,7 +780,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                     lvOrd: Int?,
                     names: Map<Namespace, String>
                 ): ParameterVisitor? {
-                    if (srcName in names && dstName in names && lvOrd != null) {
+                    if (dstName in names && lvOrd != null) {
                         val toArgName = names[dstName]!!
                         acceptor.acceptMethodArg(fromMethod, lvOrd, toArgName)
                     }
@@ -793,7 +793,7 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                     startOp: Int?,
                     names: Map<Namespace, String>
                 ): LocalVariableVisitor? {
-                    if (srcName in names && dstName in names) {
+                    if (dstName in names) {
                         val toLocalVarName = names[dstName]!!
                         acceptor.acceptMethodVar(fromMethod, lvOrd, startOp ?: -1, -1, toLocalVarName)
                     }
