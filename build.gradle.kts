@@ -30,6 +30,7 @@ kotlin {
 repositories {
     mavenLocal()
     mavenCentral()
+    maven("https://maven.wagyourtail.xyz/releases/")
     maven("https://maven.wagyourtail.xyz/snapshots/")
     maven {
         url = URI.create("https://maven.neoforged.net/releases")
