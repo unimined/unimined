@@ -13,6 +13,7 @@ import java.nio.file.StandardCopyOption
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.createDirectories
 import kotlin.io.path.inputStream
+import kotlin.time.Duration
 
 object AssetsDownloader {
 
@@ -68,6 +69,8 @@ object AssetsDownloader {
                         size,
                         hash,
                         assetPath,
+                        ignoreShaOnCache = true,
+                        expireTime = Duration.INFINITE
                     )
 
                     if (copyToResources) {

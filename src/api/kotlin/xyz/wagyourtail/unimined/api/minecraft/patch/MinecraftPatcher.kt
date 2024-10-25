@@ -5,6 +5,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream
 import org.gradle.api.file.FileCollection
 import org.jetbrains.annotations.ApiStatus
 import org.objectweb.asm.tree.ClassNode
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.mapping.Namespace
 import java.nio.file.FileSystem
@@ -53,10 +54,10 @@ interface MinecraftPatcher {
     }
 
     @ApiStatus.Internal
-    fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path
+    fun beforeRemapJarTask(remapJarTask: AbstractRemapJarTask, input: Path): Path
 
     @ApiStatus.Internal
-    fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path)
+    fun afterRemapJarTask(remapJarTask: AbstractRemapJarTask, output: Path)
 
     @get:ApiStatus.Internal
     @set:ApiStatus.Experimental
@@ -67,7 +68,7 @@ interface MinecraftPatcher {
     var unprotectRuntime: Boolean
 
     @ApiStatus.Internal
-    fun configureRemapJar(task: RemapJarTask)
+    fun configureRemapJar(task: AbstractRemapJarTask)
 
     @ApiStatus.Internal
     fun createSourcesJar(classpath: FileCollection, patchedJar: Path, outputPath: Path, linemappedPath: Path?)

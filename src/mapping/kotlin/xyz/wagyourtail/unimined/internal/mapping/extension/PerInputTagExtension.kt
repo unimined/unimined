@@ -16,12 +16,12 @@ abstract class PerInputTagExtension<T : PerInputTagExtension.InputTagExtension> 
     object SKIP
 
     companion object {
-        fun getInputTag(cls: TrClass): List<InputTag>? {
-            if (cls !is ClassInstance) return null
+        fun getInputTag(cls: TrClass): List<InputTag?> {
+            if (cls !is ClassInstance) return listOf(null)
             // InputTag[] getInputTags()
             ClassInstance::class.java.getDeclaredMethod("getInputTags").apply {
                 isAccessible = true
-                val arr = (invoke(cls) as Array<InputTag>?) ?: return null
+                val arr = (invoke(cls) as Array<InputTag?>?) ?: return listOf(null)
                 return arr.toList()
             }
         }
@@ -73,14 +73,12 @@ abstract class PerInputTagExtension<T : PerInputTagExtension.InputTagExtension> 
 
     private fun preApplyVisitor(cls: TrClass, next: ClassVisitor): ClassVisitor {
         val tags = getInputTag(cls)
-        return tags?.reduce(next) { ni -> inputTagExtensions[this]!!.preApplyVisitor(cls, ni) }
-            ?: inputTagExtensions[SKIP]!!.preApplyVisitor(cls, next)
+        return tags.reduce(next) { ni -> inputTagExtensions[this ?: SKIP]!!.preApplyVisitor(cls, ni) }
     }
 
     private fun postApplyVisitor(cls: TrClass, next: ClassVisitor): ClassVisitor {
         val tags = getInputTag(cls)
-        return tags?.reduce(next) { ni -> inputTagExtensions[this]!!.postApplyVisitor(cls, ni) }
-            ?: inputTagExtensions[SKIP]!!.postApplyVisitor(cls, next)
+        return tags.reduce(next) { ni -> inputTagExtensions[this ?: SKIP]!!.postApplyVisitor(cls, ni) }
     }
 
     fun insertExtra(tag: InputTag, fs: FileSystem) {

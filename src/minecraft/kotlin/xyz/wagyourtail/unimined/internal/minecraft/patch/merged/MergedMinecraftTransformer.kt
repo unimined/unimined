@@ -16,7 +16,7 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.forge.NeoForgedPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.minecraft.patch.rift.RiftPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
-import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.AbstractMinecraftTransformer
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftJar
@@ -34,8 +34,6 @@ import xyz.wagyourtail.unimined.internal.minecraft.patch.jarmod.JarModAgentMinec
 import xyz.wagyourtail.unimined.internal.minecraft.patch.rift.RiftMinecraftTransformer
 import xyz.wagyourtail.unimined.internal.minecraft.resolver.Library
 import xyz.wagyourtail.unimined.util.FinalizeOnRead
-import xyz.wagyourtail.unimined.util.MustSet
-import java.nio.file.FileSystem
 import java.nio.file.Path
 
 class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider): AbstractMinecraftTransformer(project, provider, "merged"), MergedPatcher {
@@ -77,7 +75,7 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         }
     }
 
-    override fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path {
+    override fun beforeRemapJarTask(remapJarTask: AbstractRemapJarTask, input: Path): Path {
         return patchers.fold(input) {
             acc, patcher -> patcher.beforeRemapJarTask(remapJarTask, acc)
         }
@@ -91,7 +89,7 @@ class MergedMinecraftTransformer(project: Project, provider: MinecraftProvider):
         patchers.forEach { it.afterEvaluate() }
     }
 
-    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
+    override fun afterRemapJarTask(remapJarTask: AbstractRemapJarTask, output: Path) {
         patchers.forEach { it.afterRemapJarTask(remapJarTask, output) }
     }
 

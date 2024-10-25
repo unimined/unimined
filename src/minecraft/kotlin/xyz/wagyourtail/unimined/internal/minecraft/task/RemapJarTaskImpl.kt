@@ -19,71 +19,12 @@ import xyz.wagyourtail.unimined.util.*
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import javax.inject.Inject
-import kotlin.io.path.*
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.outputStream
 
-abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): RemapJarTask() {
-
-    private var mixinRemapOptions: MixinRemapOptions.() -> Unit by FinalizeOnRead {}
-
-    override fun devNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<Namespace> = RemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
-        delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })
-    }
-
-    override fun prodNamespace(namespace: String) {
-        val delegate: FinalizeOnRead<Namespace> = RemapJarTask::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<Namespace>
-        delegate.setValueIntl(LazyMutable { provider.mappings.checkedNs(namespace) })
-    }
-
-    override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
-        val delegate: FinalizeOnRead<MixinRemapOptions.() -> Unit> = RemapJarTaskImpl::class.getField("mixinRemapOptions")!!.getDelegate(this) as FinalizeOnRead<MixinRemapOptions.() -> Unit>
-        val old = delegate.value as MixinRemapOptions.() -> Unit
-        mixinRemapOptions = {
-            old()
-            action()
-        }
-    }
-
-    override var allowImplicitWildcards by FinalizeOnRead(false)
-
-    @TaskAction
-    @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
-    fun run() {
-        val prodNs = prodNamespace ?: provider.mcPatcher.prodNamespace!!
-        val devNs = devNamespace ?: provider.mappings.devNamespace!!
-
-        val inputFile = provider.mcPatcher.beforeRemapJarTask(this, inputFile.get().asFile.toPath())
-
-        if (devNs == prodNs) {
-            project.logger.lifecycle("[Unimined/RemapJar ${this.path}] detected empty remap path, jumping to after remap tasks")
-            provider.mcPatcher.afterRemapJarTask(this, inputFile)
-            afterRemap(inputFile)
-            return
-        }
-
-        project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.name} from $devNs to $prodNs")
-        val prodMapped = temporaryDir.toPath().resolve("${inputFile.nameWithoutExtension}-temp-${prodNs}.jar")
-        prodMapped.deleteIfExists()
-
-        val mc = provider.getMinecraft(devNs)
-
-        val classpath = provider.mods.getClasspathAs(
-            devNs,
-            provider.sourceSet.compileClasspath.files
-        ).map { it.toPath() }.filter { it.exists() && !provider.isMinecraftJar(it) }
-
-        project.logger.debug("[Unimined/RemapJar ${path}] classpath: ")
-        classpath.forEach {
-            project.logger.debug("[Unimined/RemapJar ${path}]    $it")
-        }
-
-        remapToInternal(inputFile, prodMapped, devNs, prodNs, (classpath + listOf(mc)).toTypedArray())
-
-        project.logger.info("[Unimined/RemapJar ${path}] after remap tasks started ${System.currentTimeMillis()}")
-        provider.mcPatcher.afterRemapJarTask(this, prodMapped)
-        afterRemap(prodMapped)
-        project.logger.info("[Unimined/RemapJar ${path}] after remap tasks finished ${System.currentTimeMillis()}")
-    }
+abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
+    AbstractRemapJarTaskImpl(provider), RemapJarTask {
 
     private fun afterRemap(afterRemapJar: Path) {
         // merge in manifest from input jar
@@ -103,13 +44,13 @@ abstract class RemapJarTaskImpl @Inject constructor(@get:Internal val provider: 
     }
 
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
-    protected fun remapToInternal(
+    override fun doRemap(
         from: Path,
         target: Path,
         fromNs: Namespace,
         toNs: Namespace,
         classpathList: Array<Path>
-    ) = runBlocking {
+    ): Unit = runBlocking {
         project.logger.info("[Unimined/RemapJar ${path}] remapping $fromNs -> $toNs (start time: ${System.currentTimeMillis()})")
         val remapperB = TinyRemapper.newRemapper()
             .withMappings(

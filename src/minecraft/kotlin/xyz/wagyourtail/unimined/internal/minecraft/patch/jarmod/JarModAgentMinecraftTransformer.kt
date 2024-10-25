@@ -4,7 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ExternalDependency
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
-import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
@@ -104,7 +104,7 @@ open class JarModAgentMinecraftTransformer(
         //TODO: add mods to priority classpath, and resolve their jma.transformers
     }
 
-    override fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path {
+    override fun beforeRemapJarTask(remapJarTask: AbstractRemapJarTask, input: Path): Path {
         remapJarTask.mixinRemap {
             enableJarModAgent()
         }

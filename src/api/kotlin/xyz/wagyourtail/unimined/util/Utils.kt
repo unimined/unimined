@@ -154,14 +154,15 @@ fun Project.cachingDownload(url: String): Path {
 fun Project.cachingDownload(
     url: URI,
     size: Long = -1L,
-    sha1: String = "",
+    sha1: String? = null,
     cachePath: Path = unimined.getGlobalCache().resolve(url.path.substring(1)),
+    ignoreShaOnCache: Boolean = false,
     expireTime: Duration = 1.days,
     retryCount: Int = 3,
     backoff: (Int) -> Int = { 1000 * 3.0.pow(it.toDouble()).toInt() }, // first backoff -> 1s, second -> 3s, third -> 9s
 ): Path {
     if (gradle.startParameter.isOffline) {
-        if (testSha1(size, sha1, cachePath, Long.MAX_VALUE.milliseconds)) {
+        if (testSha1(size, if (ignoreShaOnCache) null else sha1, cachePath, Duration.INFINITE)) {
             return cachePath
         }
         if (cachePath.exists()) {
@@ -170,10 +171,21 @@ fun Project.cachingDownload(
             throw IllegalStateException("cached $url at $cachePath doesn't exist and offline mode is enabled")
         }
     }
-    if (testSha1(size, sha1, cachePath, if (gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) 0.seconds else expireTime)) {
+
+    val cacheTime = if (gradle.startParameter.isRefreshDependencies || project.unimined.forceReload) 0.seconds
+        else if (ignoreShaOnCache) Duration.INFINITE
+        else expireTime
+
+    if (testSha1(
+            size,
+            if (ignoreShaOnCache) null else sha1,
+            cachePath,
+            cacheTime
+    )) {
         logger.info("[Unimined/Cache] Using cached $url at $cachePath")
         return cachePath
     }
+
     var exception: Exception? = null
     cachePath.parent?.createDirectories()
     logger.info("[Unimined/Cache] Downloading $url to $cachePath")
@@ -197,17 +209,20 @@ fun Project.cachingDownload(
         logger.warn("[Unimined/Cache] Failed to download $url, retrying in ${backoff(i)}ms...")
         Thread.sleep(backoff(i).toLong())
     }
+
+    // should only happen if ignoreShaOnCache is false
     if (testSha1(size, sha1, cachePath, Long.MAX_VALUE.milliseconds)) {
         logger.warn("[Unimined/Cache] Falling back on expired cache $cachePath for $url")
         return cachePath
     }
+
     throw IllegalStateException("Failed to download $url", exception)
 }
 
-fun testSha1(size: Long, sha1: String, path: Path, expireTime: Duration = 1.days): Boolean {
+fun testSha1(size: Long, sha1: String?, path: Path, expireTime: Duration = 1.days): Boolean {
     if (path.exists()) {
         if (path.fileSize() == size || size == -1L) {
-            if (sha1.isEmpty()) {
+            if (sha1.isNullOrEmpty()) {
                 // fallback: expire if older than a day
                 return path.getLastModifiedTime().toMillis() > System.currentTimeMillis() - expireTime.inWholeMilliseconds
             }

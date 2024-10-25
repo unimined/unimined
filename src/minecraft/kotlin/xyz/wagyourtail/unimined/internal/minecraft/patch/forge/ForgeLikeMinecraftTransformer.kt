@@ -17,6 +17,8 @@ import xyz.wagyourtail.unimined.api.minecraft.patch.ataw.AccessTransformerPatche
 import xyz.wagyourtail.unimined.api.minecraft.patch.forge.ForgeLikePatcher
 import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.runs.RunConfig
+import xyz.wagyourtail.unimined.api.mapping.task.ExportMappingsTask
+import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.api.uniminedMaybe
 import xyz.wagyourtail.unimined.internal.mapping.at.AccessTransformerApplier
@@ -399,7 +401,7 @@ abstract class ForgeLikeMinecraftTransformer(
         }
     }
 
-    override fun afterRemapJarTask(remapJarTask: RemapJarTask, output: Path) {
+    override fun afterRemapJarTask(remapJarTask: AbstractRemapJarTask, output: Path) {
         forgeTransformer.afterRemapJarTask(remapJarTask, output)
     }
 
@@ -423,11 +425,11 @@ abstract class ForgeLikeMinecraftTransformer(
         return forgeTransformer.name()
     }
 
-    override fun beforeRemapJarTask(remapJarTask: RemapJarTask, input: Path): Path {
+    override fun beforeRemapJarTask(remapJarTask: AbstractRemapJarTask, input: Path): Path {
         return forgeTransformer.beforeRemapJarTask(remapJarTask, input)
     }
 
-    override fun configureRemapJar(task: RemapJarTask) {
+    override fun configureRemapJar(task: AbstractRemapJarTask) {
         forgeTransformer.configureRemapJar(task)
     }
 
