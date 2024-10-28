@@ -216,7 +216,6 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, subKey: Str
                 mojmap()
                 addDependency(key, MappingEntry(contentOf(mappings), "$key-$version").apply {
                     mapNamespace("obf" to "official")
-                    requires("mojmap")
                     provides("srg" to false)
                 })
             }) {
