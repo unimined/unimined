@@ -3,13 +3,13 @@ package xyz.wagyourtail.unimined
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.tasks.SourceSet
-import org.gradle.configurationcache.extensions.capitalized
 import xyz.wagyourtail.unimined.api.UniminedExtension
 import xyz.wagyourtail.unimined.api.source.task.MigrateMappingsTask
 import xyz.wagyourtail.unimined.api.minecraft.MinecraftConfig
 import xyz.wagyourtail.unimined.internal.mapping.task.MigrateMappingsTaskImpl
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.reindev.ReIndevProvider
+import xyz.wagyourtail.unimined.util.capitalized
 import xyz.wagyourtail.unimined.util.defaultedMapOf
 import xyz.wagyourtail.unimined.util.withSourceSet
 import java.net.URI
@@ -140,7 +140,7 @@ open class UniminedExtensionImpl(project: Project) : UniminedExtension(project) 
     val legacyFabricMaven by lazy {
         project.repositories.maven {
             it.name = "legacyFabric"
-            it.url = URI.create("https://repo.legacyfabric.net/repository/legacyfabric")
+            it.url = URI.create("https://maven.legacyfabric.net")
         }
     }
     override fun legacyFabricMaven() {
