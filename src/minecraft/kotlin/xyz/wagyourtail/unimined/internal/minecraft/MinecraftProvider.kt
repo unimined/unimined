@@ -450,20 +450,6 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    private fun applyDefaultRemapJars() {
-        applyDefaultRemapJar<RemapJarTaskImpl>("jar", ::remap) {
-            from(sourceSet.output)
-            archiveClassifier.set(sourceSet.name)
-            from(combinedWithList.map { it.second.output })
-        }
-
-        applyDefaultRemapJar<RemapSourcesJarTaskImpl>("sourcesJar", ::remapSources) {
-            from(sourceSet.allSource)
-            archiveClassifier.set("${sourceSet.name}-sources")
-            from(combinedWithList.map { it.second.allSource })
-        }
-    }
-
     private inline fun <reified T> applyDefaultRemapJar(
         inputTaskName: String,
         remappingFunction: (Task, JarInterface<AbstractRemapJarTask>.() -> Unit) -> Unit,
@@ -611,7 +597,19 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         if (mcPatcher.addVanillaLibraries) addLibraries(minecraftData.metadata.libraries)
 
         if (defaultRemapJar) {
-            applyDefaultRemapJars()
+            applyDefaultRemapJar<RemapJarTaskImpl>("jar", ::remap) {
+                from(sourceSet.output)
+                archiveClassifier.set(sourceSet.name)
+                from(combinedWithList.map { it.second.output })
+            }
+        }
+
+        if (defaultRemapSourcesJar) {
+            applyDefaultRemapJar<RemapSourcesJarTaskImpl>("sourcesJar", ::remapSources) {
+                from(sourceSet.allSource)
+                archiveClassifier.set("${sourceSet.name}-sources")
+                from(combinedWithList.map { it.second.allSource })
+            }
         }
 
         // apply minecraft patcher changes
