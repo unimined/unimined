@@ -105,7 +105,7 @@ abstract class FabricLikeMinecraftTransformer(
             .createDirectories()
             .resolve("intermediary2named-${provider.mappings.exportKey()}.jar")
             .apply {
-                if(!exists()) {
+                if(!exists() || project.unimined.forceReload) {
                     val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
                         location = toFile()
                         type = ExportMappingsTask.MappingExportTypes.TINY_V2

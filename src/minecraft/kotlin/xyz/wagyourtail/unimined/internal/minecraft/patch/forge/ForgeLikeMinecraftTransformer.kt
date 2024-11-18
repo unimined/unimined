@@ -202,7 +202,7 @@ abstract class ForgeLikeMinecraftTransformer(
     @set:ApiStatus.Experimental
     var srgToMCPAsSRG: Path by FinalizeOnRead(LazyMutable {
         provider.localCache.resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.srg").apply {
-            if (!exists()) {
+            if (!exists() || project.unimined.forceReload) {
                 val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
                     location = toFile()
                     type = ExportMappingsTask.MappingExportTypes.SRG
@@ -219,7 +219,7 @@ abstract class ForgeLikeMinecraftTransformer(
     @set:ApiStatus.Experimental
     var srgToMCPAsMCP: Path by FinalizeOnRead(LazyMutable {
         provider.localCache.resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.jar").apply {
-            if (!exists()) {
+            if (!exists() || project.unimined.forceReload) {
                 val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
                     location = toFile()
                     type = ExportMappingsTask.MappingExportTypes.MCP
