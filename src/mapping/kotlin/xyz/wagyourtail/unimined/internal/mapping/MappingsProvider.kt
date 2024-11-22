@@ -624,8 +624,10 @@ class MappingsProvider(project: Project, minecraft: MinecraftConfig, val mapping
 
     public fun mappingCacheFile(): Path =
         (if (hasStubs) minecraft.localCache else project.unimined.getGlobalCache())
-            .resolve("mappings").resolve("${mappingKey}-${side}-${combinedNames}.tiny")
+            .resolve("mappings").resolve("${exportKey()}.tiny")
 
+    public fun exportKey(): String =
+        "${mappingKey}-${side}-${combinedNames}"
 
     override val combinedNames: String by lazy {
         if (!freeze) freeze = true
