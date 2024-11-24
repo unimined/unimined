@@ -455,49 +455,43 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         remappingFunction: (Task, JarInterface<AbstractRemapJarTask>.() -> Unit) -> Unit,
         crossinline defaultTaskConfiguration: Jar.() -> Unit
     ) where T : AbstractRemapJarTask, T : JarInterface<AbstractRemapJarTask> {
+        val inputTaskNameSS = inputTaskName.withSourceSet(sourceSet)
 
-        var inputTask = project.tasks.findByName(inputTaskName.withSourceSet(sourceSet))
-        if (inputTask == null && createJarTask) {
-            project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Creating default $inputTaskName for $sourceSet")
-            inputTask = project.tasks.create(inputTaskName.withSourceSet(sourceSet), Jar::class.java) {
-                it.group = "build"
-                defaultTaskConfiguration(it)
-            }
-        } else if (inputTask != null) {
-            if (inputTask is Jar) {
-                inputTask.also {
-                    it.from(sourceSet.allSource)
-                    for ((_, sourceSet) in combinedWithList) {
-                        it.from(sourceSet.allSource)
-                    }
-                }
+        var inputTask = project.tasks.findByName(inputTaskNameSS)
+        if (inputTask == null) {
+            if(createJarTask) {
+                project.logger.info("[Unimined/Minecraft ${project.path}:${sourceSet.name}] Creating default $inputTaskName for $sourceSet")
+                inputTask = project.tasks.create(inputTaskNameSS, Jar::class.java) {
+                    it.group = "build"
+                    defaultTaskConfiguration(it)
+                } as Jar
             } else {
-                project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] task $inputTaskName for $sourceSet is not an instance of ${Jar::class.qualifiedName}")
+                project.logger.warn(
+                    "[Unimined/Minecraft ${project.path}:${sourceSet.name}] Could not find default task '${inputTaskName.withSourceSet(sourceSet)} for $sourceSet."
+                )
+                project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] add manually with `remap(task)` in the minecraft block for $sourceSet")
                 return
             }
+        } else if (inputTask !is Jar) {
+            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] task $inputTaskName for $sourceSet is not an instance of ${Jar::class.qualifiedName}")
+            return
         }
 
-        if (inputTask != null && inputTask is Jar) {
-            val classifier: String = inputTask.archiveClassifier.getOrElse("")
-            inputTask.apply {
-                if (classifier.isNotEmpty()) {
-                    archiveClassifier.set("$classifier-dev")
-                } else {
-                    archiveClassifier.set("dev")
-                }
-            }
-            remappingFunction(inputTask) {
-                group = "unimined"
-                description = "Remaps $inputTask's output jar"
-                asJar.archiveClassifier.set(classifier)
-            }
-            project.tasks.getByName("build").dependsOn("remap" + inputTask.name.capitalized())
-        } else {
-            project.logger.warn(
-                "[Unimined/Minecraft ${project.path}:${sourceSet.name}] Could not find default task '${inputTaskName.withSourceSet(sourceSet)} for $sourceSet."
-            )
-            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] add manually with `remapSources(task)` in the minecraft block for $sourceSet")
+        val oldClassifier = inputTask.archiveClassifier.orNull
+        inputTask.apply {
+            archiveClassifier.set(if(!oldClassifier.isNullOrEmpty()) "$oldClassifier-dev" else "dev")
         }
+
+        var remapTask: JarInterface<AbstractRemapJarTask>? = null
+
+        remappingFunction(inputTask) {
+            remapTask = this
+            group = "unimined"
+            description = "Remaps $inputTask's output jar"
+            asJar.archiveClassifier.set(oldClassifier)
+        }
+
+        project.tasks.getByName("build").dependsOn(remapTask)
     }
 
     fun applyRunConfigs() {
