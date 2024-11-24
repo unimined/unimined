@@ -103,17 +103,19 @@ abstract class FabricLikeMinecraftTransformer(
         provider.localCache
             .resolve("mappings")
             .createDirectories()
-            .resolve("intermediary2named.jar")
+            .resolve("intermediary2named-${provider.mappings.exportKey()}.jar")
             .apply {
-                val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
-                    location = toFile()
-                    type = ExportMappingsTask.MappingExportTypes.TINY_V2
-                    sourceNamespace = prodNamespace
-                    targetNamespace = setOf(provider.mappings.devNamespace)
-                    renameNs[provider.mappings.devNamespace] = "named"
+                if(!exists() || project.unimined.forceReload) {
+                    val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
+                        location = toFile()
+                        type = ExportMappingsTask.MappingExportTypes.TINY_V2
+                        sourceNamespace = prodNamespace
+                        targetNamespace = setOf(provider.mappings.devNamespace)
+                        renameNs[provider.mappings.devNamespace] = "named"
+                    }
+                    export.validate()
+                    export.exportFunc(provider.mappings.mappingTree)
                 }
-                export.validate()
-                export.exportFunc(provider.mappings.mappingTree)
             }
     })
 

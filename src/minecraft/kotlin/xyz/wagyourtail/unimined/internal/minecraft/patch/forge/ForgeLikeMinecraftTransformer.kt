@@ -35,6 +35,7 @@ import java.io.File
 import java.io.InputStreamReader
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
 
 abstract class ForgeLikeMinecraftTransformer(
     project: Project,
@@ -201,14 +202,16 @@ abstract class ForgeLikeMinecraftTransformer(
     @set:ApiStatus.Experimental
     var srgToMCPAsSRG: Path by FinalizeOnRead(LazyMutable {
         provider.localCache.resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.srg").apply {
-            val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
-                location = toFile()
-                type = ExportMappingsTask.MappingExportTypes.SRG
-                sourceNamespace = provider.mappings.getNamespace("searge")
-                targetNamespace = setOf(provider.mappings.devNamespace)
+            if (!exists() || project.unimined.forceReload) {
+                val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
+                    location = toFile()
+                    type = ExportMappingsTask.MappingExportTypes.SRG
+                    sourceNamespace = provider.mappings.getNamespace("searge")
+                    targetNamespace = setOf(provider.mappings.devNamespace)
+                }
+                export.validate()
+                export.exportFunc(provider.mappings.mappingTree)
             }
-            export.validate()
-            export.exportFunc(provider.mappings.mappingTree)
         }
     })
 
@@ -216,16 +219,18 @@ abstract class ForgeLikeMinecraftTransformer(
     @set:ApiStatus.Experimental
     var srgToMCPAsMCP: Path by FinalizeOnRead(LazyMutable {
         provider.localCache.resolve("mappings").createDirectories().resolve(provider.mappings.combinedNames).resolve("srg2mcp.jar").apply {
-            val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
-                location = toFile()
-                type = ExportMappingsTask.MappingExportTypes.MCP
-                sourceNamespace = provider.mappings.getNamespace("searge")
-                skipComments = true // the reader forge uses now is too dumb...
-                targetNamespace = setOf(provider.mappings.devNamespace)
-                envType = provider.side
+            if (!exists() || project.unimined.forceReload) {
+                val export = ExportMappingsTaskImpl.ExportImpl(provider.mappings).apply {
+                    location = toFile()
+                    type = ExportMappingsTask.MappingExportTypes.MCP
+                    sourceNamespace = provider.mappings.getNamespace("searge")
+                    skipComments = true // the reader forge uses now is too dumb...
+                    targetNamespace = setOf(provider.mappings.devNamespace)
+                    envType = provider.side
+                }
+                export.validate()
+                export.exportFunc(provider.mappings.mappingTree)
             }
-            export.validate()
-            export.exportFunc(provider.mappings.mappingTree)
         }
     })
 
