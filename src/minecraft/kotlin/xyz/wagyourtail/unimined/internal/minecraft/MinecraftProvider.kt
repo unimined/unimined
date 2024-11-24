@@ -464,7 +464,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
                 inputTask = project.tasks.create(inputTaskNameSS, Jar::class.java) {
                     it.group = "build"
                     defaultTaskConfiguration(it)
-                }
+                } as Jar
             } else {
                 project.logger.warn(
                     "[Unimined/Minecraft ${project.path}:${sourceSet.name}] Could not find default task '${inputTaskName.withSourceSet(sourceSet)} for $sourceSet."
@@ -472,26 +472,26 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
                 project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] add manually with `remap(task)` in the minecraft block for $sourceSet")
                 return
             }
-        } else {
-            if (inputTask !is Jar) {
-                project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] task $inputTaskName for $sourceSet is not an instance of ${Jar::class.qualifiedName}")
-                return
-            }
+        } else if (inputTask !is Jar) {
+            project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] task $inputTaskName for $sourceSet is not an instance of ${Jar::class.qualifiedName}")
+            return
         }
-
-        inputTask as Jar
 
         val oldClassifier = inputTask.archiveClassifier.orNull
         inputTask.apply {
             archiveClassifier.set(if(!oldClassifier.isNullOrEmpty()) "$oldClassifier-dev" else "dev")
         }
 
+        var remapTask: JarInterface<AbstractRemapJarTask>? = null
+
         remappingFunction(inputTask) {
+            remapTask = this
             group = "unimined"
             description = "Remaps $inputTask's output jar"
             asJar.archiveClassifier.set(oldClassifier)
         }
-        project.tasks.getByName("build").dependsOn("remap" + inputTask.name.capitalized())
+
+        project.tasks.getByName("build").dependsOn(remapTask)
     }
 
     fun applyRunConfigs() {
