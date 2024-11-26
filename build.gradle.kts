@@ -166,7 +166,7 @@ dependencies {
     implementation("commons-io:commons-io:2.16.1")
 
     // pack200 provided by apache commons-compress
-    implementation("org.apache.commons:commons-compress:1.26.1")
+    implementation("org.apache.commons:commons-compress:1.27.1")
 
     // aw
     implementation("net.fabricmc:access-widener:2.1.0")
