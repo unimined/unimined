@@ -482,16 +482,12 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             archiveClassifier.set(if(!oldClassifier.isNullOrEmpty()) "$oldClassifier-dev" else "dev")
         }
 
-        var remapTask: JarInterface<AbstractRemapJarTask>? = null
-
         remappingFunction(inputTask) {
-            remapTask = this
             group = "unimined"
             description = "Remaps $inputTask's output jar"
             asJar.archiveClassifier.set(oldClassifier)
+            project.tasks.getByName("build").dependsOn(this)
         }
-
-        project.tasks.getByName("build").dependsOn(remapTask)
     }
 
     fun applyRunConfigs() {
