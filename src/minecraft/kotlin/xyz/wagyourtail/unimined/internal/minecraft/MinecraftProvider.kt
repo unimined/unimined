@@ -7,6 +7,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.ApiStatus
@@ -137,7 +138,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         // remove unimined deps
     }
 
-    override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit) {
+    override fun remap(task: Task, name: String, action: RemapJarTask.() -> Unit): TaskProvider<RemapJarTask> {
         val remapTask = project.tasks.register(name, RemapJarTaskImpl::class.java, this)
         remapTask.configure {
             it.dependsOn(task)
@@ -147,9 +148,10 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             it.action()
             mcPatcher.configureRemapJar(it)
         }
+        return remapTask as TaskProvider<RemapJarTask>
     }
 
-    override fun remapSources(task: Task, name: String, action: RemapSourcesJarTask.() -> Unit) {
+    override fun remapSources(task: Task, name: String, action: RemapSourcesJarTask.() -> Unit): TaskProvider<RemapSourcesJarTask> {
         val remapTask = project.tasks.register(name, RemapSourcesJarTaskImpl::class.java, this)
         remapTask.configure {
             it.dependsOn(task)
@@ -159,6 +161,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             it.action()
             mcPatcher.configureRemapJar(it)
         }
+        return remapTask as TaskProvider<RemapSourcesJarTask>
     }
 
     override val mergedOfficialMinecraftFile: File? by lazy {
@@ -452,7 +455,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
 
     private inline fun <reified T> applyDefaultRemapJar(
         inputTaskName: String,
-        remappingFunction: (Task, JarInterface<AbstractRemapJarTask>.() -> Unit) -> Unit,
+        remappingFunction: (Task, JarInterface<AbstractRemapJarTask>.() -> Unit) -> TaskProvider<*>,
         crossinline defaultTaskConfiguration: Jar.() -> Unit
     ) where T : AbstractRemapJarTask, T : JarInterface<AbstractRemapJarTask> {
         val inputTaskNameSS = inputTaskName.withSourceSet(sourceSet)
@@ -482,12 +485,12 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             archiveClassifier.set(if(!oldClassifier.isNullOrEmpty()) "$oldClassifier-dev" else "dev")
         }
 
-        remappingFunction(inputTask) {
+        val taskProvider = remappingFunction(inputTask) {
             group = "unimined"
             description = "Remaps $inputTask's output jar"
             asJar.archiveClassifier.set(oldClassifier)
-            project.tasks.getByName("build").dependsOn(this)
         }
+        project.tasks.getByName("build").dependsOn(taskProvider)
     }
 
     fun applyRunConfigs() {
