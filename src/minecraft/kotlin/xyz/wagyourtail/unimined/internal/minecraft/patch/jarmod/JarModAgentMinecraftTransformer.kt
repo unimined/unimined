@@ -5,6 +5,7 @@ import org.gradle.api.artifacts.ExternalDependency
 import xyz.wagyourtail.unimined.api.minecraft.patch.jarmod.JarModAgentPatcher
 import xyz.wagyourtail.unimined.api.runs.RunConfig
 import xyz.wagyourtail.unimined.api.minecraft.task.AbstractRemapJarTask
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import xyz.wagyourtail.unimined.internal.minecraft.MinecraftProvider
 import xyz.wagyourtail.unimined.internal.minecraft.patch.forge.fg3.mcpconfig.SubprocessExecutor
@@ -104,17 +105,20 @@ open class JarModAgentMinecraftTransformer(
         //TODO: add mods to priority classpath, and resolve their jma.transformers
     }
 
-    override fun beforeRemapJarTask(remapJarTask: AbstractRemapJarTask, input: Path): Path {
-        remapJarTask.mixinRemap {
-            enableJarModAgent()
+    override fun beforeRemapJarTask(task: AbstractRemapJarTask, input: Path): Path {
+        if (task is RemapJarTask) {
+            task.mixinRemap {
+                enableJarModAgent()
+            }
         }
+
         @Suppress("DEPRECATION")
-        return if (compiletimeTransforms && transforms.isNotEmpty()) {
-            project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${remapJarTask.name}...")
+        return if (compiletimeTransforms && transforms.isNotEmpty() && task is RemapJarTask) {
+            project.logger.lifecycle("[Unimined/JarModAgentTransformer] Running compile time transforms for ${task}...")
             val output = getTempFilePath("${input.nameWithoutExtension}-jma", ".jar")
             Files.copy(input, output)
             try {
-                val classpath = (remapJarTask as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
+                val classpath = (task as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
 
                 val result = SubprocessExecutor.exec(project) {
                     it.jvmArgs = listOf(
@@ -138,7 +142,7 @@ open class JarModAgentMinecraftTransformer(
             }
             output
         } else {
-            super.beforeRemapJarTask(remapJarTask, input)
+            super.beforeRemapJarTask(task, input)
         }
     }
 

@@ -18,7 +18,6 @@ import xyz.wagyourtail.unimined.util.FinalizeOnRead
  * task responsible for transforming your built jar to production.
  * @since 0.1.0
  */
-@Suppress("LeakingThis")
 abstract class AbstractRemapJarTask : Jar() {
 
     @get:InputFile
@@ -35,40 +34,5 @@ abstract class AbstractRemapJarTask : Jar() {
     @get:Internal
     @set:Internal
     var prodNamespace: MappingNamespaceTree.Namespace? by FinalizeOnRead(null)
-
-    /**
-     * whether to remap AccessTransformers to the legacy format (<=1.7.10)
-     */
-    @get:Input
-    @get:Optional
-    abstract val remapATToLegacy: Property<Boolean?>
-
-    @get:Internal
-    @set:Internal
-    @set:ApiStatus.Experimental
-    abstract var allowImplicitWildcards: Boolean
-
-    abstract fun devNamespace(namespace: String)
-
-    abstract fun devFallbackNamespace(namespace: String)
-
-    abstract fun prodNamespace(namespace: String)
-
-    abstract fun mixinRemap(action: MixinRemapOptions.() -> Unit)
-
-    fun mixinRemap(
-        @DelegatesTo(value = MixinRemapOptions::class, strategy = Closure.DELEGATE_FIRST)
-        action: Closure<*>
-    ) {
-        mixinRemap {
-            action.delegate = this
-            action.resolveStrategy = Closure.DELEGATE_FIRST
-            action.call()
-        }
-    }
-
-    init {
-        remapATToLegacy.convention(null as Boolean?).finalizeValueOnRead()
-    }
 
 }

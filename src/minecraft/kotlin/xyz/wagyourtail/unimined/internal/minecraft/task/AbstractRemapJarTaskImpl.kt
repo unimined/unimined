@@ -18,34 +18,20 @@ import kotlin.io.path.*
 @Suppress("UNCHECKED_CAST")
 abstract class AbstractRemapJarTaskImpl @Inject constructor(@get:Internal val provider: MinecraftConfig): AbstractRemapJarTask() {
 
-    @get:Internal
-    protected var mixinRemapOptions: MixinRemapOptions.() -> Unit by FinalizeOnRead {}
-
-    override fun devNamespace(namespace: String) {
+    fun devNamespace(namespace: String) {
         val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = AbstractRemapJarTask::class.getField("devNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
 
-    override fun devFallbackNamespace(namespace: String) {
+    fun devFallbackNamespace(namespace: String) {
         val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = AbstractRemapJarTask::class.getField("devFallbackNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
 
-    override fun prodNamespace(namespace: String) {
+    fun prodNamespace(namespace: String) {
         val delegate: FinalizeOnRead<MappingNamespaceTree.Namespace> = AbstractRemapJarTask::class.getField("prodNamespace")!!.getDelegate(this) as FinalizeOnRead<MappingNamespaceTree.Namespace>
         delegate.setValueIntl(LazyMutable { provider.mappings.getNamespace(namespace) })
     }
-
-    override fun mixinRemap(action: MixinRemapOptions.() -> Unit) {
-        val delegate: FinalizeOnRead<MixinRemapOptions.() -> Unit> = AbstractRemapJarTaskImpl::class.getField("mixinRemapOptions")!!.getDelegate(this) as FinalizeOnRead<MixinRemapOptions.() -> Unit>
-        val old = delegate.value as MixinRemapOptions.() -> Unit
-        mixinRemapOptions = {
-            old()
-            action()
-        }
-    }
-
-    override var allowImplicitWildcards by FinalizeOnRead(false)
 
     @TaskAction
     @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")

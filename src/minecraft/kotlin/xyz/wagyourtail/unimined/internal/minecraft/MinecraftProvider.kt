@@ -69,6 +69,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.*
+import java.util.function.BiFunction
+import javax.swing.text.html.HTML.Tag.U
 import kotlin.collections.ArrayDeque
 import kotlin.io.path.*
 
@@ -453,11 +455,11 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
     }
 
-    private inline fun <reified T> applyDefaultRemapJar(
+    private inline fun <U: JarInterface<*>> applyDefaultRemapJar(
         inputTaskName: String,
-        remappingFunction: (Task, JarInterface<AbstractRemapJarTask>.() -> Unit) -> TaskProvider<*>,
+        remappingFunction: (Task, U.() -> Unit) -> TaskProvider<U>,
         crossinline defaultTaskConfiguration: Jar.() -> Unit
-    ) where T : AbstractRemapJarTask, T : JarInterface<AbstractRemapJarTask> {
+    ) {
         val inputTaskNameSS = inputTaskName.withSourceSet(sourceSet)
 
         var inputTask = project.tasks.findByName(inputTaskNameSS)
@@ -490,7 +492,9 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         val taskProvider = remappingFunction(inputTask) {
             group = "unimined"
             description = "Remaps $inputTask's output jar"
-            asJar.archiveClassifier.set(oldClassifier)
+            asJar {
+                archiveClassifier.set(oldClassifier)
+            }
         }
         project.tasks.getByName("build").dependsOn(taskProvider)
     }
@@ -592,7 +596,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         if (mcPatcher.addVanillaLibraries) addLibraries(minecraftData.metadata.libraries)
 
         if (defaultRemapJar) {
-            applyDefaultRemapJar<RemapJarTaskImpl>("jar", ::remap) {
+            applyDefaultRemapJar("jar", ::remap) {
                 from(sourceSet.output)
                 archiveClassifier.set("".withSourceSet(sourceSet))
                 from(combinedWithList.map { it.second.output })
@@ -600,7 +604,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         }
 
         if (defaultRemapSourcesJar) {
-            applyDefaultRemapJar<RemapSourcesJarTaskImpl>("sourcesJar", ::remapSources) {
+            applyDefaultRemapJar("sourcesJar", ::remapSources) {
                 from(sourceSet.allSource)
                 archiveClassifier.set("${"".withSourceSet(sourceSet)}-sources")
                 from(combinedWithList.map { it.second.allSource })
