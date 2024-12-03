@@ -478,6 +478,8 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         } else if (inputTask !is Jar) {
             project.logger.warn("[Unimined/Minecraft ${project.path}:${sourceSet.name}] task $inputTaskName for $sourceSet is not an instance of ${Jar::class.qualifiedName}")
             return
+        } else {
+            inputTask.defaultTaskConfiguration()
         }
 
         val oldClassifier = inputTask.archiveClassifier.orNull
@@ -592,7 +594,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         if (defaultRemapJar) {
             applyDefaultRemapJar<RemapJarTaskImpl>("jar", ::remap) {
                 from(sourceSet.output)
-                archiveClassifier.set(sourceSet.name)
+                archiveClassifier.set("".withSourceSet(sourceSet))
                 from(combinedWithList.map { it.second.output })
             }
         }
@@ -600,7 +602,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
         if (defaultRemapSourcesJar) {
             applyDefaultRemapJar<RemapSourcesJarTaskImpl>("sourcesJar", ::remapSources) {
                 from(sourceSet.allSource)
-                archiveClassifier.set("${sourceSet.name}-sources")
+                archiveClassifier.set("${"".withSourceSet(sourceSet)}-sources")
                 from(combinedWithList.map { it.second.allSource })
             }
         }
