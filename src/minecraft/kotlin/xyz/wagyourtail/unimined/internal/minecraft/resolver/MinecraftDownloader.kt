@@ -298,19 +298,13 @@ open class MinecraftDownloader(val project: Project, val provider: MinecraftProv
     }
 
     fun extract(dependency: Dependency, extract: Extract, path: Path) {
-        val resolved = provider.minecraftLibraries.resolvedConfiguration
-        resolved.getFiles { it == dependency }.forEach { file ->
-            ZipFile(file).use {
-                for (entry in it.entries) {
-                    if (entry.isDirectory) {
-                        continue
-                    }
-                    if (extract.exclude.any { entry.name.startsWith(it) }) {
-                        continue
-                    }
-                    val outPath = path.resolve(entry.name)
+        val resolved = provider.minecraftLibraries
+        resolved.getFiles(dependency).forEach { file ->
+            file.toPath().forEachInZip { name, stream ->
+                if (!extract.exclude.any { name.startsWith(it) }) {
+                    val outPath = path.resolve(name)
                     outPath.parent.createDirectories()
-                    Files.copy(it.getInputStream(entry), outPath, StandardCopyOption.REPLACE_EXISTING)
+                    Files.copy(stream, outPath, StandardCopyOption.REPLACE_EXISTING)
                 }
             }
         }
