@@ -346,7 +346,7 @@ open class FG3MinecraftTransformer(project: Project, val parent: ForgeLikeMinecr
         )
 
 
-        //  extract binpatches
+        // extract binpatches
         val binPatchFile = this.binpatchFile ?: if (patchedMC.envType == EnvType.COMBINED) {
             forgeUd.toPath().readZipInputStreamFor(userdevCfg["binpatches"].asString) {
                 outFolder.resolve("binpatches-joined.lzma").apply {

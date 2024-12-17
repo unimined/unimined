@@ -94,7 +94,8 @@ abstract class RemapJarTaskImpl @Inject constructor(provider: MinecraftConfig):
                             ),
                             AccessTransformerApplier.AtRemapper(
                                 project.logger,
-                                remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher<*>)?.remapAtToLegacy == true)!!
+                                remapATToLegacy.getOrElse((provider.mcPatcher as? ForgeLikePatcher<*>)?.remapAtToLegacy == true)!!,
+                                manifest.attributes["FMLAT"]?.toString()?.split(" ") ?: emptyList()
                             ),
                         )
                     )

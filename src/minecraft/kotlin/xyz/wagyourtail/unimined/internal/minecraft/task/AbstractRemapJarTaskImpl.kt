@@ -49,13 +49,24 @@ abstract class AbstractRemapJarTaskImpl @Inject constructor(@get:Internal val pr
 
         val inputFile = provider.mcPatcher.beforeRemapJarTask(this, inputFile.get().asFile.toPath())
 
+        // merge in manifest from input jar
+        inputFile.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
+            // write to temp file
+            val inpTmp = temporaryDir.toPath().resolve("input-manifest.MF")
+            inpTmp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
+                inp.copyTo(out)
+            }
+            this.manifest {
+                it.from(inpTmp)
+            }
+        }
+
         if (path.isEmpty()) {
             project.logger.lifecycle("[Unimined/RemapJar ${this.path}] detected empty remap path, jumping to after remap tasks")
             provider.mcPatcher.afterRemapJarTask(this, inputFile)
             afterRemap(inputFile)
             return
         }
-
         project.logger.lifecycle("[Unimined/RemapJar ${this.path}] remapping output ${inputFile.name} from $devNs/$devFNs to $prodNs")
         project.logger.info("[Unimined/RemapJar ${this.path}]    $devNs -> ${path.joinToString(" -> ") { it.name }}")
 
@@ -96,17 +107,6 @@ abstract class AbstractRemapJarTaskImpl @Inject constructor(@get:Internal val pr
     }
 
     private fun afterRemap(afterRemapJar: Path) {
-        // merge in manifest from input jar
-        afterRemapJar.readZipInputStreamFor("META-INF/MANIFEST.MF", false) { inp ->
-            // write to temp file
-            val inpTmp = temporaryDir.toPath().resolve("input-manifest.MF")
-            inpTmp.outputStream(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { out ->
-                inp.copyTo(out)
-            }
-            this.manifest {
-                it.from(inpTmp)
-            }
-        }
         // copy into output
         from(project.zipTree(afterRemapJar))
         copy()
