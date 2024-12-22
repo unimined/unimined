@@ -819,7 +819,7 @@ open class MinecraftProvider(project: Project, sourceSet: SourceSet) : Minecraft
             workingDir = defaultWorkingDir
             classpath = sourceSet.runtimeClasspath
             mainClass.set(minecraftData.metadata.mainClass)
-            jvmArgs = minecraftData.metadata.getJVMArgs() + betacraftArgs
+            jvmArgs(minecraftData.metadata.getJVMArgs() + betacraftArgs)
             args = minecraftData.metadata.getGameArgs()
 
             (mcPatcher as AbstractMinecraftTransformer).applyClientRunTransform(this)

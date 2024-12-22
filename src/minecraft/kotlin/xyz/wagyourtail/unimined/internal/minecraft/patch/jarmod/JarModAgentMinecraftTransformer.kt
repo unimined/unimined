@@ -121,9 +121,10 @@ open class JarModAgentMinecraftTransformer(
                 val classpath = (task as RemapJarTaskImpl).provider.sourceSet.runtimeClasspath.files.toMutableSet()
 
                 val result = SubprocessExecutor.exec(project) {
-                    it.jvmArgs = listOf(
+                    it.jvmArgs(listOf(
                         "-D${JMA_TRANSFORMERS}=${transforms.joinToString(File.pathSeparator)}",
-                        "-D${JMA_DEBUG}=true")
+                        "-D${JMA_DEBUG}=true"
+                    ))
                     it.args = listOf(
                         input.absolutePathString(),
                         classpath.joinToString(File.pathSeparator) { it.absolutePath },
