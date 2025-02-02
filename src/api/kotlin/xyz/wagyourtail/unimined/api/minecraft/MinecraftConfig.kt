@@ -85,8 +85,9 @@ abstract class MinecraftConfig(val project: Project, val sourceSet: SourceSet) :
         project.logger.info("setting minecraft side to $sideConf")
         if (sideConf.equals("combined", true)) {
             side = EnvType.JOINED
+        } else {
+            side = EnvType.valueOf(sideConf.uppercase())
         }
-        side = EnvType.valueOf(sideConf.uppercase())
     }
 
     /**
